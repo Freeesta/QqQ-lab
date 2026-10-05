@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tpfinder"
+version = "0.1.0"
+description = "A light tool to look for transformation products in full-scan data and to prepare MRM transitions"
+requires-python = ">=3.11"
+dependencies = ["numpy>=1.24"]
+license = { text = "MIT" }
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+tpfinder = "tpfinder.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["tpfinder*"]
+
+[tool.setuptools.package-data]
+tpfinder = ["web/*", "web/vendor/*", "web/vendor/ketcher/*", "web/vendor/ketcher/assets/*", "config/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

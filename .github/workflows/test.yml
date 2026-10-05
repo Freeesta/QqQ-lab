@@ -1,0 +1,48 @@
+# Runs on every push and pull request (once the project is on GitHub).
+# Unit tests on the oldest supported and the newest Python, on Linux, Mac and Windows;
+# the launcher (scripts/avvia.py) is tried too; JavaScript is syntax-checked.
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.11", "3.14"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: python -m pip install -e ".[test]"
+      - name: Unit tests
+        run: python -m pytest -q tests
+      - name: Launcher builds its environment and starts the program
+        run: python scripts/avvia.py --help
+
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Syntax check
+        run: |
+          node --check tpfinder/web/explore.js
+          cp tpfinder/web/draw.js /tmp/draw.mjs && node --check /tmp/draw.mjs
+          python3 - <<'PY'
+          import re, pathlib
+          html = pathlib.Path("tpfinder/web/index.html").read_text(encoding="utf-8")
+          inline = re.findall(r"<script>(.*?)</script>", html, re.S)
+          pathlib.Path("/tmp/inline.js").write_text("\n".join(inline), encoding="utf-8")
+          PY
+          # classic scripts share globals: check explore.js + inline together (no duplicate const)
+          cat tpfinder/web/explore.js /tmp/inline.js > /tmp/page.js && node --check /tmp/page.js

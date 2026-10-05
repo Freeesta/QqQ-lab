@@ -1,0 +1,15 @@
+# Normalize line endings; Windows batch files need CRLF, shell scripts LF
+* text=auto
+*.bat text eol=crlf
+*.command text eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.ico binary
+*.wasm binary
+
+# Third-party bundles (Ketcher, OpenChemLib): no diffs, not counted as project code
+tpfinder/web/vendor/** -diff linguist-vendored

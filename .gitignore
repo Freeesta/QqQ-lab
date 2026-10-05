@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Private environments made by the launchers (scripts/avvia.py)
+.venv/
+.venv-tpfinder/
+.venv-tpfinder-*/
+.venv-tpfinder.salta
+
+# Caches, work folders and test output
+.tpfinder-cache/
+TPFinder_lavoro/
+tests_e2e/shots/
+
+# Lab data never go into the repository (raw data stay in ../QqQ and ../esempio_conversione)
+*.mzML
+*.mzml
+*.wiff
+*.wiff2
+*.wiff.scan
+*.dam
+taccuino.json
+
+# OS and editors
+.DS_Store
+*.!*!.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

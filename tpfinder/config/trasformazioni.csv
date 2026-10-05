@@ -1,0 +1,19 @@
+sep=;
+name;delta;comment
+hydroxylation;+O;one oxygen added (aromatic or aliphatic OH)
+dihydroxylation;+O2;two oxygens added
+dehydrogenation;-H2;loss of two hydrogens (double bond, ring closure)
+oxidation to carbonyl;+O-H2;alcohol to ketone or aldehyde
+demethylation;-CH2;N- or O-demethylation
+methylation;+CH2;
+decarboxylation;-CO2;
+carboxylation;+CO2;
+hydration;+H2O;addition of water, hydrolysis without cleavage
+dehydration;-H2O;
+deamination;-NH+O-H2;
+dechlorination (H);-Cl+H;reductive dechlorination
+dechlorination (OH);-Cl+OH;hydrolytic dechlorination
+debromination (H);-Br+H;
+defluorination (OH);-F+OH;
+sulfoxidation;+O;(same mass as hydroxylation) sulfur oxidation
+epoxidation;+O;(same mass as hydroxylation) epoxide

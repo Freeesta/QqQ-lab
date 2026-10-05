@@ -1,0 +1,85 @@
+[
+ {
+  "source": [
+   {
+    "id": "CUR",
+    "label": "Gas tenda (CUR)",
+    "value": 35.0,
+    "unit": "psi"
+   },
+   {
+    "id": "GS1",
+    "label": "Gas di nebulizzazione (GS1)",
+    "value": 45.0,
+    "unit": "psi"
+   },
+   {
+    "id": "GS2",
+    "label": "Gas di desolvatazione (GS2)",
+    "value": 55.0,
+    "unit": "psi"
+   },
+   {
+    "id": "CAD",
+    "label": "Gas di collisione (CAD), valore grezzo",
+    "value": -3.0,
+    "unit": ""
+   },
+   {
+    "id": "IS",
+    "label": "Tensione dello spray (IS)",
+    "value": 5500.0,
+    "unit": "V"
+   },
+   {
+    "id": "TEM",
+    "label": "Temperatura della sorgente (TEM)",
+    "value": 0.0,
+    "unit": "°C"
+   },
+   {
+    "id": "ihe",
+    "label": "Interface heater (ihe), 1 = acceso",
+    "value": 1.0,
+    "unit": ""
+   }
+  ],
+  "compound": [
+   {
+    "id": "DP",
+    "label": "Declustering potential (DP)",
+    "value": 50.0,
+    "unit": "V"
+   },
+   {
+    "id": "EP",
+    "label": "Entrance potential (EP)",
+    "value": 10.0,
+    "unit": "V"
+   },
+   {
+    "id": "CEP",
+    "label": "Collision cell entrance potential (CEP)",
+    "value": 12.058,
+    "unit": "V"
+   },
+   {
+    "id": "CE",
+    "label": "Energia di collisione (CE)",
+    "value": 10.0,
+    "unit": "eV"
+   },
+   {
+    "id": "CES",
+    "label": "Collision energy spread (CES)",
+    "value": 0.0,
+    "unit": "eV"
+   }
+  ],
+  "file": {
+   "metodo": "D:\\Analyst Data\\Projects\\Lab_inquinanti_2017\\Acquisition Methods\\Lab_inq_FullMass_pos_max300.dam"
+  },
+  "name": "Lab_inq_FullMass_pos_max300.dam",
+  "sample": null
+ }
+]
