@@ -5,6 +5,7 @@ import base64
 import json
 import os
 import re
+import shutil
 import threading
 import time
 import webbrowser
@@ -43,6 +44,9 @@ def _method_summary(m: dict | None) -> str:
     return txt + (f", m/z {rng[0][0]:g}-{rng[0][1]:g}" if rng and len(ex) == 1 else "")
 
 
+MAX_UPLOAD = 4 << 30  # bytes: one mzML/wiff upload
+
+
 class App:
     """The page lets the user drop files and open them for exploration; the work folder keeps the files and the notebook."""
 
@@ -59,7 +63,7 @@ class App:
         """Reopen the files that were open when the program was closed (list stored in taccuino.json)."""
         try:
             nb = self.notebook()
-            smp = [x for x in nb.get("session", []) if (self.workdir / x["file"]).exists()]
+            smp = [x for x in nb.get("session", []) if (self.workdir / self.safe_name(x["file"])).exists()]
             if smp:
                 self.open_session({"samples": smp})
         except Exception:  # noqa: BLE001 -- a broken notebook must never stop the program
@@ -167,6 +171,10 @@ class App:
         if not self.workdir:
             raise ValueError("uploads are only available in app mode")
         n = self.safe_name(name)
+        if length > MAX_UPLOAD:
+            raise ValueError("file too large")
+        if length > shutil.disk_usage(self.workdir).free - (200 << 20):
+            raise ValueError("not enough free disk space")
         dest = self.workdir / n
         tmp = dest.with_name(dest.name + ".part")
         left = length
