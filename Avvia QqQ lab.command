@@ -10,9 +10,12 @@ for c in python3 /Library/Frameworks/Python.framework/Versions/Current/bin/pytho
     status=$?
     if [ $status -ne 0 ]; then read -n 1 -s -r -p "Premi un tasto per chiudere..."
     else   # program closed normally (browser page closed): close this Terminal window too
+      # osascript runs in its OWN session (start_new_session): if it stayed on this window's tty, Terminal would see a
+      # running process and ask for confirmation instead of closing. 'delay 1' lets this shell exit first.
       T=$(tty)
-      ( sleep 0.5; /usr/bin/osascript -e "tell application \"Terminal\" to close (every window whose tty of selected tab is \"$T\")" >/dev/null 2>&1 ) >/dev/null 2>&1 &
-      disown 2>/dev/null
+      "$c" -c 'import subprocess, sys; subprocess.Popen(["/usr/bin/osascript", "-e", sys.argv[1]], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)' \
+        "delay 1
+tell application \"Terminal\" to close (every window whose tty of selected tab is \"$T\") saving no" >/dev/null 2>&1
     fi
     exit $status
   fi

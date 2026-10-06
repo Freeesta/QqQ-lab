@@ -155,6 +155,16 @@ class App:
         src = self.workdir / n
         trash = self.workdir / "_cestino"
         trash.mkdir(exist_ok=True)
+        # an open session keeps the file memory-mapped: on Windows a mapped file cannot be moved, so release it first
+        # (the file leaves the session too: it is gone from the work folder)
+        if self.session:
+            for it in list(self.session.items):
+                if Path(it.file).name == n:
+                    try:
+                        it.run.close()
+                    except Exception:  # noqa: BLE001 -- already closed or never opened
+                        pass
+                    self.session.items.remove(it)
         for f in (src, self.workdir / (n + ".scan")):
             if f.exists():
                 os.replace(f, trash / f.name)

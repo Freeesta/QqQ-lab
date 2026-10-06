@@ -14,7 +14,7 @@ const TOL0 = 1.0;                                   // strumento datato: finestr
 
 // ------------------------------------------------------------------ schermata di caricamento
 const PHRASES = [
-  "Ignorando i warning", "Schivando gli ftalati", "Minando crypto di nascosto", "Litigando coi file", "Allineando i quadrupolo",
+  "Ignorando i warning", "Schivando gli ftalati", "Minando crypto di nascosto", "Litigando coi file", "Allineando i quadrupoli",
   "Compilando preghiere", "Aggiornando Matrix", "Cercando il segnale perduto", "Riavviando l'universo", "Ansia da separazione",
   "Contaminando la sorgente", "Accecando l'elettromoltiplicatore", "Maledicendo la matrice", "Cuocendo sui quadrupoli"];
 // loading screen: one phrase every 5 s, in random order without repeats; the three dots appear one after the other
@@ -373,7 +373,7 @@ function addPanel(type, o, after) {
     let out = b; try { out = await pngWithMeta(b, plotMeta(p)); } catch (e) { /* the image is saved anyway, only without metadata */ }
     const a = document.createElement("a"); a.href = URL.createObjectURL(out); a.download = plotName(p) + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   });
-  el.querySelector(".x").onclick = () => { p._ro.disconnect(); if (p._up) removeEventListener("mouseup", p._up); el.remove(); E.panels = E.panels.filter(x => x !== p); fitHost(); uiSave(); };
+  el.querySelector(".x").onclick = () => { p._ro.disconnect(); if (p._up) removeEventListener("mouseup", p._up); el.remove(); E.panels = E.panels.filter(x => x !== p); relayout(); fitHost(); uiSave(); };
   el.querySelector(".ttl").ondblclick = async () => { const v = await ask("Nome del pannello", p.title); if (v) { p.title = v; ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
   return p;
@@ -602,7 +602,7 @@ function axes(g, W, H, x0, x1, ymax, yfmt, o = {}) {
   const X = v => M.l + (v - x0) / (x1 - x0) * (W - M.l - M.r), ph = H - M.t - M.b;
   const Y = o.log ? v => H - M.b - (Math.log10(Math.max(v, o.lo)) - Math.log10(o.lo)) / (Math.log10(ymax) - Math.log10(o.lo)) * ph : v => H - M.b - v / ymax * ph;
   g.clearRect(0, 0, W, H);
-  const yt = o.stack ? [] : o.log ? Array.from({ length: Math.max(0, Math.floor(Math.log10(ymax)) - Math.ceil(Math.log10(o.lo)) + 1) }, (_, i) => Math.pow(10, Math.ceil(Math.log10(o.lo)) + i)) : nice(0, ymax, 4);
+  const yt = o.stack ? [] : o.log ? Array.from({ length: Math.max(0, Math.floor(Math.log10(ymax)) - Math.ceil(Math.log10(o.lo)) + 1) }, (_, i) => Math.pow(10, Math.ceil(Math.log10(o.lo)) + i)) : nice(0, ymax, Math.max(5, Math.round(ph / 32)));
   frame(g, W, H, nice(x0, x1, 8).map(t => [X(t), +t.toFixed(2)]), yt.map(t => [Y(t), yfmt(t)]), o.xt, o.yt);
   return { X, Y };
 }
@@ -1010,7 +1010,17 @@ function attach(p) {
     if (a.map) { const y = a.mzAt(recty(e)); p.zoomY = clampView(y - (y - a.y0) * f, y + (a.y1 - y) * f, a.fullY[0], a.fullY[1]); }
     zoomTo(p, x - (x - a.x0) * f, x + (a.x1 - x) * f);
   }, { passive: false });
-  cv.ondblclick = () => { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); };
+  cv.ondblclick = e => {
+    if (p.type === "chrom" || p.type === "xic" || p.type === "mrm") {      // double click = mass spectrum at that retention time (also on the PDA trace)
+      const x = xd(rect(e)), k = nearestFile(p, x), f = E.files[k];
+      if (!p._a || !f || f.kind === "mrm") return;
+      const dt = scanStep(), r0 = x - dt / 2, r1 = x + dt / 2;
+      p.sel = null;
+      if (E.panels.some(s => s.type === "spec" && s.link === p.id)) pushLinked(p, r0, r1, k, false); else newSpec(p, r0, r1, k);
+      draw(p); return;
+    }
+    p.zoom = null; p.zoomY = null; p.sel = null; draw(p);
+  };
   cv.oncontextmenu = e => { hideHover(p); ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };
 }
 const scanStep = () => { const f = scanFiles(E.files)[0]; return f ? Math.max((f.rt_max - f.rt_min) / Math.max(f.ms1 + f.ms2 - 1, 1), 0.005) : 0.02; };
@@ -1089,9 +1099,11 @@ function lcHtml(lc, row) {
   svg += `<text x="${(l + w - r) / 2}" y="${hh - 4}" text-anchor="middle" fill="${css("--ink")}">Tempo (min)</text><text transform="translate(11 ${(t + hh - b) / 2}) rotate(-90)" text-anchor="middle" fill="${css("--ink")}">% B</text></svg>`;
   const pda = lc.pda || {};
   const tbl = `<table><tr><th class="num">Tempo (min)</th><th class="num">% A</th><th class="num">% B</th><th class="num">Flusso (mL/min)</th></tr>${g.map(q => `<tr><td class="num">${q.t}</td><td class="num">${+(100 - q.b).toFixed(1)}</td><td class="num">${q.b}</td><td class="num">${q.flow}</td></tr>`).join("")}</table>`;
-  return `<h4>Metodo cromatografico (LC) e PDA</h4>${svg}${tbl}
-   <table style="margin-top:6px">${row("Durata della corsa", lc.run_time != null ? lc.run_time + " min" : "")}${row("Temperatura del forno", lc.oven != null ? lc.oven + " °C" : "")}
-   ${row("PDA: intervallo", pda.start != null ? `${pda.start}-${pda.stop} nm (passo ${pda.step} nm)` : "")}</table>`;
+  const pdaRow = pda.start != null ? `<h4>PDA</h4><table>${row("Intervallo", `${pda.start}-${pda.stop} nm (passo ${pda.step} nm)`)}</table>` : "";
+  return `<h4>Metodo cromatografico (LC)</h4>
+   <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap"><div style="flex:1 1 380px;max-width:440px">${svg}</div><div style="flex:1 1 280px">${tbl}</div></div>
+   <div class="sm" style="margin:6px 0">A = H<sub>2</sub>O + 0.1% FA &nbsp;&middot;&nbsp; B = ACN + 0.1% FA</div>
+   <table>${row("Durata della corsa", lc.run_time != null ? lc.run_time + " min" : "")}${row("Temperatura del forno", lc.oven != null ? lc.oven + " °C" : "")}</table>${pdaRow}`;
 }
 
 // ------------------------------------------------------------------ metodo di acquisizione (letto dagli mzML)
@@ -1102,13 +1114,13 @@ async function showMethod(sel) {
   const pol = { positive: "positivo (ESI+)", negative: "negativo (ESI-)", mixed: "misto", unknown: "non indicata" }[m.polarity] || m.polarity;
   const labs = m.lab || [], li = labs.length ? Math.min(Math.max(sel ?? m.lab_pick ?? 0, 0), labs.length - 1) : -1, lab = labs[li];
   let h = labs.length ? "" : `<div style="background:#fff4e0;border-left:4px solid #e08a00;border-radius:6px;padding:8px 12px;margin-bottom:8px"><b>Manca il metodo di acquisizione.</b> Gli mzML non contengono i parametri della sorgente, le energie di collisione e il gradiente: li leggo dal file <b>.dam</b> del metodo (quello di Analyst).<div style="margin-top:6px"><button class="go" id="m-load">Carica il metodo (.dam)</button></div></div>`;
-  h += `<div class="muted sm">File: <b>${EH(f.label)}</b> (cambia file con le frecce nella barra). Informazioni lette dall'mzML.</div><h4>Strumento</h4><table>${row("Modello", EH(m.instrument))}${row("Numero di serie", EH(m.serial))}</table>
+  h += `<div class="muted sm">File: <b>${EH(f.label)}</b></div><h4>Strumento</h4><table>${row("Modello", EH(m.instrument))}${row("Numero di serie", EH(m.serial))}</table>
    <h4>Esperimento</h4><table>${row("Tipo rilevato", `<b>${KIND[m.kind]}</b>`)}${row("Polarità", pol)}${row("Intervallo di massa", m.scan_window ? `m/z ${m.scan_window[0]}-${m.scan_window[1]}` : "")}${row("Durata", `${m.rt_min.toFixed(2)}-${m.rt_max.toFixed(2)} min`)}${row("Scan", m.scans || "")}${row("Tempo di ciclo", m.cycle_s ? m.cycle_s.toFixed(2) + " s" : "")}${row("Precursori (Q1)", m.precursors.join(", "))}${row("Energia di collisione", m.ce.length ? m.ce.join(", ") + " eV" : "")}</table>`;
   if (m.transitions.length) h += `<h4>Transizioni MRM</h4><table><tr><th>Nome</th><th class="num">Q1 (m/z)</th><th class="num">Q3 (m/z)</th><th class="num">CE (eV)</th><th class="num">Dwell (ms)</th></tr>${m.transitions.map(t => `<tr><td>${EH(t.name || "")}</td><td class="num">${t.q1}</td><td class="num">${t.q3}</td><td class="num">${t.ce ?? ""}</td><td class="num">${t.dwell != null ? Math.round(t.dwell * 1000) : ""}</td></tr>`).join("")}</table>`;
   if (lab && lab.check && lab.check.length) {
     const ic = { ok: '<span style="color:var(--ok)">\u2713 coincide</span>', diff: '<span style="color:var(--bad)">\u2717 diverso</span>', na: '<span class="muted">non verificabile</span>' };
     const bad = lab.check.filter(r => r.status === "diff").length;
-    h += `<h4>Il metodo corrisponde ai dati?</h4><div class="muted sm">Confronto fra «${EH(lab.name)}» e ciò che questo file dichiara di sé. Una coincidenza non prova che sia il metodo usato; una differenza mostra che non lo è (o che il file è un altro).</div>
+    h += `<h4>Il metodo corrisponde ai dati?</h4>
       <table><tr><th>Cosa</th><th>Metodo (.dam)</th><th>File (mzML)</th><th></th></tr>${lab.check.map(r => `<tr><td>${EH(r.what)}</td><td>${EH(r.method)}</td><td>${EH(r.data)}</td><td>${ic[r.status] || ""}</td></tr>`).join("")}</table>
       ${bad ? `<div class="sm" style="margin-top:4px;color:var(--bad)">${bad} differenz${bad === 1 ? "a" : "e"}: controlla di aver caricato il metodo giusto per questo file${labs.length > 1 ? " (puoi sceglierne un altro qui sopra)" : ""}.</div>` : ""}`;
   }
@@ -1179,7 +1191,6 @@ Q("#np-mrm").onclick = () => addPanel("mrm", {});
 Q("#np-tile").onclick = tile;
 Q("#np-merge").onclick = mergeXics;
 Q("#addf").onclick = async () => { S.adding = true; try { const d = await J("/api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
-Q("#dhx").onclick = () => { Q("#dhint").hidden = true; };
 addEventListener("resize", () => { fitWidth(); redrawAll(); });
 document.addEventListener("tpview", e => { if (e.detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });
 
