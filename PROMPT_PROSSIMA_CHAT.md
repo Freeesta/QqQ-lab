@@ -40,6 +40,12 @@ Verificato: 20 pytest, e2e3/4/5/6/7 senza errori JS (le `api/notebook` ERR_ABORT
 9. **Distribuzione**: nome definitivo del programma; provare `QqQ lab.app` su Mac (permesso Terminale, icona, Gatekeeper); versione tablet rinviata (vedi Decisioni).
 10. **Pulizia codice**: endpoint dei candidati (`/api/build`, `/api/candidate`, `/export/*.csv`, `/export/session.json`) da togliere o tenere per `candidates` e i test; e2e nella CI (Playwright su GitHub Actions).
 
+## Fatto il 2026-10-06 (notte): metodo .dam, isotopi, chiusura
+- Metodo: si carica il .dam (card 2 della schermata di carico o pulsante nella scheda Metodo); niente più metodo predefinito: senza .dam la scheda dice che manca e offre il pulsante. Più .dam: selettore (scelta automatica per tipo di file).
+- Isotopi: spettro a barre (M, M+1, M+2...) sopra la tabella. Tolte le due scritte; fonti dati nei commenti. Perdite neutre: elenco di 4 riferimenti con link (Levsen 2007, De Vijlder 2018, Demarque 2016, Holcapek 2010): le colonne "tipica di" sono mie sintesi, Federico deve controllare i riferimenti (pagine di Demarque non verificate).
+- Chiusura del browser = si ferma il programma (`--exit-on-close`, vedi AGENTS.md); chiusura della finestra del Terminale su Mac da provare su un Mac vero.
+- Verificato: e2e3-10, pytest-sostituto (nel container manca pytest).
+
 ## Fatto il 2026-10-06 (sera): gradiente, PDA, posti fissi
 - Gradiente e metodo LC: ricavati dai .wiff/.dam (non dagli mzML) e messi in `metodo_laboratorio.json` (`lc`); la scheda Metodo mostra grafico %B, tabella, flusso, PDA, forno.
 - PDA: cromatogramma `TWC` degli mzML come tipo "PDA (UV, totale)" nel pannello Cromatogramma (anche per i file MRM). Spettri UV e canali singoli NON ci sono negli mzML: servirebbe decodificare `DADRealTimeData` dei .wiff (non fatto) o un altro export.

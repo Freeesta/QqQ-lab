@@ -6,14 +6,15 @@ FILES = ["B_FullMass-t0", "B_FullMass-t15", "B_FullMass-t60", "B_MS2-t15", "B_MR
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 MZ = Path(os.environ.get("QQQ_MZML", ROOT.parent / "esempio_conversione" / "mzml"))
+DAM = Path(os.environ.get("QQQ_DAM", ROOT.parent / "QqQ" / "Metodi inquinanti" / "Lab_inq_FullMass_pos_max480.dam"))   # a lab method (not in git)
 SH = str(HERE / "shots") + "/"
 os.makedirs(SH, exist_ok=True)
 def mz(f): return str(MZ / f"{f}.mzML")
 class Run:
-    def __init__(s, port=8811, wd="/tmp/wd1", fresh=True):
+    def __init__(s, port=8811, wd="/tmp/wd1", fresh=True, extra=()):
         s.port, s.wd, s.errs = port, wd, []
         if fresh: shutil.rmtree(wd, ignore_errors=True)
-        s.srv = subprocess.Popen([sys.executable, "-m", "tpfinder", "app", "--workdir", wd, "--port", str(port), "--no-open"],
+        s.srv = subprocess.Popen([sys.executable, "-m", "tpfinder", "app", "--workdir", wd, "--port", str(port), "--no-open", *extra],
                                  cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         time.sleep(2)
     def page(s, p):
@@ -21,7 +22,7 @@ class Run:
         pg = s.b.new_page(viewport={"width": 1500, "height": 2200})
         pg.on("pageerror", lambda e: s.errs.append(("pageerror", str(e))))
         pg.on("console", lambda m: s.errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") else None)
-        pg.on("requestfailed", lambda r: s.errs.append(("reqfail", r.url, r.failure)))
+        pg.on("requestfailed", lambda r: s.errs.append(("reqfail", r.url, r.failure)) if "/api/ping" not in r.url and "/api/bye" not in r.url else None)   # presence pings are cut when the page closes
         pg.on("response", lambda r: s.errs.append(("http%d" % r.status, r.url)) if r.status >= 400 else None)
         pg.goto(f"http://127.0.0.1:{s.port}/")
         pg.wait_for_timeout(800)

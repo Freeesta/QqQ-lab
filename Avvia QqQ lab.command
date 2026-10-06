@@ -8,7 +8,12 @@ for c in python3 /Library/Frameworks/Python.framework/Versions/Current/bin/pytho
   if command -v "$c" >/dev/null 2>&1 && "$c" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)' 2>/dev/null; then
     "$c" scripts/avvia.py "$@"
     status=$?
-    if [ $status -ne 0 ]; then read -n 1 -s -r -p "Premi un tasto per chiudere..."; fi
+    if [ $status -ne 0 ]; then read -n 1 -s -r -p "Premi un tasto per chiudere..."
+    else   # program closed normally (browser page closed): close this Terminal window too
+      T=$(tty)
+      ( sleep 0.5; /usr/bin/osascript -e "tell application \"Terminal\" to close (every window whose tty of selected tab is \"$T\")" >/dev/null 2>&1 ) >/dev/null 2>&1 &
+      disown 2>/dev/null
+    fi
     exit $status
   fi
 done

@@ -327,3 +327,38 @@ def test_lc_method_xml_is_decoded():
     assert [(g["t"], g["b"], g["flow"]) for g in lc["gradient"]] == [(0.0, 5.0, 0.25), (2.0, 50.0, 0.25), (5.0, 50.0, 0.5)]
     assert lc["run_time"] == 8.0 and lc["oven"] == 40.0
     assert lc["pda"]["start"] == 200.0 and lc["pda_channels"] == [{"wl": 254.0, "bw": 4.0}]
+
+
+def test_browser_presence_stops_the_program(tmp_path, monkeypatch):
+    """--exit-on-close: the program stops when no page is left (after a grace period), not before; a reload (bye then ping) is tolerated."""
+    from tpfinder import server
+    app = server.App(None, tmp_path / "w")
+    monkeypatch.setattr(server, "EXIT_GRACE", 0.2)
+    monkeypatch.setattr(server, "EXIT_FIRST", 0.5)
+    import time
+    assert not app.should_exit()                    # nobody yet, but the first-connection time has not passed
+    app.ping("a")
+    time.sleep(0.3)
+    assert not app.should_exit()                    # a page is open
+    app.bye("a")                                    # reload: the page leaves...
+    app.ping("b")                                   # ...and the new one arrives within the grace period
+    time.sleep(0.3)
+    assert not app.should_exit()
+    app.bye("b")
+    assert not app.should_exit()                    # grace period not over
+    time.sleep(0.3)
+    assert app.should_exit()
+
+
+def test_method_dam_upload_is_listed_and_unknown_is_empty(tmp_path):
+    """A .dam is accepted as an upload, listed as a method and never replaced by a built-in method; with none, the list is empty."""
+    from tpfinder import server
+    app = server.App(None, tmp_path / "w")
+    (tmp_path / "w").mkdir(exist_ok=True)
+    assert app.methods() == [] and app.lab_methods() == []
+    import io
+    app.save_upload("Lab_x.dam", io.BytesIO(b"not an OLE file"), 15)
+    assert [m["name"] for m in app.methods()] == ["Lab_x.dam"]
+    lab = app.lab_methods()
+    assert lab[0]["name"] == "Lab_x.dam" and "error" in lab[0]       # a broken file is reported, it does not crash
+    assert app.files() == []                                        # a method is not a data file

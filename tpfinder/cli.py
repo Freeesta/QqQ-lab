@@ -31,6 +31,7 @@ def main(argv=None) -> int:
     ap_.add_argument("--workdir", help="folder where the dropped files are kept (default: ~/TPFinder_lavoro/sessione_...)")
     ap_.add_argument("--port", type=int, default=8790)
     ap_.add_argument("--no-open", action="store_true")
+    ap_.add_argument("--exit-on-close", action="store_true", help="stop the program when the browser page is closed (used by the launchers)")
     a = ap.parse_args(argv)
 
     if a.cmd == "draft":
@@ -71,7 +72,7 @@ def main(argv=None) -> int:
     elif a.cmd == "app":
         from .server import default_workdir, serve
         wd = Path(a.workdir) if a.workdir else default_workdir()
-        serve(None, a.port, not a.no_open, workdir=wd)
+        serve(None, a.port, not a.no_open, workdir=wd, exit_on_close=a.exit_on_close)
     return 0
 
 

@@ -43,9 +43,10 @@
   function periodic() {
     const cells = ELEMENTS.map(e => `<div class="pt-c${ORGANIC.has(e.s) ? " org" : ""}${e.iso.length ? "" : " nd"}" data-s="${e.s}" style="grid-row:${e.r};grid-column:${e.c}">` +
       `<span>${e.z}</span><b>${e.s}</b><small>${e.w != null ? (e.w < 100 ? e.w.toFixed(3) : e.w.toFixed(2)) : ""}</small></div>`).join("");
-    return `<div class="muted sm">Passa sopra un elemento per vedere masse e isotopi; clic per fermarlo. In evidenza gli elementi più comuni nelle molecole organiche. Utile per capire <b>cosa si perde</b> fra due ioni: la differenza di m/z è la massa di ciò che se n'è andato.</div>
-      <div class="pt">${cells}<div class="pt-info" id="pt-info">${info(EL.C)}</div><div class="pt-gap">lantanidi e attinidi</div></div>
-      <div class="muted sm">Masse esatte: tabella isotopi di OpenChemLib. Abbondanze: composizioni isotopiche rappresentative IUPAC (CIAAW). Peso atomico medio: elenco di Ketcher.</div>`;
+    // Data sources (kept here, not shown in the page): exact masses = isotope table of OpenChemLib; abundances = representative
+    // isotopic compositions, IUPAC (CIAAW); average atomic weight = Ketcher element list. Hovering an element shows masses and isotopes
+    // (click pins it); the most common elements of organic molecules are highlighted.
+    return `<div class="pt">${cells}<div class="pt-info" id="pt-info">${info(EL.C)}</div><div class="pt-gap">lantanidi e attinidi</div></div>`;
   }
   function bindPeriodic(root) {
     let pinned = null; const box = root.querySelector("#pt-info");
@@ -116,10 +117,19 @@
     ["C2H4", "etilene: catene etiliche, eteri etilici"], ["C3H6", "propene: gruppi isopropilici"], ["HCN", "acido cianidrico: nitrili, eterocicli azotati"],
     ["HF", "composti fluorurati"], ["HCl", "composti clorurati"], ["HBr", "composti bromurati"], ["SO2", "sulfonammidi, solfoni"], ["SO3", "solfati, sulfonati"],
     ["H2S", "tioli, tioeteri"], ["CH3", "radicale metile (perdita dispari, poco comune in ESI)"], ["NO2", "radicale NO2: nitroderivati"], ["C6H6", "benzene: anelli aromatici"]];
+  // The masses are computed from the formulas (exact mass rounded to the integer); the "typical of" column summarises what the reviews below
+  // describe for even-electron ions in ESI-MS/MS. A loss is only a hypothesis: it must be checked against the structure.
+  function lossRefs() {
+    const L = (u, t) => `<a href="${u}" target="_blank" rel="noopener">${t}</a>`;
+    return `<div class="muted sm" style="margin-top:8px"><b>Riferimenti</b><ol style="margin:4px 0 0 18px;padding:0;line-height:1.5">
+      <li>Levsen K., Schiebel H.-M., Terlouw J. K., et al. <i>Even-electron ions: a systematic study of the neutral species lost in the dissociation of quasi-molecular ions.</i> J. Mass Spectrom. 2007, 42, 1024-1044. ${L("https://analyticalsciencejournals.onlinelibrary.wiley.com/doi/10.1002/jms.1234", "link")}</li>
+      <li>De Vijlder T., Valkenborg D., Lemi&egrave;re F., Romijn E. P., Laukens K., Cuyckens F. <i>A tutorial in small molecule identification via electrospray ionization-mass spectrometry: the practical art of structural elucidation.</i> Mass Spectrom. Rev. 2018, 37, 607-629. ${L("https://pmc.ncbi.nlm.nih.gov/articles/PMC6099382/", "link (accesso libero)")}</li>
+      <li>Demarque D. P., Crotti A. E. M., Vessecchi R., Lopes J. L. C., Lopes N. P. <i>Fragmentation reactions using electrospray ionization mass spectrometry: an important tool for the structural elucidation and characterization of synthetic and natural products.</i> Nat. Prod. Rep. 2016, 33, 432-455. ${L("https://pubs.rsc.org/en/content/articlelanding/2016/np/c5np00073d", "link")}</li>
+      <li>Hol&ccaron;apek M., Jir&aacute;sko R., L&iacute;sa M. <i>Basic rules for the interpretation of atmospheric pressure ionization mass spectra of small molecules.</i> J. Chromatogr. A 2010, 1217, 3908-3921. ${L("https://pubmed.ncbi.nlm.nih.gov/20303090/", "link")}</li></ol></div>`;
+  }
   function lossTab() {
-    return `<div class="muted sm">Differenze di massa frequenti fra uno ione e i suoi frammenti (o fra due ioni dello stesso composto). Una perdita è un'ipotesi: va controllata con la struttura.</div>
-      <table style="margin-top:6px"><tr><th>perdita</th><th class="num">&Delta;m</th><th>tipica di</th></tr>` +
-      LOSS.map(([f, n]) => { const m = massOf(f); return `<tr><td><b>${sub(f)}</b></td><td class="num"><b>${Math.round(m)}</b></td><td class="muted sm">${n}</td></tr>`; }).join("") + "</table>";
+    return `<table><tr><th>perdita</th><th class="num">&Delta;m</th><th>tipica di</th></tr>` +
+      LOSS.map(([f, n]) => { const m = massOf(f); return `<tr><td><b>${sub(f)}</b></td><td class="num"><b>${Math.round(m)}</b></td><td class="muted sm">${n}</td></tr>`; }).join("") + "</table>" + lossRefs();
   }
 
   // ---------------------------------------------------------------- isotope pattern, computed here (no external library)
@@ -173,8 +183,21 @@
       <div class="muted sm">Profilo isotopico calcolato dalla formula che scrivi tu (abbondanze naturali), come lo vede uno strumento a risoluzione unitaria: un picco per ogni massa intera (M, M+1, M+2...). Confrontalo con lo spettro: un cloro dà M+2 circa un terzo di M, un bromo M+2 alto quasi come M, lo zolfo un M+2 piccolo (4-5%). Nello spettro, clic destro &rarr; &laquo;Confronta con il profilo isotopico&raquo; lo disegna sopra i picchi.</div>
       <div id="is-out"></div>`;
   }
+  // stick spectrum of the pattern (m/z on x, relative intensity on y): every peak M, M+1, M+2... is a stem with its label and percentage
+  function isoSvg(rows) {
+    const w = 620, h = 200, l = 44, r = 14, t = 22, b = 36, lo = Math.min(...rows.map(q => q.mz)) - 1, hi = Math.max(...rows.map(q => q.mz)) + 1;
+    const X = v => l + (v - lo) / (hi - lo) * (w - l - r), Y = v => t + (100 - v) / 100 * (h - t - b), ink = "#6b7280", bar = "#2b5c8a";
+    let g = `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px;background:#fff;border:1px solid #d8dde6;border-radius:6px;margin-top:6px" font-family="system-ui" font-size="11"><path d="M${l} ${t - 6}V${h - b}H${w - r}" fill="none" stroke="${ink}"/>`;
+    for (const v of [0, 25, 50, 75, 100]) g += `<path d="M${l - 3} ${Y(v)}H${l}" stroke="${ink}"/><text x="${l - 6}" y="${Y(v) + 4}" text-anchor="end" fill="${ink}">${v}</text>`;
+    for (let v = Math.ceil(lo); v <= hi; v++) g += `<path d="M${X(v)} ${h - b}v3" stroke="${ink}"/><text x="${X(v)}" y="${h - b + 15}" text-anchor="middle" fill="${ink}">${v}</text>`;
+    for (const q of rows) {
+      const lab = (q.off ? "M+" + q.off : "M"), pc = q.rel < 1 ? q.rel.toFixed(2) : q.rel.toFixed(1);
+      g += `<path d="M${X(q.mz)} ${Y(0)}V${Y(q.rel)}" stroke="${bar}" stroke-width="3"/><text x="${X(q.mz)}" y="${Y(q.rel) - 14}" text-anchor="middle" fill="#1f2937" font-weight="600">${lab}</text><text x="${X(q.mz)}" y="${Y(q.rel) - 3}" text-anchor="middle" fill="${ink}">${pc}%</text>`;
+    }
+    return g + `<text x="${(l + w - r) / 2}" y="${h - 4}" text-anchor="middle" fill="#1f2937">m/z</text><text transform="translate(12 ${(t + h - b) / 2}) rotate(-90)" text-anchor="middle" fill="#1f2937">Intensità relativa (%)</text></svg>`;
+  }
   function isoHtml(rows) {
-    return `<table style="margin-top:6px;max-width:560px"><tr><th>picco</th><th class="num">m/z</th><th class="num">1 decimale</th><th class="num">intensità relativa %</th><th></th></tr>` +
+    return isoSvg(rows) + `<table style="margin-top:6px;max-width:560px"><tr><th>picco</th><th class="num">m/z</th><th class="num">1 decimale</th><th class="num">intensità relativa %</th><th></th></tr>` +
       rows.map(r => `<tr><td>${r.off ? "M+" + r.off : "M"}</td><td class="num">${r.mz.toFixed(4)}</td><td class="num">${r.mz.toFixed(1)}</td><td class="num"><b>${r.rel < 1 ? r.rel.toFixed(2) : r.rel.toFixed(1)}</b></td>` +
       `<td><i class="pt-bar" style="width:${Math.max(1, Math.round(r.rel * 2))}px"></i></td></tr>`).join("") + "</table>";
   }

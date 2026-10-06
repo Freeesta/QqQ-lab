@@ -5,13 +5,14 @@ cd /d "%~dp0"
 where py >nul 2>nul
 if not errorlevel 1 (
   py -3 scripts\avvia.py %*
-  goto end
+  if errorlevel 1 pause
+  goto :eof
 )
 where python >nul 2>nul
 if not errorlevel 1 (
   python scripts\avvia.py %*
-  goto end
+  if errorlevel 1 pause
+  goto :eof
 )
 echo Serve Python 3.11 o piu recente: https://www.python.org/downloads/ ^(spunta "Add python.exe to PATH"^) e rifai doppio clic.
-:end
 pause

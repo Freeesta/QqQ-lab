@@ -1080,31 +1080,53 @@ function lcHtml(lc, row) {
   svg += `<text x="${(l + w - r) / 2}" y="${hh - 4}" text-anchor="middle" fill="${css("--ink")}">Tempo (min)</text><text transform="translate(11 ${(t + hh - b) / 2}) rotate(-90)" text-anchor="middle" fill="${css("--ink")}">% B</text></svg>`;
   const pda = lc.pda || {}, ch = (lc.pda_channels || []).map(c => c.wl + " nm").join(", ");
   const tbl = `<table><tr><th class="num">Tempo (min)</th><th class="num">% B</th><th class="num">Flusso (mL/min)</th></tr>${g.map(q => `<tr><td class="num">${q.t}</td><td class="num">${q.b}</td><td class="num">${q.flow}</td></tr>`).join("")}</table>`;
-  return `<h4>Metodo cromatografico (LC) e PDA</h4><div class="muted sm">Non è scritto negli mzML: viene dal metodo di acquisizione del laboratorio (file .wiff / .dam). Vale per tutti i metodi del corso. Il tempo è quello della pompa: i picchi arrivano al rivelatore più tardi, per il volume morto del sistema.</div>
+  return `<h4>Metodo cromatografico (LC) e PDA</h4><div class="muted sm">Non è scritto negli mzML: l\u0027ho letto dal file .dam che hai caricato. Il tempo è quello della pompa: i picchi arrivano al rivelatore più tardi, per il volume morto del sistema.</div>
    ${svg}<div class="muted sm" style="margin:2px 0 6px">Gradiente: % di fase organica B nel tempo (secondo la procedura del corso: A = acqua con acido formico 0.05%, B = acetonitrile). La tabella mostra anche i cambi di flusso.</div>${tbl}
    <table style="margin-top:6px">${row("Flusso iniziale", lc.flow != null ? lc.flow + " mL/min" : "")}${row("Variazioni di flusso", flowTxt.length > 1 ? flowTxt.join(" → ") + " mL/min" : "")}${row("Durata della corsa", lc.run_time != null ? lc.run_time + " min" : "")}${row("Temperatura del forno", lc.oven != null ? lc.oven + " °C" : "")}
    ${row("PDA: intervallo", pda.start != null ? `${pda.start}-${pda.stop} nm (passo ${pda.step} nm)` : "")}${row("PDA: canali registrati", ch)}${row("PDA: frequenza", pda.freq != null ? pda.freq + " Hz" : "")}${row("PDA: lampade", pda.lamp)}${row("PDA: cella", pda.cell != null ? pda.cell + " °C" : "")}</table>`;
 }
 
 // ------------------------------------------------------------------ metodo di acquisizione (letto dagli mzML)
-async function showMethod() {
+async function showMethod(sel) {
   const f = E.files[E.cur]; if (!f) return info("Apri prima almeno un file.");
   let m; try { m = await J("/api/method?k=" + f.k); } catch (e) { return info("Errore: " + EH(e.message)); }
   const row = (a, b) => b == null || b === "" ? "" : `<tr><td class="muted">${a}</td><td>${b}</td></tr>`;
   const pol = { positive: "positivo (ESI+)", negative: "negativo (ESI-)", mixed: "misto", unknown: "non indicata" }[m.polarity] || m.polarity;
-  let h = `<div class="muted sm">File: <b>${EH(f.label)}</b> (cambia file con le frecce nella barra). Informazioni lette dall'mzML.</div><h4>Strumento</h4><table>${row("Modello", EH(m.instrument))}${row("Numero di serie", EH(m.serial))}${row("Componenti", EH(m.components.join(" → ")))}</table>
+  const labs = m.lab || [], li = labs.length ? Math.min(Math.max(sel ?? m.lab_pick ?? 0, 0), labs.length - 1) : -1, lab = labs[li];
+  let h = labs.length ? "" : `<div style="background:#fff4e0;border-left:4px solid #e08a00;border-radius:6px;padding:8px 12px;margin-bottom:8px"><b>Manca il metodo di acquisizione.</b> Gli mzML non contengono i parametri della sorgente, le energie di collisione e il gradiente: li leggo dal file <b>.dam</b> del metodo (quello di Analyst).<div style="margin-top:6px"><button class="go" id="m-load">Carica il metodo (.dam)</button></div></div>`;
+  h += `<div class="muted sm">File: <b>${EH(f.label)}</b> (cambia file con le frecce nella barra). Informazioni lette dall'mzML.</div><h4>Strumento</h4><table>${row("Modello", EH(m.instrument))}${row("Numero di serie", EH(m.serial))}${row("Componenti", EH(m.components.join(" → ")))}</table>
    <h4>Esperimento</h4><table>${row("Tipo rilevato", `<b>${KIND[m.kind]}</b>`)}${row("Polarità", pol)}${row("Intervallo di massa", m.scan_window ? `m/z ${m.scan_window[0]}-${m.scan_window[1]}` : "")}${row("Durata", `${m.rt_min.toFixed(2)}-${m.rt_max.toFixed(2)} min`)}${row("Scan", m.scans || "")}${row("Tempo di ciclo", m.cycle_s ? m.cycle_s.toFixed(2) + " s" : "")}${row("Precursori (Q1)", m.precursors.join(", "))}${row("Energia di collisione", m.ce.length ? m.ce.join(", ") + " eV" : "")}</table>`;
   if (m.transitions.length) h += `<h4>Transizioni MRM</h4><table><tr><th>Nome</th><th class="num">Q1 (m/z)</th><th class="num">Q3 (m/z)</th><th class="num">CE (eV)</th><th class="num">Dwell (ms)</th></tr>${m.transitions.map(t => `<tr><td>${EH(t.name || "")}</td><td class="num">${t.q1}</td><td class="num">${t.q3}</td><td class="num">${t.ce ?? ""}</td><td class="num">${t.dwell != null ? Math.round(t.dwell * 1000) : ""}</td></tr>`).join("")}</table>`;
-  if (m.lab && m.lab.length) {
-    const l = m.lab[0], pr = a => a.map(s => `<tr><td class="muted">${EH(s.label)}</td><td>${s.value} ${s.unit}</td></tr>`).join("");
-    h += `<h4>Parametri del metodo di laboratorio</h4><div class="muted sm">Non sono scritti negli mzML: vengono dal metodo di riferimento del laboratorio (${EH(l.name || "")}). Possono differire dal tuo file.</div><table>${pr(l.source)}${pr(l.compound)}</table>`;
+  if (lab) {
+    const pr = a => a.map(s => `<tr><td class="muted">${EH(s.label)}</td><td>${s.value} ${s.unit}</td></tr>`).join("");
+    h += `<h4>Parametri del metodo (file .dam)</h4>${labs.length > 1 ? `<div class="sm">Metodo: <select id="m-sel">${labs.map((x, i) => `<option value="${i}" ${i === li ? "selected" : ""}>${EH(x.name)}</option>`).join("")}</select> <button id="m-load">Carica un altro .dam</button></div>` : `<div class="muted sm">Letti dal file <b>${EH(lab.name)}</b> che hai caricato. <button id="m-load">Carica un altro .dam</button></div>`}
+      ${lab.error ? `<div class="fail">${EH(lab.error)}</div>` : lab.source.length || lab.compound.length ? `<table>${pr(lab.source)}${pr(lab.compound)}</table>` : `<div class="muted sm">In questo file non ho trovato parametri della sorgente.</div>`}`;
+    if (lab.lc) h += lcHtml(lab.lc, row);
+    else if (!lab.error) h += `<div class="muted sm" style="margin-top:6px">Questo .dam non contiene il metodo cromatografico (gradiente) né le impostazioni del PDA.</div>`;
   }
-  if (m.lab && m.lab[0] && m.lab[0].lc) h += lcHtml(m.lab[0].lc, row);
   if (m.pda) h += `<div class="muted sm" style="margin-top:8px">Questo file contiene anche il segnale del PDA: nel pannello Cromatogramma scegli «PDA (UV, totale)».</div>`;
   h += `<h4>Origine dei dati</h4><table>${row("File originali", EH(m.source_files.join(", ")))}${row("Software", EH(m.software.join("; ")))}</table>`;
-  big("Metodo di acquisizione", h);
+  const d = Q("#bigdlg"); if (d.open) d.close();
+  big("Metodo di acquisizione", h, () => {
+    const sl = Q("#m-sel"); if (sl) sl.onchange = () => showMethod(+sl.value);
+    const ld = Q("#m-load"); if (ld) ld.onclick = loadDam;
+  });
 }
-Q("#np-method").onclick = showMethod;
+// the method (.dam) can also be loaded here, without going back to the start screen
+function loadDam() {
+  const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".dam,.DAM";
+  inp.onchange = async () => {
+    const fl = inp.files[0]; if (!fl) return;
+    try {
+      const j = await (await fetch("/api/upload?name=" + encodeURIComponent(fl.name), { method: "POST", body: fl })).json();
+      if (j.error) throw new Error(j.error);
+      if (typeof ST !== "undefined") { ST.methods = j.methods || ST.methods; renderMethods(); }
+      showMethod();
+    } catch (e) { info("Errore: " + EH(e.message)); }
+  };
+  inp.click();
+}
+Q("#np-method").onclick = () => showMethod();
 
 // ------------------------------------------------------------------ esportazione e relazione
 function exportMenu(ev) {
@@ -1142,7 +1164,7 @@ Q("#np-map").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(E.file
 Q("#np-mrm").onclick = () => addPanel("mrm", {});
 Q("#np-tile").onclick = tile;
 Q("#np-merge").onclick = mergeXics;
-Q("#addf").onclick = () => { S.adding = true; applyView(); };
+Q("#addf").onclick = async () => { S.adding = true; try { const d = await J("/api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
 Q("#dhx").onclick = () => { Q("#dhint").hidden = true; };
 addEventListener("resize", () => { fitWidth(); redrawAll(); });
 document.addEventListener("tpview", e => { if (e.detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });

@@ -8,6 +8,7 @@ import json
 import os
 import re
 import threading
+import time
 import webbrowser
 from datetime import datetime
 from pathlib import Path
@@ -20,10 +21,14 @@ import numpy as np
 from .chem.elements import formula_mz
 from .core.analysis import Analysis
 from .explore import Session
+from .reader.methodinfo import read_methods
 from .project import SAMPLE_TYPES, guess_sample, load_project, write_project
 
 
-UPLOAD_SUFFIXES = (".mzml", ".wiff", ".scan")
+UPLOAD_SUFFIXES = (".mzml", ".wiff", ".scan", ".dam")
+# "close the browser = close the program" (only with --exit-on-close): every open page pings the server; when no page is left
+# (after a short grace period that survives a reload) or none ever connected, the server stops
+EXIT_GRACE, EXIT_FIRST, EXIT_STALE = 8.0, 120.0, 150.0
 
 
 class App:
@@ -56,6 +61,32 @@ class App:
             self.session = None
 
     # ------------------------------------------------------------------ app mode: files and start
+    # ------------------------------------------------------------------ browser presence (close the browser -> stop the program)
+    def _presence(self):
+        if not hasattr(self, "_tabs"):
+            self._tabs, self._plock, self._deadline = {}, threading.Lock(), time.time() + EXIT_FIRST
+        return self._plock
+
+    def ping(self, tab: str):
+        with self._presence():
+            self._tabs[tab] = time.time()
+            self._deadline = None
+
+    def bye(self, tab: str):
+        with self._presence():
+            self._tabs.pop(tab, None)
+            if not self._tabs:
+                self._deadline = time.time() + EXIT_GRACE
+
+    def should_exit(self) -> bool:
+        with self._presence():
+            now = time.time()
+            for t in [t for t, seen in self._tabs.items() if now - seen > EXIT_STALE]:
+                del self._tabs[t]
+            if not self._tabs and self._deadline is None:
+                self._deadline = now + EXIT_GRACE
+            return not self._tabs and self._deadline is not None and now > self._deadline
+
     def files(self) -> list[dict]:
         if not self.workdir:
             return []
@@ -67,11 +98,35 @@ class App:
                             "scan": (p.parent / (p.name + ".scan")).exists() if p.suffix.lower() == ".wiff" else None})
         return out
 
+    def methods(self) -> list[dict]:
+        """Acquisition methods (.dam) uploaded in the work folder, oldest first."""
+        if not self.workdir:
+            return []
+        ps = sorted((p for p in self.workdir.iterdir() if p.suffix.lower() == ".dam" and p.is_file()), key=lambda p: p.stat().st_mtime)
+        return [{"name": p.name, "size": p.stat().st_size} for p in ps]
+
+    def lab_methods(self) -> list[dict]:
+        """The parameters read from every uploaded .dam: [{name, source, compound, lc, file}]. Nothing is assumed when none is loaded."""
+        out = []
+        for m in self.methods():
+            p = self.workdir / m["name"]
+            key = (str(p), p.stat().st_mtime)
+            cache = self.__dict__.setdefault("_dam_cache", {})
+            if key not in cache:
+                try:
+                    r = read_methods(p)[0]
+                    r["name"] = p.name
+                    cache[key] = r
+                except Exception as e:  # noqa: BLE001 -- a broken file must not break the page
+                    cache[key] = {"name": p.name, "error": f"non riesco a leggere questo file ({e})", "source": [], "compound": [], "file": {}}
+            out.append(cache[key])
+        return out
+
     @staticmethod
     def safe_name(name: str) -> str:
         n = Path(name.replace("\\", "/")).name.strip()
         if not n or n.startswith(".") or Path(n).suffix.lower() not in UPLOAD_SUFFIXES:
-            raise ValueError(f"file type not accepted: {name!r} (use .mzML, or .wiff together with its .wiff.scan)")
+            raise ValueError(f"file type not accepted: {name!r} (use .mzML, or .wiff together with its .wiff.scan, or a method .dam)")
         return re.sub(r"[\x00-\x1f<>:\"|?*]", "_", n)
 
     def save_upload(self, name: str, stream, length: int) -> str:
@@ -168,7 +223,7 @@ class App:
 
     def session_state(self) -> dict:
         return {"session": self.session.info() if self.session else None, "app": bool(self.workdir),
-                "workdir": str(self.workdir) if self.workdir else None, "files": self.files(),
+                "workdir": str(self.workdir) if self.workdir else None, "files": self.files(), "methods": self.methods(),
                 "has_analysis": self.analysis is not None, "version": __import__("tpfinder").__version__}
 
     def _item(self, k: int):
@@ -192,11 +247,11 @@ class App:
 
     def method(self, k: int) -> dict:
         m = self._item(k).method()
-        lab = resources.files("tpfinder").joinpath("config/metodo_laboratorio.json")
-        try:
-            m["lab"] = json.loads(lab.read_text(encoding="utf-8")) if lab.is_file() else None
-        except (OSError, ValueError):
-            m["lab"] = None
+        m["lab"] = self.lab_methods()            # only what the user uploaded as .dam: no built-in method is assumed
+        pick = {"full": "full", "ms2": "ms2", "mrm": "mrm"}.get(m.get("kind"), "")
+        names = [x["name"].lower() for x in m["lab"]]
+        hit = [i for i, n in enumerate(names) if pick and pick in n] or [i for i, n in enumerate(names) if m.get("kind") == "ms2" and "ms2" in n]
+        m["lab_pick"] = hit[-1] if hit else (len(names) - 1 if names else None)
         return m
 
     def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None) -> dict:
@@ -235,7 +290,7 @@ class App:
         if self.analysis is None:
             if self.workdir and not self.path:
                 return {"error": None, "phase": "start", "app": True, "workdir": str(self.workdir),
-                        "files": self.files(), "version": __import__("tpfinder").__version__}
+                        "files": self.files(), "methods": self.methods(), "version": __import__("tpfinder").__version__}
             return {"error": self.error}
         a = self.analysis
         return {"error": None, "phase": "analysis", "app": bool(self.workdir),
@@ -338,9 +393,13 @@ def make_handler(app: App):
                 if not self._local_only():
                     return self._json({"error": "forbidden"}, 403)
                 n = int(self.headers.get("Content-Length") or 0)
+                if u.path in ("/api/ping", "/api/bye"):
+                    self.rfile.read(n)
+                    (app.ping if u.path == "/api/ping" else app.bye)(q.get("tab", ""))
+                    return self._json({"ok": True})
                 if u.path == "/api/upload":
                     app.save_upload(q.get("name", ""), self.rfile, n)
-                    return self._json({"files": app.files()})
+                    return self._json({"files": app.files(), "methods": app.methods()})
                 body = json.loads(self.rfile.read(n) or b"{}")
                 if u.path == "/api/explore":
                     app.open_session(body)
@@ -350,7 +409,7 @@ def make_handler(app: App):
                     return self._json(app.state())
                 if u.path == "/api/remove":
                     app.remove_file(body.get("name", ""))
-                    return self._json({"files": app.files()})
+                    return self._json({"files": app.files(), "methods": app.methods()})
                 if u.path == "/api/notebook":
                     app.save_notebook(body)
                     return self._json({"ok": True})
@@ -439,7 +498,7 @@ def default_workdir(new: bool = False) -> Path:
     return root / datetime.now().strftime("sessione_%Y%m%d_%H%M%S")
 
 
-def serve(project_path, port: int = 8790, open_browser: bool = True, workdir=None):
+def serve(project_path, port: int = 8790, open_browser: bool = True, workdir=None, exit_on_close: bool = False):
     import platform
     from . import __version__, console as C
     if not os.environ.get("QQQ_HEADER"):        # the launcher (scripts/avvia.py) has already printed it
@@ -468,7 +527,16 @@ def serve(project_path, port: int = 8790, open_browser: bool = True, workdir=Non
     if app.workdir:
         C.note("cartella di lavoro: " + C.home(app.workdir))
     C.say()
-    C.say("  " + C.dim("Per chiudere QqQ lab chiudi questa finestra (oppure premi Ctrl+C)."))
+    C.say("  " + C.dim("Per chiudere QqQ lab chiudi la pagina del browser (oppure questa finestra, o premi Ctrl+C)." if exit_on_close
+                       else "Per chiudere QqQ lab chiudi questa finestra (oppure premi Ctrl+C)."))
+    if exit_on_close:
+        app._presence()            # starts the clock: if no page ever connects (EXIT_FIRST), the program stops by itself
+
+        def watch():
+            while not app.should_exit():
+                time.sleep(1)
+            httpd.shutdown()
+        threading.Thread(target=watch, daemon=True).start()
     if open_browser:
         webbrowser.open(url)
     try:
@@ -476,5 +544,9 @@ def serve(project_path, port: int = 8790, open_browser: bool = True, workdir=Non
     except KeyboardInterrupt:
         C.say()
         C.say("  " + C.dim("QqQ lab chiuso: il lavoro è salvato nella cartella di lavoro."))
+    else:
+        if exit_on_close:
+            C.say()
+            C.say("  " + C.dim("Pagina chiusa: QqQ lab si ferma. Il lavoro è salvato nella cartella di lavoro."))
     finally:
         httpd.server_close()

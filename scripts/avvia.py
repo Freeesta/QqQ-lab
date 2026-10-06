@@ -228,7 +228,7 @@ def main() -> int:
         return 1
     C.ok("Ambiente Python pronto", f"Python {current[0]}.{current[1]}")
     os.environ["QQQ_HEADER"] = "1"           # the app does not print the header again
-    cmd = [str(env_python()), "-m", "tpfinder", *(sys.argv[1:] or ["app"])]
+    cmd = [str(env_python()), "-m", "tpfinder", *(sys.argv[1:] or ["app", "--exit-on-close"])]
     if WIN:
         return subprocess.call(cmd)
     os.execv(cmd[0], cmd)  # replaces this process: closing the window stops the app
