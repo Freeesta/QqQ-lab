@@ -1,5 +1,7 @@
 # PROSSIMA CHAT (QqQ lab): Impostazioni, Disegno, Dati, XIC, Addotti e lavori in coda
 
+> **Come si usa e si mantiene questo file.** Contiene SOLO il lavoro ancora da fare. Quando una sezione, un punto o una sotto-voce è fatta e verificata, **cancellala da questo file** (non segnarla «fatta», non lasciare cronaca: la storia sta in `git log` e in `AGENTS.md`); le conoscenze che restano utili (nuove regole, nomi di funzioni, decisioni) vanno in `AGENTS.md`. Se resta una parte fatta a metà, riscrivila come ciò che manca. Rinumera i punti e le sezioni rimaste. Se tutto è fatto, il file deve ridursi a poche righe («niente in coda») più le Regole fisse. L'aggiornamento di questo file fa parte dello stesso commit del lavoro.
+
 Lavori nella cartella `~/QqQ_lab/QqQ_lab`. Leggi prima `AGENTS.md`. Una sola chat alla volta sulla cartella. Prima di modificare `index.html`, `AGENTS.md`, `explore.js` o `draw.js`, ri-leggi la versione sul Mac, perché un'altra chat può averli cambiati. Non sovrascrivere con copie vecchie.
 
 ## Regole fisse
@@ -132,7 +134,16 @@ Riferimenti: `qqq_lab/web/tables.js` (`ADD`, `adducts`, `adductTab`, `bindAdduct
 7. **Nota corretta su [M]+.** Spiega meglio che per un catione preformato (ammonio quaternario) si inserisce la formula del *catione* (la massa sottrae l'elettrone), mentre per il radicale catione M+. si inserisce la formula della molecola neutra. Ora i due casi sono confusi nella stessa nota.
 8. Test: spostamenti di massa di tutti gli addotti contro i valori calcolati a mano, coerenza fra gli elenchi, colonna nominale, strumento delle coppie di addotti. Aggiorna Teoria (cap. ESI) e `AGENTS.md`.
 
-## SEZIONE 6: lavori in coda (dai vecchi prompt; NON farli senza il via libera di Federico, tranne dove scritto)
+## SEZIONE 6: pulizia dei residui dei launcher locali (autorizzata da Federico)
+Dal 6 ottobre 2026 gli studenti usano SOLO il sito (GitHub Pages); `QqQ lab.app`, `Avvia QqQ lab.*`, `scripts/avvia.py` e `.venv-qqq-lab` sono già stati spostati in `_cestino/2026-10-06_launcher_locali/`, e README, AGENTS, `.gitattributes`, `.gitignore` e CI aggiornati. Il server locale resta SOLO per i test e2e e lo sviluppo. Restano da togliere dal codice (grep mirato, non leggere `vendor/`):
+1. `--exit-on-close` (`cli.py`, `server.py`), heartbeat `/api/live` e `/api/bye` lato server e lato pagina (`explore.js`, `index.html`, `browser.js`, `browser-worker.js` se presenti), il test pytest «`--exit-on-close`» in `tests/test_pipeline.py` e `e2e10.py` (adatta: toglie solo la parte sulla chiusura, non le altre prove); il test pytest in meno cambia il numero dei test in `AGENTS.md`.
+2. `qqq_lab/console.py` e le sue chiamate (intestazione del Terminale, spunte, spinner, `QQQ_HEADER`) se non servono più nemmeno al comando `app` di sviluppo: semplifica con un `print` minimo.
+3. `tools/genera_icone.py`: toglie la scrittura di `AppIcon.icns` dentro il pacchetto app (non esiste più); restano logo, favicon e icone del sito (PWA, se resta dopo la Sezione 1).
+4. `Teoria QqQ lab.html` nella radice (apre la Teoria da disco): chiedi a Federico se serve ancora; se no, spostala in `_cestino/`.
+5. Testi che citano doppio clic, Terminale, `.venv`, «versione offline dal computer» (README, `AGENTS.md` sez. 3, 6, 8, 9, Teoria, aiuto, `help.js`). `convert.py`/`converti.bat` (msconvert per i `.wiff`) restano: non sono launcher.
+6. `pyproject.toml`: controlla che non ci siano voci solo per i launcher (non cambiare le dipendenze).
+
+## SEZIONE 7: lavori in coda (dai vecchi prompt; NON farli senza il via libera di Federico, tranne dove scritto)
 
 1. **Frecce ← → sul cromatogramma** (da decidere, analisi e misure in `AGENTS.md` sez. 12). Consiglio: (b) niente svuotamento dello spettro + «ultimo vince» + un draw per frame + niente `ctl()` a ogni passo; poi (c) asse y bloccato sul massimo delle ±20 scansioni con lucchetto, con (a) `api/spectra` a blocco e cache per scansione; (d) sagoma della scansione precedente, opzionale e spenta. Sconsigliata l'evidenziazione automatica dei picchi che cambiano.
 2. **Salvataggio e sicurezza dei dati dello studente** (proposta, da approvare). Oggi nel browser file e taccuino stanno in IndexedDB (si perdono in finestra privata o cancellando i dati del sito).
@@ -145,9 +156,9 @@ Riferimenti: `qqq_lab/web/tables.js` (`ADD`, `adducts`, `adductTab`, `bindAdduct
 4. **Da verificare a mano da Federico** (non farlo fare alla chat): Mac reale (`QqQ lab.app`: permesso Terminale, icona, Gatekeeper; `Avvia QqQ lab.command`, se «privilegi» `chmod +x`), Windows con Python nuovo e prima apertura offline, Safari, file molto grandi; nomi veri degli standard (concentrazione indovinata), finestra di integrazione comune Quant/Qual, retta di taratura contro Analyst (RT, aree, rapporto Quant/Qual); misura su Pyodide della latenza di `api/spectrum` per scansione.
 5. **Limiti noti** (non nasconderli): file con MS1 e MS2 insieme (data-dependent) trattati come MS2; etichette dell'asse x dello spettro affollate con intervallo MS2 stretto; i controlli del cromatogramma TIC a 1500 px vanno su una seconda riga (voluto); spettri UV del PDA non decodificati (negli mzML c'è solo `TWC`; vedi Sezione 3, punto 3).
 
-## SEZIONE 7: chiusura
+## SEZIONE 8: chiusura
 - `node --check` su `draw.js`, `explore.js` e lo script inline di `index.html` prima dei test.
 - Esegui e2e e pytest, ciascuno separatamente.
-- Aggiorna `AGENTS.md` (riga `draw.js`: proprietà con carica esclusa e «?», ione predefinito nessuno, «Disegna veloce» aggiunge e non sostituisce; impostazioni ridotte, nuova sessione con pulizia cache e avviso, causa del problema del Disegno, schermo intero, limiti RT, estratto PDA, tooltip) e questo file (`PROMPT_PROSSIMA_CHAT.md`: togli ciò che è fatto, aggiungi bug aperti e prossimi passi; sostituisci, non accodare).
+- Aggiorna `AGENTS.md` (riga `draw.js`: proprietà con carica esclusa e «?», ione predefinito nessuno, «Disegna veloce» aggiunge e non sostituisce; impostazioni ridotte, nuova sessione con pulizia cache e avviso, causa del problema del Disegno, schermo intero, limiti RT, estratto PDA, tooltip) e questo file (`PROMPT_PROSSIMA_CHAT.md`): **cancella da esso tutto ciò che hai fatto e verificato**, lascia solo ciò che manca (bug aperti, prossimi passi), rinumera; nello stesso commit.
 - Prima di copiare i file sul Mac, confronta gli md5 dei file condivisi (`index.html`, `AGENTS.md`, `explore.js`).
 - Un commit solo e un report breve, con cosa Federico deve controllare a mano (Cmd+Shift+R): aggiungere uno SMILES dal pannello laterale senza perdere il disegno, logP nel «?» e con una struttura carica, Ione predefinito nessuno, impostazioni, nuova sessione con avviso, SMILES alla selezione, logP, export con e senza sfondo trasparente, schermo intero su ogni pannello, limiti RT, estratto PDA, tooltip.

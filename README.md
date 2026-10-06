@@ -3,9 +3,9 @@
 Programma didattico per esplorare dati LC-MS di un triplo quadrupolo (risoluzione unitaria) e cercare
 i **prodotti di trasformazione (TP)** di un inquinante degradato nel tempo. Lo studente sceglie cosa
 estrarre, integra, attribuisce e disegna: il programma mostra i dati, **non dà le risposte**.
-Si può usare **online, senza installare nulla** (https://freeesta.github.io/QqQ-lab/) oppure **offline** dal tuo computer. In entrambi i casi i dati restano sul tuo computer.
+Si usa **online, senza installare nulla** (https://freeesta.github.io/QqQ-lab/). I dati restano sul tuo computer.
 
-*(English: a light, offline teaching tool to explore unit-resolution LC-MS data and look for
+*(English: a light teaching tool that runs in the browser to explore unit-resolution LC-MS data and look for
 transformation products. It shows the data; the student does the reasoning.)*
 
 ## Versione online (nessuna installazione)
@@ -19,22 +19,14 @@ browser). Dopo la prima visita funziona anche senza internet (copia nel browser)
 **Installare come app** (versione online): Chrome/Edge, icona "Installa" nella barra degli indirizzi; Safari su Mac, File → Aggiungi al Dock; iPhone/iPad, Condividi → Aggiungi alla schermata Home. Dopo la prima visita funziona anche offline (controllato con Chrome: nessun errore di installabilità, service worker attivo, test offline in `tests_e2e/e2e13.py`).
 Come si pubblica: vedi `AGENTS.md`, sezione "Versione nel browser".
 
-## Avvio (offline)
+## Uso
 
-- **Doppio clic**: Mac **`QqQ lab.app`** (la prima volta macOS chiede il permesso di aprire il Terminale; se dice che lo sviluppatore non è identificato: clic destro → Apri), oppure `Avvia QqQ lab.command`; Windows `Avvia QqQ lab.bat`. La prima volta crea un
-  ambiente Python privato (`.venv-qqq-lab`) e installa numpy: serve internet e Python 3.11 o più recente
-  (consigliato l'ultimo, da https://www.python.org/downloads/). Se in seguito installi un Python più nuovo,
-  l'ambiente si aggiorna da solo al doppio clic successivo; quello vecchio non viene cancellato.
-  Nota: l'avvio non firmato può far comparire un avviso del sistema ("sviluppatore non identificato" su Mac, "Windows ha protetto il PC" su Windows):
-  è normale per programmi non firmati, usa **Apri comunque** (Mac: clic destro → Apri; Windows: Ulteriori informazioni → Esegui comunque). L'installazione scarica
-  solo pacchetti già compilati (numpy) dal sito ufficiale di Python, non aggiorna pip e non esegue script di compilazione; serve la rete la prima volta.
-  Anche in questa versione **i tuoi file non lasciano il tuo computer**: il programma risponde solo a questo computer (127.0.0.1).
-- **Da terminale**: `pip install -e .` una volta, poi `python -m qqq_lab app` (opzioni `--workdir CARTELLA`, `--port`).
+Apri il sito, trascina i file `.mzML` (o "clicca per sceglierli"), controlla tempi e tipi, premi **Carica dati**.
+Il taccuino (pannelli, XIC, integrazioni, annotazioni, disegni) si salva da solo nel browser e si ripristina alla riapertura.
 
-Si apre il browser: trascina i file `.mzML` (o "clicca per sceglierli"), controlla tempi e tipi, premi
-**Carica dati**. I file sono copiati in `~/QqQ_lab_lavoro/sessione_...`: gli originali non vengono
-toccati. Il taccuino (pannelli, XIC, integrazioni, annotazioni, disegni) si salva da solo
-(`taccuino.json`) e si ripristina alla riapertura.
+## Sviluppo (solo per chi modifica il programma)
+
+`pip install -e .` una volta, poi `python -m qqq_lab app` (opzioni `--workdir CARTELLA`, `--port`): server locale usato per i test e2e. Gli studenti usano solo il sito.
 
 ## Le schede
 

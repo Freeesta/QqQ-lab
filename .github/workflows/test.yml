@@ -1,6 +1,6 @@
 # Runs on every push and pull request (once the project is on GitHub).
 # Unit tests on the oldest supported and the newest Python, on Linux, Mac and Windows;
-# the launcher (scripts/avvia.py) is tried too; JavaScript is syntax-checked.
+# JavaScript is syntax-checked.
 name: test
 
 on:
@@ -27,8 +27,6 @@ jobs:
         run: python -m pip install -e ".[test]"
       - name: Unit tests
         run: python -m pytest -q tests
-      - name: Launcher builds its environment and starts the program
-        run: python scripts/avvia.py --help
 
   javascript:
     runs-on: ubuntu-latest
