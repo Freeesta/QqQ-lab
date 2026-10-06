@@ -4,6 +4,7 @@
 
 Sources (kept OUTSIDE the public repository, default ../QqQ_lab_privato/tpmine/ next to the repo folder):
     js/*.js        run in file-name order after the unlock; they register their tools with window.QTOOLS.register(...)
+    files/*        extra text files given to the scripts as QTOOLS.ctx.files[name] (the Web Worker source)
     py/**/*.py     the Python of the tools, zipped and handed to Pyodide at run time (any other file in py/ is included as is)
 Every .js and .py source must carry the marker TPMINE-PRIVATE (a comment): build_site.py refuses to publish a site in which the
 marker appears in plain text. The password is never written anywhere (not in files, not in the output).
@@ -36,6 +37,12 @@ def pack(src: Path) -> dict:
         if MARKER not in code:
             sys.exit(f"{f.name}: missing the marker {MARKER} (add a comment with it)")
         js.append({"name": f.name, "code": code})
+    files = {}
+    for f in sorted((src / "files").glob("*")) if (src / "files").is_dir() else []:       # extra text files (e.g. the Web Worker source)
+        code = f.read_text(encoding="utf-8")
+        if MARKER not in code:
+            sys.exit(f"files/{f.name}: missing the marker {MARKER}")
+        files[f.name] = code
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as z:
         for f in sorted((src / "py").rglob("*")):
@@ -43,7 +50,7 @@ def pack(src: Path) -> dict:
                 if f.suffix == ".py" and MARKER not in f.read_text(encoding="utf-8"):
                     sys.exit(f"{f.relative_to(src)}: missing the marker {MARKER}")
                 z.write(f, f.relative_to(src / "py").as_posix())
-    return {"v": 1, "js": js, "py_zip_b64": base64.b64encode(buf.getvalue()).decode(), "meta": {}}
+    return {"v": 1, "js": js, "py_zip_b64": base64.b64encode(buf.getvalue()).decode(), "files": files, "meta": {}}
 
 
 def encrypt(payload: dict, password: str, iterations: int = ITER) -> bytes:

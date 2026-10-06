@@ -21,7 +21,7 @@ cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(tmp /
 if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
 subprocess.run(cmd, check=True)
 site = tmp / "site"
-marker = b"DEMO-SEGRETO-4471"
+marker = b"Elenco delle trasformazioni (nome;variazione)"
 def no_plain():
     for f in site.rglob("*"):
         if f.is_file() and "pyodide" not in f.parts and "vendor" not in f.parts:
@@ -48,16 +48,17 @@ try:
             for _ in range(5): pg.click('button.hq[data-help="header"]')
             pg.wait_for_selector("#qt-dlg[open]"); pg.fill("#qt-pw", "parola-sbagliata"); pg.click("#qt-go")
             pg.wait_for_function("document.getElementById('qt-msg').textContent.includes('vuoto')", timeout=30000)
-            assert pg.evaluate("window.QTOOLS.list().length") == 0 and pg.evaluate("document.getElementById('qt-bar').hidden")
+            assert pg.evaluate("window.QTOOLS.list().length") == 0 and not pg.query_selector('#nav button[data-v="tpmine"]')
             assert marker.decode() not in pg.content()
         step("wrong password: ironic message, nothing unlocked", wrong)
         def right():
             pg.fill("#qt-pw", pw); pg.click("#qt-go")
-            pg.wait_for_selector("#qt-bar:not([hidden])", timeout=30000)
-            assert pg.evaluate("window.QTOOLS.list().map(t=>t.id)") == ["demo"]
+            pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
+            assert pg.evaluate("window.QTOOLS.list().map(t=>t.id)") == ["tpmine"]
             assert not pg.evaluate("document.getElementById('qt-dlg').open")
-            pg.click('#qt-bar button[data-t="demo"]'); pg.wait_for_selector("#demo-secret")
-            assert marker.decode() in pg.inner_text("#qt-host")
+            pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
+            assert marker.decode() in pg.inner_text("#v-tpmine") and not pg.evaluate("document.getElementById('v-draw').offsetParent")
+            pg.click('#nav button[data-v="theory"]'); assert pg.evaluate("document.getElementById('v-tpmine').hidden")
             pg.screenshot(path=str(HERE / "shots" / "tpmine1.png")) if (HERE / "shots").exists() else None
         step("right password: tool registered and opened", right)
         def nostore():

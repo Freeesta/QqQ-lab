@@ -6,7 +6,8 @@
 //   -> the decrypted scripts run from Blob URLs and register their tools with window.QTOOLS.register(...) -> launcher bar.
 // Nothing decrypted is written to the Cache API, IndexedDB, localStorage or the service worker cache.
 // File format of tpmine.enc: "TPMN" | version (1 byte) | PBKDF2 iterations (uint32 BE) | salt (16) | iv (12) | AES-GCM ciphertext
-// (the 37-byte header is the GCM additional data). The plaintext is a zlib-compressed JSON {v, js:[{name,code}], py_zip_b64}.
+// (the 37-byte header is the GCM additional data). The plaintext is a zlib-compressed JSON {v, js:[{name,code}], py_zip_b64, files:{name:text}}.
+// A tool registered with nav:true gets its own tab in the page header (next to Teoria) and a full page; others get a button in the floating bar.
 (() => {
   "use strict";
   const ENC_URL = new URL("tpmine.enc", document.currentScript ? document.currentScript.src : location.href).href;
@@ -18,7 +19,7 @@
   const reg = window.QTOOLS = {
     ctx: null,                                     // set after the unlock: {pyZip: Uint8Array, base: URL of the site static folder}
     list: () => tools.slice(),
-    register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); render(); },
+    register(t) { if (!t || !t.id || typeof t.open !== "function") throw new Error("QTOOLS.register: id and open() are required"); const i = tools.findIndex(x => x.id === t.id); if (i >= 0) tools[i] = t; else tools.push(t); if (t.nav) addTab(t); render(); },
   };
 
   // ---- crypto
@@ -66,9 +67,26 @@
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   function render() {
     if (!bar) return;
-    bar.hidden = !unlocked || !tools.length;
-    bar.innerHTML = tools.map(t => `<button data-t="${esc(t.id)}" title="${esc(t.desc || t.name)}">${t.icon || ""}${esc(t.name)}</button>`).join("");
+    const floating = tools.filter(t => !t.nav);
+    bar.hidden = !unlocked || !floating.length;
+    bar.innerHTML = floating.map(t => `<button data-t="${esc(t.id)}" title="${esc(t.desc || t.name)}">${t.icon || ""}${esc(t.name)}</button>`).join("");
     bar.querySelectorAll("button").forEach(b => b.onclick = () => openTool(tools.find(t => t.id === b.dataset.t)));
+  }
+  // tool with its own tab: button in #nav + full page section after the other views; opened lazily on the first visit
+  function addTab(t) {
+    const nav = document.getElementById("nav"), anchor = document.getElementById("v-theory");
+    if (!nav || !anchor || document.getElementById("v-" + t.id)) return;
+    const b = document.createElement("button"); b.dataset.v = t.id; b.title = t.desc || t.name;
+    b.innerHTML = (t.icon ? t.icon + " " : "") + esc(t.name); b.style.display = "inline-flex"; b.style.alignItems = "center"; b.style.gap = "5px";
+    nav.appendChild(b);
+    const sec = document.createElement("section"); sec.id = "v-" + t.id; sec.hidden = true; anchor.after(sec);
+    let opened = false;
+    b.onclick = () => setView(t.id);
+    document.addEventListener("tpview", ev => {
+      const on = ev.detail.view === t.id; sec.hidden = !on;
+      if (on && !opened) { opened = true; try { t.open(sec, reg.ctx); } catch (e) { sec.textContent = "Il filone ha ceduto: " + (e && e.message || e); } }
+      else if (on && t.onShow) try { t.onShow(); } catch (_) { /* ignore */ }
+    });
   }
   function openTool(t) {
     host.innerHTML = `<div class="qt-hd">${t.icon || ""}<b>${esc(t.name)}</b><span class="muted sm">${esc(t.desc || "")}</span><button class="qt-x" title="Chiudi">Chiudi</button></div><div class="qt-bd"></div>`;
@@ -105,7 +123,7 @@
     const r = await fetch(ENC_URL);                            // no-store would defeat offline use; the file is encrypted anyway
     if (!r.ok) throw new Error("assente");
     const pkg = await decrypt(await r.arrayBuffer(), password);
-    reg.ctx = { pyZip: pkg.py_zip_b64 ? b64(pkg.py_zip_b64) : null, base: new URL(".", ENC_URL).href, meta: pkg.meta || {} };
+    reg.ctx = { pyZip: pkg.py_zip_b64 ? b64(pkg.py_zip_b64) : null, base: new URL(".", ENC_URL).href, meta: pkg.meta || {}, files: pkg.files || {} };
     unlocked = true;
     for (const f of pkg.js || []) await runScript(f.name, f.code);
     render();
