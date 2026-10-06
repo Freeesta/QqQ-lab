@@ -17,7 +17,9 @@ const QICON = (() => {
     full: wrap(box(0, 1) + sweep(0) + box(1) + pass(1) + box(2) + pass(2), "Full Scan: Q1 scansiona, Q2 e Q3 lasciano passare"),
     prod: wrap(box(0) + fixed(0) + box(1) + hit(1) + box(2, 1) + sweep(2), "Product ion: Q1 fisso, Q2 frammenta, Q3 scansiona"),
     mrm: wrap(box(0) + fixed(0) + box(1) + hit(1) + box(2) + fixed(2), "MRM: Q1 fisso, Q2 frammenta, Q3 fisso"),
-    get(k, px = 20) { return this[k].replace("<svg ", `<svg width="${Math.round(px * 48 / 20)}" height="${px}" `); },
+    // TP Mine (secret module): a pickaxe and a gem, square
+    mine: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="TP Mine"><path d="M5 21.5L13 6.6"/><path d="M3.5 12.5C6 5.5 16 3.5 21 9" stroke-width="2.2"/><path d="M3.5 12.5l.9 2.4M21 9l-2.4-.8" stroke-width="1.4"/><path d="M16.5 16l2.2-2.8 2.2 2.8-2.2 3.2z" fill="currentColor" fill-opacity=".25" stroke-width="1.4"/></svg>`,
+    get(k, px = 20) { const w = k === "mine" ? px : Math.round(px * 48 / 20); return this[k].replace("<svg ", `<svg width="${w}" height="${px}" `); },
   };
 })();
 if (typeof module !== "undefined") module.exports = QICON;
