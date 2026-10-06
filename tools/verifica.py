@@ -36,6 +36,7 @@ E2E = ROOT / "tests_e2e"
 # "crypto" = needs the 'cryptography' package. Keep this table up to date when you add an e2e (default: no needs).
 NEEDS: dict[str, set[str]] = {
     "e2e9": {"dam"}, "e2e10": {"dam"}, "e2e15": {"dam"},
+    "e2e_studenti": {"veri"},          # needs the whole series B (7 times, 6 standards): the synthetic files are only a few
     "e2e13": {"sito"}, "e2e_tpmine1": {"sito", "crypto"}, "e2e_tpmine2": {"sito", "crypto"},
 }
 NOT_TESTS = {"lib", "lat_arrows", "make_examples"}          # helpers and measurements, not tests

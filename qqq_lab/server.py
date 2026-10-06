@@ -269,6 +269,23 @@ class App:
         mz, y, n = self._item(k).spectrum(rt0, rt1, level, precursor, bin_da=bin_da, bg=bg)
         return {"mz": [round(float(v), 3) for v in mz], "y": [round(float(v), 1) for v in y], "scans": n}
 
+    MAX_SPECTRA = 60       # scans per /api/spectra request
+
+    def spectra(self, k: int, i0: int, i1: int, level: int, precursor, bin_da: float) -> dict:
+        """Single scans i0..i1 of file k (for scan-by-scan navigation); each one equals /api/spectrum on a window holding only that scan."""
+        item = self._item(k)
+        if item.kind() == "mrm":
+            raise ValueError("Questo file è MRM: contiene solo cromatogrammi di transizioni, non scansioni.")
+        if i0 > i1:
+            raise ValueError("intervallo di scansioni non valido: i0 è maggiore di i1")
+        if i1 - i0 + 1 > self.MAX_SPECTRA:
+            raise ValueError(f"al massimo {self.MAX_SPECTRA} scansioni per richiesta")
+        n = item.scan_count(level, precursor)
+        if i0 < 0 or i0 >= n:
+            raise ValueError(f"scansione fuori dal file (il file ne ha {n})")
+        return {"n": n, "scans": [{"i": s["i"], "rt": round(s["rt"], 4), "mz": [round(float(v), 3) for v in s["mz"]], "y": [round(float(v), 1) for v in s["y"]]}
+                                  for s in item.scans(i0, i1, level, precursor, bin_da=bin_da)]}
+
     def ionmap(self, k: int, level: int) -> dict:
         """RT x m/z intensity matrix (float32, row = RT bin, column = m/z bin, base64) on the session-wide grid."""
         item = self._item(k)

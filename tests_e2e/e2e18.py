@@ -59,7 +59,7 @@ try:
             pg.click("#xic-no")
         step("right click on a peak of the spectrum opens the window already filled in", spec_menu)
         def groups():
-            for sel, expect in [(".pnl.chrom", ["izoom", "fit", "iauto", "iman", "xic", "up", "down", "png", "max"]), (".pnl.xic", ["izoom", "fit", "iauto", "iman", "up", "down", "png", "xlsx", "max"]), (".pnl.spec", ["fit", "up", "down", "png", "xlsx", "max"])]:
+            for sel, expect in [(".pnl.chrom", ["izoom", "fit", "yz", "iauto", "iman", "xic", "up", "down", "png", "max"]), (".pnl.xic", ["izoom", "fit", "yz", "iauto", "iman", "up", "down", "png", "xlsx", "max"]), (".pnl.spec", ["fit", "yz", "lock", "up", "down", "png", "xlsx", "max"])]:
                 got = pg.evaluate(f"[...document.querySelector('{sel}').querySelectorAll('.tbs [data-a]')].filter(b=>b.tagName==='BUTTON'&&!b.hidden).map(b=>b.dataset.a)"); assert got == expect, (sel, got)
             # hidden until needed
             assert pg.evaluate("[...document.querySelectorAll('.pnl.xic [data-a=intf], .pnl.xic [data-a=iclr], .pnl.xic [data-a=itab]')].every(b=>b.hidden)")

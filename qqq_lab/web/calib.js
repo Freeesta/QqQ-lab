@@ -75,6 +75,8 @@ async function openCalib() {
       <label>Pesi <select id="cal-w"><option value="none">nessuno</option><option value="x">1/x</option><option value="x2">1/x&sup2;</option></select></label>
       <label>Unità <input id="cal-u" style="width:70px"></label><span class="sp"></span><button id="cal-xlsx">${IC_DL}Excel</button></div>
     <div id="cal-eq" style="margin:4px 0"></div><canvas id="cal-cv"></canvas>
+    <div id="cal-empty" hidden><div class="cal-steps"><div><b>1</b> Nel grafico MRM <b>trascina sul picco</b>: tutti i file vengono integrati nella stessa finestra</div><div><b>2</b> <b>Controlla le aree</b> (trascina le barre per correggere i bordi)</div><div><b>3</b> Torna qui: <b>tabella e retta</b> si riempiono da sole</div></div>
+      <button class="go" id="cal-goto">Chiudi e vai al grafico MRM</button></div>
     <div id="cal-tab" style="overflow-x:auto;margin-top:6px"></div><div class="muted sm" id="cal-note"></div>`;
   big("Retta di taratura", html, () => {
     const sel = (id, cur, none) => { const el = Q(id); el.innerHTML = (none ? '<option value="">nessuna</option>' : "") + CAL.trs.map(t => `<option value="${EH(t.key)}" ${t.key === cur ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join(""); };
@@ -116,9 +118,11 @@ async function openCalib() {
       plot(rows, use, fit, u, calc);
     }
     function plot(rows, use, fit, u, calc) {
-      const cv = Q("#cal-cv"), { g, W, H } = setup(cv), pts = rows.filter(r => r.type === "standard" && r.conc != null && r.aq != null);
+      const cv = Q("#cal-cv"), pts = rows.filter(r => r.type === "standard" && r.conc != null && r.aq != null);
+      cv.style.display = pts.length ? "" : "none"; Q("#cal-empty").hidden = !!pts.length;      // nothing integrated yet: the three steps instead of an empty frame
+      if (!pts.length) return;
+      const { g, W, H } = setup(cv);
       g.clearRect(0, 0, W, H);
-      if (!pts.length) { g.fillStyle = css("--muted"); g.fillText("Nessun standard ha ancora un'area.", M.l, 30); return; }
       const smp = fit ? rows.filter(r => r.type === "sample" && r.aq != null && calc(r.aq) != null) : [];
       const xs = [...pts.map(r => r.conc), ...smp.map(r => calc(r.aq))], x1 = Math.max(...xs, 1e-9) * 1.08, x0 = Math.min(0, ...xs);
       const ym = Math.max(...pts.map(r => r.aq), ...smp.map(r => r.aq), fit ? fit.a * x1 + fit.b : 0, 1e-9) * 1.1;
@@ -140,6 +144,13 @@ async function openCalib() {
           ["LOD e LOQ sono stime: 3,3 e 10 volte la deviazione standard dei residui divisa per la pendenza (non una validazione del metodo)."]]
           : [["Retta non calcolabile: servono almeno due standard con concentrazione diversa e un'area."]])];
       dlx("retta_di_taratura.xlsx", [{ name: "Dati", head, rows: data, widths: [26, 11, 12, 14, 24, 24, 20, 24, 12] }, { name: "Retta", rows: R, widths: [34, 18] }]);
+    };
+    Q("#cal-goto").onclick = () => {                           // close and go to the quantifier graph with the manual integration tool ready
+      Q("#bigdlg").close();
+      const q = tabPanels("mrm").find(x => x.tr === CAL.quant) || tabPanels("mrm")[0]; if (!q) return;
+      if (E.tab !== "mrm") setTab("mrm");
+      setActive(q); front(q.el); if (q.imode !== "man") { const b = q.el.querySelector('[data-a="iman"]'); if (b) b.click(); }
+      reveal(q);
     };
     paint();
   });
