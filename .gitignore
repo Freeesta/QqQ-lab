@@ -17,6 +17,7 @@ dist/
 .qqq_lab-cache/
 QqQ_lab_lavoro/
 tests_e2e/shots/
+.verifica/
 
 # Lab data never go into the repository (raw data stay in ../QqQ and ../esempio_conversione)
 *.mzML

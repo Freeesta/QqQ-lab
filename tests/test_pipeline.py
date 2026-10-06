@@ -186,17 +186,10 @@ def test_theory_module_is_served_and_self_contained():
             assert _static(target) is not None, (name, ref)
 
 
-def test_mac_app_bundle_and_vector_logo():
-    """The Mac launcher app is complete (plist, executable, icon) and the logo exists as SVG."""
-    import plistlib
+def test_vector_logo():
+    """The logo exists as SVG (the Mac launcher app was removed on 6 Oct 2026: students use the website only)."""
     from pathlib import Path
     root = Path(__file__).resolve().parents[1]
-    app = root / "QqQ lab.app" / "Contents"
-    info = plistlib.loads((app / "Info.plist").read_bytes())
-    exe = app / "MacOS" / info["CFBundleExecutable"]
-    text = exe.read_text(encoding="utf-8")
-    assert text.startswith("#!/bin/bash") and "lab.command" in text and "osascript" in text
-    assert (app / "Resources" / (info["CFBundleIconFile"] + ".icns")).read_bytes()[:4] == b"icns"
     svg = (root / "qqq_lab" / "web" / "logo.svg").read_text(encoding="utf-8")
     assert svg.lstrip().startswith("<svg") and "<image" in svg
 
