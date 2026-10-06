@@ -28,8 +28,8 @@ canvas{display:block;width:100%}
 #helppop{position:fixed;z-index:10001;max-width:min(420px,92vw);background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;box-shadow:0 8px 26px rgba(20,30,50,.22);padding:8px 12px;font-size:12.5px;line-height:1.5;color:var(--ink)}#helppop .hp-t{display:flex;align-items:center;margin-bottom:4px}#helppop .hp-t b{flex:1;font-size:13px}
 [hidden]{display:none!important}
 #start{max-width:920px;margin:16px auto;padding:0 14px}
-#drop{border:2px dashed var(--line);border-radius:10px;padding:26px 14px;text-align:center;color:var(--muted);cursor:pointer;background:var(--panel)}
-#drop.over{border-color:var(--accent);background:var(--sel);color:var(--ink)}#drop b{color:var(--ink);font-size:15px}
+#drop,#dropdam{border:2px dashed var(--line);border-radius:10px;padding:26px 14px;text-align:center;color:var(--muted);cursor:pointer;background:var(--panel)}
+#drop.over,#dropdam.over{border-color:var(--accent);background:var(--sel);color:var(--ink)}#drop b,#dropdam b{color:var(--ink);font-size:15px}
 .frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:10px}.frm label{display:flex;flex-direction:column;gap:3px;color:var(--muted)}
 .frm input,.frm select{width:100%}#wiffhelp{margin-top:8px}#wiffhelp summary{cursor:pointer;color:var(--accent)}#wiffhelp ol{margin:6px 0 0 18px;padding:0;line-height:1.6}
 .go{background:var(--accent);color:#fff;border-color:var(--accent);padding:6px 18px;font-weight:600}.go:disabled{opacity:.5;cursor:default}
@@ -154,8 +154,9 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
   <input type="file" id="pick" multiple accept=".mzML,.mzml,.wiff,.scan,.dam" hidden>
   <div id="up"></div><div id="flist"></div></div>
  <div class="card"><h3>2. Metodo di acquisizione (facoltativo)</h3>
-  <div class="muted sm">Puoi caricare il metodo come file <b>.dam</b> (il metodo di Analyst usato per acquisire i dati). Il programma ne legge i parametri (gas, tensioni, energie di collisione, gradiente e PDA) e li mostra nella scheda <b>Metodo</b>. Senza il .dam quella scheda mostra solo ciò che c'è negli mzML.</div>
-  <div class="bar" style="margin-top:6px"><button id="pickdambtn">Carica il metodo (.dam)</button><input type="file" id="pickdam" accept=".dam,.DAM" hidden></div><div id="mlist"></div></div>
+  <div id="dropdam"><b>Trascina qui il metodo .dam</b><br>oppure <u>clicca per sceglierlo dal computer</u></div>
+  <input type="file" id="pickdam" multiple accept=".dam,.DAM" hidden>
+  <div id="mlist"></div></div>
  <div class="card"><div class="bar"><button class="go" id="opbtn" disabled>Apri i dati</button><button id="cancadd" hidden>Annulla</button><span id="gomsg" class="muted"></span></div></div>
 </section>
 <script src="/static/explore.js"></script>
@@ -220,11 +221,14 @@ async function upload(files){const box=$("#up");fail();
       x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(_){}j.error?ko(new Error(j.error)):(mergeFiles(j.files),ST.methods=j.methods||ST.methods,renderMethods(),ok())};x.onerror=()=>ko(new Error("upload fallito"));x.send(f)});row.remove()}
     catch(e){row.innerHTML=`<span class="fail">${esc(f.name)}: ${esc(e.message)}</span>`}}}
 function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
-$("#pickdambtn").onclick=()=>$("#pickdam").click();$("#pickdam").onchange=e=>{upload([...e.target.files]);e.target.value=""};
+$("#dropdam").onclick=()=>$("#pickdam").click();$("#pickdam").onchange=e=>{upload([...e.target.files]);e.target.value=""};
 $("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files]);e.target.value=""};
 ["dragenter","dragover"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.add("over")}));
 ["dragleave","drop"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.remove("over")}));
 $("#drop").addEventListener("drop",e=>upload([...e.dataTransfer.files]));
+["dragenter","dragover"].forEach(t=>$("#dropdam").addEventListener(t,e=>{e.preventDefault();$("#dropdam").classList.add("over")}));
+["dragleave","drop"].forEach(t=>$("#dropdam").addEventListener(t,e=>{e.preventDefault();$("#dropdam").classList.remove("over")}));
+$("#dropdam").addEventListener("drop",e=>upload([...e.dataTransfer.files]));
 addEventListener("dragover",e=>e.preventDefault());addEventListener("drop",e=>e.preventDefault());   // a missed drop must not open the file
 $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;$("#gomsg").textContent="Apro i file...";loading(true,"Leggo i file e preparo i cromatogrammi...");
   try{await post("/api/explore",{samples:ST.files.filter(f=>f.use).map(f=>({file:f.name,time:f.time,type:f.type,label:(E.files.find(x=>x.file===f.name)||{}).label}))});S.adding=false;await bootSession();applyView();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave()}
