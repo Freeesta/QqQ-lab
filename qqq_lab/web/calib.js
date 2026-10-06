@@ -134,7 +134,7 @@ async function openCalib() {
       const data = rows.map(r => [r.f.label, T[r.type] || r.type, r.f.time, r.conc, r.aq, r.al, r.ratio, r.type !== "standard" && fit && r.aq != null ? calc(r.aq) : null, r.type === "standard" ? (CAL.off.has(r.f.file) ? "no" : "sì") : ""]);
       const head = ["File", "Tipo", "Tempo (min)", `Conc. (${u})`, `Area ${CAL.quant || "quantificatore"} (conteggi*s)`, `Area ${CAL.qual || "qualificatore"} (conteggi*s)`, "Rapporto Qual/Quant", `Conc. dalla retta (${u})`, "Nella retta"];
       const B = t => ({ v: t, b: true }), R = [
-        [B("Quantificatore"), CAL.quant || ""], [B("Qualificatore"), CAL.qual || ""], [B("Pesi"), CAL.w === "none" ? "nessuno" : CAL.w === "x" ? "1/x" : "1/x²"], [B("Unità di concentrazione"), u], [],
+        [B("Bianco interno applicato"), [...new Set(E.panels.filter(q => q.type === "mrm" && q.ibk).map(q => ibkText(q.ibk)))].join("; ") || "no"], [B("Quantificatore"), CAL.quant || ""], [B("Qualificatore"), CAL.qual || ""], [B("Pesi"), CAL.w === "none" ? "nessuno" : CAL.w === "x" ? "1/x" : "1/x²"], [B("Unità di concentrazione"), u], [],
         ...(fit ? [[B("Pendenza (area per " + u + ")"), fit.a], [B("Intercetta (area)"), fit.b], [B("R²"), fit.r2], [B("Punti nella retta (n)"), fit.n],
           [B(`LOD (${u})`), fit.lod], [B(`LOQ (${u})`), fit.loq], [],
           ["LOD e LOQ sono stime: 3,3 e 10 volte la deviazione standard dei residui divisa per la pendenza (non una validazione del metodo)."]]

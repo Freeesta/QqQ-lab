@@ -89,7 +89,7 @@ function uiSave(now = false) {
         traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label })),
         k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
         link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1, imode: p.imode || null, intf: p.intf || "",
-        iso: p.iso || null, sim: p.sim || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
+        iso: p.iso || null, ibk: p.ibk || null, sim: p.sim || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
       }))
     };
     nbSave(now);
@@ -370,8 +370,8 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") Q("#ctx").hi
 function dl(name, text, type = "application/octet-stream") {
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
-const INT_COLS = ["panel", "ion", "file", "time", "a", "b", "rt", "area", "height"];
-const INT_HEADS = ["Pannello", "Traccia", "Campione", "Tempo di trattamento (min)", "RT inizio (min)", "RT fine (min)", "RT apice (min)", "Area (conteggi*s)", "Altezza (cps)"];
+const INT_COLS = ["panel", "ion", "file", "time", "a", "b", "rt", "area", "height", "ibk"];
+const INT_HEADS = ["Pannello", "Traccia", "Campione", "Tempo di trattamento (min)", "RT inizio (min)", "RT fine (min)", "RT apice (min)", "Area (conteggi*s)", "Altezza (cps)", "Bianco interno applicato"];
 // data of a plot as columns side by side (each trace has its own x), one sheet with the units in the headers: for graphs and tables made in Excel
 function plotSheets(p) {
   const a = p._a; if (!a) return null;
@@ -381,7 +381,9 @@ function plotSheets(p) {
   if (!cols.length) return null;
   const n = Math.max(...cols.map(c => c[1].length)), rows = [];
   for (let i = 0; i < n; i++) rows.push(cols.map(c => (i < c[1].length ? c[1][i] : null)));
-  return [{ name: p.title || "Dati", head: cols.map(c => c[0]), rows, widths: cols.map(c => Math.min(44, Math.max(14, c[0].length + 2))) }];
+  const out = [{ name: p.title || "Dati", head: cols.map(c => c[0]), rows, widths: cols.map(c => Math.min(44, Math.max(14, c[0].length + 2))) }];
+  if (p.ibk) out.push({ name: "Note", rows: [[{ v: "Bianco interno applicato", b: true }, ibkText(p.ibk)], ["Le intensità di questo foglio sono già sottratte del livello di fondo (un numero o una retta preso da un tratto del cromatogramma); non è la sottrazione di un file bianco."]], widths: [28, 60] });
+  return out;
 }
 
 // ------------------------------------------------------------------ pannelli mobili
@@ -647,6 +649,7 @@ function plotMeta(p) {
   const mzs = a.sr ? [...new Set(a.sr.map(s => s.mz).filter(v => v != null))] : [];
   if (mzs.length) d.push("m/z " + mzs.map(v => v.toFixed(1)).join(", "));
   if (p.type === "spec" && p.r0 != null) d.push(`RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min`);
+  if (p.ibk) d.push("bianco interno applicato: " + ibkText(p.ibk) + " (livello di fondo tolto a tutta la traccia, non è la sottrazione di un file bianco)");
   if (a.x0 != null) d.push(`asse visibile ${a.x0.toFixed(p.type === "spec" ? 1 : 2)}-${a.x1.toFixed(p.type === "spec" ? 1 : 2)}`);
   return [["Title", p.title || "Grafico"], ["Description", d.join("; ")], ["Source", fs.map(f => f.label).join(", ")], ["Software", "QqQ lab"], ["Creation Time", new Date().toISOString()]];
 }
@@ -810,20 +813,34 @@ async function blankTrace(p, s) {
   if (p.type === "chrom") { const d = await getChrom(b.k, p.kind, b.lv); return { x: d.rt, y: d.y }; }
   const tr = (await getMrm(b.k)).find(t => `${t.q1}>${t.q3}` === s.ion); return tr && { x: tr.rt, y: tr.y };
 }
+// ---- internal blank: a stretch of the trace chosen by the student (for example 0-2 min, where nothing elutes) gives the background level, which is
+// subtracted from the whole trace. p.ibk = { mode: "mean" | "median" | "line", a: [t0, t1], b: [t0, t1] (line only: second stretch), clip: bool }.
+// Not a blank-file subtraction: one number (or a straight line), not a profile in time. The level is computed on each trace (each file) on its own.
+const ibkRange = (a, d = 1) => `${+a[0].toFixed(d)}-${+a[1].toFixed(d)} min`;
+const ibkText = ib => !ib ? "no" : `sì, ${ibkRange(ib.a)}${ib.mode === "line" && ib.b ? " e " + ibkRange(ib.b) : ""}, ${{ mean: "media", median: "mediana", line: "retta" }[ib.mode]}${ib.clip ? ", negativi a 0" : ""}`;
+function ibkFn(s, ib) {
+  const stat = (r, med) => { const v = []; s.x.forEach((t, i) => { if (t >= r[0] && t <= r[1]) v.push(s.y[i]); }); if (!v.length) return 0; if (med) { v.sort((p, q) => p - q); return v.length % 2 ? v[v.length >> 1] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2; } return v.reduce((p, q) => p + q, 0) / v.length; };
+  if (ib.mode === "line" && ib.b) {
+    const xa = (ib.a[0] + ib.a[1]) / 2, xb = (ib.b[0] + ib.b[1]) / 2, ya = stat(ib.a), yb = stat(ib.b), m = (yb - ya) / ((xb - xa) || 1);
+    return { f: x => ya + m * (x - xa), lvl: ya, lvl2: yb };
+  }
+  const L = stat(ib.a, ib.mode === "median"); return { f: () => L, lvl: L };
+}
 async function corrected(p, all) {
   const hasBk = p.bk !== "" && p.bk != null && E.files[+p.bk];
-  if (!hasBk && !p.snip) return all;
+  if (!hasBk && !p.snip && !p.ibk) return all;
   const out = [];
   for (const s of all) {
     if (hasBk && s.k === +p.bk) continue;                   // the blank itself is the thing being subtracted
-    let y = s.y.slice(), note = [];
+    let y = s.y.slice(), note = [], ibl = null;
+    if (p.ibk) { ibl = ibkFn(s, p.ibk); y = y.map((v, i) => { const r = v - ibl.f(s.x[i]); return p.ibk.clip ? Math.max(0, r) : r; }); note.push("- bianco interno"); }
     if (hasBk) { const b = await blankTrace(p, s); if (b) { y = y.map((v, i) => Math.max(0, v - interp(b.x, b.y, s.x[i]))); note.push("- bianco"); } }
     if (p.snip && s.x.length > 5) {
       const dts = s.x.slice(1).map((v, i) => v - s.x[i]).sort((a, b) => a - b), dt = dts[dts.length >> 1] || 0.01;
       const w = Math.max(2, Math.round((p.snipw || 1) / dt / 2)), bl = snipBaseline(y, w);
       y = y.map((v, i) => Math.max(0, v - bl[i])); note.push("- baseline");
     }
-    out.push({ ...s, y, corr: note.join(" ") });
+    out.push({ ...s, y, corr: note.join(" "), ibl });
   }
   return out;
 }
@@ -889,6 +906,47 @@ async function draw(p) {
 const MSG = { xic: "Scrivi un m/z qui sopra, oppure clic destro su un picco dello spettro.", chrom: "Nessun file visibile (o nessun cromatogramma in questo tipo di file).", mrm: "Nessun file MRM visibile." };
 const isHid = (p, s) => !!(p.hid && (p.hid[s.key] || (s.mz != null && p.hid["t" + s.mz])));
 
+function ibkChip(p) {
+  if (!p.ibk) return;
+  const ib = p.ibk, sr = p._a && p._a.sr, l0 = sr && sr[0] && sr[0].ibl;
+  const chip = document.createElement("span"); chip.className = "ibk";
+  chip.title = tipOf("Bianco interno: un solo numero (o una retta) preso da un tratto del cromatogramma e tolto a tutta la traccia. NON è la sottrazione di un file bianco, che invece segue il tempo. Vale se il fondo è piatto e il tratto non contiene l'analita; con un gradiente il fondo sale e conviene la baseline o la retta tra due tratti.");
+  chip.innerHTML = `<b>bianco interno</b> ${ibkRange(ib.a)}${ib.mode === "line" && ib.b ? " e " + ibkRange(ib.b) : ""}: ${l0 ? fmtA(l0.lvl) + (l0.lvl2 != null ? " e " + fmtA(l0.lvl2) : "") + " cps" : ""} (${{ mean: "media", median: "mediana", line: "retta" }[ib.mode]}) <label><input type="checkbox" data-ib="clip" ${ib.clip ? "checked" : ""}> negativi a 0</label> <button data-ib="spec" title="Sottrae lo spettro medio dello stesso tratto dagli spettri di questo cromatogramma">sottrai lo spettro</button> <button data-ib="off">Rimuovi</button>`;
+  chip.querySelector("[data-ib=clip]").onchange = e => { ib.clip = e.target.checked; draw(p); uiSave(); };
+  chip.querySelector("[data-ib=spec]").onclick = () => ibkSpectra(p);
+  chip.querySelector("[data-ib=off]").onclick = () => { p.ibk = null; draw(p); uiSave(); };
+  p.leg.appendChild(chip);
+}
+// the spectra of this chromatogram: subtract the mean spectrum of the blank stretch (same file), as Analyst/MassLynx do
+function ibkSpectra(p) {
+  const ib = p.ibk; if (!ib) return;
+  const sp = E.panels.filter(q => q.type === "spec" && (q.link === p.id || q.src === p.id));
+  if (!sp.length) return info("Nessuno spettro collegato a questo cromatogramma: fai prima un doppio clic sul picco.");
+  sp.forEach(q => { q.bg = "w"; q.bw0 = ib.a[0]; q.bw1 = ib.a[1]; ctl(q); draw(q); }); uiSave();
+}
+function ibkSet(p, mode, a, b) {
+  if (!(a && a[1] > a[0])) return info("L'intervallo del bianco deve avere un inizio minore della fine.");
+  p.ibk = { mode, a: [a[0], a[1]], b: b ? [b[0], b[1]] : null, clip: p.type === "chrom" && p.kind === "tic" };
+  p._ibkA = null; draw(p); uiSave();
+}
+async function ibkAsk(p, mode) {
+  const v = await ask("Intervallo di tempo del bianco interno, in minuti (per esempio 0-2). Deve essere un tratto in cui non esce l'analita.", p.sel ? `${p.sel[0].toFixed(2)}-${p.sel[1].toFixed(2)}` : "0-2");
+  const m = v && v.replace(",", ".").match(/^\s*(\d+\.?\d*)\s*[-\u2013 ]\s*(\d+\.?\d*)\s*$/); if (!m) return;
+  ibkPick(p, mode, [+m[1], +m[2]]);
+}
+function ibkPick(p, mode, iv) {
+  if (mode === "line") { if (!p._ibkA) { p._ibkA = iv; info(`Primo tratto: ${ibkRange(iv, 2)}. Ora scegli il secondo tratto con lo stesso comando (clic destro, «Bianco interno: retta»).`); return; } ibkSet(p, "line", p._ibkA, iv); }
+  else ibkSet(p, mode, iv);
+}
+function ibkMenuItems(p) {
+  const it = [];
+  const iv = p.sel && p.sel[1] > p.sel[0] ? p.sel : null, t = iv ? `${iv[0].toFixed(2)}-${iv[1].toFixed(2)} min` : "";
+  it.push({ label: iv ? `Bianco interno: costante, media di ${t}` : "Bianco interno: costante (media), scegli l'intervallo...", fn: () => iv ? ibkPick(p, "mean", [...iv]) : ibkAsk(p, "mean") });
+  it.push({ label: iv ? `Bianco interno: costante, mediana di ${t}` : "Bianco interno: costante (mediana), scegli l'intervallo...", fn: () => iv ? ibkPick(p, "median", [...iv]) : ibkAsk(p, "median") });
+  it.push({ label: p._ibkA ? `Bianco interno: retta, secondo tratto${iv ? " " + t : "..."}` : `Bianco interno: retta tra due tratti, primo${iv ? " " + t : "..."}`, fn: () => iv ? ibkPick(p, "line", [...iv]) : ibkAsk(p, "line") });
+  if (p.ibk) it.push({ label: "Togli il bianco interno", fn: () => { p.ibk = null; draw(p); uiSave(); } }, { label: "Sottrai lo spettro del tratto bianco dagli spettri collegati", fn: () => ibkSpectra(p) });
+  return it;
+}
 function legend(p, all, note = "") {
   const sw = c => `<i style="background:${c}"></i>`, off = h => (h ? " off" : "");
   if (p.type === "xic") {
@@ -900,6 +958,7 @@ function legend(p, all, note = "") {
   p.leg.querySelectorAll("[data-t]").forEach(b => b.ondblclick = async () => { const t = p.traces.find(x => x.id == b.dataset.t), v = await ask("Nome dell'ione", t.label); if (v) { t.label = v; draw(p); } });
   p.leg.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { p.traces = p.traces.filter(x => x.id != b.dataset.r); ctl(p); draw(p); });
   p.leg.querySelectorAll("[data-h]").forEach(b => b.onclick = () => { const k = b.dataset.h; if (p.hid[k]) delete p.hid[k]; else p.hid[k] = true; draw(p); });
+  ibkChip(p);
 }
 
 async function drawLines(p) {
@@ -927,6 +986,12 @@ async function drawLines(p) {
   const { X, Y } = axes(g, W, H, x0, x1, ymax, fmt, { log: logy, lo: lo10, stack: stk, xt: XT_RT, yt, ymin });
   const ph = H - M.t - M.b;
   p._a = { x0, x1, X, Y, W, H, sr, ymax, U, stk, logy, full: [lo, hi], yinv: py => ymin + (H - M.b - py) / ph * (ymax - ymin) };
+  if (p.ibk && !p._exp) {                                    // grey band(s) of the internal blank, always visible
+    const ib = p.ibk, bands = [ib.a].concat(ib.mode === "line" && ib.b ? [ib.b] : []), s0 = sr[0], l0 = s0 && s0.ibl;
+    g.fillStyle = "rgba(120,120,120,.22)"; bands.forEach(b => { const xa = Math.max(X(b[0]), M.l), xb = Math.min(X(b[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); });
+    g.font = "11px system-ui"; g.textAlign = "left"; g.fillStyle = css("--muted");
+    g.fillText(`bianco interno ${ibkRange(ib.a)}${ib.mode === "line" && ib.b ? " e " + ibkRange(ib.b) : ""}: ${l0 ? fmtA(l0.lvl) + (l0.lvl2 != null ? " e " + fmtA(l0.lvl2) : "") + " cps" : ""}${sr.length > 1 ? " (prima traccia)" : ""}`, Math.max(M.l + 6, X(ib.a[0]) + 4), H - M.b - 6);
+  }
   if (p.sel && !p._exp) { g.fillStyle = "rgba(43,92,138,.10)"; g.fillRect(X(p.sel[0]), M.t, X(p.sel[1]) - X(p.sel[0]), H - M.t - M.b); }
   if (stk) {
     g.font = "11px system-ui"; g.textAlign = "left";
@@ -941,7 +1006,7 @@ async function drawLines(p) {
   g.restore(); g.setLineDash([]);
   for (const it of p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi
     const s = sr.find(q => q.key === it.key); if (!s) continue;
-    const r = integ(s, it.a, it.b); Object.assign(it, { area: r.area, height: r.height, rt: r.rt });
+    const r = integ(s, it.a, it.b); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, ibk: ibkText(p.ibk) });
     const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
     if (i1 > i0) {
       g.globalAlpha = 0.28; g.fillStyle = s.color; g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0])));
@@ -1178,13 +1243,13 @@ function allInts() { return E.panels.flatMap(p => p.ints.map(i => ({ ...i, panel
 function showInts() {
   const rows = allInts();
   big("Integrazioni dei picchi", rows.length ? `<div class="bar"><button id="ig-xlsx">${IC_DL}Excel</button><label class="muted"><input type="checkbox" id="ig-rel"> area relativa al massimo di ogni ione</label></div>
-    <table><tr><th>Pannello</th><th>Traccia</th><th>Campione</th><th class="num">Tempo (min)</th><th class="num">RT inizio</th><th class="num">RT fine</th><th class="num">RT apice</th><th class="num">Area (conteggi·s)</th><th class="num">Altezza</th></tr>` +
-    rows.map(r => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num" title="${fmtFull(r.area ?? 0)}">${fmtA(r.area ?? 0)}</td><td class="num">${fmt(r.height ?? 0)}</td></tr>`).join("") +
+    <table><tr><th>Pannello</th><th>Traccia</th><th>Campione</th><th class="num">Tempo (min)</th><th class="num">RT inizio</th><th class="num">RT fine</th><th class="num">RT apice</th><th class="num">Area (conteggi·s)</th><th class="num">Altezza</th><th>Bianco interno applicato</th></tr>` +
+    rows.map(r => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num" title="${fmtFull(r.area ?? 0)}">${fmtA(r.area ?? 0)}</td><td class="num">${fmt(r.height ?? 0)}</td><td>${EH(r.ibk || "no")}</td></tr>`).join("") +
     `</table><div class="muted sm">Area: regola dei trapezi con baseline lineare tra i due bordi. Trascina le barre nel pannello per correggere i bordi.</div>
     <h4>Area contro tempo di irraggiamento</h4><canvas id="ig-cv" style="height:240px"></canvas><div class="leg" id="ig-leg"></div>`
     : `<div class="muted">Nessuna integrazione. Clic destro su un picco di un cromatogramma, di un XIC o di una transizione MRM e scegli «Integra».</div>`, () => {
     if (!rows.length) return;
-    Q("#ig-xlsx").onclick = () => dlx("integrazioni.xlsx", [{ name: "Integrazioni", head: INT_HEADS, rows: rows.map(r => INT_COLS.map(c => r[c])), widths: [16, 18, 22, 14, 14, 14, 14, 18, 14] }]);
+    Q("#ig-xlsx").onclick = () => dlx("integrazioni.xlsx", [{ name: "Integrazioni", head: INT_HEADS, rows: rows.map(r => INT_COLS.map(c => r[c])), widths: [16, 18, 22, 14, 14, 14, 14, 18, 14, 34] }]);
     const plot = () => {
       const cv = Q("#ig-cv"), { g, W, H } = setup(cv), rel = Q("#ig-rel").checked;
       const groups = {}; rows.forEach(r => { if (r.time != null) (groups[r.ion] = groups[r.ion] || []).push(r); });
@@ -1468,6 +1533,7 @@ function ctxFor(p, e, x, px, py) {
     }
     items.push({ label: "Ripristina zoom", fn: () => { p.zoom = null; p.zoomY = null; draw(p); }, dim: !(p.zoom || p.zoomY) });
     items.push("-", ...intMenuItems(p, x, near, py));
+    items.push("-", ...ibkMenuItems(p));
     items.push("-", { label: "Annota questo punto...", fn: async () => { const v = await ask("Annotazione a RT " + x.toFixed(2), ""); if (v) { p.anns.push({ x, text: v }); draw(p); } } });
   }
   if (near) items.push("-", { label: `Modifica «${near.text}»`, fn: async () => { const v = await ask("Annotazione", near.text); if (v) { near.text = v; draw(p); } } },
