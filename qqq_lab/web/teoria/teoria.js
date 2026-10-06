@@ -14,6 +14,7 @@ const CHAPTERS = [
   ["09-dati.html", "9", "Full scan, MS2 e MRM: leggere i dati"],
   ["10-strategia.html", "10", "Strategia per trovare i TP"],
   ["11-glossario.html", "11", "Glossario e bibliografia"],
+  ["12-disegno.html", "12", "Disegnare le molecole"],
 ];
 
 const TP = (() => {

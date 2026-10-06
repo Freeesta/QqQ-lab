@@ -14,22 +14,18 @@
   const pending = new Map();
   let seq = 0, isReady = false, failed = null;
 
-  // full-page message while the calculation engine loads (about 15 MB the first time, then it comes from the cache)
-  const box = document.createElement("div");
-  box.style.cssText = "position:fixed;inset:0;z-index:100000;background:var(--bg,#f7f8fa);display:flex;align-items:center;justify-content:center;font:15px system-ui;color:var(--ink,#25282c);text-align:center;padding:24px";
-  const msg = document.createElement("div");
-  msg.innerHTML = "<style>@keyframes qqbar{0%{left:-35%}100%{left:100%}}</style><img src=\"static/logo.svg\" alt=\"\" style=\"height:64px;display:block;margin:0 auto 10px\"><b style=\"font-size:18px\">QqQ lab</b><br><span id=\"qq-load\" style=\"color:#687080\">Preparo il motore di calcolo...</span><div style=\"position:relative;overflow:hidden;width:220px;height:4px;border-radius:2px;background:#dde3ea;margin:12px auto 0\"><i style=\"position:absolute;top:0;width:35%;height:4px;border-radius:2px;background:#2b5c8a;animation:qqbar 1.3s ease-in-out infinite\"></i></div>";
-  box.appendChild(msg);
-  const attach = () => document.body && !box.isConnected && document.body.appendChild(box);
-  document.addEventListener("DOMContentLoaded", () => { if (!isReady) attach(); });
-  const step = t => { const e = document.getElementById("qq-load"); if (e) e.textContent = t; };
+  // while the engine loads the page shows the same loading screen as everywhere else (#loading, funny phrases);
+  // the step text goes under the phrase (#ldsub). window.qqStep is also read by loading() in explore.js.
+  window.qqStep = "Preparo il motore di calcolo...";
+  const step = t => { window.qqStep = t; const e = document.getElementById("ldsub"); if (e) e.textContent = t; };
+  document.addEventListener("DOMContentLoaded", () => step(window.qqStep));
 
   const ready = new Promise((res, rej) => {
-    if (!worker) { const t = "questo browser è troppo vecchio: usa una versione recente di Chrome, Edge, Firefox o Safari."; failed = t; document.addEventListener("DOMContentLoaded", () => { attach(); step(t); }); return rej(new Error(t)); }
+    if (!worker) { const t = "questo browser è troppo vecchio: usa una versione recente di Chrome, Edge, Firefox o Safari."; failed = t; document.addEventListener("DOMContentLoaded", () => step(t)); return rej(new Error(t)); }
     worker.onmessage = ev => {
       const m = ev.data;
       if (m.type === "step") return step(m.text);
-      if (m.type === "ready") { isReady = true; box.remove(); return res(); }
+      if (m.type === "ready") { isReady = true; window.qqStep = ""; return res(); }
       if (m.type === "fatal") { failed = m.text; step("Non riesco ad avviare il motore di calcolo: " + m.text); return rej(new Error(m.text)); }
       const p = pending.get(m.id); if (!p) return; pending.delete(m.id); p(m);
     };

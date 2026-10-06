@@ -23,7 +23,7 @@ function start() {
   }).then(async k => { await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); requestAnimationFrame(showSelection); });
     k.editor.subscribe("selectionChange", () => requestAnimationFrame(showSelection));
     hideMacro(fr); changed(); drawLabels(); return k; });
-  starting.catch(e => { Q("#dcomp").textContent = e.message; });
+  starting.catch(e => dnote(e.message));
   return starting;
 }
 // Ketcher's macromolecule mode (peptides, RNA, DNA) is not needed here and confuses: its switch is hidden
@@ -59,6 +59,7 @@ function describe(smi) {
     return { smiles: smi, formula: hill(counts), mass: f.absoluteWeight };
   } catch (_) { return null; }
 }
+const dnote = msg => { Q("#dcard").hidden = false; Q("#dcomp").textContent = msg; };   // message / table box, visible only when it has content
 function adductTable(d) {
   const main = ["[M+H]+", "[M+Na]+", "[M-H]-"], all = [...ADDUCTS.pos, ...ADDUCTS.neg];
   const row = ([n, dm]) => `<tr><td>${fmtAdduct(n)}</td><td class="num">${(d.mass + dm).toFixed(4)}</td><td>${typeof E !== "undefined" && E.files.length ? `<button class="sm" data-x="${(d.mass + dm).toFixed(2)}" data-l="${d.formula} ${n}">XIC</button>` : ""}</td></tr>`;
@@ -68,7 +69,8 @@ function list(smiles) {
   const box = Q("#dcomp");
   const parts = [...new Set(smiles.split(/[.>]+/).map(s => s.trim()).filter(Boolean))];
   PARTS = parts; capParts();
-  if (!parts.length) { box.innerHTML = '<div class="muted">Disegna una molecola, un frammento o un intero cammino (frecce e testo sono nella barra a sinistra).</div>'; return; }
+  if (!parts.length) { box.innerHTML = ""; Q("#dcard").hidden = true; return; }
+  Q("#dcard").hidden = false;
   box.innerHTML = parts.map((s, i) => {
     const d = describe(s);
     if (!d) return `<div class="muted sm">${EH(s)}: struttura non riconosciuta (frammento aperto?)</div>`;
@@ -83,7 +85,7 @@ function list(smiles) {
 }
 
 // ------------------------------------------------------------------ formula and mass written under each structure
-// Optional (checkbox "#lb-on"). Drawn in an overlay group of Ketcher's own SVG, so the label follows zoom and scroll
+// Optional (checkboxes "#lb-f" formula, "#lb-m" mass + "#lb-dec" decimals). Drawn in an overlay group of Ketcher's own SVG, so the label follows zoom and scroll
 // but is NOT part of the structure (undo, .ket and SMILES are untouched). Added as text to the exported images.
 const MONO = { H: 1.00782503, D: 2.01410178, C: 12, N: 14.00307401, O: 15.99491462, F: 18.99840322, Na: 22.98976928, Mg: 23.9850417, Al: 26.98153853,
   Si: 27.97692653, P: 30.97376163, S: 31.97207100, Cl: 34.96885268, K: 38.96370668, Ca: 39.96259098, Fe: 55.9349375, Cu: 62.9295975, Zn: 63.9291422,
@@ -148,14 +150,18 @@ function arrowDeltas() {
 }
 // text of a label as pieces: [text, "sub" | "sup" | ""]
 function labelParts(d) {
-  const parts = [];
-  for (const m of d.formula.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([m[1], ""]); if (m[2]) parts.push([m[2], "sub"]); }
-  if (d.q) parts.push([(Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "−"), "sup"]);
-  const v = d.q ? roundHalfUp((d.mass - d.q * ELECTRON) / Math.abs(d.q)) : roundHalfUp(d.mass);
-  parts.push([d.q ? `  m/z ${v}` : `  M = ${v}`, ""]);
+  const parts = [], f = Q("#lb-f").checked, m = Q("#lb-m").checked, dec = +Q("#lb-dec").value;
+  if (f) {
+    for (const x of d.formula.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([x[1], ""]); if (x[2]) parts.push([x[2], "sub"]); }
+    if (d.q) parts.push([(Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "−"), "sup"]);
+  }
+  if (m) {
+    const raw = d.q ? (d.mass - d.q * ELECTRON) / Math.abs(d.q) : d.mass;
+    parts.push([`${f ? "  " : ""}${d.q ? "m/z" : "M ="} ${dec ? raw.toFixed(dec) : roundHalfUp(raw)}`, ""]);
+  }
   return parts;
 }
-const labelsOn = () => Q("#lb-on").checked;
+const labelsOn = () => Q("#lb-f").checked || Q("#lb-m").checked;
 function drawLabels() {
   if (!K) return;
   const svg = K.editor.render.paper.canvas, doc = svg.ownerDocument, ns = "http://www.w3.org/2000/svg", sc = K.editor.render.options.microModeScale || 40;
@@ -194,8 +200,12 @@ function ketWithLabels(ket) {
   for (const a of arrowDeltas()) { const t = plain(a.parts); add(t, a.x - t.length * 0.09, -(a.y - 0.75), 14); }
   return JSON.stringify(j);
 }
-Q("#lb-on").addEventListener("change", () => { drawLabels(); NB.labels = labelsOn(); nbSave(); });
-document.addEventListener("nbloaded", () => { Q("#lb-on").checked = NB.labels !== false; drawLabels(); });
+["#lb-f", "#lb-m", "#lb-dec"].forEach(id => Q(id).addEventListener("change", () => { drawLabels(); NB.labF = Q("#lb-f").checked; NB.labM = Q("#lb-m").checked; NB.labDec = +Q("#lb-dec").value; nbSave(); }));
+document.addEventListener("nbloaded", () => {      // older notebooks only have NB.labels (both on)
+  Q("#lb-f").checked = NB.labF !== undefined ? NB.labF : NB.labels !== false; Q("#lb-m").checked = NB.labM !== undefined ? NB.labM : NB.labels !== false;
+  Q("#lb-dec").value = String(NB.labDec || 0); drawLabels();
+});
+Q("#ex-link").onclick = e => { e.preventDefault(); window.big("Esempio di disegno", '<img src="static/esempio-disegno.png" alt="Esempio: paracetamolo e il suo prodotto con +O, con formula e massa sotto ogni struttura e la differenza sopra la freccia" style="max-width:100%;height:auto">'); };
 
 // ------------------------------------------------------------------ selected atoms: a fragment without breaking bonds
 // The H are those the atoms carry in the molecule; every bond to an unselected atom is a cut. The ions are hypotheses
@@ -291,13 +301,94 @@ function addCaption(svgText, c) {
 Q("#cap-copy").onclick = async () => { const c = await capData(); if (c) try { await navigator.clipboard.writeText(capText(c)); } catch (_) { /* clipboard blocked */ } };
 document.addEventListener("nbloaded", () => { if (NB.cap) { Q("#cap-name").value = NB.cap.name || ""; Q("#cap-ad").value = NB.cap.adduct || "[M+H]+"; Q("#cap-on").checked = NB.cap.on === true; } capShow(); });
 
+// Labels of the exported image as real SVG text (subscripts and superscripts shifted with dy, like the caption).
+// Ketcher turns text objects into glyph outlines and spaces Unicode subscripts badly, so the export is made WITHOUT text objects:
+// the position of the structures in the exported SVG is found by matching the bond end points with the atom positions of the
+// .ket (the export scale is 40 px per unit), then the labels are added as <text>. If the match fails, the old way is used.
+const EXPORT_SCALE = 40;
+function exportOffset(svgText, ket) {
+  const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
+  doc.querySelectorAll("defs").forEach(d => d.remove());
+  const atoms = [];
+  Object.keys(ket).filter(k => /^mol\d+$/.test(k)).forEach(k => (ket[k].atoms || []).forEach(a => a.location && atoms.push([a.location[0] * EXPORT_SCALE, -a.location[1] * EXPORT_SCALE])));
+  const ends = [];
+  doc.querySelectorAll("path").forEach(pa => {
+    const n = (pa.getAttribute("d") || "").match(/-?\d+(?:\.\d+)?/g);
+    const tr = (pa.getAttribute("transform") || "").match(/matrix\(([^)]*)\)/);                 // Ketcher draws in ket units with matrix(40,0,0,40,tx,ty)
+    const [a, b, c, d, e, f] = tr ? tr[1].split(/[\s,]+/).map(Number) : [1, 0, 0, 1, 0, 0];
+    if (n && (pa.getAttribute("d") || "").trim()[0] === "M") for (let i = 0; i + 1 < n.length; i += 2) ends.push([a * +n[i] + c * +n[i + 1] + e, b * +n[i] + d * +n[i + 1] + f]);
+  });
+  const votes = new Map();
+  for (const [ax, ay] of atoms) for (const [ex, ey] of ends) {
+    const k = Math.round(ex - ax) + "," + Math.round(ey - ay); votes.set(k, (votes.get(k) || 0) + 1);
+  }
+  // symmetric molecules (rings) match well at several shifts: keep only shifts that leave every atom inside the picture
+  // (Ketcher crops the picture tightly around the drawing), then take the best supported one
+  const vb = (doc.documentElement.getAttribute("viewBox") || "0 0 0 0").split(/[\s,]+/).map(Number);
+  const inside = (ox, oy) => atoms.every(([ax, ay]) => ax + ox >= vb[0] - 3 && ax + ox <= vb[0] + vb[2] + 3 && ay + oy >= vb[1] - 3 && ay + oy <= vb[1] + vb[3] + 3);
+  const ranked = [...votes].sort((p, q) => q[1] - p[1]).slice(0, 40);
+  const need = Math.max(2, Math.min(atoms.length, 3));
+  const pick = ranked.find(([k, c]) => c >= need && inside(...k.split(",").map(Number)));
+  if (!pick) return null;
+  const [bx, by] = pick[0].split(",").map(Number);
+  // refine with the matching pairs
+  let sx = 0, sy = 0, m = 0;
+  for (const [ax, ay] of atoms) for (const [ex, ey] of ends) if (Math.abs(ex - ax - bx) <= 1.5 && Math.abs(ey - ay - by) <= 1.5) { sx += ex - ax; sy += ey - ay; m++; }
+  return { ox: sx / m, oy: sy / m };
+}
+const svgNS = "http://www.w3.org/2000/svg";
+let _meas = null;
+const textWidth = (parts, size) => {
+  _meas = _meas || document.createElement("canvas").getContext("2d");
+  return parts.reduce((w, [s, k]) => { _meas.font = `${k ? size * 0.72 : size}px Arial, Helvetica, sans-serif`; return w + _meas.measureText(String(s)).width; }, 0);
+};
+function svgLabel(doc, parts, x, y, size, color) {
+  const t = doc.createElementNS(svgNS, "text");
+  t.setAttribute("x", x); t.setAttribute("y", y); t.setAttribute("text-anchor", "middle");
+  t.setAttribute("font-family", "Arial, Helvetica, sans-serif"); t.setAttribute("font-size", size); t.setAttribute("fill", color);
+  let shift = 0;                                   // current vertical shift in em: tspans carry dy relative to the previous one
+  for (const [txt, k] of parts) {
+    const want = k === "sub" ? 0.28 : k === "sup" ? -0.45 : 0, sp = doc.createElementNS(svgNS, "tspan");
+    sp.textContent = String(txt);
+    if (want !== shift) { sp.setAttribute("dy", ((want - shift) * size).toFixed(2)); shift = want; }
+    if (k) sp.setAttribute("font-size", (size * 0.72).toFixed(2));
+    t.appendChild(sp);
+  }
+  return t;
+}
+function addExportLabels(svgText, ket) {
+  const off = exportOffset(svgText, ket); if (!off) return null;
+  const doc = new DOMParser().parseFromString(svgText, "image/svg+xml"), root = doc.documentElement;
+  const vb = (root.getAttribute("viewBox") || "").split(/[\s,]+/).map(Number);
+  if (vb.length !== 4 || vb.some(isNaN)) return null;
+  const g = doc.createElementNS(svgNS, "g"); g.setAttribute("id", "qqq-labels");
+  let [x0, y0, x1, y1] = [vb[0], vb[1], vb[0] + vb[2], vb[1] + vb[3]];
+  const put = (parts, x, y, size, color) => {
+    g.appendChild(svgLabel(doc, parts, x, y, size, color));
+    const w = textWidth(parts, size);
+    x0 = Math.min(x0, x - w / 2 - 8); x1 = Math.max(x1, x + w / 2 + 8); y0 = Math.min(y0, y - size - 4); y1 = Math.max(y1, y + size * 0.6 + 4);
+  };
+  for (const d of structures()) put(labelParts(d), off.ox + d.cx * EXPORT_SCALE, off.oy + (d.y + 0.6) * EXPORT_SCALE + 14, 16, "#3b3b3b");
+  for (const a of arrowDeltas()) put(a.parts, off.ox + a.x * EXPORT_SCALE, off.oy + (a.y - 0.75) * EXPORT_SCALE + 12, 14, "#2b5c8a");
+  // grow the picture to hold the labels (background rectangle included)
+  const bg = [...doc.querySelectorAll("rect")].find(r => !r.closest("defs"));
+  root.setAttribute("viewBox", `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
+  const sx = (x1 - x0) / vb[2], sy = (y1 - y0) / vb[3];
+  const pw = parseFloat(root.getAttribute("width")), ph = parseFloat(root.getAttribute("height"));
+  if (pw) root.setAttribute("width", pw * sx); if (ph) root.setAttribute("height", ph * sy);
+  if (bg) { bg.setAttribute("x", x0); bg.setAttribute("y", y0); bg.setAttribute("width", x1 - x0); bg.setAttribute("height", y1 - y0); }
+  root.appendChild(g);
+  return new XMLSerializer().serializeToString(doc);
+}
+
 // ------------------------------------------------------------------ export
 const download = (blob, name) => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
 async function image(format) {
   await start();
-  const ket = ketWithLabels(await K.getKet()), cream = Q("#ex-bg").checked;
-  const svg0 = await K.generateImage(ket, { outputFormat: "svg", backgroundColor: cream ? "255,251,240" : "255,255,255" });
-  let svgText = await svg0.text();
+  const raw = await K.getKet(), cream = Q("#ex-bg").checked, gen = k => K.generateImage(k, { outputFormat: "svg", backgroundColor: cream ? "255,251,240" : "255,255,255" });
+  let svgText = null;
+  if (labelsOn()) { try { svgText = addExportLabels(await (await gen(raw)).text(), JSON.parse(raw)); } catch (_) { svgText = null; } }   // real SVG text
+  if (!svgText) svgText = await (await gen(ketWithLabels(raw))).text();                                                              // fallback: Ketcher text objects
   const cap = Q("#cap-on").checked ? await capData() : null;
   if (cap) svgText = addCaption(svgText, cap);
   const svg = new Blob([svgText], { type: "image/svg+xml" });
@@ -315,7 +406,7 @@ Q("#ex-png").onclick = async () => download(await image("png"), "struttura.png")
 Q("#ex-jpg").onclick = async () => download(await image("jpg"), "struttura.jpg");
 Q("#ex-svg").onclick = async () => download(await image("svg"), "struttura.svg");
 Q("#ex-ket").onclick = async () => { await start(); download(new Blob([await K.getKet()], { type: "application/json" }), "disegno.ket"); };
-Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); try { await K.setMolecule(v); } catch (e) { Q("#dcomp").textContent = "SMILES non valido: " + e.message; } };
+Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); try { await K.setMolecule(v); } catch (e) { dnote("SMILES non valido: " + e.message); } };
 
 window.TPDraw = { image, smiles: async () => { await start(); return K.getSmiles(); }, ready: () => !!K };
 document.addEventListener("tpview", e => { if (e.detail.view === "draw") start(); });
