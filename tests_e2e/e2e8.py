@@ -42,7 +42,7 @@ try:
             pg.screenshot(path=SH + "80_zoom_drag.png")
             pg.mouse.up(); pg.wait_for_timeout(800)
             assert pg.evaluate(f"E.panels[{i}].zoom!==null") and pg.evaluate(f"E.panels[{i}].el.querySelector('.zr').hidden")
-            assert pg.evaluate(f"E.panels[{i}].el.querySelector('[data-a=fit]').style.display")==""
+            assert pg.evaluate(f"E.panels[{i}].el.querySelector('[data-a=fit]').disabled")==False
             pg.screenshot(path=SH + "81_zoomed.png")
             pg.locator(f".pnl.spec [data-a=fit]").first.click(); pg.wait_for_timeout(600)
             assert pg.evaluate(f"E.panels[{i}].zoom===null")
@@ -67,10 +67,10 @@ try:
             print(txt); assert txt.get("Software") == "QqQ lab" and txt.get("Title") and txt.get("Source")
             assert dd.suggested_filename.endswith(".png") and "TIC" in dd.suggested_filename
         step("PNG name + valid tEXt metadata", png)
-        def csvn():
-            with pg.expect_download() as d: pg.locator(".pnl.spec [data-a=csv]").first.click()
-            print("csv file", d.value.suggested_filename); assert d.value.suggested_filename.startswith("spettro")
-        step("CSV name", csvn)
+        def xlsn():
+            with pg.expect_download() as d: pg.locator(".pnl.spec [data-a=xlsx]").first.click()
+            print("xlsx file", d.value.suggested_filename); assert d.value.suggested_filename.startswith("spettro")
+        step("Excel name", xlsn)
         def ctx():
             for _ in range(60):
                 for i in range(pg.evaluate("E.panels.length")): pg.evaluate(f"front(E.panels[{i}].el)")

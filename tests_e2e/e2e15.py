@@ -29,6 +29,10 @@ try:
             assert d["blank_MRM.mzML"][0] == "blank" and d["B_MRM-t15.mzML"][:1] == ("sample",) and d["B_MRM-t15.mzML"][2] == 15, d
             en = pg.evaluate("[...document.querySelectorAll('#flist input[data-k=conc]')].map(x=>[x.disabled,x.value])")
             assert any(not e[0] and e[1] == "5" for e in en), en
+            # concentration only for the standards of an MRM experiment: no field on the other rows, Full Scan "standard" included
+            rows = pg.evaluate("[...document.querySelectorAll('#flist tr')].slice(1).map(r=>[r.children[1].childNodes[0].textContent.trim(), !!r.querySelector('[data-k=conc]')])")
+            std = {n for n, has in rows if has}; assert std == {"Std_1ppm.mzML", "Std_5.mzML", "std_10mgL.mzML"}, rows
+            assert pg.locator("#cunit").count() == 1
         step("columns, types and concentrations guessed from the name", layout)
         def routing():
             assert MDAM.name in pg.inner_text("#mlist") and "MRM, 2 transizioni" in pg.inner_text("#mlist"), pg.inner_text("#mlist")
@@ -37,6 +41,15 @@ try:
             assert "riquadro 1" in pg.inner_text("#up")
             assert pg.locator("#mlist table").count() == 1 and pg.locator("#flist table").count() == 1
         step("a .dam dropped in box 1 goes to box 2 (and the other way round), method table", routing)
+        def conc_rules():
+            row = pg.locator('#flist tr', has_text="B_FullMass-t0").locator("select[data-k=type]"); row.select_option("standard"); pg.wait_for_timeout(100)
+            assert pg.locator('#flist tr', has_text="B_FullMass-t0").locator("[data-k=conc]").count() == 0 and pg.evaluate("ST.files.find(f=>f.name==='B_FullMass-t0.mzML').conc") is None
+            row.select_option("sample")
+            for n in ("Std_1ppm", "Std_5", "std_10mgL"): pg.locator('#flist tr', has_text=n).locator("[data-k=use]").uncheck()
+            assert pg.locator("#cunit").count() == 0, "unit selector still there"; assert pg.locator("#flist input[data-k=conc]").count() == 0 and "Conc." not in pg.inner_text("#flist"), pg.inner_text("#flist")[:200]
+            for n in ("Std_1ppm", "Std_5", "std_10mgL"): pg.locator('#flist tr', has_text=n).locator("[data-k=use]").check()
+            assert pg.locator("#cunit").count() == 1
+        step("concentration and unit only for MRM standards", conc_rules)
         def size():
             fs = pg.evaluate("parseFloat(getComputedStyle(document.querySelector('#start')).fontSize)"); assert fs >= 15, fs
             w = pg.evaluate("[document.querySelector('#opbtn').getBoundingClientRect().width, document.querySelector('#drop').getBoundingClientRect().width]"); assert abs(w[0] - w[1]) < 40, w
@@ -82,10 +95,16 @@ try:
             pg.locator('[data-use]').first.uncheck(); pg.wait_for_timeout(300)
             assert "n = 2" in pg.inner_text("#cal-eq"); pg.locator('[data-use]').first.check()
             pg.select_option("#cal-w", "x"); pg.wait_for_timeout(300); assert "R²" in pg.inner_text("#cal-eq")
-            with pg.expect_download() as d: pg.click("#cal-csv")
-            txt = open(d.value.path(), encoding="utf-8-sig").read(); assert "Pendenza" in txt and "Std_5" in txt, txt[:300]
+            with pg.expect_download() as d: pg.click("#cal-xlsx")
+            f = d.value.path(); assert d.value.suggested_filename == "retta_di_taratura.xlsx"
+            sh = xlsx_sheets(f); assert sh == ["Dati", "Retta"], sh
+            dat = xlsx_rows(f, 1); ret = xlsx_rows(f, 2); labels = [r[0][1] for r in ret if r and r[0]]
+            assert any(l.startswith("Pendenza") for l in labels) and "R²" in labels and any(l.startswith("LOD") for l in labels), labels
+            slope = [r[1][1] for r in ret if r and r[0] and r[0][1].startswith("Pendenza")][0]; assert slope > 0, slope
+            assert any(c and c[0] == "s" and "Std_5" in c[1] for r in dat for c in r[:1]), dat[:3]
+            assert all(c[0] == "n" for r in dat[1:] for c in r[3:5] if c), dat[1]
             pg.click("#bigx")
-        step("calibration window: fit, exclude a point, weights, CSV", calib)
+        step("calibration window: fit, exclude a point, weights, Excel (2 sheets)", calib)
         def reopen():
             pg.locator('.pnl.mrm [data-o=cal]').first.click(); pg.wait_for_timeout(800); assert pg.locator("#cal-cv").is_visible(); pg.click("#bigx")
         step("panel button opens it too", reopen)

@@ -76,9 +76,9 @@ function list(smiles) {
       ${adductTable(d)}
       <div class="muted sm" style="word-break:break-all">${EH(s)}</div></div>`;
   }).join("");
-  box.querySelectorAll("[data-x]").forEach(b => b.onclick = () => {
+  box.querySelectorAll("[data-x]").forEach(b => b.onclick = () => {      // same window as every other way of extracting an ion
     window.setView("data");
-    window.addPanel("xic", { traces: [{ id: E.seq++, mz: +b.dataset.x, label: b.dataset.l }] });
+    if (E.files.length) window.openXic(null, { mz: +b.dataset.x, label: b.dataset.l });
   });
 }
 
@@ -232,7 +232,7 @@ function showSelection() {
   h += `<table class="sm" style="margin-top:4px"><tr><th>ipotesi</th><th>ione</th><th class="num">m/z</th><th class="num">intero</th><th></th></tr>${tbl.join("")}</table>
     <div class="muted sm">Sono ipotesi da confrontare con lo spettro di ioni prodotto (MS/MS): in ESI i frammenti sono quasi sempre ioni a numero pari di elettroni. Il calcolo usa gli H che gli atomi hanno nel disegno.</div>`;
   body.innerHTML = h;
-  body.querySelectorAll("[data-x]").forEach(b => b.onclick = () => { window.setView("data"); window.addPanel("xic", { traces: [{ id: E.seq++, mz: +b.dataset.x, label: b.dataset.l + " (" + b.dataset.x + ")" }] }); });
+  body.querySelectorAll("[data-x]").forEach(b => b.onclick = () => { window.setView("data"); if (E.files.length) window.openXic(null, { mz: +b.dataset.x, label: b.dataset.l }); });
 }
 
 // ------------------------------------------------------------------ caption (name, formula, m/z) for the report

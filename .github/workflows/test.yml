@@ -37,6 +37,9 @@ jobs:
       - name: Syntax check
         run: |
           node --check qqq_lab/web/explore.js
+          node --check qqq_lab/web/xlsx.js
+          node --check qqq_lab/web/calib.js
+          node --check qqq_lab/web/tabs.js
           node --check qqq_lab/web/browser.js
           cp qqq_lab/web/browser-worker.js /tmp/bw.mjs && node --check /tmp/bw.mjs
           cp qqq_lab/web/draw.js /tmp/draw.mjs && node --check /tmp/draw.mjs

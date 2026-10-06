@@ -1,5 +1,5 @@
 // Calibration curve for the MRM files. Classic script loaded after explore.js: it uses its globals
-// (E, Q, EH, big, dl, csvOf, getMrm, setup, axes, css, fmt, M, PAL). The student integrates the peaks in the MRM panel
+// (E, Q, EH, big, dlx, IC_DL, getMrm, setup, axes, css, fmt, M, PAL). The student integrates the peaks in the MRM panel
 // (drag over a peak: every file is integrated in the same window); this window lists the areas and fits the line.
 // Nothing is decided for the student: the areas, the concentrations and the points kept in the fit are theirs.
 
@@ -73,7 +73,7 @@ async function openCalib() {
   await calLoad();
   const html = `<div class="cal-top bar"><label>Transizione quantificatrice <select id="cal-q"></select></label><label>qualificatrice <select id="cal-l"></select></label>
       <label>Pesi <select id="cal-w"><option value="none">nessuno</option><option value="x">1/x</option><option value="x2">1/x&sup2;</option></select></label>
-      <label>Unità <input id="cal-u" style="width:70px"></label><span class="sp"></span><button id="cal-csv">Esporta CSV</button></div>
+      <label>Unità <input id="cal-u" style="width:70px"></label><span class="sp"></span><button id="cal-xlsx">${IC_DL}Excel</button></div>
     <div id="cal-eq" style="margin:4px 0"></div><canvas id="cal-cv"></canvas>
     <div id="cal-tab" style="overflow-x:auto;margin-top:6px"></div><div class="muted sm" id="cal-note"></div>`;
   big("Retta di taratura", html, () => {
@@ -129,13 +129,17 @@ async function openCalib() {
       smp.forEach(r => { const x = X(calc(r.aq)), y = Y(r.aq); g.fillStyle = "#e6550d"; g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x + 5, y); g.lineTo(x, y + 6); g.lineTo(x - 5, y); g.closePath(); g.fill(); });
       g.font = "11px system-ui"; g.fillStyle = css("--muted"); g.textAlign = "left"; g.fillText("● standard   ◆ campioni (sulla retta)", M.l + 8, M.t + 12);
     }
-    Q("#cal-csv").onclick = () => {
-      if (!last) return; const { rows, fit, u, calc } = last;
-      const data = rows.map(r => ({ file: r.f.label, tipo: r.type, tempo: r.f.time ?? "", conc: r.conc ?? "", aq: r.aq ?? "", al: r.al ?? "", ratio: r.ratio ?? "", cc: r.type !== "standard" && fit && r.aq != null ? calc(r.aq) ?? "" : "", incl: r.type === "standard" ? (CAL.off.has(r.f.file) ? "no" : "si") : "" }));
-      const head = ["File", "Tipo", "Tempo (min)", `Conc. (${u})`, `Area ${CAL.quant || ""}`, `Area ${CAL.qual || ""}`, "Qual/Quant", `Conc. dalla retta (${u})`, "Nella retta"];
-      let t = csvOf(["file", "tipo", "tempo", "conc", "aq", "al", "ratio", "cc", "incl"], data, head);
-      if (fit) t += `\r\n"Pendenza";${calNum(fit.a)}\r\n"Intercetta";${calNum(fit.b)}\r\n"R2";${calNum(fit.r2)}\r\n"Pesi";"${CAL.w === "none" ? "nessuno" : CAL.w === "x" ? "1/x" : "1/x2"}"\r\n`;
-      dl("retta_di_taratura.csv", t);
+    Q("#cal-xlsx").onclick = () => {
+      if (!last) return; const { rows, fit, u, calc } = last, T = { standard: "standard", sample: "campione", blank: "bianco" };
+      const data = rows.map(r => [r.f.label, T[r.type] || r.type, r.f.time, r.conc, r.aq, r.al, r.ratio, r.type !== "standard" && fit && r.aq != null ? calc(r.aq) : null, r.type === "standard" ? (CAL.off.has(r.f.file) ? "no" : "sì") : ""]);
+      const head = ["File", "Tipo", "Tempo (min)", `Conc. (${u})`, `Area ${CAL.quant || "quantificatore"} (conteggi*s)`, `Area ${CAL.qual || "qualificatore"} (conteggi*s)`, "Rapporto Qual/Quant", `Conc. dalla retta (${u})`, "Nella retta"];
+      const B = t => ({ v: t, b: true }), R = [
+        [B("Quantificatore"), CAL.quant || ""], [B("Qualificatore"), CAL.qual || ""], [B("Pesi"), CAL.w === "none" ? "nessuno" : CAL.w === "x" ? "1/x" : "1/x²"], [B("Unità di concentrazione"), u], [],
+        ...(fit ? [[B("Pendenza (area per " + u + ")"), fit.a], [B("Intercetta (area)"), fit.b], [B("R²"), fit.r2], [B("Punti nella retta (n)"), fit.n],
+          [B(`LOD (${u})`), fit.lod], [B(`LOQ (${u})`), fit.loq], [],
+          ["LOD e LOQ sono stime: 3,3 e 10 volte la deviazione standard dei residui divisa per la pendenza (non una validazione del metodo)."]]
+          : [["Retta non calcolabile: servono almeno due standard con concentrazione diversa e un'area."]])];
+      dlx("retta_di_taratura.xlsx", [{ name: "Dati", head, rows: data, widths: [26, 11, 12, 14, 24, 24, 20, 24, 12] }, { name: "Retta", rows: R, widths: [34, 18] }]);
     };
     paint();
   });

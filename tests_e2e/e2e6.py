@@ -29,13 +29,18 @@ try:
             pg.keyboard.press("Escape"); pg.wait_for_timeout(200); assert not pg.is_visible("#helppop")
             n = pg.locator(".hq:visible").count(); assert n >= 5, n
         step("? buttons open the explanation", helpq)
-        def csvexcel():
+        def xlsxexcel():
             pg.click("#dtabs [data-t=mrm]"); pg.wait_for_timeout(2500)
-            with pg.expect_download() as d: pg.locator(".pnl.mrm [data-a=csv]").first.click()
-            raw = open(d.value.path(), "rb").read(); t = raw.decode("utf-8-sig"); first = t.split("\r\n")[:3]
-            print("CSV:", first[0][:120], "|", first[1][:80])
-            assert raw[:3] == b"\xef\xbb\xbf" and "RT min" in first[0] and ";" in first[1] and "," in "".join(first[1:]) and "." not in "".join(first[1:]).replace('"', ''), first
-        step("plot CSV for Excel (semicolon, decimal comma, BOM)", lambda: (csvexcel(), pg.evaluate("setTab('full')"), pg.wait_for_timeout(800)))
+            with pg.expect_download() as d: pg.locator(".pnl.mrm [data-a=xlsx]").first.click()
+            f = d.value; assert f.suggested_filename.endswith(".xlsx"), f.suggested_filename
+            rows = xlsx_rows(f.path()); head = [c[1] for c in rows[0] if c]
+            print("XLSX:", f.suggested_filename, head[:2], rows[1][:2])
+            assert any("RT (min)" in h for h in head) and any("Intensità (cps)" in h for h in head), head
+            assert all(c[0] == "n" for c in rows[1][:2] if c), rows[1][:2]                    # real numbers, not text
+            assert 0 <= rows[1][0][1] < 40 and rows[5][0][1] > rows[1][0][1], (rows[1][0], rows[5][0])
+            wb = xlsx_openpyxl(f.path())
+            if wb: assert isinstance(wb.active.cell(2, 1).value, (int, float)) and wb.active.cell(1, 1).font.b
+        step("plot Excel (.xlsx: numeric cells, units in headers)", lambda: (xlsxexcel(), pg.evaluate("setTab('full')"), pg.wait_for_timeout(800)))
         def fold():
             w0 = pg.evaluate("E.panels[0].w"); pg.click("#ffold"); pg.wait_for_timeout(600)
             w1 = pg.evaluate("E.panels[0].w"); assert w1 > w0 + 150 and pg.is_visible("#funfold") and not pg.is_visible("#dfiles"), (w0, w1)

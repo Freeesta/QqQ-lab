@@ -36,3 +36,31 @@ class Run:
         print("--- SERVER LOG (tail)\n", s.log[-1500:])
         print("--- BROWSER ERRORS", len(s.errs))
         for e in s.errs: print(e)
+
+# ---- .xlsx reading without libraries (zip + XML), plus openpyxl as a second opinion when it is installed
+def xlsx_rows(path, n=1):
+    """Rows of worksheet n as lists of ('n', float) | ('s', text) | None, read straight from xl/worksheets/sheetN.xml."""
+    import zipfile, re
+    import xml.etree.ElementTree as ET
+    ns = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+    z = zipfile.ZipFile(path); assert z.testzip() is None
+    root = ET.fromstring(z.read(f"xl/worksheets/sheet{n}.xml")); rows = []
+    for r in root.iter("{%s}row" % ns["m"]):
+        row = {}
+        for c in r.findall("m:c", ns):
+            col = 0
+            for ch in re.match(r"[A-Z]+", c.get("r")).group(): col = col * 26 + ord(ch) - 64
+            if c.get("t") == "inlineStr": row[col - 1] = ("s", "".join(t.text or "" for t in c.iter("{%s}t" % ns["m"])))
+            else:
+                v = c.find("m:v", ns); row[col - 1] = ("n", float(v.text)) if v is not None else None
+        rows.append([row.get(i) for i in range(max(row) + 1)] if row else [])
+    return rows
+def xlsx_sheets(path):
+    import zipfile, re
+    z = zipfile.ZipFile(path); return re.findall(r'<sheet name="([^"]*)"', z.read("xl/workbook.xml").decode("utf-8"))
+def xlsx_openpyxl(path):
+    try: import openpyxl
+    except ImportError: return None
+    import shutil, tempfile
+    tmp = os.path.join(tempfile.mkdtemp(), "t.xlsx"); shutil.copy(path, tmp)      # downloads have no extension, openpyxl wants one
+    return openpyxl.load_workbook(tmp, data_only=True)

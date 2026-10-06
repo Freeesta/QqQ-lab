@@ -1,4 +1,4 @@
-"""Local server (127.0.0.1 only): JSON API for the page, CSV and JSON exports."""
+"""Local server (127.0.0.1 only): JSON API for the page and the session export."""
 from __future__ import annotations
 
 import base64

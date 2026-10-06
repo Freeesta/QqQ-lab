@@ -76,7 +76,7 @@ try:
         step("map hover", maphover)
         def mapxic():
             i = mi(); c = pt(pg, i, 14.33, ymz=194.5); pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
-            pg.locator("#ctx div", has_text="Estrai l'XIC").first.click(); pg.wait_for_timeout(2500)
+            pg.locator("#ctx div", has_text="Estrai l'XIC").first.click(); pg.wait_for_timeout(300); pg.click("#xic-go"); pg.wait_for_timeout(2500)
             assert pg.evaluate("E.panels.some(p=>p.type==='xic'&&p.traces.length===1&&Math.abs(p.traces[0].mz-194.5)<2.5)")
         step("map right-click -> XIC", mapxic)
         def mapdrag():

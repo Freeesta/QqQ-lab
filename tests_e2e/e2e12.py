@@ -38,9 +38,9 @@ with sync_playwright() as p:
         c.locator('[data-a=izoom]').click()
         pg.mouse.move(box["x"] + pg.evaluate("E.panels[0]._a.X(13)"), box["y"] + 100); pg.mouse.down(); pg.mouse.move(box["x"] + pg.evaluate("E.panels[0]._a.X(16)"), box["y"] + 100, steps=5); pg.mouse.up(); pg.wait_for_timeout(500)
         z = pg.evaluate("E.panels[0].zoom"); assert z and abs(z[0] - 13) < 0.1 and abs(z[1] - 16) < 0.1, z
-        assert c.locator('[data-a=fit]').is_visible(); c.locator('[data-a=fit]').click(); c.locator('[data-a=izoom]').click()
+        assert c.locator('[data-a=fit]').is_enabled(); c.locator('[data-a=fit]').click(); c.locator('[data-a=izoom]').click(); assert c.locator('[data-a=fit]').is_disabled()
         # XIC panel with a chosen window, then auto + manual integration on a chosen file
-        pg.click("#np-xic"); pg.fill("#xic-q", "364.1"); pg.press("#xic-q", "Enter"); pg.wait_for_timeout(300); pg.fill("#xic-lo", "363.6"); pg.fill("#xic-hi", "364.6"); pg.click("#xic-go"); pg.wait_for_timeout(2500)
+        pg.click("#np-xic"); pg.fill("#xic-lo", "363.6"); pg.fill("#xic-hi", "364.6"); pg.click("#xic-go"); pg.wait_for_timeout(2500)
         xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')"); xp = pg.locator('.pnl.xic').first
         assert pg.evaluate(f"E.panels[{xi}].traces[0].w") == 0.5
         xp.locator('[data-a=iauto]').click(); assert xp.locator('[data-a=intf]').is_visible()

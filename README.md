@@ -37,7 +37,7 @@ toccati. Il taccuino (pannelli, XIC, integrazioni, annotazioni, disegni) si salv
   ai grafici. Trascina sul cromatogramma per lo spettro di un altro intervallo; clic destro per estrarre uno ione (XIC) o aggiungerlo a un pannello; il campo
   "m/z o formula" accetta anche una formula bruta. Pannelli spettro, XIC, MRM e mappa RT-m/z;
   vista impilata, scala log, zoom, cursore con i valori, sottrazione del bianco e linea di base,
-  integrazione con tabella delle aree nel tempo (per le cinetiche) esportabile in CSV.
+  integrazione con tabella delle aree nel tempo (per le cinetiche) esportabile in Excel (.xlsx).
   Popup "Metodo" (parametri dello strumento) e "Calcolatrice m/z".
 - **Tavola periodica** e **Addotti** (pulsanti in alto a destra): masse esatte e abbondanze isotopiche passando sopra gli elementi; tabella degli addotti ESI con l'm/z calcolato da una massa o una formula; profilo isotopico di una formula (M, M+1, M+2..., calcolato dal programma), che si può anche sovrapporre a uno spettro con il clic destro; perdite neutre più comuni.
 - **Teoria**: undici capitoli sulla teoria dell'esperienza (prodotti di trasformazione, fotocatalisi TiO2, LC in fase inversa, elettrospray, vuoto, teoria del quadrupolo, triplo quadrupolo e CID, come si frammentano gli ioni, full scan/MS2/MRM, strategia per i TP, glossario e bibliografia), con figure interattive calcolate nel browser. Si apre anche **senza il programma**, con doppio clic su `Teoria QqQ lab.html` (o `qqq_lab/web/teoria/index.html`), in qualsiasi browser e offline.
@@ -47,7 +47,7 @@ toccati. Il taccuino (pannelli, XIC, integrazioni, annotazioni, disegni) si salv
   e gli m/z possibili del frammento; con la gomma si rompe un legame. A destra: m/z degli addotti con
   pulsante XIC, didascalia per la relazione, guida rapida. Esporta PNG, JPEG, SVG e .ket.
 
-I pulsanti **?** accanto alle funzioni spiegano a cosa servono. Ogni grafico ha i pulsanti **PNG** (immagine) e **CSV** (dati); i CSV e la tabella delle integrazioni sono pronti per **Excel** in italiano (punto e virgola, virgola decimale): le tabelle e i grafici della relazione (cinetica, retta di taratura) si costruiscono lì.
+I pulsanti **?** accanto alle funzioni spiegano a cosa servono. Ogni grafico ha i pulsanti **PNG** (immagine) ed **Excel** (dati); le esportazioni sono veri file .xlsx (numeri come numeri, intestazioni con le unità, un foglio per esportazione; la retta di taratura ha il foglio dei dati e il foglio «Retta» con pendenza, intercetta, R², LOD e LOQ): le tabelle e i grafici della relazione (cinetica, retta di taratura) si costruiscono lì.
 
 Con risoluzione unitaria **un m/z è un candidato, non un'identificazione**. Sullo strumento del
 laboratorio l'asse m/z è spostato di circa +0.3 Da: usa una finestra XIC di +-1 Da.

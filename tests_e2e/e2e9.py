@@ -1,4 +1,4 @@
-"""PDA trace, no CSV on chromatograms, fixed panel slots (drag = swap), LC method in the Metodo window, trace not over the y axis."""
+"""PDA trace, no Excel on chromatograms, fixed panel slots (drag = swap), LC method in the Metodo window, trace not over the y axis."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -21,10 +21,10 @@ try:
             assert "PDA" in pg.evaluate("plotName(E.panels[0])")
             pg.screenshot(path=SH + "90_pda.png")
         step("PDA kind: one trace per file incl. MRM", pda)
-        def nocsv():
-            assert pg.locator(".pnl.chrom [data-a=csv]").count() == 0
-            assert pg.locator(".pnl.spec [data-a=csv]").count() >= 1
-        step("no CSV button on the chromatogram, still on the spectrum", nocsv)
+        def noxls():
+            assert pg.locator(".pnl.chrom [data-a=xlsx]").count() == 0
+            assert pg.locator(".pnl.spec [data-a=xlsx]").count() >= 1
+        step("no Excel button on the chromatogram, still on the spectrum", noxls)
         def edge():
             # no coloured pixel of the trace in the 1.5 px left of the plot area except the axis itself
             n = pg.evaluate("""()=>{const p=E.panels[0],c=p.cv,g=c.getContext('2d'),d=window.devicePixelRatio||1;
