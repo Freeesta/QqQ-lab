@@ -30,10 +30,10 @@ const TP = (() => {
     // wide tables scroll horizontally on phones instead of widening the page
     document.querySelectorAll("main table").forEach(t => { const w = document.createElement("div"); w.className = "tw"; t.parentNode.insertBefore(w, t); w.appendChild(t); });
     const top = document.createElement("header"); top.id = "top";
-    top.innerHTML = `<button id="menu" aria-label="Indice">&#9776;</button><a href="index.html"><img src="../logo.png" alt=""></a>
-      <span class="t">QqQ lab <small>· Teoria</small></span><span class="sp"></span>
-      ${embedded ? `<a class="btn" href="${here}" target="_blank" rel="noopener" title="Apri la teoria in una scheda separata">Apri in una nuova scheda &#8599;</a>` : ""}
-      <button id="printb" title="Stampa o salva in PDF questo capitolo">Stampa</button>`;
+    // inside the program the main bar already has the logo and the tabs: no second header there (only the index button on narrow screens)
+    if (embedded) document.body.classList.add("emb");
+    top.innerHTML = `<button id="menu" aria-label="Indice">&#9776;</button>` + (embedded ? "" : `<a href="index.html"><img src="../logo.png" alt=""></a>
+      <span class="t">QqQ lab <small>· Teoria</small></span><span class="sp"></span>`);
     document.body.prepend(top);
     const side = $("#side");
     const list = CHAPTERS.map((c, i) => `<li><a href="${c[0]}" class="${i === idx ? "on" : ""}"><b>${c[1]}</b><span>${c[2]}</span></a></li>`).join("");
@@ -43,7 +43,6 @@ const TP = (() => {
     const toc = hs.map(h => `<a href="#${h.id}" class="${h.tagName === "H3" ? "l3" : ""}">${h.textContent}</a>`).join("");
     side.innerHTML = `<h4>Capitoli</h4><ol>${list}</ol>${toc ? `<h4>In questa pagina</h4><div class="toc">${toc}</div>` : ""}`;
     $("#menu").onclick = () => side.classList.toggle("open");
-    $("#printb").onclick = () => window.print();
     // prev / next
     const pn = document.createElement("div"); pn.className = "pn";
     const p = CHAPTERS[idx - 1], n = CHAPTERS[idx + 1];
