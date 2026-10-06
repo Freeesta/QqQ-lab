@@ -82,7 +82,7 @@ function uiSave(now = false) {
         type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, kind: p.kind, smooth: p.smooth, tol: p.tol,
         traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label })),
         k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
-        link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, imode: p.imode || null, intf: p.intf || "",
+        link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1, imode: p.imode || null, intf: p.intf || "",
         iso: p.iso || null, sim: p.sim || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
       }))
     };
@@ -168,7 +168,7 @@ function restoreUi() {
   const made = u.panels.map(sp => addPanel(sp.type, {
     ...sp, tab: sp.tab || (sp.type === "mrm" ? "mrm" : E.files[kof(sp.k)]?.kind === "ms2" ? "ms2" : "full"), k: sp.k ? kof(sp.k) : undefined, ref: sp.ref ? kof(sp.ref) : "", bk: sp.bk ? kof(sp.bk) : "", bg: sp.bg === "w" ? "w" : sp.bg ? kof(sp.bg) : "", traces: (sp.traces || []).map(t => ({ id: E.seq++, ...t })), link: null, ints: sp.ints || [], anns: sp.anns || []
   }));
-  u.panels.forEach((sp, i) => { if (sp.link >= 0 && made[sp.link]) made[i].link = made[sp.link].id; });
+  u.panels.forEach((sp, i) => { if (sp.link >= 0 && made[sp.link]) made[i].link = made[sp.link].id; if (sp.src >= 0 && made[sp.src]) made[i].src = made[sp.src].id; });
   if (E.files[E.cur]?.kind !== E.tab) E.cur = (tabFiles()[0] || { k: 0 }).k;
   renderFileList(); return true;
 }
@@ -250,7 +250,6 @@ function toolbar() {
   const t = E.tab, scan = t !== "mrm", mrm = t === "mrm";
   Q("#np-chrom").hidden = !scan; Q("#np-spec").hidden = !scan; Q("#np-map").hidden = t !== "full"; Q("#np-xic").hidden = !scan; Q("#np-calc").hidden = !scan; Q("#np-merge").hidden = !scan;
   Q("#np-mrm").hidden = !mrm; Q("#np-cal").hidden = !mrm; Q("#calbar").hidden = !mrm; if (mrm && window.calbar) { Q("#calbar")._sig = null; calbar(); }
-  Q("#expbar").hidden = t !== "ms2"; if (t === "ms2" && window.expbar) expbar();
 }
 
 // ------------------------------------------------------------------ piccole finestre e menu
@@ -327,14 +326,20 @@ function place(w, h) {
 }
 // fixed slots: full-width panels sit one under the other; dragging one up or down makes the others change place
 // (final = false: the dragged panel follows the mouse; final = true: it drops into its slot)
-function restack(drag, final) {
+// spectra made from a chromatogram (double click, or linked) travel with it when it is dragged
+const followers = p => tabPanels().filter(q => q !== p && q.full && q.el && q.type === "spec" && (q.link === p.id || q.src === p.id));
+function restack(drag, final, grp = []) {
   const st = tabPanels().filter(q => q.full && q.el);
-  const others = st.filter(q => q !== drag).sort((a, b) => a.y - b.y), c = drag.y + drag.h / 2;
+  const others = st.filter(q => q !== drag && !grp.includes(q)).sort((a, b) => a.y - b.y), c = drag.y + drag.h / 2;
   const idx = others.filter(q => q.y + q.h / 2 < c).length;
-  const order = others.slice(); order.splice(idx, 0, drag);
+  const order = others.slice(); order.splice(idx, 0, drag, ...grp);      // the group stays together, in its own order
   let y = 0;
-  order.forEach(q => { if (q !== drag || final) q.y = y; if (q !== drag) apply(q); y += q.h + 10; });
-  if (final) apply(drag);
+  order.forEach(q => {
+    const mine = q === drag, moving = grp.includes(q);
+    if (!mine && !moving) { q.y = y; apply(q); }                         // the others close the gap
+    else if (final) { q.y = y; apply(q); }                                // the dragged ones: placed at the drop
+    y += q.h + 10;
+  });
   E.panels.sort((a, b) => a.y - b.y || a.id - b.id);
 }
 function relayout() {      // after a panel changes height: keep the order, close or open the gap
@@ -355,15 +360,17 @@ function pairArrows() {
 }
 // up / down buttons: swap a full-width panel with its neighbour (the panels slide); inactive for the first and the last
 function stackOrder() { return tabPanels().filter(q => q.full && q.el).sort((a, b) => a.y - b.y || a.id - b.id); }
+// block that moves together: a chromatogram with its child spectra; the others, in order
+function blockOf(p) { const grp = [p, ...(p.type === "chrom" || p.type === "xic" || p.type === "mrm" ? followers(p).sort((a, b) => a.y - b.y) : [])], st = stackOrder(), others = st.filter(q => !grp.includes(q)); return { grp, others, at: others.filter(q => q.y < p.y).length }; }
 function arrows() {
-  const st = stackOrder();
-  E.panels.forEach(q => { const u = q.el?.querySelector('[data-a="up"]'), d = q.el?.querySelector('[data-a="down"]'); if (!u) return; const i = st.indexOf(q); u.disabled = i <= 0; d.disabled = i < 0 || i >= st.length - 1; });
+  E.panels.forEach(q => { const u = q.el?.querySelector('[data-a="up"]'), d = q.el?.querySelector('[data-a="down"]'); if (!u) return; if (!q.full) { u.disabled = d.disabled = true; return; } const b = blockOf(q); u.disabled = b.at <= 0; d.disabled = b.at >= b.others.length; });
 }
 function movePanel(p, dir) {
-  const st = stackOrder(), i = st.indexOf(p), j = i + dir; if (i < 0 || j < 0 || j >= st.length) return;
-  [st[i], st[j]] = [st[j], st[i]];
-  let y = 0; st.forEach(q => { q.y = y; apply(q); y += q.h + 10; });
-  E.panels.sort((a, b) => a.y - b.y || a.id - b.id); front(p.el); arrows(); uiSave();
+  if (!p.full) return;
+  const b = blockOf(p), j = b.at + dir; if (j < 0 || j > b.others.length) return;
+  const order = b.others.slice(); order.splice(j, 0, ...b.grp);
+  let y = 0; order.forEach(q => { q.y = y; apply(q); y += q.h + 10; });
+  E.panels.sort((a, b2) => a.y - b2.y || a.id - b2.id); front(p.el); arrows(); uiSave();
 }
 function tile() {
   const w = hostWidth(); let y = 0;
@@ -409,13 +416,14 @@ function addPanel(type, o, after) {
   el.querySelector(".hd").addEventListener("mousedown", e => {
     if (e.target.closest("input,select,button,label,option") || el.classList.contains("max")) return;
     const sx = e.clientX - p.x, sy = e.clientY - p.y;
-    if (p.full) el.classList.add("drag");
+    const grp = p.full ? followers(p).sort((a, b) => a.y - b.y) : [], off = new Map(grp.map(q => [q, q.y - p.y]));
+    if (p.full) { el.classList.add("drag"); grp.forEach(q => q.el.classList.add("drag")); }
     const mv = ev => {
       p.y = Math.max(0, ev.clientY - sy);
-      if (p.full) { p.x = 0; restack(p, false); } else p.x = Math.max(0, ev.clientX - sx);
+      if (p.full) { p.x = 0; grp.forEach(q => { q.y = Math.max(0, p.y + off.get(q)); q.x = 0; apply(q); }); restack(p, false, grp); } else p.x = Math.max(0, ev.clientX - sx);
       apply(p); fitHost();
     };
-    const up = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", up); if (p.full) { el.classList.remove("drag"); restack(p, true); } uiSave(); };
+    const up = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", up); if (p.full) { el.classList.remove("drag"); grp.forEach(q => q.el.classList.remove("drag")); restack(p, true, grp); fitHost(); } uiSave(); };
     addEventListener("mousemove", mv); addEventListener("mouseup", up); e.preventDefault();
   });
   let first = true;
@@ -475,7 +483,33 @@ function front(el) {
 }
 // active panel (outlined): its cursor can be moved scan by scan with the arrow keys
 function setActive(p) { E.active = p; E.panels.forEach(q => q.el.classList.toggle("act", q === p)); }
+// MS2 precursor chromatograms: scans are sparse (one every few cycles) and many are empty. Nearest scan WITH data, either around x (d = 0)
+// or strictly beyond x in the direction d; g = half the smaller gap to its neighbours, so the spectrum window holds that scan and no other.
+function ms2Near(p, x, d) {
+  let best = null;
+  for (const s of p._a.sr) {
+    if (E.files[s.k]?.kind === "mrm") continue;
+    const xs = s.x, yy = s.y, e = 1e-6;
+    for (let i = 0; i < xs.length; i++) {
+      if (!(yy[i] > 0) || (d > 0 && xs[i] <= x + e) || (d < 0 && xs[i] >= x - e)) continue;
+      const dist = Math.abs(xs[i] - x); if (best && dist >= best.dist) { if (d > 0) break; continue; }
+      best = { dist, rt: xs[i], k: s.k, i, s };
+      if (d > 0) break;                                   // first scan beyond x going right
+    }
+  }
+  if (!best) return null;
+  const xs = best.s.x, i = best.i, gaps = [xs[i] - xs[i - 1], xs[i + 1] - xs[i]].filter(v => v > 0);
+  return { ...best, g: (gaps.length ? Math.min(...gaps) : scanStep()) * 0.9 };
+}
 function stepScan(p, d) {
+  if (p.tab === "ms2") {                                  // jump straight to the nearest scan with data in the direction pressed
+    const n = ms2Near(p, p.cur, d);
+    if (!n) { p.rd.textContent = d > 0 ? "ultimo scan con dati" : "primo scan con dati"; return; }
+    p.cur = n.rt; p.sel = null;
+    if (p.zoom && (n.rt < p.zoom[0] || n.rt > p.zoom[1])) { const w = p.zoom[1] - p.zoom[0]; p.zoom = clampView(n.rt - w / 2, n.rt + w / 2, p._a.full[0], p._a.full[1]); }
+    draw(p); pushLinked(p, n.rt - n.g / 2, n.rt + n.g / 2, n.k, true);
+    p.rd.textContent = `scansione ${n.i + 1}/${n.s.x.length} · RT ${n.rt.toFixed(3)} min`; return;
+  }
   const a = p._a, ok = s => E.files[s.k]?.kind !== "mrm";
   const k = nearestFile(p, p.cur), s = a.sr.find(x => x.k === k && ok(x)) || a.sr.find(ok) || a.sr[0]; if (!s || !s.x.length) return;
   const i0 = nearIdx(s.x, p.cur), yy = s.y || s.ys; let i = i0 + d;
@@ -556,6 +590,7 @@ async function pngWithMeta(blob, fields) {
 function ctl(p) {
   const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl");
   t.textContent = p.title;
+  if (p.type === "spec" && p.link) t.insertAdjacentHTML("beforeend", ` <span class="lk" title="Questo spettro segue il cromatogramma: un clic, il cursore, le frecce o una selezione lo aggiornano. Gli altri spettri aperti da quel cromatogramma restano fermi al loro tempo.">&#128279; segue il cursore</span>`);
   const T0 = p.tab || E.tab, ms2c = p.type === "chrom" && T0 === "ms2", mrmP = p.type === "mrm";
   if (ms2c) { p.kind = "tic"; p.mz0 = p.mz1 = null; p.bk = ""; p.snip = false; p.log = false; }      // precursor chromatogram: only the MS2 scans of the precursor
   if (mrmP) { p.bk = ""; p.snip = false; }
@@ -1171,7 +1206,7 @@ function attach(p) {
       draw(p);
     } else if (drag && drag.cursor) {                         // dragging the vertical line: the linked spectrum follows
       p.cur = Math.max(a.full[0], Math.min(a.full[1], x)); p.sel = null; draw(p);
-      if (!p._lm) { p._lm = true; requestAnimationFrame(() => { p._lm = false; const dt = scanStep(); pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
+      if (!p._lm) { p._lm = true; requestAnimationFrame(() => { p._lm = false; const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, p.cur, 0) : null, dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k, true); else pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
     } else if (drag && drag.edge) { drag.edge.it[drag.edge.e] = x; draw(p); }
     else if (drag) { drag.x = px; if (p.type === "spec") {
       if (Math.abs(px - drag.x0) > 4) { zr.hidden = false; zr.style.left = cv.offsetLeft + Math.min(px, drag.x0) + "px"; zr.style.width = Math.abs(px - drag.x0) + "px"; zr.style.top = cv.offsetTop + M.t + "px"; zr.style.height = a.H - M.t - M.b + "px"; }
@@ -1202,7 +1237,7 @@ function attach(p) {
       if (p.type === "spec") { p.zoom = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); }
       else { p.sel = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); pushLinked(p, p.sel[0], p.sel[1], nearestFile(p, (x0 + x1) / 2)); }
     } else if (p.type !== "spec") {
-      p.sel = null; p.cur = x0; draw(p); const dt = scanStep(); pushLinked(p, x0 - dt / 2, x0 + dt / 2, nearestFile(p, x0));
+      p.sel = null; p.cur = x0; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, x0, 0) : null; if (sn) p.cur = sn.rt; draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else pushLinked(p, x0 - dt / 2, x0 + dt / 2, nearestFile(p, x0));
     }
   };
   addEventListener("mouseup", p._up);
@@ -1218,9 +1253,10 @@ function attach(p) {
     if (p.type === "chrom" || p.type === "xic" || p.type === "mrm") {      // double click = mass spectrum at that retention time (also on the PDA trace)
       const x = xd(rect(e)), k = nearestFile(p, x), f = E.files[k];
       if (!p._a || !f || f.kind === "mrm") return;
-      const dt = scanStep(), r0 = x - dt / 2, r1 = x + dt / 2;
-      p.sel = null; p.cur = x;
-      newSpec(p, r0, r1, k, null);          // every double click makes a new spectrum at that time (not linked: later clicks do not change it)
+      let dt = scanStep(), r0 = x - dt / 2, r1 = x + dt / 2, kk = k;
+      const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, x, 0) : null; if (sn) { r0 = sn.rt - sn.g / 2; r1 = sn.rt + sn.g / 2; kk = sn.k; }
+      p.sel = null; p.cur = sn ? sn.rt : x;
+      newSpec(p, r0, r1, kk);          // every double click makes a new LIVE spectrum right under the chromatogram; the previous ones freeze
       draw(p); return;
     }
     p.zoom = null; p.zoomY = null; p.sel = null; draw(p);
@@ -1237,7 +1273,35 @@ function nearestFile(p, x) {
 function pushLinked(p, r0, r1, k, keepZoom) {
   E.panels.filter(s => s.type === "spec" && s.link === p.id).forEach(s => { s.r0 = r0; s.r1 = r1; s.k = k; if (!keepZoom) s.zoom = null; ctl(s); draw(s); });
 }
-function newSpec(from, r0, r1, k, link = from.id) { return addPanel("spec", { link, k, r0, r1, level: E.files[k]?.lv || 1 }, from); }
+// A new spectrum from a chromatogram (double click, right click) is the "live" one: it sits right under the chromatogram (the older ones slide down),
+// and only it follows clicks, cursor, arrows and selections. The older ones are frozen: they keep their time in the title and stay children of the
+// chromatogram (src) so they travel with it. Closing the live one promotes nobody; "Ricollega al cromatogramma" in a spectrum's menu makes it live again.
+function stackAfter(p, anchor) {
+  if (!p.full || !anchor.full || !p.el || !anchor.el) return;
+  const st = stackOrder().filter(q => q !== p); st.splice(st.indexOf(anchor) + 1, 0, p);
+  let y = 0; st.forEach(q => { q.y = y; apply(q); y += q.h + 10; });
+  E.panels.sort((a, b) => a.y - b.y || a.id - b.id);
+}
+const rtText = s => (s.r1 - s.r0 > 1.6 * scanStep() ? `${s.r0.toFixed(2)}-${s.r1.toFixed(2)}` : ((s.r0 + s.r1) / 2).toFixed(2)) + " min";
+function freezeSpec(s) {
+  if (!s.link) return;
+  s.src = s.src || s.link; s.link = null;
+  if (/^Spettro/.test(s.title) && s.r0 != null) s.title = `Spettro${s.level === 2 ? " ioni prodotto" : ""} a ${rtText(s)}${s.prec != null && s.level === 2 ? " · " + s.prec : ""}`;
+  ctl(s);
+}
+function liveSpec(s, from) {
+  E.panels.filter(q => q !== s && q.type === "spec" && q.link === from.id).forEach(freezeSpec);
+  s.link = from.id; s.src = from.id; ctl(s);
+  if (from.cur != null && s.r0 == null) { const dt = scanStep(); s.r0 = from.cur - dt / 2; s.r1 = from.cur + dt / 2; }
+  draw(s); uiSave();
+}
+function newSpec(from, r0, r1, k, link = from.id) {
+  if (link) E.panels.filter(q => q.type === "spec" && q.link === from.id).forEach(freezeSpec);
+  const s = addPanel("spec", { link, src: from.id, k, r0, r1, level: E.files[k]?.lv || 1, prec: from.tab === "ms2" ? from.prec : null, title: from.tab === "ms2" ? `Spettro degli ioni prodotto${from.prec != null ? " · " + from.prec : ""}` : "Spettro di massa" });
+  stackAfter(s, from); relayout(); fitHost();
+  requestAnimationFrame(() => s.el.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+  return s;
+}
 
 function ctxFor(p, e, x, px, py) {
   if (!p._a) return e.preventDefault();
@@ -1257,6 +1321,9 @@ function ctxFor(p, e, x, px, py) {
     d0.mz.forEach((v, j) => { const dd = Math.abs(a.X(v) - px); if (dd < 12 && dd < bestd && d0.y[j] > 0) { bestd = dd; m = v; } });
     const lab = m.toFixed(1);
     items.push({ label: `m/z ${m.toFixed(2)}`, dim: true }, "-");
+    const srcP = p.src && E.panels.find(q => q.id === p.src && q.el);
+    if (p.link) items.push({ label: "Congela questo spettro (smette di seguire il cromatogramma)", fn: () => { freezeSpec(p); uiSave(); } }, "-");
+    else if (srcP) items.push({ label: "Ricollega al cromatogramma (lo spettro che lo seguiva si ferma)", fn: () => liveSpec(p, srcP) }, "-");
     items.push({ label: `Estrai l'XIC di m/z ${lab} (scegli la finestra)...`, fn: () => openXic(null, { mz: m, half: 0.25 }) });
     tabPanels().filter(q => q.type === "xic").forEach(q => items.push({ label: `Aggiungi m/z ${lab} al pannello «${q.title}»...`, fn: () => openXic(q, { mz: m, half: 0.25 }) }));
     items.push("-", { label: "Annota questo picco...", fn: async () => { const v = await ask("Annotazione per m/z " + lab, ""); if (v) { p.anns.push({ x: m, text: v }); draw(p); } } });

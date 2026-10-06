@@ -27,13 +27,11 @@ try:
             order = lambda: pg.evaluate(S + ".map(p=>p.id)")
             dis = lambda i, a: pg.evaluate(f"{S}[{i}].el.querySelector('[data-a={a}]').disabled")
             n = pg.evaluate("E.panels.length")
-            assert dis(0, "up") and not dis(1, "up") and dis(n - 1, "down") and not dis(0, "down")
-            o0 = order(); pg.evaluate(f"{S}[0].el.querySelector('[data-a=down]').click()"); pg.wait_for_timeout(120)
-            y_mid = pg.evaluate("E.panels.find(p=>p.id==%d).el.getBoundingClientRect().top" % o0[1]); y_end = pg.evaluate("E.panels.find(p=>p.id==%d).y" % o0[1])
-            pg.wait_for_timeout(700); o1 = order()
-            assert o1[0] == o0[1] and o1[1] == o0[0], (o0, o1)
-            assert dis(0, "up") and not dis(1, "up")
-            pg.evaluate(f"{S}[1].el.querySelector('[data-a=up]').click()"); pg.wait_for_timeout(700); assert order() == o0
+            # the chromatogram carries its spectra, so it has nothing to pass: the arrows are tested on the spectra (children, they move alone)
+            assert dis(0, "up") and dis(0, "down") and not dis(1, "up") and not dis(1, "down") and not dis(n - 1, "up") and dis(n - 1, "down")
+            o0 = order(); pg.evaluate(f"{S}[1].el.querySelector('[data-a=down]').click()"); pg.wait_for_timeout(700); o1 = order()
+            assert o1[0] == o0[0] and o1[1] == o0[2] and o1[2] == o0[1], (o0, o1)
+            pg.evaluate(f"{S}[2].el.querySelector('[data-a=up]').click()"); pg.wait_for_timeout(700); assert order() == o0
         step("arrows swap panels (first has no up, last no down)", arrows)
         def method():
             b = pg.locator("#np-method"); assert "imp" in b.get_attribute("class")

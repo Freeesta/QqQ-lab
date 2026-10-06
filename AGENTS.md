@@ -124,7 +124,7 @@ Stato lato front end: variabile globale `E` (file, pannelli), `S` (stato pagina)
 
 ## 11. Schede della vista Dati (6 ottobre 2026)
 - Full Scan, MS² (Product Ion) e MRM non condividono mai un grafico: `E.tab` ('full'|'ms2'|'mrm'), ogni pannello ha `p.tab`; `tabFiles(t)`/`tabPanels(t)` filtrano; elenco file, toolbar (`toolbar()`), taccuino (`uiSave`/`restoreUi`) e layout iniziale sono per scheda. Codice in `web/tabs.js` (`renderTabs`, `setTab`, `ensureLayout`, `defaultLayoutTab`, `ms2Exps`, `expbar`, `openOverview`), barra `#dtabs`.
-- MS²: `Item.info().ms2_exps` (da `_ms2_exps`: precursore, CE, n. scansioni). Striscia `#expbar` con il numero di esperimenti; un pannello cromatogramma + spettro per precursore (i primi 4; gli altri con + Cromatogramma). Limite noto: file con MS1 e MS2 insieme (data-dependent) sono trattati come MS².
+- MS²: `Item.info().ms2_exps` (da `_ms2_exps`: precursore, CE, n. scansioni). (la striscia `#expbar` è stata tolta: i precursori si scelgono nella lista file); un pannello cromatogramma + spettro per precursore (i primi 4; gli altri con + Cromatogramma). Limite noto: file con MS1 e MS2 insieme (data-dependent) sono trattati come MS². Trascinando l'intestazione di un cromatogramma si spostano con lui gli spettri creati da esso (`src` per il doppio clic, `link` per quelli collegati; `followers()`/`restack()` in `explore.js`).
 - MRM: pannelli Quantificatore e Qualificatore (+ eventuale terza transizione); un'integrazione in uno si ripete nell'altro (`addInt`, specchio sulla stessa finestra); retta di taratura da `calib.js`.
 - "Tempi ed esperimenti" (`openOverview`): matrice righe = tempo/standard/bianco, colonne = tipo; clic su un file lo apre nella sua scheda. Test: `tests_e2e/e2e17.py`.
 

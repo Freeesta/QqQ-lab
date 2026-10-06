@@ -23,14 +23,13 @@ try:
             pg.click("#dtabs [data-t=ms2]"); pg.wait_for_timeout(2500)
             assert pg.evaluate("E.tab") == "ms2"
             n = pg.evaluate("E.panels.filter(p=>p.tab==='ms2').length"); assert n >= 2 and n % 2 == 0, n
-            assert pg.locator("#expbar").is_visible(); tx = pg.locator("#expbar").inner_text(); assert "MS" in tx and "precursore" in tx, tx
+            assert pg.locator("#expbar").count() == 0                       # the experiments strip was removed (precursors live in the file list)
             assert pg.evaluate("E.panels.filter(p=>p.tab==='full').every(p=>p.el.style.display==='none')")
-        step("MS2 tab: experiments strip, one chromatogram+spectrum per precursor", t3)
+        step("MS2 tab: one chromatogram+spectrum per precursor", t3)
         def t4():
             pg.click("#dtabs [data-t=mrm]"); pg.wait_for_timeout(3000)
             m = pg.evaluate("E.panels.filter(p=>p.tab==='mrm').map(p=>p.title||'')"); assert len(m) >= 2, m
             assert any("Quantificatore" in x for x in m) and any("Qualificatore" in x for x in m), m
-            assert not pg.locator("#expbar").is_visible()
         step("MRM tab: Quantificatore and Qualificatore panels", t4)
         def t5():
             pg.click("#ovbtn"); pg.wait_for_timeout(500)

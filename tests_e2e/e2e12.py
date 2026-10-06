@@ -70,7 +70,7 @@ with sync_playwright() as p:
     step("zoom tool, TIC refuses, XIC window da-a, integration of a chosen file", integ)
     def ms2():
         pg.click("#dtabs [data-t=ms2]"); pg.wait_for_timeout(3500)
-        assert "2 esperimenti" in pg.inner_text("#expbar") and "229.1" in pg.inner_text("#expbar") and "305" in pg.inner_text("#expbar"), pg.inner_text("#expbar")
+        assert pg.locator("#expbar").count() == 0
         ch = pg.evaluate("tabPanels().filter(p=>p.type==='chrom').map(p=>[p.prec,p._a.sr[0].x.length])")
         assert len(ch) == 2 and ch[0][0] != ch[1][0] and all(n > 0 for _, n in ch), ch      # one chromatogram per precursor
         assert pg.locator("#flst").inner_text().upper().count("MS\u00b2") == 1 and "MRM" not in pg.inner_text("#flst")

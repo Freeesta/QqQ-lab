@@ -21,7 +21,10 @@ function setTab(t, quiet) {
   E.panels.forEach(p => { if (p.el) p.el.style.display = p.tab === t ? "" : "none"; });
   const back = E.curBy[t]; E.cur = E.files[back]?.kind === t ? back : (tabFiles()[0] || { k: 0 }).k;
   setActive(null);
+  const firstLayout = tabFiles().length && !tabPanels().length;
+  if (firstLayout) loading(true);                       // same funny loading screen as everywhere else
   ensureLayout();
+  if (firstLayout) Promise.all(tabPanels().map(p => p.ready).filter(Boolean)).catch(() => {}).then(() => loading(false));
   fitWidth(); relayout(); fitHost(); renderFileList(); renderNav(); toolbar();
   requestAnimationFrame(() => redrawAll());
   uiSave();
@@ -81,20 +84,12 @@ const ms2PairOf = prec => E.panels.find(p => p.tab === "ms2" && p.type === "chro
 function ms2Toggle(prec, on) {
   const c = ms2PairOf(prec);
   if (on && !c) { const e = ms2Exps().find(x => String(x.prec) === String(prec)); if (e) { addMs2Pair(e, tabPanels().reduce((m, q) => Math.max(m, q.y + q.h + 10), 0)); relayout(); fitHost(); } }
-  if (!on && c) { [...E.panels.filter(q => q.link === c.id), c].forEach(q => q.el.querySelector(".x").click()); }
+  if (!on && c) { [...E.panels.filter(q => q.link === c.id || q.src === c.id), c].forEach(q => q.el.querySelector(".x").click()); }
   renderFileList(); uiSave();
 }
 function ms2Goto(prec) {
   const c = ms2PairOf(prec); if (!c) return ms2Toggle(prec, true);
   setActive(c); front(c.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + c.y - 70, behavior: "smooth" });
-}
-
-// strip of the MS2 tab: how many experiments there are and what each one is
-function expbar() {
-  const bar = Q("#expbar"); if (!bar || bar.hidden) return;
-  const ex = ms2Exps(), nf = tabFiles("ms2").length;
-  bar.innerHTML = ex.length ? `<b>${ex.length} esperiment${ex.length === 1 ? "o" : "i"} MS&sup2;</b> (uno per precursore) in ${nf} file: ` + ex.map(e => `<span class="ex">precursore <b>${e.prec ?? "?"}</b>${e.ce.size ? ` &middot; CE ${[...e.ce].join(", ")} V` : ""} &middot; ${e.n} scansioni${e.files.size < nf ? ` (in ${e.files.size} file su ${nf})` : ""}</span>`).join("") +
-    (ex.length > 4 ? `<span class="muted"> I primi 4 hanno già il loro grafico; per gli altri usa + Cromatogramma e scegli il precursore.</span>` : "") : "Nessun esperimento MS² riconosciuto.";
 }
 
 // which files exist for each time and each kind of experiment; a click opens the file in its tab
