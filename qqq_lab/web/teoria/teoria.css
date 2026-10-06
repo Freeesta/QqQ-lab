@@ -95,3 +95,9 @@ details.q summary{cursor:pointer;font-weight:600}details.q[open] summary{margin-
 
 .tw{overflow-x:auto;margin:10px 0 16px}.tw table{margin:0}
 main{overflow-wrap:break-word}
+
+/* glossary hints: dotted underline on the terms, small card with the definition */
+.g{border-bottom:1.5px dotted var(--ink);cursor:help}.g:hover,.g:focus{background:var(--sel);outline:none}
+#gtip{position:fixed;z-index:50;max-width:340px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 22px rgba(0,0,0,.16);padding:9px 12px;font-size:14px;line-height:1.45}
+#gtip[hidden]{display:none}#gtip b{display:block;margin-bottom:2px}#gtip p{margin:0 0 4px}#gtip a{font-size:13px;font-weight:600;text-decoration:none}
+@media print{.g{border-bottom:0}#gtip{display:none}}

@@ -184,6 +184,61 @@ const TP = (() => {
   const fmt = (v, d = 2) => (+v).toLocaleString("it-IT", { minimumFractionDigits: d, maximumFractionDigits: d });
   const sci = (v, d = 2) => { if (v === 0) return "0"; const e = Math.floor(Math.log10(Math.abs(v))); const mnt = v / Math.pow(10, e); return fmt(mnt, d) + "·10" + sup(e); };
 
-  document.addEventListener("DOMContentLoaded", layout);
+
+  // ---------------------------------------------------------------- glossary hints
+  // Every glossary term (glossario-dati.js, generated from 11-glossario.html by tools/genera_glossario.py) found in the text gets a dotted
+  // underline; the mouse over it (or focus / tap) shows the short definition and a link to its chapter.
+  function glossary() {
+    if (here === "11-glossario.html") return;
+    const s = document.createElement("script"); s.src = "glossario-dati.js"; s.onload = () => { try { markTerms(GLOSSARIO); } catch (_) { /* hints are optional */ } };
+    document.head.appendChild(s);
+  }
+
+  function markTerms(G) {
+    const cs = new Map(), ci = new Map();
+    G.forEach((e, i) => e.k.forEach(k => {
+      const strict = k.length <= 3 || (k.match(/[A-ZÀ-Ý]/g) || []).length >= 2;
+      (strict ? cs : ci).set(strict ? k : k.toLowerCase(), i);
+    }));
+    const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const all = [...cs.keys(), ...ci.keys()].sort((a, b) => b.length - a.length);
+    const re = new RegExp("(?<![\\p{L}\\p{N}_])(" + all.map(esc).join("|") + ")(?![\\p{L}\\p{N}_])", "giu");
+    const skip = "a,button,select,input,textarea,script,style,canvas,svg,code,kbd,h1,h2,h3,h4,h5,.kicker,.ctl,.pn,#side,#top,.tag,.g,sub,sup";
+    const nodes = [], tw = document.createTreeWalker($("main"), NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) if (n.nodeValue.trim() && !n.parentElement.closest(skip)) nodes.push(n);
+    nodes.forEach(n => {
+      const txt = n.nodeValue; let last = 0, hit = false; const frag = document.createDocumentFragment();
+      for (const m of txt.matchAll(re)) {
+        const i = cs.has(m[1]) ? cs.get(m[1]) : ci.get(m[1].toLowerCase());
+        if (i === undefined) continue;
+        frag.appendChild(document.createTextNode(txt.slice(last, m.index)));
+        const sp = document.createElement("span"); sp.className = "g"; sp.tabIndex = 0; sp.dataset.g = i; sp.textContent = m[1];
+        frag.appendChild(sp); last = m.index + m[1].length; hit = true;
+      }
+      if (hit) { frag.appendChild(document.createTextNode(txt.slice(last))); n.parentNode.replaceChild(frag, n); }
+    });
+    const tip = document.createElement("div"); tip.id = "gtip"; tip.setAttribute("role", "tooltip"); tip.hidden = true; document.body.appendChild(tip);
+    let timer = 0, cur = null;
+    const hide = () => { tip.hidden = true; cur = null; };
+    const show = el => {
+      clearTimeout(timer); if (cur === el) return; cur = el;
+      const e = G[+el.dataset.g];
+      tip.innerHTML = `<b>${e.t}</b><p>${e.d}</p>` + (e.h ? `<a href="${e.h}">${e.n} &rarr;</a>` : "");
+      tip.hidden = false;
+      const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+      const x = Math.max(8, Math.min(r.left, innerWidth - w - 8)), below = r.bottom + 6 + h < innerHeight || r.top - 6 - h < 0;
+      tip.style.left = x + "px"; tip.style.top = (below ? r.bottom + 6 : r.top - 6 - h) + "px";
+    };
+    const later = () => { clearTimeout(timer); timer = setTimeout(hide, 220); };
+    document.addEventListener("mouseover", ev => { const el = ev.target.closest(".g"); if (el) show(el); else if (ev.target.closest("#gtip")) clearTimeout(timer); });
+    document.addEventListener("mouseout", ev => { if (ev.target.closest(".g, #gtip")) later(); });
+    document.addEventListener("focusin", ev => { const el = ev.target.closest(".g"); if (el) show(el); });
+    document.addEventListener("focusout", ev => { if (ev.target.closest(".g")) later(); });
+    document.addEventListener("click", ev => { const el = ev.target.closest(".g"); if (el) { cur === el && !tip.hidden ? hide() : show(el); } else if (!ev.target.closest("#gtip")) hide(); });
+    document.addEventListener("keydown", ev => { if (ev.key === "Escape") hide(); });
+    addEventListener("scroll", hide, { passive: true });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); });
   return { $, controls, buttons, canvas, axes, line, sticks, label, legend, nice, fmt, sci, sup };
 })();
