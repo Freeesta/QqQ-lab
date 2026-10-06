@@ -68,8 +68,8 @@ try:
             assert dd.suggested_filename.endswith(".png") and "TIC" in dd.suggested_filename
         step("PNG name + valid tEXt metadata", png)
         def csvn():
-            with pg.expect_download() as d: pg.locator(".pnl [data-a=csv]").first.click()
-            print("csv file", d.value.suggested_filename); assert d.value.suggested_filename.startswith("TIC")
+            with pg.expect_download() as d: pg.locator(".pnl.mrm [data-a=csv]").first.click()
+            print("csv file", d.value.suggested_filename); assert d.value.suggested_filename.startswith("MRM")
         step("CSV name", csvn)
         def ctx():
             for _ in range(60):

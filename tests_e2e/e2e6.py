@@ -30,7 +30,7 @@ try:
             n = pg.locator(".hq:visible").count(); assert n >= 5, n
         step("? buttons open the explanation", helpq)
         def csvexcel():
-            with pg.expect_download() as d: pg.locator(".pnl.chrom [data-a=csv]").first.click()
+            with pg.expect_download() as d: pg.locator(".pnl.mrm [data-a=csv]").first.click()
             raw = open(d.value.path(), "rb").read(); t = raw.decode("utf-8-sig"); first = t.split("\r\n")[:3]
             print("CSV:", first[0][:120], "|", first[1][:80])
             assert raw[:3] == b"\xef\xbb\xbf" and "RT min" in first[0] and ";" in first[1] and "," in first[1] and "." not in first[1].replace('"', ''), first

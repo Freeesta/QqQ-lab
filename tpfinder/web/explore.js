@@ -290,6 +290,21 @@ function place(w, h) {
   const y = E.panels.length ? Math.max(...E.panels.map(p => p.y + p.h)) + 10 : 0;
   return { x: 0, y, w: W, h: H, full: !w };
 }
+// fixed slots: full-width panels sit one under the other; dragging one up or down makes the others change place
+// (final = false: the dragged panel follows the mouse; final = true: it drops into its slot)
+function restack(drag, final) {
+  const st = E.panels.filter(q => q.full && q.el);
+  const others = st.filter(q => q !== drag).sort((a, b) => a.y - b.y), c = drag.y + drag.h / 2;
+  const idx = others.filter(q => q.y + q.h / 2 < c).length;
+  const order = others.slice(); order.splice(idx, 0, drag);
+  let y = 0;
+  order.forEach(q => { if (q !== drag || final) q.y = y; if (q !== drag) apply(q); y += q.h + 10; });
+  if (final) apply(drag);
+  E.panels.sort((a, b) => a.y - b.y || a.id - b.id);
+}
+function relayout() {      // after a panel changes height: keep the order, close or open the gap
+  let y = 0; E.panels.filter(q => q.full && q.el).sort((a, b) => a.y - b.y || a.id - b.id).forEach(q => { q.y = y; apply(q); y += q.h + 10; });
+}
 function fitHost() { Q("#dpanels").style.height = Math.max(520, ...E.panels.map(p => p.y + p.h + 16)) + "px"; }
 function tile() {
   const w = hostWidth(); let y = 0;
@@ -315,7 +330,7 @@ function addPanel(type, o, after) {
   Object.assign(p, g);
   const el = document.createElement("div");
   el.className = "card pnl " + type;
-  el.innerHTML = `<div class="hd"><b class="ttl" title="Doppio clic per rinominare"></b>${helpBtn("pnl-" + type)}<span class="ctl"></span><span class="rd"></span><button class="bt" data-a="fit" style="display:none" title="Torna a vedere tutto il grafico (anche: doppio clic sul grafico)">Vista intera</button><button class="bt" data-a="png" title="Salva il grafico come immagine PNG">PNG</button>${type === "map" ? "" : '<button class="bt" data-a="csv" title="Salva i dati del grafico (le tracce visibili) in un file CSV da aprire con Excel">CSV</button>'}<button class="bt" data-a="max" title="Ingrandisci o riduci questo pannello">&#9633;</button><button class="x" title="Chiudi il pannello">&times;</button></div><canvas></canvas><div class="vl" hidden></div><div class="tip" hidden></div><div class="leg"></div>`;
+  el.innerHTML = `<div class="hd"><b class="ttl" title="Doppio clic per rinominare"></b>${helpBtn("pnl-" + type)}<span class="ctl"></span><span class="rd"></span><button class="bt" data-a="fit" style="display:none" title="Torna a vedere tutto il grafico (anche: doppio clic sul grafico)">Vista intera</button><button class="bt" data-a="png" title="Salva il grafico come immagine PNG">PNG</button>${type === "map" || type === "chrom" ? "" : '<button class="bt" data-a="csv" title="Salva i dati del grafico (le tracce visibili) in un file CSV da aprire con Excel">CSV</button>'}<button class="bt" data-a="max" title="Ingrandisci o riduci questo pannello">&#9633;</button><button class="x" title="Chiudi il pannello">&times;</button></div><canvas></canvas><div class="vl" hidden></div><div class="tip" hidden></div><div class="leg"></div>`;
   p.el = el; p.vl = el.querySelector(".vl"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg");
   Q("#dpanels").appendChild(el);
   E.panels.push(p); apply(p); fitHost();
@@ -324,14 +339,19 @@ function addPanel(type, o, after) {
   el.querySelector(".hd").addEventListener("mousedown", e => {
     if (e.target.closest("input,select,button,label,option") || el.classList.contains("max")) return;
     const sx = e.clientX - p.x, sy = e.clientY - p.y;
-    const mv = ev => { p.x = Math.max(0, ev.clientX - sx); p.y = Math.max(0, ev.clientY - sy); apply(p); fitHost(); };
-    const up = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", up); uiSave(); };
+    if (p.full) el.classList.add("drag");
+    const mv = ev => {
+      p.y = Math.max(0, ev.clientY - sy);
+      if (p.full) { p.x = 0; restack(p, false); } else p.x = Math.max(0, ev.clientX - sx);
+      apply(p); fitHost();
+    };
+    const up = () => { removeEventListener("mousemove", mv); removeEventListener("mouseup", up); if (p.full) { el.classList.remove("drag"); restack(p, true); } uiSave(); };
     addEventListener("mousemove", mv); addEventListener("mouseup", up); e.preventDefault();
   });
   let first = true;
   p._ro = new ResizeObserver(() => {
     if (first) { first = false; return; }
-    if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; if (p.full && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) p.full = false; fitHost(); uiSave(); }
+    if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; if (p.full && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) p.full = false; if (p.full) relayout(); fitHost(); uiSave(); }
     cancelAnimationFrame(p._raf); p._raf = requestAnimationFrame(() => draw(p));
   });
   p._ro.observe(el); p._ro.observe(p.cv);   // the canvas too: it shrinks when the legend or the controls wrap to more lines
@@ -440,7 +460,7 @@ function ctl(p) {
   const nbk = E.files.filter(x => x.kind !== "mrm" || p.type === "mrm");
   const corr = `<select data-o="bk" title="Sottrae il file «bianco» da ogni traccia (interpolando sul tempo e portando a zero i valori negativi). Il bianco indica cosa c'è anche senza il campione: ciò che resta è più probabilmente suo">${`<option value="">bianco: nessuno</option>` + nbk.map(x => `<option value="${x.k}" ${String(p.bk) === String(x.k) ? "selected" : ""}>sottrai ${EH(x.label)}</option>`).join("")}</select>${chk("snip", "baseline")}${p.snip ? `<label class="muted" title="Larghezza della finestra SNIP: deve essere più larga dei picchi">&le;<input data-o="snipw" type="number" step="0.5" min="0.2" value="${p.snipw}" style="width:50px"> min</label>` : ""}`;
   const fsel = `<select data-o="fk" title="Quali file mostrare"><option value="">file visibili</option>${E.files.map(x => `<option value="${x.k}" ${String(p.fk) === String(x.k) ? "selected" : ""}>solo ${EH(x.label)}</option>`).join("")}</select>`;
-  if (p.type === "chrom") c.innerHTML = `<select data-o="kind"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>TIC (somma)</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""}>BPC (picco base)</option></select>${chk("norm", "normalizza")}${chk("smooth", "smoothing")}${view}${corr}`;
+  if (p.type === "chrom") c.innerHTML = `<select data-o="kind"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>TIC (somma)</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""}>BPC (picco base)</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} title="Segnale del rivelatore a serie di diodi (PDA/UV): non dipende dallo spettrometro di massa">PDA (UV, totale)</option></select>${chk("norm", "normalizza")}${chk("smooth", "smoothing")}${view}${corr}`;
   if (p.type === "xic") c.innerHTML = `<input data-o="add" placeholder="m/z o formula" title="Scrivi un m/z (una cifra decimale basta) oppure una formula bruta come C9H10N2O: il programma calcola l'm/z dell'ione con l'addotto scelto" style="width:104px"><select data-o="adduct" title="Addotto usato quando scrivi una formula">${["[M+H]+","[M+Na]+","[M+NH4]+","[M-H]-","[M+Cl]-","[M+HCOO]-"].map(a => `<option ${p.adduct === a ? "selected" : ""}>${a}</option>`).join("")}</select><button data-o="addb" title="Aggiunge uno ione a questo pannello">+ ione</button><label class="muted" title="Finestra di estrazione attorno all'm/z. Strumento datato: 1 Da è un buon punto di partenza">&plusmn;<input data-o="tol" list="tols" type="number" step="0.1" min="0.05" value="${p.tol}" style="width:58px"> Da</label>${fsel}${chk("norm", "normalizza")}${chk("smooth", "smoothing")}${view}${corr}${p.traces.length > 1 ? '<button data-o="split" title="Un pannello per ogni ione">Separa</button>' : ""}`;
   if (p.type === "mrm") c.innerHTML = `<select data-o="tr" title="Transizione"><option value="">tutte le transizioni</option>${p._trs.map(t => `<option value="${t.key}" ${p.tr === t.key ? "selected" : ""}>${t.key} ${EH(t.name)}</option>`).join("")}</select>${fsel}${chk("norm", "normalizza")}${chk("smooth", "smoothing")}${view}${corr}`;
   if (p.type === "map") {
@@ -539,7 +559,7 @@ async function seriesOf(p) { return corrected(p, await rawSeries(p)); }
 async function rawSeries(p) {
   if (p.type === "chrom") {
     let fl = shown();
-    if (fl.some(f => f.kind !== "mrm")) fl = fl.filter(f => f.kind !== "mrm");   // MRM files have their own panel: their TIC would be a flat line here
+    if (p.kind !== "pda" && fl.some(f => f.kind !== "mrm")) fl = fl.filter(f => f.kind !== "mrm");   // MRM files have their own panel: their TIC would be a flat line here
     const r = await Promise.all(fl.map(f => getChrom(f.k, p.kind, f.lv).then(d => ({ x: d.rt, y: d.y, color: f.color, dash: f.type === "blank" ? [4, 3] : [], name: f.label, k: f.k, key: `c|${f.k}|${p.kind}`, ion: p.kind.toUpperCase(), time: f.time }))));
     return r.filter(s => s.x.length);
   }
@@ -638,7 +658,7 @@ async function drawLines(p) {
   const U = (s, v) => s.off + v / s.sc;
   const ymax = stk ? sr.length : p.norm ? 1 : G * 1.08;
   const lo10 = p.norm ? 1e-3 : Math.pow(10, Math.max(0, Math.floor(Math.log10(ymax)) - 4));
-  const yt = stk ? (p.norm ? "Intensità (ogni riga sul suo massimo)" : "Intensità (righe separate)") : p.norm ? "Intensità relativa (%)" : logy ? YT_I + ", scala log" : YT_I;
+  const yt = stk ? (p.norm ? "Intensità (ogni riga sul suo massimo)" : "Intensità (righe separate)") : p.norm ? "Intensità relativa (%)" : logy ? YT_I + ", scala log" : p.kind === "pda" && p.type === "chrom" ? "Segnale PDA (unità del file)" : YT_I;
   const { X, Y } = axes(g, W, H, x0, x1, ymax, v => p.norm ? (v >= 0.1 ? Math.round(v * 100) : +(v * 100).toPrecision(1)) + "%" : fmt(v), { log: logy, lo: lo10, stack: stk, xt: XT_RT, yt });
   const ph = H - M.t - M.b;
   p._a = { x0, x1, X, Y, W, H, sr, ymax, U, stk, logy, full: [lo, hi], yinv: py => (H - M.b - py) / ph * ymax };
@@ -647,12 +667,13 @@ async function drawLines(p) {
     g.font = "11px system-ui"; g.textAlign = "left";
     sr.forEach(s => { const y = Y(s.off); g.strokeStyle = css("--line"); g.beginPath(); g.moveTo(M.l, y); g.lineTo(W - M.r, y); g.stroke(); const t = s.name.length > 34 ? s.name.slice(0, 33) + "…" : s.name; g.lineWidth = 3; g.lineJoin = "round"; g.strokeStyle = css("--panel"); g.strokeText(t, M.l + 4, y - 4); g.fillStyle = s.color; g.fillText(t, M.l + 4, y - 4); g.lineWidth = 1; });
   }
+  g.save(); g.beginPath(); g.rect(M.l + 1.5, 0, W - M.l - M.r - 1.5, H); g.clip();   // the line (1.8 px wide) must not overdraw the y axis
   for (const s of sr) {
     g.strokeStyle = s.color; g.lineWidth = s.dash.length ? 1.5 : 1.8; g.setLineDash(s.dash); g.beginPath(); let st = false;
     s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = X(r), py = Y(U(s, s.ys[i])); st ? g.lineTo(px, py) : g.moveTo(px, py); st = true; });
     g.stroke();
   }
-  g.setLineDash([]);
+  g.restore(); g.setLineDash([]);
   for (const it of p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi
     const s = sr.find(q => q.key === it.key); if (!s) continue;
     const r = integ(s, it.a, it.b); Object.assign(it, { area: r.area, height: r.height, rt: r.rt });
@@ -1045,6 +1066,26 @@ function ctxFor(p, e, x, px, py) {
   menu(e, items);
 }
 
+// LC method of the laboratory (gradient, flow, PDA, oven): it is stored in the .wiff/.dam files, not in the mzML
+function lcHtml(lc, row) {
+  const g = lc.gradient || [], T = lc.run_time || (g.length ? g[g.length - 1].t : 22);
+  const w = 440, hh = 170, l = 40, r = 10, t = 10, b = 32, X = v => l + v / T * (w - l - r), Y = v => t + (100 - v) / 100 * (hh - t - b);
+  let pts = []; g.forEach((q, i) => { pts.push([q.t, q.b]); });
+  const flowTxt = g.map(q => q.flow).filter((v, i, a) => i === 0 || v !== a[i - 1]);
+  const ink = css("--muted"), acc = css("--accent");
+  let svg = `<svg viewBox="0 0 ${w} ${hh}" width="100%" style="max-width:${w}px;background:#fff;border:1px solid ${css("--line")};border-radius:6px" font-family="system-ui" font-size="11"><path d="M${l} ${t}V${hh - b}H${w - r}" fill="none" stroke="${ink}"/>`;
+  for (const v of [0, 25, 50, 75, 100]) svg += `<path d="M${l - 3} ${Y(v)}H${l}" stroke="${ink}"/><text x="${l - 6}" y="${Y(v) + 4}" text-anchor="end" fill="${ink}">${v}</text>`;
+  for (let v = 0; v <= T; v += 5) svg += `<path d="M${X(v)} ${hh - b}v3" stroke="${ink}"/><text x="${X(v)}" y="${hh - b + 15}" text-anchor="middle" fill="${ink}">${v}</text>`;
+  svg += `<polyline fill="none" stroke="${acc}" stroke-width="2" points="${pts.map(q => X(q[0]) + "," + Y(q[1])).join(" ")}"/>${pts.map(q => `<circle cx="${X(q[0])}" cy="${Y(q[1])}" r="2.6" fill="${acc}"/>`).join("")}`;
+  svg += `<text x="${(l + w - r) / 2}" y="${hh - 4}" text-anchor="middle" fill="${css("--ink")}">Tempo (min)</text><text transform="translate(11 ${(t + hh - b) / 2}) rotate(-90)" text-anchor="middle" fill="${css("--ink")}">% B</text></svg>`;
+  const pda = lc.pda || {}, ch = (lc.pda_channels || []).map(c => c.wl + " nm").join(", ");
+  const tbl = `<table><tr><th class="num">Tempo (min)</th><th class="num">% B</th><th class="num">Flusso (mL/min)</th></tr>${g.map(q => `<tr><td class="num">${q.t}</td><td class="num">${q.b}</td><td class="num">${q.flow}</td></tr>`).join("")}</table>`;
+  return `<h4>Metodo cromatografico (LC) e PDA</h4><div class="muted sm">Non è scritto negli mzML: viene dal metodo di acquisizione del laboratorio (file .wiff / .dam). Vale per tutti i metodi del corso. Il tempo è quello della pompa: i picchi arrivano al rivelatore più tardi, per il volume morto del sistema.</div>
+   ${svg}<div class="muted sm" style="margin:2px 0 6px">Gradiente: % di fase organica B nel tempo (secondo la procedura del corso: A = acqua con acido formico 0.05%, B = acetonitrile). La tabella mostra anche i cambi di flusso.</div>${tbl}
+   <table style="margin-top:6px">${row("Flusso iniziale", lc.flow != null ? lc.flow + " mL/min" : "")}${row("Variazioni di flusso", flowTxt.length > 1 ? flowTxt.join(" → ") + " mL/min" : "")}${row("Durata della corsa", lc.run_time != null ? lc.run_time + " min" : "")}${row("Temperatura del forno", lc.oven != null ? lc.oven + " °C" : "")}
+   ${row("PDA: intervallo", pda.start != null ? `${pda.start}-${pda.stop} nm (passo ${pda.step} nm)` : "")}${row("PDA: canali registrati", ch)}${row("PDA: frequenza", pda.freq != null ? pda.freq + " Hz" : "")}${row("PDA: lampade", pda.lamp)}${row("PDA: cella", pda.cell != null ? pda.cell + " °C" : "")}</table>`;
+}
+
 // ------------------------------------------------------------------ metodo di acquisizione (letto dagli mzML)
 async function showMethod() {
   const f = E.files[E.cur]; if (!f) return info("Apri prima almeno un file.");
@@ -1058,6 +1099,8 @@ async function showMethod() {
     const l = m.lab[0], pr = a => a.map(s => `<tr><td class="muted">${EH(s.label)}</td><td>${s.value} ${s.unit}</td></tr>`).join("");
     h += `<h4>Parametri del metodo di laboratorio</h4><div class="muted sm">Non sono scritti negli mzML: vengono dal metodo di riferimento del laboratorio (${EH(l.name || "")}). Possono differire dal tuo file.</div><table>${pr(l.source)}${pr(l.compound)}</table>`;
   }
+  if (m.lab && m.lab[0] && m.lab[0].lc) h += lcHtml(m.lab[0].lc, row);
+  if (m.pda) h += `<div class="muted sm" style="margin-top:8px">Questo file contiene anche il segnale del PDA: nel pannello Cromatogramma scegli «PDA (UV, totale)».</div>`;
   h += `<h4>Origine dei dati</h4><table>${row("File originali", EH(m.source_files.join(", ")))}${row("Software", EH(m.software.join("; ")))}</table>`;
   big("Metodo di acquisizione", h);
 }

@@ -36,7 +36,7 @@ class Item:
                 "polarity": "positive" if pol == [1] else "negative" if pol == [-1] else "mixed" if pol else "unknown",
                 "precursors": sorted({round(s.precursor, 1) for s in ms2 if s.precursor}),
                 "chromatograms": r.n_chromatograms, "kind": self.kind(),
-                "srm": sum(1 for c in r.chromatograms() if c["kind"] == "srm")}
+                "srm": sum(1 for c in r.chromatograms() if c["kind"] == "srm"), "pda": self.has_pda()}
         if not r.scans:                                   # MRM file: no scans, take times and polarity from the chromatograms
             rng = self._srm_rt_range()
             if rng:
@@ -94,7 +94,7 @@ class Item:
         win = r.scan_window()
         res = {"file": self.file, "kind": kind, **md, "polarity": self.info()["polarity"] if kind != "mrm" else self._header_polarity(), "scans": len(r.scans),
                "rt_min": float(min((s.rt for s in r.scans), default=0.0)), "rt_max": float(max((s.rt for s in r.scans), default=0.0)),
-               "cycle_s": cycle, "scan_window": list(win) if win else None,
+               "pda": self.has_pda(), "cycle_s": cycle, "scan_window": list(win) if win else None,
                "filters": sorted({s.filter for s in r.scans if s.filter})[:6],
                "precursors": sorted({round(s.precursor, 2) for s in ms2 if s.precursor}),
                "ce": sorted({s.collision_energy for s in ms2 if s.collision_energy is not None}),
@@ -103,7 +103,15 @@ class Item:
         return res
 
     # ------------------------------------------------------------------ chromatograms
+    def has_pda(self) -> bool:
+        return any(c["kind"] == "pda" for c in self.run.chromatograms())
+
     def total(self, kind: str = "tic", level: int = 1):
+        if kind == "pda":                       # UV trace recorded by the PDA/DAD (own time axis, not tied to the MS scans)
+            for c in self.run.chromatograms():
+                if c["kind"] == "pda":
+                    return self.run.chromatogram(c["index"])
+            return np.zeros(0), np.zeros(0)
         if self.kind() == "mrm":
             for c in self.run.chromatograms():
                 if c["kind"] == kind or (kind == "tic" and c["kind"] == "tic"):

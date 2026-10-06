@@ -287,3 +287,43 @@ def test_mac_app_bundle_and_vector_logo():
     assert (app / "Resources" / (info["CFBundleIconFile"] + ".icns")).read_bytes()[:4] == b"icns"
     svg = (root / "tpfinder" / "web" / "logo.svg").read_text(encoding="utf-8")
     assert svg.lstrip().startswith("<svg") and "linearGradient" in svg
+
+
+def test_pda_chromatogram_is_read_as_kind_pda(tmp_path):
+    """The mzML 'TWC' chromatogram (total wavelength, PDA/UV) is exposed as kind 'pda' and served by Item.total('pda')."""
+    from tpfinder.explore import Item
+    chrom = ('<chromatogram index="0" id="TWC" defaultArrayLength="3"><cvParam cvRef="MS" accession="MS:1000813" name="emission chromatogram" value=""/>'
+             f'<binaryDataArrayList count="2">{_array("MS:1000595", "time array", [0.0, 0.004, 0.008])}{_array("MS:1000515", "intensity array", [5.0, -2.0, 9.0])}</binaryDataArrayList></chromatogram>')
+    f = tmp_path / "uv.mzML"
+    f.write_text(_mzml(f'<chromatogramList count="1">{chrom}</chromatogramList>'), encoding="utf-8")
+    it = Item("uv.mzML", None, 0, "sample", f)
+    assert it.has_pda()
+    t, y = it.total("pda")
+    assert list(y) == [5.0, -2.0, 9.0] and t[2] == pytest.approx(0.008)
+
+
+def test_lc_method_xml_is_decoded():
+    """The Shimadzu/Analyst LC method (VendorAppMethod XML) gives the gradient, flow changes, PDA settings and oven."""
+    from tpfinder.reader.methodinfo import _lc
+
+    def row(*f):
+        return "<row>" + "".join(f"<Field{i + 1}>{v}</Field{i + 1}>" for i, v in enumerate(f)) + "</row>"
+    xml = ('<SCIEX_ANALYST_ACQUISITION_METHOD><version_1>'
+           '<Category><Title>System Controller</Title><Table><Name>Time Program</Name>'
+           + row("Time", "Module", "Event", "Event String", "Parameter") + row("---", "---", "---", "---", "---")
+           + row("2", "Pumps", "7", "Pump B Conc.", "50") + row("5", "Pumps", "6", "Total Flow", "0.50") + row("8", "System Controller", "3", "Stop", "")
+           + '</Table></Category><Category><Title>Pumps</Title><Parameter><Name>Total Flow</Name><Value>0.25</Value><Unit>mL/min</Unit></Parameter>'
+           '<Parameter><Name>B Concentration</Name><Value>5</Value><Unit>%</Unit></Parameter></Category>'
+           '<Category><Title>PDA Detector</Title><Parameter><Name>Start WL</Name><Value>200</Value></Parameter><Parameter><Name>Stop WL</Name><Value>400</Value></Parameter>'
+           '<Table><Name>DA Channel Array</Name>' + row("Wavelength", "BandWidth") + row("---", "---") + row("254", "4") + '</Table></Category>'
+           '<Category><Title>Oven</Title><Parameter><Name>Temperature</Name><Value>40</Value></Parameter></Category></version_1></SCIEX_ANALYST_ACQUISITION_METHOD>')
+
+    class FakeOle:
+        streams = {"DeviceMethod1/VendorAppMethod": 1}
+
+        def read(self, key):
+            return b"\x00\x01junk<?xml version='1.0'?>" + xml.encode()
+    lc = _lc(FakeOle(), "")
+    assert [(g["t"], g["b"], g["flow"]) for g in lc["gradient"]] == [(0.0, 5.0, 0.25), (2.0, 50.0, 0.25), (5.0, 50.0, 0.5)]
+    assert lc["run_time"] == 8.0 and lc["oven"] == 40.0
+    assert lc["pda"]["start"] == 200.0 and lc["pda_channels"] == [{"wl": 254.0, "bw": 4.0}]

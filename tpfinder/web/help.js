@@ -15,11 +15,13 @@ const HELP = {
   "nav": ["Scorrere i file", `Le frecce (o i tasti ← →) cambiano file corrente; con <b>un file alla volta</b> i grafici mostrano solo quello: utile per guardare i campioni uno per uno senza perdere gli XIC che hai estratto.`],
   "tools": ["Metodo, integrazioni, esportazioni", `<b>Metodo</b>: strumento, polarità, intervallo di massa, transizioni MRM e parametri della sorgente del metodo di laboratorio.
     <br><b>Integrazioni</b>: la tabella di tutte le aree che hai integrato (con il tempo di trattamento di ogni campione) e il loro andamento nel tempo.
-    <br><b>Esporta</b>: tabella delle integrazioni in CSV per <b>Excel</b> (colonne separate da punto e virgola, virgola decimale), relazione HTML con i grafici, sessione completa. Ogni grafico ha anche i suoi pulsanti <b>PNG</b> (immagine) e <b>CSV</b> (dati).`],
+    <br><b>Esporta</b>: tabella delle integrazioni in CSV per <b>Excel</b> (colonne separate da punto e virgola, virgola decimale), relazione HTML con i grafici, sessione completa. Ogni grafico ha anche il pulsante <b>PNG</b> (immagine); XIC, MRM e spettri hanno anche <b>CSV</b> (dati).`],
   "pnl-chrom": ["Cromatogramma", `Asse x: tempo di ritenzione; asse y: intensità (cps). <b>Trascina</b> sul grafico per scegliere un intervallo: lo spettro sotto mostra la media di quegli scan; un <b>clic</b> mostra lo spettro di un solo scan.
     <br><b>Clic destro</b>: spettro in un nuovo pannello, estrarre uno ione, <b>integrare</b> il picco, annotare.
     <br>Opzioni: <b>normalizza</b> (ogni traccia sul suo massimo), <b>smoothing</b>, <b>impilati</b> (una riga per file), <b>picchi</b> (etichette con l'RT: solo dove sono, non cosa sono), <b>scala log</b> (vedi i segnali deboli), <b>bianco</b> (sottrae il file bianco), <b>baseline</b> (toglie la linea di base con l'algoritmo SNIP).
-    <br>Zoom: Ctrl + rotella; Maiusc + trascina sposta; doppio clic torna alla vista intera. Clic sulla legenda nasconde una traccia.`],
+    <br>Zoom: Ctrl + rotella; Maiusc + trascina sposta; doppio clic torna alla vista intera. Clic sulla legenda nasconde una traccia.
+    <br><b>PDA (UV, totale)</b>: segnale del rivelatore a serie di diodi, registrato insieme al massa; serve a confrontare ciò che assorbe nell'UV con ciò che vede lo spettrometro.
+    <br>I pannelli stanno in posti fissi, uno sotto l'altro: trascina l'intestazione in su o in giù e gli altri si spostano.`],
   "pnl-spec": ["Spettro di massa", `Mostra gli ioni presenti nell'intervallo di tempo scelto sul cromatogramma. <b>Trascina</b> per ingrandire un intervallo di m/z, doppio clic per tornare indietro.
     <br><b>Clic destro su un picco</b>: estrai il suo XIC, aggiungilo a un pannello, annotalo, oppure <b>confronta con il profilo isotopico</b> di una formula che proponi tu (cerchi rossi: M, M+1, M+2...).
     <br><b>sovrapponi i file</b>: gli spettri di tutti i file visibili; <b>MS1 / MS/MS</b> e <b>precursore</b> per i file di ioni prodotto; <b>fondo</b>: sottrae uno spettro di fondo (un altro intervallo, o il bianco).

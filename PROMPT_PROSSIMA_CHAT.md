@@ -40,6 +40,12 @@ Verificato: 20 pytest, e2e3/4/5/6/7 senza errori JS (le `api/notebook` ERR_ABORT
 9. **Distribuzione**: nome definitivo del programma; provare `QqQ lab.app` su Mac (permesso Terminale, icona, Gatekeeper); versione tablet rinviata (vedi Decisioni).
 10. **Pulizia codice**: endpoint dei candidati (`/api/build`, `/api/candidate`, `/export/*.csv`, `/export/session.json`) da togliere o tenere per `candidates` e i test; e2e nella CI (Playwright su GitHub Actions).
 
+## Fatto il 2026-10-06 (sera): gradiente, PDA, posti fissi
+- Gradiente e metodo LC: ricavati dai .wiff/.dam (non dagli mzML) e messi in `metodo_laboratorio.json` (`lc`); la scheda Metodo mostra grafico %B, tabella, flusso, PDA, forno.
+- PDA: cromatogramma `TWC` degli mzML come tipo "PDA (UV, totale)" nel pannello Cromatogramma (anche per i file MRM). Spettri UV e canali singoli NON ci sono negli mzML: servirebbe decodificare `DADRealTimeData` dei .wiff (non fatto) o un altro export.
+- Asse y: la linea non copre più l'asse. Tolto il CSV dai cromatogrammi totali (TIC/BPC/PDA); resta su XIC, MRM, spettri. Posti fissi: trascinando un pannello gli altri si scambiano. Regola m/z in inglese scritta in AGENTS.md.
+- Verificato: e2e3-9 senza errori JS nuovi, 2 nuovi test Python (PDA, LC). Da decidere con Federico: il messaggio si era interrotto dopo "Inoltre".
+
 ## Fatto il 2026-10-06 (pomeriggio) dagli appunti di Federico
 1. Frecce = scan per scan: il clic su un pannello lo rende attivo (contorno blu); se ha un cursore le frecce spostano di una scansione e lo spettro collegato segue (mantiene lo zoom); senza cursore o senza pannello attivo cambiano file. Clic sullo sfondo vuoto disattiva.
 2. Zoom: rettangolo durante il trascinamento nello spettro, barra in alto a destra con la finestra visibile, pulsante "Vista intera", voce di menu per ingrandire l'intervallo selezionato nei cromatogrammi.

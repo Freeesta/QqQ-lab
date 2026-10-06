@@ -150,7 +150,7 @@ class Run:
 
     # ------------------------------------------------------------------ chromatograms (TIC/BPC/SRM)
     def chromatograms(self) -> list[dict]:
-        """Header of every <chromatogram>: id, kind (tic/bpc/srm/other), Q1, Q3, collision energy, dwell time."""
+        """Header of every <chromatogram>: id, kind (tic/bpc/pda/srm/other), Q1, Q3, collision energy, dwell time."""
         if getattr(self, "_chroms", None) is not None:
             return self._chroms
         out, mm, pos = [], self._mm, 0
@@ -169,6 +169,8 @@ class Run:
                 d["kind"] = "tic"
             elif cid == "BPC":
                 d["kind"] = "bpc"
+            elif cid == "TWC":                  # total wavelength chromatogram = PDA/DAD signal summed over wavelengths
+                d["kind"] = "pda"
             elif cid.startswith("SRM"):
                 d["kind"] = "srm"
                 for key, rx in (("q1", r"Q1=([0-9.]+)"), ("q3", r"Q3=([0-9.]+)"), ("ce", r"ce=([0-9.]+)")):
