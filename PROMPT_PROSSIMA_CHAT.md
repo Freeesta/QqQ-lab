@@ -40,12 +40,13 @@ Verificato: 20 pytest, e2e3/4/5/6/7 senza errori JS (le `api/notebook` ERR_ABORT
 9. **Distribuzione**: nome definitivo del programma; provare `QqQ lab.app` su Mac (permesso Terminale, icona, Gatekeeper); versione tablet rinviata (vedi Decisioni).
 10. **Pulizia codice**: endpoint dei candidati (`/api/build`, `/api/candidate`, `/export/*.csv`, `/export/session.json`) da togliere o tenere per `candidates` e i test; e2e nella CI (Playwright su GitHub Actions).
 
-## Appunti di Federico (2026-10-06), da fare nella prossima chat
-1. **Frecce = scan per scan**: se il cromatogramma in alto è selezionato o "fissato" (pin), le frecce ← → devono spostare il cursore da una scansione alla successiva/precedente e aggiornare lo spettro sotto (oggi le frecce cambiano file: `goFile` in `explore.js`, keydown globale). Serve un modo per scegliere il pannello attivo (clic sul pannello o pulsante pin) e, solo allora, frecce = scan; altrimenti restano per cambiare file.
-2. **Zoom più chiaro**: mentre si zooma si deve vedere cosa si sta ingrandendo (rettangolo/area evidenziata durante il trascinamento, anche nello spettro dove oggi il trascinamento zooma senza mostrare l'area; eventuale minimappa o indicazione dell'intervallo visibile; pulsante "vista intera").
-3. **Nomi e metadati dei PNG (e CSV) scaricati**: nome sensato e non troppo lungo, ricavato da tipo di grafico + file (o "sovrapposti_N_file") + ione/intervallo, es. `XIC_m-z194_t15.png`, `spettro_t0_RT14.3.png`, `TIC_5file.png`; nei PNG scrivere i metadati (chunk tEXt: titolo, file, RT/m/z, data, "QqQ lab") — oggi il nome è solo il titolo del pannello (`whiteCanvas` + `toBlob` in `addPanel`).
-4. **Bug: il menu del clic destro su uno spettro compare SOTTO il cromatogramma.** Causa probabile: `#ctx` ha `z-index:50`, mentre ogni pannello cliccato riceve `z-index = ++E.z` (parte da 10 e cresce senza limite) e dopo un po' supera 50. Rimedio: z-index di `#ctx`, `#helppop`, dialoghi e tooltip molto alto (es. 10000) oppure non far crescere `E.z` oltre una soglia. Verificare con e2e (clic destro dopo aver cliccato molti pannelli).
-5. Colori diversi per file: già fatti (`paintFiles`: palette `PAL` per i campioni, grigio per il bianco, marrone per il controllo; gli spettri sovrapposti usano il colore del file). Controllare solo che con molti file (> 12) i colori restino distinguibili.
+## Fatto il 2026-10-06 (pomeriggio) dagli appunti di Federico
+1. Frecce = scan per scan: il clic su un pannello lo rende attivo (contorno blu); se ha un cursore le frecce spostano di una scansione e lo spettro collegato segue (mantiene lo zoom); senza cursore o senza pannello attivo cambiano file. Clic sullo sfondo vuoto disattiva.
+2. Zoom: rettangolo durante il trascinamento nello spettro, barra in alto a destra con la finestra visibile, pulsante "Vista intera", voce di menu per ingrandire l'intervallo selezionato nei cromatogrammi.
+3. Nomi dei PNG e CSV (`TIC_t0`, `XIC_m-z194_t15`, `spettro_t0_RT14.3`, `MRM_364.1-194.1_t0`, `5file`...) e metadati tEXt nei PNG (Title, Description, Source, Software, Creation Time). Un pannello rinominato dallo studente usa il suo nome. I CSV non hanno metadati.
+4. Bug del menu sotto i pannelli risolto (z-index dei menu 10000+, `front()` rinumera).
+5. Colori con > 12 file: NON ancora controllato.
+Verificato: e2e3-8 senza errori JS (restano solo le `api/notebook` ERR_ABORTED note e il 400 voluto di e2e5). pytest non rieseguito (nessuna modifica Python; nel container pip non trova pytest).
 
 Idee non fatte: mappa con soglia regolabile, XIC in ppm per dati HRMS, minimappa del cromatogramma.
 

@@ -202,8 +202,12 @@ Q("#fsel").onchange = e => { E.cur = +e.target.value; renderFileList(); if (E.br
 Q("#fbrowse").onchange = e => { E.browse = e.target.checked; redrawAll(); uiSave(); };
 document.addEventListener("keydown", e => {
   if (S.view !== "data" || !E.files.length || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || Q("dialog[open]")) return;
-  if (e.key === "ArrowRight") { e.preventDefault(); goFile(1); } else if (e.key === "ArrowLeft") { e.preventDefault(); goFile(-1); }
+  const dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (!dir) return;
+  e.preventDefault();
+  const ap = E.active;                       // active panel with a cursor: arrows = previous/next scan; otherwise arrows change file
+  if (ap && E.panels.includes(ap) && ap.cur != null && ap._a && ap._a.sr) stepScan(ap, dir); else goFile(dir);
 });
+document.addEventListener("mousedown", e => { if (E.active && e.target.closest("#dpanels") && !e.target.closest(".pnl")) setActive(null); });
 function toolbar() {
   const scan = E.files.some(f => f.kind !== "mrm"), mrm = E.files.some(f => f.kind === "mrm");
   Q("#np-spec").hidden = !scan; Q("#np-map").hidden = !scan; Q("#np-xic").hidden = !scan; Q("#np-mrm").hidden = !mrm;
@@ -311,12 +315,12 @@ function addPanel(type, o, after) {
   Object.assign(p, g);
   const el = document.createElement("div");
   el.className = "card pnl " + type;
-  el.innerHTML = `<div class="hd"><b class="ttl" title="Doppio clic per rinominare"></b>${helpBtn("pnl-" + type)}<span class="ctl"></span><span class="rd"></span><button class="bt" data-a="png" title="Salva il grafico come immagine PNG">PNG</button>${type === "map" ? "" : '<button class="bt" data-a="csv" title="Salva i dati del grafico (le tracce visibili) in un file CSV da aprire con Excel">CSV</button>'}<button class="bt" data-a="max" title="Ingrandisci o riduci questo pannello">&#9633;</button><button class="x" title="Chiudi il pannello">&times;</button></div><canvas></canvas><div class="vl" hidden></div><div class="tip" hidden></div><div class="leg"></div>`;
+  el.innerHTML = `<div class="hd"><b class="ttl" title="Doppio clic per rinominare"></b>${helpBtn("pnl-" + type)}<span class="ctl"></span><span class="rd"></span><button class="bt" data-a="fit" style="display:none" title="Torna a vedere tutto il grafico (anche: doppio clic sul grafico)">Vista intera</button><button class="bt" data-a="png" title="Salva il grafico come immagine PNG">PNG</button>${type === "map" ? "" : '<button class="bt" data-a="csv" title="Salva i dati del grafico (le tracce visibili) in un file CSV da aprire con Excel">CSV</button>'}<button class="bt" data-a="max" title="Ingrandisci o riduci questo pannello">&#9633;</button><button class="x" title="Chiudi il pannello">&times;</button></div><canvas></canvas><div class="vl" hidden></div><div class="tip" hidden></div><div class="leg"></div>`;
   p.el = el; p.vl = el.querySelector(".vl"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg");
   Q("#dpanels").appendChild(el);
   E.panels.push(p); apply(p); fitHost();
   // sposta (trascina l'intestazione), porta davanti, ridimensiona (maniglia in basso a destra), ingrandisci
-  el.addEventListener("mousedown", () => { el.style.zIndex = ++E.z; });
+  el.addEventListener("mousedown", () => { front(el); setActive(p); });
   el.querySelector(".hd").addEventListener("mousedown", e => {
     if (e.target.closest("input,select,button,label,option") || el.classList.contains("max")) return;
     const sx = e.clientX - p.x, sy = e.clientY - p.y;
@@ -331,10 +335,14 @@ function addPanel(type, o, after) {
     cancelAnimationFrame(p._raf); p._raf = requestAnimationFrame(() => draw(p));
   });
   p._ro.observe(el); p._ro.observe(p.cv);   // the canvas too: it shrinks when the legend or the controls wrap to more lines
-  el.querySelector('[data-a="max"]').onclick = () => { el.classList.toggle("max"); el.style.zIndex = ++E.z; };
+  el.querySelector('[data-a="max"]').onclick = () => { el.classList.toggle("max"); front(el); };
   const csvB = el.querySelector('[data-a="csv"]');
-  if (csvB) csvB.onclick = () => { const t = plotCsv(p); if (t) dl((p.title || "grafico").replace(/[^\w\-]+/g, "_") + ".csv", t); else info("Nessun dato da salvare in questo grafico."); };
-  el.querySelector('[data-a="png"]').onclick = () => whiteCanvas(p.cv).toBlob(b => { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = (p.title || "grafico").replace(/[^\w\-]+/g, "_") + ".png"; a.click(); });
+  if (csvB) csvB.onclick = () => { const t = plotCsv(p); if (t) dl(plotName(p) + ".csv", t); else info("Nessun dato da salvare in questo grafico."); };
+  el.querySelector('[data-a="fit"]').onclick = () => { p.zoom = null; p.zoomY = null; draw(p); };
+  el.querySelector('[data-a="png"]').onclick = () => whiteCanvas(p.cv).toBlob(async b => {
+    let out = b; try { out = await pngWithMeta(b, plotMeta(p)); } catch (e) { /* the image is saved anyway, only without metadata */ }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(out); a.download = plotName(p) + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  });
   el.querySelector(".x").onclick = () => { p._ro.disconnect(); if (p._up) removeEventListener("mouseup", p._up); el.remove(); E.panels = E.panels.filter(x => x !== p); fitHost(); uiSave(); };
   el.querySelector(".ttl").ondblclick = async () => { const v = await ask("Nome del pannello", p.title); if (v) { p.title = v; ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
@@ -345,6 +353,83 @@ const redrawAll = () => E.panels.forEach(draw);
 function whiteCanvas(cv) {
   const c = document.createElement("canvas"); c.width = cv.width; c.height = cv.height;
   const g = c.getContext("2d"); g.fillStyle = "#ffffff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(cv, 0, 0); return c;
+}
+
+// bring a panel to the front (z-index is renumbered before it can reach the menus, which sit above 10000)
+function front(el) {
+  el.style.zIndex = ++E.z;
+  if (E.z > 5000) { E.panels.slice().sort((a, b) => (+a.el.style.zIndex || 0) - (+b.el.style.zIndex || 0)).forEach((q, i) => { q.el.style.zIndex = 10 + i; }); E.z = 10 + E.panels.length; el.style.zIndex = ++E.z; }
+}
+// active panel (outlined): its cursor can be moved scan by scan with the arrow keys
+function setActive(p) { E.active = p; E.panels.forEach(q => q.el.classList.toggle("act", q === p)); }
+function stepScan(p, d) {
+  const a = p._a, ok = s => E.files[s.k]?.kind !== "mrm";
+  const k = nearestFile(p, p.cur), s = a.sr.find(x => x.k === k && ok(x)) || a.sr.find(ok) || a.sr[0]; if (!s || !s.x.length) return;
+  const i = Math.max(0, Math.min(s.x.length - 1, nearIdx(s.x, p.cur) + d)), rt = s.x[i];
+  p.cur = rt; p.sel = null;
+  if (p.zoom && (rt < p.zoom[0] || rt > p.zoom[1])) { const w = p.zoom[1] - p.zoom[0]; p.zoom = clampView(rt - w / 2, rt + w / 2, a.full[0], a.full[1]); }
+  const dt = Math.abs(s.x[Math.min(i + 1, s.x.length - 1)] - s.x[Math.max(i - 1, 0)]) / 2 || scanStep();
+  draw(p); pushLinked(p, rt - dt / 2, rt + dt / 2, s.k, true);
+  p.rd.textContent = `scansione ${i + 1}/${s.x.length} · RT ${rt.toFixed(3)} min`;
+}
+// "zoom bar" in the top margin: where the visible window sits in the whole axis, plus the visible range in words; "Vista intera" button
+function afterDraw(p) {
+  const btn = p.el.querySelector('[data-a="fit"]'), z = !!(p._a && (p.zoom || p.zoomY));
+  if (btn) btn.style.display = z ? "" : "none";
+  if (!z) return;
+  const a = p._a, g = p.cv.getContext("2d"), bw = 90, x = a.W - M.r - bw, y = 3, f0 = a.full[0], f1 = a.full[1], u = p.type === "spec" ? "m/z" : "RT";
+  const txt = `${u} ${a.x0.toFixed(p.type === "spec" ? 1 : 2)}-${a.x1.toFixed(p.type === "spec" ? 1 : 2)}` + (p.type === "spec" ? "" : " min") + (a.map && p.zoomY ? ` · m/z ${a.y0.toFixed(0)}-${a.y1.toFixed(0)}` : "");
+  g.save(); g.font = "10px system-ui"; g.textAlign = "right"; g.fillStyle = css("--muted"); g.fillText("ingrandito: " + txt, x - 6, y + 7);
+  g.fillStyle = "rgba(120,120,120,.25)"; g.fillRect(x, y, bw, 6);
+  g.fillStyle = css("--accent"); const l = x + (a.x0 - f0) / (f1 - f0) * bw, r = x + (a.x1 - f0) / (f1 - f0) * bw; g.fillRect(l, y, Math.max(2, r - l), 6);
+  g.restore();
+}
+// ---- names and metadata of the saved images / CSV files
+const DEF_TITLES = ["Cromatogramma", "Spettro di massa", "Ione estratto (XIC)", "Transizioni MRM", "Mappa RT-m/z"];
+const fname = t => String(t).replace(/[^\w.+\-]+/g, "_").replace(/^_+|_+$/g, "");
+function plotFiles(p) {
+  const a = p._a, seen = new Map();
+  (a && a.sr ? a.sr.map(s => E.files[s.k]) : a && a.data ? a.data.map(x => x.f) : a && a.f ? [a.f] : []).forEach(f => { if (f) seen.set(f.k, f); });
+  return [...seen.values()];
+}
+function plotName(p) {
+  const fs = plotFiles(p), a = p._a;
+  const ft = fs.length === 1 ? (fs[0].type === "sample" && fs[0].time != null ? "t" + fs[0].time : fname(fs[0].label).slice(0, 18)) : fs.length ? fs.length + "file" : "";
+  const mzs = a && a.sr ? [...new Set(a.sr.map(s => s.mz).filter(v => v != null))] : [];
+  const trs = a && a.sr && p.type === "mrm" ? [...new Set(a.sr.map(s => s.ion))] : [];
+  const lst = (arr, f) => arr.length <= 3 ? arr.map(f).join("+") : arr.length + "ioni";
+  const rtm = p.r0 != null ? "RT" + ((p.r0 + p.r1) / 2).toFixed(1) : "";
+  let parts;
+  if (p.type === "chrom") parts = [p.kind.toUpperCase(), ft];
+  else if (p.type === "xic") parts = ["XIC", mzs.length ? "m-z" + lst(mzs, v => +v.toFixed(1)) : "", ft];
+  else if (p.type === "mrm") parts = ["MRM", trs.length ? lst(trs, v => String(v).replace(">", "-")) : "", ft];
+  else if (p.type === "spec") parts = [p.level === 2 ? "spettroMS2" : "spettro", fs.length > 1 ? "sovrapposti_" + ft : ft, rtm];
+  else parts = ["mappa", ft];
+  if (!DEF_TITLES.includes(p.title) && p.title) parts = [p.title, ft];
+  return fname(parts.filter(Boolean).join("_")).slice(0, 60) || "grafico";
+}
+function plotMeta(p) {
+  const a = p._a || {}, fs = plotFiles(p), d = [];
+  d.push({ chrom: "cromatogramma " + (p.kind || "").toUpperCase(), xic: "XIC (finestra +-" + p.tol + " Da)", mrm: "transizioni MRM", spec: "spettro di massa MS" + (p.level === 2 ? "/MS" : "1"), map: "mappa RT-m/z" }[p.type] || p.type);
+  const mzs = a.sr ? [...new Set(a.sr.map(s => s.mz).filter(v => v != null))] : [];
+  if (mzs.length) d.push("m/z " + mzs.map(v => v.toFixed(1)).join(", "));
+  if (p.type === "spec" && p.r0 != null) d.push(`RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min`);
+  if (a.x0 != null) d.push(`asse visibile ${a.x0.toFixed(p.type === "spec" ? 1 : 2)}-${a.x1.toFixed(p.type === "spec" ? 1 : 2)}`);
+  return [["Title", p.title || "Grafico"], ["Description", d.join("; ")], ["Source", fs.map(f => f.label).join(", ")], ["Software", "QqQ lab"], ["Creation Time", new Date().toISOString()]];
+}
+// writes tEXt chunks (Latin-1) right after the IHDR of a PNG
+const CRCT = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = u => { let c = 0xffffffff; for (const b of u) c = CRCT[(c ^ b) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+async function pngWithMeta(blob, fields) {
+  const src = new Uint8Array(await blob.arrayBuffer()), l1 = t => Uint8Array.from(String(t).replace(/[\u2013\u2014]/g, "-").replace(/[^\x20-\x7e\xa0-\xff]/g, "?"), c => c.charCodeAt(0));
+  const parts = [src.slice(0, 33)];
+  fields.forEach(([k, v]) => {
+    const kb = l1(k), vb = l1(v), body = new Uint8Array(4 + kb.length + 1 + vb.length);
+    body.set([116, 69, 88, 116], 0); body.set(kb, 4); body.set(vb, 5 + kb.length);       // "tEXt" + keyword + 0 + text
+    const ch = new Uint8Array(12 + body.length - 4), dv = new DataView(ch.buffer);
+    dv.setUint32(0, body.length - 4); ch.set(body, 4); dv.setUint32(ch.length - 4, crc32(body)); parts.push(ch);
+  });
+  parts.push(src.slice(33)); return new Blob(parts, { type: "image/png" });
 }
 
 function ctl(p) {
@@ -505,7 +590,7 @@ function frame(g, W, H, xt, yt, xtitle, ytitle) {
 const XT_RT = "Tempo di ritenzione (min)", YT_I = "Intensità (cps)";
 async function draw(p) {
   if (!p.cv.clientWidth || p.cv.clientWidth < 30) return;
-  try { if (p.type === "spec") await drawSpec(p); else if (p.type === "map") await drawMap(p); else await drawLines(p); uiSave(); } catch (e) { p.rd.textContent = "errore: " + e.message; }
+  try { if (p.type === "spec") await drawSpec(p); else if (p.type === "map") await drawMap(p); else await drawLines(p); afterDraw(p); uiSave(); } catch (e) { p.rd.textContent = "errore: " + e.message; }
 }
 const MSG = { xic: "Scrivi un m/z qui sopra, oppure clic destro su un picco dello spettro.", chrom: "Nessun file visibile (o nessun cromatogramma in questo tipo di file).", mrm: "Nessun file MRM visibile." };
 // ---- ricerca dei picchi (solo per etichettare dove sono: non identifica nulla)
@@ -745,6 +830,7 @@ function intMenuItems(p, x, near, py) {
     let best = null; a.sr.forEach(s => { const v = a.U(s, s.ys[nearIdx(s.x, x)]); if (!best || v > best.v) best = { v, s }; }); return best && best.s; };
   items.push({ label: "Integra il picco qui (automatico, poi sposta le barre)", fn: () => { const s = top(); if (!s) return; const [l, r] = autoEdges(s, x); addInt(p, s, l, r); } });
   if (p.sel) items.push({ label: `Integra l'intervallo selezionato (${p.sel[0].toFixed(2)}-${p.sel[1].toFixed(2)} min, tutte le tracce)`, fn: () => a.sr.forEach(s => addInt(p, s, p.sel[0], p.sel[1])) });
+  if (p.sel && p.sel[1] > p.sel[0]) items.push({ label: `Ingrandisci l'intervallo selezionato (${p.sel[0].toFixed(2)}-${p.sel[1].toFixed(2)} min)`, fn: () => { const [s0, s1] = p.sel; const w = (s1 - s0) * 0.1; zoomTo(p, s0 - w, s1 + w); } });
   const nearInt = p.ints.find(it => x >= Math.min(it.a, it.b) && x <= Math.max(it.a, it.b));
   if (nearInt) items.push({ label: "Elimina questa integrazione", fn: () => { p.ints = p.ints.filter(i => i !== nearInt); draw(p); } });
   if (p.ints.length) items.push({ label: "Elimina tutte le integrazioni di questo pannello", fn: () => { p.ints = []; draw(p); } });
@@ -857,11 +943,14 @@ function attach(p) {
       if (a.map && drag.zy) { const sy = drag.zy[1] - drag.zy[0], dy = (py - drag.y0) / (a.H - M.t - M.b) * sy; p.zoomY = clampView(drag.zy[0] + dy, drag.zy[1] + dy, a.fullY[0], a.fullY[1]); }
       draw(p);
     } else if (drag && drag.edge) { drag.edge.it[drag.edge.e] = x; draw(p); }
-    else if (drag) { drag.x = px; if (p.type !== "spec") { p.sel = [Math.min(xd(drag.x0), x), Math.max(xd(drag.x0), x)]; draw(p); } }
+    else if (drag) { drag.x = px; if (p.type === "spec") {
+      if (Math.abs(px - drag.x0) > 4) { zr.hidden = false; zr.style.left = cv.offsetLeft + Math.min(px, drag.x0) + "px"; zr.style.width = Math.abs(px - drag.x0) + "px"; zr.style.top = cv.offsetTop + M.t + "px"; zr.style.height = a.H - M.t - M.b + "px"; }
+    } else { p.sel = [Math.min(xd(drag.x0), x), Math.max(xd(drag.x0), x)]; draw(p); } }
     else cv.style.cursor = e.shiftKey ? "grab" : edgeAt(px) ? "col-resize" : "crosshair";
     p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(1) : "RT " + x.toFixed(2) + " min" + (a.map ? " · m/z " + a.mzAt(py).toFixed(1) : "");
     showHover(p, px, py); if (drag) p.tip.hidden = true;
   };
+  const zr = document.createElement("div"); zr.className = "zr"; zr.hidden = true; p.el.appendChild(zr);   // area being zoomed (spectrum drag)
   cv.onmouseleave = () => hideHover(p);
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
@@ -869,7 +958,7 @@ function attach(p) {
     const ed = edgeAt(px); drag = ed ? { edge: ed } : { x0: px, x: px };
   };
   p._up = e => {
-    if (!drag) return; const d = drag; drag = null;
+    if (!drag) return; const d = drag; drag = null; zr.hidden = true;
     if (d.pan) { uiSave(); return; }
     if (d.edge) { uiSave(); return; }
     const a = p._a, x0 = xd(d.x0), x1 = xd(d.x);
@@ -900,8 +989,8 @@ function nearestFile(p, x) {
   a.sr.forEach(s => { if (E.files[s.k]?.kind === "mrm") return; const v = s.ys[nearIdx(s.x, x)]; if (!best || v > best.v) best = { v, k: s.k }; });
   return best ? best.k : (scanFiles(E.files)[0]?.k ?? 0);
 }
-function pushLinked(p, r0, r1, k) {
-  E.panels.filter(s => s.type === "spec" && s.link === p.id).forEach(s => { s.r0 = r0; s.r1 = r1; s.k = k; s.zoom = null; ctl(s); draw(s); });
+function pushLinked(p, r0, r1, k, keepZoom) {
+  E.panels.filter(s => s.type === "spec" && s.link === p.id).forEach(s => { s.r0 = r0; s.r1 = r1; s.k = k; if (!keepZoom) s.zoom = null; ctl(s); draw(s); });
 }
 function newSpec(from, r0, r1, k) { return addPanel("spec", { link: from.id, k, r0, r1, level: E.files[k]?.lv || 1 }, from); }
 
