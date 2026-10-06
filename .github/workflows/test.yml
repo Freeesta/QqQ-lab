@@ -36,13 +36,15 @@ jobs:
           node-version: "22"
       - name: Syntax check
         run: |
-          node --check tpfinder/web/explore.js
-          cp tpfinder/web/draw.js /tmp/draw.mjs && node --check /tmp/draw.mjs
+          node --check qqq_lab/web/explore.js
+          node --check qqq_lab/web/browser.js
+          cp qqq_lab/web/browser-worker.js /tmp/bw.mjs && node --check /tmp/bw.mjs
+          cp qqq_lab/web/draw.js /tmp/draw.mjs && node --check /tmp/draw.mjs
           python3 - <<'PY'
           import re, pathlib
-          html = pathlib.Path("tpfinder/web/index.html").read_text(encoding="utf-8")
+          html = pathlib.Path("qqq_lab/web/index.html").read_text(encoding="utf-8")
           inline = re.findall(r"<script>(.*?)</script>", html, re.S)
           pathlib.Path("/tmp/inline.js").write_text("\n".join(inline), encoding="utf-8")
           PY
           # classic scripts share globals: check explore.js + inline together (no duplicate const)
-          cat tpfinder/web/explore.js /tmp/inline.js > /tmp/page.js && node --check /tmp/page.js
+          cat qqq_lab/web/explore.js /tmp/inline.js > /tmp/page.js && node --check /tmp/page.js

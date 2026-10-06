@@ -104,7 +104,7 @@
       const t = inp.value.trim().replace(",", ".");
       if (!t) { msg.textContent = ""; tb.innerHTML = adducts(null); return; }
       if (/^\d+(\.\d*)?$/.test(t)) { msg.textContent = ""; tb.innerHTML = adducts(+t); return; }
-      try { const r = await (await fetch("/api/formula?f=" + encodeURIComponent(t))).json(); if (r.error) throw new Error(r.error);
+      try { const r = await (await fetch("api/formula?f=" + encodeURIComponent(t))).json(); if (r.error) throw new Error(r.error);
         let M = r.neutral; try { M = massOf(r.formula); } catch (_) { /* element without isotope data here: use the server value */ }
         msg.innerHTML = `${sub(r.formula)}: M = ${M.toFixed(4)}`; tb.innerHTML = adducts(M); }
       catch (e) { msg.textContent = "formula non valida"; tb.innerHTML = adducts(null); }
@@ -206,7 +206,7 @@
     const run = async () => {
       const t = f.value.trim(); if (!t) { out.innerHTML = ""; msg.textContent = ""; return; }
       try {
-        const r = await (await fetch("/api/formula?f=" + encodeURIComponent(t))).json(); if (r.error) throw new Error("formula non valida");
+        const r = await (await fetch("api/formula?f=" + encodeURIComponent(t))).json(); if (r.error) throw new Error("formula non valida");
         const ion = ionCounts(r.formula, ad.value); msg.innerHTML = sub(r.formula) + " " + H(ion.ad);
         out.innerHTML = isoHtml(isoPattern(ion.n, ion.z));
       } catch (e) { msg.textContent = e.message; out.innerHTML = ""; }

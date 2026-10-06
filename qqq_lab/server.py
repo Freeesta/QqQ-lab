@@ -16,7 +16,7 @@ from urllib.parse import parse_qs, urlparse
 
 import numpy as np
 
-from .chem.elements import formula_mz
+from .api import dispatch
 from .explore import Session, sniff
 from .reader.methodinfo import check_against, read_methods
 from .project import guess_sample
@@ -222,7 +222,7 @@ class App:
     def session_state(self) -> dict:
         return {"session": self.session.info() if self.session else None, "app": bool(self.workdir),
                 "workdir": str(self.workdir) if self.workdir else None, "files": self.files(), "methods": self.methods(),
-                "version": __import__("tpfinder").__version__}
+                "version": __import__("qqq_lab").__version__}
 
     def _item(self, k: int):
         if not self.session or not 0 <= k < len(self.session.items):
@@ -280,7 +280,7 @@ class App:
 
     def state(self):
         return {"error": None, "phase": "start", "app": bool(self.workdir), "workdir": str(self.workdir) if self.workdir else None,
-                "files": self.files(), "methods": self.methods(), "version": __import__("tpfinder").__version__}
+                "files": self.files(), "methods": self.methods(), "version": __import__("qqq_lab").__version__}
 
 
 STATIC_TYPES = {".html": "text/html", ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf",
@@ -289,8 +289,8 @@ STATIC_TYPES = {".html": "text/html", ".woff2": "font/woff2", ".woff": "font/wof
 
 
 def _static(rel: str):
-    """A file under tpfinder/web (never outside it)."""
-    base = resources.files("tpfinder") / "web"
+    """A file under qqq_lab/web (never outside it)."""
+    base = resources.files("qqq_lab") / "web"
     parts = [p for p in rel.split("/") if p]
     if not parts or any(p in (".", "..") or "\\" in p for p in parts):
         return None
@@ -302,7 +302,7 @@ def _static(rel: str):
 
 
 def _page() -> bytes:
-    return (resources.files("tpfinder") / "web" / "index.html").read_bytes()
+    return (resources.files("qqq_lab") / "web" / "index.html").read_bytes()
 
 
 def make_handler(app: App):
@@ -331,114 +331,56 @@ def make_handler(app: App):
             origin = self.headers.get("Origin")
             return not origin or urlparse(origin).hostname in ("127.0.0.1", "localhost")
 
+        def _answer(self, res):
+            code, ctype, body, extra = res
+            self._send(code, body, ctype, extra)
+
         def do_POST(self):
             u = urlparse(self.path)
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
-            try:
-                if not self._local_only():
-                    return self._json({"error": "forbidden"}, 403)
-                n = int(self.headers.get("Content-Length") or 0)
-                if u.path in ("/api/ping", "/api/bye"):
-                    self.rfile.read(n)
-                    (app.ping if u.path == "/api/ping" else app.bye)(q.get("tab", ""))
-                    return self._json({"ok": True})
-                if u.path == "/api/upload":
-                    app.save_upload(q.get("name", ""), self.rfile, n)
-                    return self._json({"files": app.files(), "methods": app.methods()})
-                body = json.loads(self.rfile.read(n) or b"{}")
-                if u.path == "/api/explore":
-                    app.open_session(body)
-                    return self._json(app.session_state())
-                if u.path == "/api/remove":
-                    app.remove_file(body.get("name", ""))
-                    return self._json({"files": app.files(), "methods": app.methods()})
-                if u.path == "/api/notebook":
-                    app.save_notebook(body)
-                    return self._json({"ok": True})
-                if u.path == "/api/new":
-                    app.reset(bool(body.get("fresh")))
-                    return self._json(app.state())
-                return self._json({"error": "unknown endpoint"}, 404)
-            except Exception as e:  # noqa: BLE001
-                return self._json({"error": f"{type(e).__name__}: {e}" if not isinstance(e, ValueError) else str(e)}, 400)
+            if not self._local_only():
+                return self._json({"error": "forbidden"}, 403)
+            return self._answer(dispatch(app, "POST", u.path, q, self.rfile, int(self.headers.get("Content-Length") or 0)))
 
         def do_GET(self):
             u = urlparse(self.path)
             if not self._local_only():
                 return self._json({"error": "forbidden"}, 403)
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
-            try:
-                if u.path in ("/", "/index.html"):
-                    return self._send(200, _page(), "text/html")
-                if u.path == "/api/live":                       # presence by an open connection: when the page goes, the connection drops
-                    tab = q.get("tab", "")
-                    self.send_response(200)
-                    self.send_header("Content-Type", "text/event-stream")
-                    self.send_header("Cache-Control", "no-cache")
-                    self.send_header("Connection", "close")
-                    self.end_headers()
-                    self.close_connection = True
-                    app.live_open(tab)
-                    try:
-                        while True:
-                            self.wfile.write(b": alive\n\n")
-                            self.wfile.flush()
-                            time.sleep(1.5)
-                    except OSError:                              # BrokenPipe / ConnectionReset: the page is gone
-                        pass
-                    finally:
-                        app.live_close(tab)
-                    return
-                if u.path == "/api/reload":
-                    app.load()
-                    return self._json(app.state())
-                if u.path == "/api/state":
-                    return self._json(app.state())
-                if u.path.startswith("/static/"):
-                    got = _static(u.path[len("/static/"):])
-                    if got is None:
-                        return self._json({"error": "not found"}, 404)
-                    return self._send(200, got[0], got[1], {"Cache-Control": "no-cache"})
-                if u.path == "/api/notebook":
-                    return self._json(app.notebook())
-                if u.path == "/api/session":
-                    return self._json(app.session_state())
-                if u.path == "/api/chrom":
-                    return self._json(app.chrom(int(q["k"]), q.get("kind", "tic"), int(q.get("level", 1)),
-                                                float(q["mz0"]) if q.get("mz0") else None, float(q["mz1"]) if q.get("mz1") else None,
-                                                float(q["prec"]) if q.get("prec") else None))
-                if u.path == "/api/xic":
-                    return self._json(app.xic([int(x) for x in q["k"].split(",") if x], float(q["mz"]),
-                                              float(q.get("tol", 0.35)), int(q.get("level", 1))))
-                if u.path == "/api/mrm":
-                    return self._json(app.mrm([int(x) for x in q["k"].split(",") if x]))
-                if u.path == "/api/method":
-                    return self._json(app.method(int(q["k"])))
-                if u.path == "/api/spectrum":
-                    pr = q.get("precursor")
-                    bg = None
-                    if q.get("bgk") not in (None, ""):
-                        bg = {"k": int(q["bgk"]), "rt0": float(q["bgrt0"]), "rt1": float(q["bgrt1"]),
-                              "factor": float(q.get("bgf", 1.0))}
-                    return self._json(app.spectrum(int(q["k"]), float(q["rt0"]), float(q["rt1"]), int(q.get("level", 1)),
-                                                   float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), bg))
-                if u.path == "/api/formula":
-                    try:
-                        return self._json(formula_mz(q.get("f", ""), q.get("adduct") or None))
-                    except ValueError as e:      # a typo in the formula is the user's, not a server fault
-                        return self._json({"error": str(e)}, 400)
-                if u.path == "/api/map":
-                    return self._json(app.ionmap(int(q["k"]), int(q.get("level", 1))))
-                return self._json({"error": "unknown endpoint"}, 404)
-            except Exception as e:  # noqa: BLE001
-                return self._json({"error": f"{type(e).__name__}: {e}"}, 500)
+            if u.path in ("/", "/index.html"):
+                return self._send(200, _page(), "text/html")
+            if u.path == "/api/live":                       # presence by an open connection: when the page goes, the connection drops
+                tab = q.get("tab", "")
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Connection", "close")
+                self.end_headers()
+                self.close_connection = True
+                app.live_open(tab)
+                try:
+                    while True:
+                        self.wfile.write(b": alive\n\n")
+                        self.wfile.flush()
+                        time.sleep(1.5)
+                except OSError:                              # BrokenPipe / ConnectionReset: the page is gone
+                    pass
+                finally:
+                    app.live_close(tab)
+                return
+            if u.path.startswith("/static/"):
+                got = _static(u.path[len("/static/"):])
+                if got is None:
+                    return self._json({"error": "not found"}, 404)
+                return self._send(200, got[0], got[1], {"Cache-Control": "no-cache"})
+            return self._answer(dispatch(app, "GET", u.path, q))
 
     return H
 
 
 def default_workdir(new: bool = False) -> Path:
     """The most recent work folder (so closing and reopening the program resumes), or a new one."""
-    root = Path.home() / "TPFinder_lavoro"
+    root = Path.home() / "QqQ_lab_lavoro"
     if not new and root.is_dir():
         old = sorted(p for p in root.glob("sessione_*") if p.is_dir())
         if old:

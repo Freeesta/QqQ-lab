@@ -92,7 +92,7 @@ Windows, usate da `msconvert`. Il piano:
   ridistribuibili);
 - se trova `msconvert` installato (ProteoWizard, installato una volta sul PC Windows dello
   strumento o del laboratorio), lo lancia da solo e salva l'mzML in una cartella di cache accanto al
-  file originale (`.tpfinder-cache/`); altrimenti mostra un messaggio chiaro con le istruzioni;
+  file originale (`.qqq_lab-cache/`); altrimenti mostra un messaggio chiaro con le istruzioni;
 - Federico può anche convertire lui i file e dare direttamente gli mzML agli studenti, e il programma
   funziona identico.
 
@@ -197,7 +197,7 @@ studenti per un mese.
 ### 7.2 Struttura proposta del codice (Python)
 
 ```
-tpfinder/
+qqq_lab/
   reader/      mzML (e conversione wiff tramite msconvert)
   chem/        masse, formule, trasformazioni
   core/        xic, picchi, punteggio, cosa cresce, transizioni

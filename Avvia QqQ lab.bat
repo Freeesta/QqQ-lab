@@ -1,6 +1,6 @@
 @echo off
 rem Double-click to open QqQ lab (Windows). The logic lives in scripts\avvia.py: it builds or updates the
-rem private environment (.venv-tpfinder) with the newest Python installed (>= 3.11), then opens the app.
+rem private environment (.venv-qqq-lab) with the newest Python installed (>= 3.11), then opens the app.
 cd /d "%~dp0"
 where py >nul 2>nul
 if not errorlevel 1 (

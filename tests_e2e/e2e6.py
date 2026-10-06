@@ -33,7 +33,7 @@ try:
             with pg.expect_download() as d: pg.locator(".pnl.mrm [data-a=csv]").first.click()
             raw = open(d.value.path(), "rb").read(); t = raw.decode("utf-8-sig"); first = t.split("\r\n")[:3]
             print("CSV:", first[0][:120], "|", first[1][:80])
-            assert raw[:3] == b"\xef\xbb\xbf" and "RT min" in first[0] and ";" in first[1] and "," in first[1] and "." not in first[1].replace('"', ''), first
+            assert raw[:3] == b"\xef\xbb\xbf" and "RT min" in first[0] and ";" in first[1] and "," in "".join(first[1:]) and "." not in "".join(first[1:]).replace('"', ''), first
         step("plot CSV for Excel (semicolon, decimal comma, BOM)", csvexcel)
         def fold():
             w0 = pg.evaluate("E.panels[0].w"); pg.click("#ffold"); pg.wait_for_timeout(600)

@@ -25,7 +25,7 @@ with sync_playwright() as p:
         assert "FULL SCAN (EMS)" in t.upper() and "MS2" in t and "MRM" in t, t
         assert pg.locator("#flst .fgh").count() >= 3 and pg.locator("#flst .tag").count() == 0 and pg.locator('#dfiles .hq').count() == 0
         assert pg.locator("#np-export, #np-ints, #kindinfo").count() == 0
-        assert "federico.cristaudo@unito.it" in pg.inner_text("#credits") and pg.locator('.pnl.chrom [data-o=norm]').count() == 0
+        assert pg.locator("#credits").count() == 0 and pg.locator('.pnl.chrom [data-o=norm]').count() == 0
         fw = pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').offsetWidth"); assert fw < 60, fw
     step("sidebar slim, EMS chosen at start, no Esporta/Integrazioni/Rilevato", side)
     def integ():

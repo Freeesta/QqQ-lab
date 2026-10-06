@@ -1,4 +1,4 @@
-"""Command line: tpfinder app | convert | metodo."""
+"""Command line: qqq_lab app | convert | metodo."""
 from __future__ import annotations
 
 import argparse
@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(prog="tpfinder", description=__doc__)
+    ap = argparse.ArgumentParser(prog="qqq_lab", description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("convert", help="convert .wiff files to mzML with msconvert")
     c.add_argument("files", nargs="+")
@@ -15,7 +15,7 @@ def main(argv=None) -> int:
     am.add_argument("file")
     am.add_argument("-o", "--out", default="-")
     ap_ = sub.add_parser("app", help="open the program: drop files in the page and start the analysis")
-    ap_.add_argument("--workdir", help="folder where the dropped files are kept (default: ~/TPFinder_lavoro/sessione_...)")
+    ap_.add_argument("--workdir", help="folder where the dropped files are kept (default: ~/QqQ_lab_lavoro/sessione_...)")
     ap_.add_argument("--port", type=int, default=8790)
     ap_.add_argument("--no-open", action="store_true")
     ap_.add_argument("--exit-on-close", action="store_true", help="stop the program when the browser page is closed (used by the launchers)")

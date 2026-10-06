@@ -31,11 +31,11 @@ def find_msconvert() -> str | None:
 
 
 def to_mzml(path: Path, extra_args: list[str] | None = None) -> Path:
-    """The mzML of a .wiff (or other vendor file), converted once into .tpfinder-cache next to it."""
+    """The mzML of a .wiff (or other vendor file), converted once into .qqq_lab-cache next to it."""
     path = Path(path)
     if path.suffix.lower() == ".mzml":
         return path
-    out_dir = path.parent / ".tpfinder-cache"
+    out_dir = path.parent / ".qqq_lab-cache"
     out = out_dir / (path.stem + ".mzML")
     if out.exists() and out.stat().st_mtime >= path.stat().st_mtime:
         return out

@@ -57,12 +57,12 @@ function nbSave(now = false) {
   clearTimeout(nbTimer);
   const go = () => {
     const body = JSON.stringify(NB); if (body === nbLast) return;      // nothing changed: no request (fewer aborted saves on reload)
-    nbLast = body; fetch("/api/notebook", { method: "POST", body, keepalive: true }).catch(() => { nbLast = ""; });
+    nbLast = body; fetch("api/notebook", { method: "POST", body, keepalive: true }).catch(() => { nbLast = ""; });
   };
   if (now) go(); else nbTimer = setTimeout(go, 500);
 }
 async function nbLoad() {
-  try { Object.assign(NB, await (await fetch("/api/notebook")).json()); } catch (_) { /* prima volta */ }
+  try { Object.assign(NB, await (await fetch("api/notebook")).json()); } catch (_) { /* prima volta */ }
   document.dispatchEvent(new Event("nbloaded"));
 }
 let uiTimer = null;
@@ -93,16 +93,16 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 const CACHE = new Map();
 const memo = (key, fn) => { if (!CACHE.has(key)) CACHE.set(key, fn().catch(e => { CACHE.delete(key); throw e; })); return CACHE.get(key); };
 const J = u => fetch(u).then(async r => { const j = await r.json(); if (j.error) throw new Error(j.error); return j; });
-const getChrom = (k, kind, lv, mz0, mz1, prec) => memo(`c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}`, () => J(`/api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "")));
-const getXic = (k, mz, tol, lv) => memo(`x${k}|${mz}|${tol}|${lv}`, () => J(`/api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0]));
-const getSpec = (k, a, b, lv, pr, bg) => memo(`s${k}|${a}|${b}|${lv}|${pr}|${bg ? bg.join(",") : ""}`, () => J(`/api/spectrum?k=${k}&rt0=${a}&rt1=${b}&level=${lv}&precursor=${pr ?? ""}` + (bg ? `&bgk=${bg[0]}&bgrt0=${bg[1]}&bgrt1=${bg[2]}` : "")));
-const getFormula = (f, ad) => J(`/api/formula?f=${encodeURIComponent(f)}&adduct=${encodeURIComponent(ad || "")}`);
+const getChrom = (k, kind, lv, mz0, mz1, prec) => memo(`c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}`, () => J(`api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "")));
+const getXic = (k, mz, tol, lv) => memo(`x${k}|${mz}|${tol}|${lv}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0]));
+const getSpec = (k, a, b, lv, pr, bg) => memo(`s${k}|${a}|${b}|${lv}|${pr}|${bg ? bg.join(",") : ""}`, () => J(`api/spectrum?k=${k}&rt0=${a}&rt1=${b}&level=${lv}&precursor=${pr ?? ""}` + (bg ? `&bgk=${bg[0]}&bgrt0=${bg[1]}&bgrt1=${bg[2]}` : "")));
+const getFormula = (f, ad) => J(`api/formula?f=${encodeURIComponent(f)}&adduct=${encodeURIComponent(ad || "")}`);
 // default adduct from the polarity of the visible files
 const defAdduct = () => (E.files.find(f => f.vis && f.polarity === "negative") && !E.files.find(f => f.vis && f.polarity === "positive")) ? "[M-H]-" : "[M+H]+";
-const getMrm = k => memo(`m${k}`, () => J(`/api/mrm?k=${k}`).then(j => j.files[0].transitions));
+const getMrm = k => memo(`m${k}`, () => J(`api/mrm?k=${k}`).then(j => j.files[0].transitions));
 
 async function bootSession() {
-  const j = await J("/api/session");
+  const j = await J("api/session");
   S.sess = j.session;
   if (!j.session) { E.files = []; E.key = ""; return; }
   const key = JSON.stringify(j.session.map(s => s.file));
@@ -844,7 +844,7 @@ function lut(stops) {
   return out;
 }
 const LUT_SEQ = lut(RAMP), LUT_DIV = lut(DIV);
-const getMap = (k, lv) => memo(`g${k}|${lv}`, () => J(`/api/map?k=${k}&level=${lv}`).then(j => {
+const getMap = (k, lv) => memo(`g${k}|${lv}`, () => J(`api/map?k=${k}&level=${lv}`).then(j => {
   const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
   return { ...j, m: new Float32Array(u.buffer) };
 }));
@@ -1254,7 +1254,7 @@ function lcHtml(lc, row) {
 // ------------------------------------------------------------------ metodo di acquisizione (letto dagli mzML)
 async function showMethod(sel) {
   const f = E.files[E.cur]; if (!f) return info("Apri prima almeno un file.");
-  let m; try { m = await J("/api/method?k=" + f.k); } catch (e) { return info("Errore: " + EH(e.message)); }
+  let m; try { m = await J("api/method?k=" + f.k); } catch (e) { return info("Errore: " + EH(e.message)); }
   const row = (a, b) => b == null || b === "" ? "" : `<tr><td class="muted">${a}</td><td>${b}</td></tr>`;
   const pol = { positive: "positivo (ESI+)", negative: "negativo (ESI-)", mixed: "misto", unknown: "non indicata" }[m.polarity] || m.polarity;
   const labs = m.lab || [], li = labs.length ? Math.min(Math.max(sel ?? m.lab_pick ?? 0, 0), labs.length - 1) : -1, lab = labs[li];
@@ -1300,7 +1300,7 @@ function loadDam() {
   inp.onchange = async () => {
     const fl = inp.files[0]; if (!fl) return;
     try {
-      const j = await (await fetch("/api/upload?name=" + encodeURIComponent(fl.name), { method: "POST", body: fl })).json();
+      const j = await (await fetch("api/upload?name=" + encodeURIComponent(fl.name), { method: "POST", body: fl })).json();
       if (j.error) throw new Error(j.error);
       if (typeof ST !== "undefined") { ST.methods = j.methods || ST.methods; renderMethods(); }
       showMethod();
@@ -1326,7 +1326,7 @@ Q("#np-map").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(E.file
 Q("#np-mrm").onclick = () => addPanel("mrm", {});
 Q("#np-tile").onclick = tile;
 Q("#np-merge").onclick = mergeXics;
-Q("#addf").onclick = async () => { S.adding = true; try { const d = await J("/api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
+Q("#addf").onclick = async () => { S.adding = true; try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
 addEventListener("resize", () => { fitWidth(); redrawAll(); });
 document.addEventListener("tpview", e => { if (e.detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });
 

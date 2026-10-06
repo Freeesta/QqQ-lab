@@ -1,4 +1,4 @@
-"""Write the logo (SVG, from tools/genera_logo.py) and all the raster icons made from it into tpfinder/web/:
+"""Write the logo (SVG, from tools/genera_logo.py) and all the raster icons made from it into qqq_lab/web/:
 logo.svg, app-icon.svg, favicon.svg, logo.png, favicon-32.png, favicon.ico, apple-touch-icon.png,
 app-icon-192/256/512/1024.png, and the macOS icon QqQ lab.app/Contents/Resources/AppIcon.icns.
 Needs Playwright + Chromium (developer machine or the cloud container), only to rasterise the SVG.
@@ -7,7 +7,7 @@ import io, struct, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-WEB = ROOT / "tpfinder" / "web"
+WEB = ROOT / "qqq_lab" / "web"
 sys.path.insert(0, str(Path(__file__).parent))
 import genera_logo as L  # noqa: E402
 

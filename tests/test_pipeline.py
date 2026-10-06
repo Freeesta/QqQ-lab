@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
 
-from tpfinder.chem import elements as E
-from tpfinder.demo import make_demo
-from tpfinder.project import guess_sample
+from qqq_lab.chem import elements as E
+from qqq_lab.demo import make_demo
+from qqq_lab.project import guess_sample
 
 
 def test_formula_and_mass():
@@ -30,7 +30,7 @@ def demo(tmp_path_factory):
 def test_explore_session(demo):
     """Chromatograms, spectra and ion chromatograms on demand, with no compound given."""
     import numpy as np
-    from tpfinder.explore import Session
+    from qqq_lab.explore import Session
     folder, files = demo
     s = Session([{"file": str(x), "time": guess_sample(x.name)[1], "type": guess_sample(x.name)[2]} for x in files], folder)
     it = next(i for i in s.items if "t0min" in str(i.path))
@@ -49,7 +49,7 @@ def test_app_mode_upload_and_open(tmp_path, demo):
     import io
     import shutil
 
-    from tpfinder.server import App
+    from qqq_lab.server import App
     app = App(tmp_path / "w")
     src = demo[1][0]
     app.save_upload("../evil/" + src.name, io.BytesIO(src.read_bytes()), src.stat().st_size)   # path parts are dropped
@@ -90,7 +90,7 @@ def _mzml(body: str) -> str:
 
 def test_empty_zlib_array_does_not_crash(tmp_path):
     """MS2 scans without peaks carry zlib-flagged but empty arrays: reading them must give empty arrays, not an error."""
-    from tpfinder.reader.mzml import Run
+    from qqq_lab.reader.mzml import Run
     spec = ('<spectrum index="0" id="scan=1" defaultArrayLength="0"><cvParam cvRef="MS" accession="MS:1000511" name="ms level" value="2"/>'
             '<cvParam cvRef="MS" accession="MS:1000130" name="positive scan" value=""/>'
             '<cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="0.5" unitName="minute"/>'
@@ -103,7 +103,7 @@ def test_empty_zlib_array_does_not_crash(tmp_path):
 
 def test_mrm_file_gets_rt_range_and_polarity(tmp_path):
     """An MRM-only file has no scans: RT range and polarity must come from the SRM chromatograms."""
-    from tpfinder.explore import Item
+    from qqq_lab.explore import Item
     chrom = ('<chromatogram index="0" id="SRM SIC Q1=364.1 Q3=194.1 sample=1 period=1 experiment=1 transition=0 ce=20 name=Quant" defaultArrayLength="3">'
              '<cvParam cvRef="MS" accession="MS:1001473" name="selected reaction monitoring chromatogram" value=""/>'
              '<cvParam cvRef="MS" accession="MS:1000130" name="positive scan" value=""/>'
@@ -126,7 +126,7 @@ def _scan_xml(i: int, rt: float, mz, inten, level: int = 1) -> str:
 
 def test_ionmap_is_mean_per_scan_on_common_grid(tmp_path):
     """Two scans in the same RT bin are averaged (not summed); a later scan lands in its own bin."""
-    from tpfinder.explore import Session
+    from qqq_lab.explore import Session
     scans = [_scan_xml(0, 1.00, [150.2], [100.0]), _scan_xml(1, 1.01, [150.4], [300.0]), _scan_xml(2, 3.00, [250.7], [50.0])]
     f = tmp_path / "full.mzML"
     f.write_text(_mzml(f'<spectrumList count="3">{"".join(scans)}</spectrumList>'), encoding="utf-8")
@@ -156,7 +156,7 @@ def test_formula_mz_one_decimal_and_nominal():
 
 def test_spectrum_background_subtraction(tmp_path):
     """Same file, two windows: signal minus background per bin, clipped at zero."""
-    from tpfinder.explore import Session
+    from qqq_lab.explore import Session
     scans = [_scan_xml(0, 1.0, [100.2, 200.2], [500.0, 80.0]), _scan_xml(1, 5.0, [100.2, 200.2], [100.0, 200.0])]
     f = tmp_path / "x.mzML"
     f.write_text(_mzml(f'<spectrumList count="2">{"".join(scans)}</spectrumList>'), encoding="utf-8")
@@ -170,8 +170,8 @@ def test_theory_module_is_served_and_self_contained():
     """The Teoria pages are static: every local link, script and stylesheet must exist, no external scripts."""
     import re
     from importlib import resources
-    from tpfinder.server import _static
-    base = resources.files("tpfinder") / "web" / "teoria"
+    from qqq_lab.server import _static
+    base = resources.files("qqq_lab") / "web" / "teoria"
     pages = sorted(p.name for p in base.iterdir() if p.name.endswith(".html"))
     assert "index.html" in pages and len(pages) >= 10
     body, ctype = _static("teoria/index.html")
@@ -195,13 +195,13 @@ def test_mac_app_bundle_and_vector_logo():
     text = exe.read_text(encoding="utf-8")
     assert text.startswith("#!/bin/bash") and "lab.command" in text and "osascript" in text
     assert (app / "Resources" / (info["CFBundleIconFile"] + ".icns")).read_bytes()[:4] == b"icns"
-    svg = (root / "tpfinder" / "web" / "logo.svg").read_text(encoding="utf-8")
+    svg = (root / "qqq_lab" / "web" / "logo.svg").read_text(encoding="utf-8")
     assert svg.lstrip().startswith("<svg") and "linearGradient" in svg
 
 
 def test_pda_chromatogram_is_read_as_kind_pda(tmp_path):
     """The mzML 'TWC' chromatogram (total wavelength, PDA/UV) is exposed as kind 'pda' and served by Item.total('pda')."""
-    from tpfinder.explore import Item
+    from qqq_lab.explore import Item
     chrom = ('<chromatogram index="0" id="TWC" defaultArrayLength="3"><cvParam cvRef="MS" accession="MS:1000813" name="emission chromatogram" value=""/>'
              f'<binaryDataArrayList count="2">{_array("MS:1000595", "time array", [0.0, 0.004, 0.008])}{_array("MS:1000515", "intensity array", [5.0, -2.0, 9.0])}</binaryDataArrayList></chromatogram>')
     f = tmp_path / "uv.mzML"
@@ -214,7 +214,7 @@ def test_pda_chromatogram_is_read_as_kind_pda(tmp_path):
 
 def test_lc_method_xml_is_decoded():
     """The Shimadzu/Analyst LC method (VendorAppMethod XML) gives the gradient, flow changes, PDA settings and oven."""
-    from tpfinder.reader.methodinfo import _lc
+    from qqq_lab.reader.methodinfo import _lc
 
     def row(*f):
         return "<row>" + "".join(f"<Field{i + 1}>{v}</Field{i + 1}>" for i, v in enumerate(f)) + "</row>"
@@ -241,7 +241,7 @@ def test_lc_method_xml_is_decoded():
 
 def test_browser_presence_stops_the_program(tmp_path, monkeypatch):
     """--exit-on-close: the program stops when no page is left (after a grace period), not before; a reload (bye then ping) is tolerated."""
-    from tpfinder import server
+    from qqq_lab import server
     app = server.App(tmp_path / "w")
     monkeypatch.setattr(server, "EXIT_GRACE", 0.2)
     monkeypatch.setattr(server, "EXIT_FIRST", 0.5)
@@ -262,7 +262,7 @@ def test_browser_presence_stops_the_program(tmp_path, monkeypatch):
 
 def test_method_dam_upload_is_listed_and_unknown_is_empty(tmp_path):
     """A .dam is accepted as an upload, listed as a method and never replaced by a built-in method; with none, the list is empty."""
-    from tpfinder import server
+    from qqq_lab import server
     app = server.App(tmp_path / "w")
     (tmp_path / "w").mkdir(exist_ok=True)
     assert app.methods() == [] and app.lab_methods() == []
@@ -277,7 +277,7 @@ def test_method_dam_upload_is_listed_and_unknown_is_empty(tmp_path):
 def test_method_experiments_are_decoded_and_checked_against_the_data():
     """MRM transitions and scan ranges are read from MassRangeEx and compared with what the mzML says."""
     import struct
-    from tpfinder.reader.methodinfo import _experiments, check_against
+    from qqq_lab.reader.methodinfo import _experiments, check_against
 
     def mrm_entry(q1, q3, dwell, name, ce):
         nm = name.encode("utf-16le")
@@ -313,7 +313,7 @@ def test_method_experiments_are_decoded_and_checked_against_the_data():
 
 def test_tic_and_bpc_can_be_restricted_to_an_mz_range(tmp_path):
     """TIC/BPC with mz0/mz1 only use ions inside the range (None = open end); no ions -> zeros."""
-    from tpfinder.explore import Session
+    from qqq_lab.explore import Session
     scans = [_scan_xml(0, 1.0, [100.0, 200.0, 300.0], [10.0, 20.0, 40.0]), _scan_xml(1, 2.0, [100.0, 200.0, 300.0], [1.0, 2.0, 4.0])]
     (tmp_path / "f.mzML").write_text(_mzml(f'<spectrumList count="2">{"".join(scans)}</spectrumList>'), encoding="utf-8")
     it = Session([{"file": "f.mzML"}], tmp_path).items[0]
@@ -336,7 +336,7 @@ def _ms2_scan(i: int, rt: float, prec: float, mz, inten) -> str:
 
 def test_experiment_type_is_read_from_the_file_and_ms2_can_be_filtered_by_precursor(tmp_path):
     """The start screen gets the experiment (full / ms2 / mrm) from the content, whatever the name says; MS2 chromatograms can be limited to one precursor."""
-    from tpfinder.explore import Session, sniff
+    from qqq_lab.explore import Session, sniff
     (tmp_path / "enhanced_mrm_like_name.mzML").write_text(_mzml(f'<spectrumList count="2">{_scan_xml(0, 1.0, [100.0], [5.0])}{_scan_xml(1, 2.0, [100.0], [5.0])}</spectrumList>'), encoding="utf-8")
     sc = [_ms2_scan(0, 1.0, 229.1, [90.0], [10.0]), _ms2_scan(1, 1.1, 305.0, [90.0], [3.0]), _ms2_scan(2, 1.2, 229.1, [90.0], [20.0])]
     (tmp_path / "x.mzML").write_text(_mzml(f'<spectrumList count="3">{"".join(sc)}</spectrumList>'), encoding="utf-8")
@@ -348,3 +348,28 @@ def test_experiment_type_is_read_from_the_file_and_ms2_can_be_filtered_by_precur
     rt, y = it.total("tic", 2, None, None, 229.1)
     assert rt.tolist() == [1.0, 1.2] and y.tolist() == [10.0, 20.0]
     it.run.close()
+
+
+def test_browser_entry_answers_like_the_server(tmp_path, demo, monkeypatch):
+    """qqq_lab.browser (run inside Pyodide by the site) goes through the same dispatch as the local server."""
+    import json
+    from qqq_lab import browser
+    monkeypatch.setattr(browser, "WORK", tmp_path / "work")
+    browser.start()
+
+    class Body:                                   # what Pyodide hands over for a JS Uint8Array
+        def __init__(self, b):
+            self.b = b
+
+        def to_bytes(self):
+            return self.b
+    src = demo[1][0]
+    code, text = browser.handle("POST", "api/upload?name=" + src.name, Body(src.read_bytes()))
+    assert code == 200 and json.loads(text)["files"][0]["name"] == src.name
+    code, text = browser.handle("POST", "api/explore", Body(json.dumps({"samples": [{"file": src.name}]}).encode()))
+    assert code == 200 and json.loads(text)["session"][0]["ms1"] > 0
+    code, text = browser.handle("GET", "api/chrom?k=0&kind=tic&level=1")
+    assert code == 200 and len(json.loads(text)["rt"]) > 10
+    code, text = browser.handle("GET", "api/formula?f=C15H12N2O&adduct=%5BM%2BH%5D%2B")
+    assert code == 200 and abs(json.loads(text)["mz"] - 237.1022) < 1e-3
+    assert browser.handle("GET", "api/nope")[0] == 404

@@ -18,7 +18,7 @@ Per il testo servono solo i file `.html`. I `.js` vanno toccati solo per cambiar
 
 Un editor di testo semplice: Visual Studio Code (consigliato, colora i tag e segnala gli errori), BBEdit, oppure TextEdit **in modalità testo semplice** (Formato > Converti in testo normale; in Preferenze, "Apri file HTML come codice HTML"). Non Word.
 
-Per vedere la modifica: apri il file con doppio clic (o `Teoria QqQ lab.html` nella cartella `tpfinder`) e ricarica con Cmd+R. Nell'app, scheda Teoria, ricarica la pagina.
+Per vedere la modifica: apri il file con doppio clic (o `Teoria QqQ lab.html` nella cartella `qqq_lab`) e ricarica con Cmd+R. Nell'app, scheda Teoria, ricarica la pagina.
 
 ## Dove sta il testo
 
@@ -82,4 +82,4 @@ Menu laterale, indice della pagina e pulsanti avanti/indietro si aggiornano da s
 - Pagina vuota o figure sparite: di solito un tag non chiuso o un `"` mancante vicino all'ultima modifica.
 - In Visual Studio Code i tag non chiusi sono evidenziati.
 - Prima di modifiche grosse, fai un commit git (o copia il file): così puoi sempre tornare indietro.
-- Controllo automatico (opzionale): `python3 -m pytest -q tests` dalla cartella `tpfinder` verifica che link, script e capitoli esistano.
+- Controllo automatico (opzionale): `python3 -m pytest -q tests` dalla cartella `qqq_lab` verifica che link, script e capitoli esistano.

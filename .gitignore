@@ -8,14 +8,14 @@ dist/
 
 # Private environments made by the launchers (scripts/avvia.py)
 .venv/
-.venv-tpfinder/
-.venv-tpfinder-*/
-.venv-tpfinder.salta
-.venv-tpfinder.log
+.venv-qqq-lab/
+.venv-qqq-lab-*/
+.venv-qqq-lab.salta
+.venv-qqq-lab.log
 
 # Caches, work folders and test output
-.tpfinder-cache/
-TPFinder_lavoro/
+.qqq_lab-cache/
+QqQ_lab_lavoro/
 tests_e2e/shots/
 
 # Lab data never go into the repository (raw data stay in ../QqQ and ../esempio_conversione)
@@ -35,3 +35,6 @@ desktop.ini
 .vscode/
 .idea/
 .chiusura.log
+
+# Static site built by tools/build_site.py (published by .github/workflows/pages.yml)
+site/

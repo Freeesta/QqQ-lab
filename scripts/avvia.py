@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Launcher for QqQ lab, used by 'Avvia QqQ lab.command' (Mac) and 'Avvia QqQ lab.bat' (Windows).
 
-It keeps a private environment (.venv-tpfinder) built with the NEWEST Python (>= 3.11) installed on
+It keeps a private environment (.venv-qqq-lab) built with the NEWEST Python (>= 3.11) installed on
 this computer, then opens the app. This script itself runs with any Python >= 3.8.
 - No environment, or a broken one: it is built (needs internet once).
 - A newer Python has been installed: the environment is rebuilt with it. The old environment is never
   deleted: it is moved to ../_cestino/ (or next to the project) and put back if the rebuild fails.
 - A Python version whose install fails (e.g. numpy not released for it yet) is skipped for 7 days
-  (list in .venv-tpfinder.salta), so the app still opens quickly with the previous environment.
+  (list in .venv-qqq-lab.salta), so the app still opens quickly with the previous environment.
   Without a working environment every version is tried again (e.g. the first attempt was offline).
 Extra arguments are passed to the app: `python3 scripts/avvia.py app --port 8811`.
 """
@@ -25,11 +25,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from tpfinder import __version__, console as C   # noqa: E402 -- stdlib only, works on any Python >= 3.8
+from qqq_lab import __version__, console as C   # noqa: E402 -- stdlib only, works on any Python >= 3.8
 
-ENV = ROOT / ".venv-tpfinder"
-SKIP = ROOT / ".venv-tpfinder.salta"
-LOG = ROOT / ".venv-tpfinder.log"            # pip output of the last (re)build, shown only on failure
+ENV = ROOT / ".venv-qqq-lab"
+SKIP = ROOT / ".venv-qqq-lab.salta"
+LOG = ROOT / ".venv-qqq-lab.log"            # pip output of the last (re)build, shown only on failure
 MIN = (3, 11)
 SKIP_DAYS = 7
 WIN = os.name == "nt"
@@ -106,12 +106,12 @@ def pythons(use_skip: bool = True) -> list[tuple]:
 
 
 def env_version() -> tuple | None:
-    """Version of the private environment if it works (numpy and tpfinder importable), else None."""
+    """Version of the private environment if it works (numpy and qqq_lab importable), else None."""
     py = env_python()
     if not py.exists():
         return None
     try:
-        ok = subprocess.run([str(py), "-c", "import numpy, tpfinder"], capture_output=True, timeout=60,
+        ok = subprocess.run([str(py), "-c", "import numpy, qqq_lab"], capture_output=True, timeout=60,
                             cwd=tempfile.gettempdir()).returncode == 0
     except (OSError, subprocess.SubprocessError):
         ok = False
@@ -152,7 +152,7 @@ def build(ver: tuple, py: str, old: tuple | None) -> bool:
         if not C.TTY:
             C.note("solo questa volta: serve internet e ci vuole qualche minuto")
         if ENV.exists():
-            aside = ROOT / ".venv-tpfinder-precedente"
+            aside = ROOT / ".venv-qqq-lab-precedente"
             if aside.exists():
                 archive(aside, "venv-precedente")
             ENV.rename(aside)
@@ -172,7 +172,7 @@ def build(ver: tuple, py: str, old: tuple | None) -> bool:
     if ok:
         if aside:
             old_tag = f"py{old[0]}.{old[1]}" if old else "non-funzionante"
-            dest = archive(aside, ".venv-tpfinder-" + old_tag)
+            dest = archive(aside, ".venv-qqq-lab-" + old_tag)
             C.note(f"l'ambiente precedente è in {C.home(dest)}")
         return True
     for line in _log_tail():
@@ -181,7 +181,7 @@ def build(ver: tuple, py: str, old: tuple | None) -> bool:
     C.say()
     _skip(ver)
     if ENV.exists():
-        archive(ENV, f".venv-tpfinder-py{tag}-fallito")
+        archive(ENV, f".venv-qqq-lab-py{tag}-fallito")
     if aside:
         aside.rename(ENV)
     return False
@@ -192,7 +192,7 @@ def set_icon() -> None:
     which zip files and cloud folders drop: so it is set again whenever it is missing. Silent if it fails."""
     if sys.platform != "darwin":
         return
-    target, icon = ROOT / "Avvia QqQ lab.command", ROOT / "tpfinder" / "web" / "app-icon-512.png"
+    target, icon = ROOT / "Avvia QqQ lab.command", ROOT / "qqq_lab" / "web" / "app-icon-512.png"
     if not (target.exists() and icon.exists()):
         return
     try:
@@ -228,7 +228,7 @@ def main() -> int:
         return 1
     C.ok("Ambiente Python pronto", f"Python {current[0]}.{current[1]}")
     os.environ["QQQ_HEADER"] = "1"           # the app does not print the header again
-    cmd = [str(env_python()), "-m", "tpfinder", *(sys.argv[1:] or ["app", "--exit-on-close"])]
+    cmd = [str(env_python()), "-m", "qqq_lab", *(sys.argv[1:] or ["app", "--exit-on-close"])]
     if WIN:
         return subprocess.call(cmd)
     os.execv(cmd[0], cmd)  # replaces this process: closing the window stops the app

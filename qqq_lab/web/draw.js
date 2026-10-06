@@ -1,6 +1,6 @@
 // "Disegno": Ketcher (structures, fragments, arrows, text) + OpenChemLib (formula and exact mass).
 // Both are bundled in web/vendor: no internet needed. Module script; helpers come from explore.js (window).
-import * as OCL from "/static/vendor/openchemlib.js";
+import * as OCL from "./vendor/openchemlib.js";
 
 const Q = s => document.querySelector(s);
 const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -18,7 +18,7 @@ function start() {
   starting = new Promise((resolve, reject) => {
     const on = e => { if (e.data && e.data.type === "ketcher-ready") { removeEventListener("message", on); K = fr.contentWindow.ketcher; resolve(K); } };
     addEventListener("message", on);
-    fr.src = "/static/vendor/ketcher/index.html";
+    fr.src = "static/vendor/ketcher/index.html";
     setTimeout(() => reject(new Error("Ketcher non si e' avviato")), 60000);
   }).then(async k => { await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); requestAnimationFrame(showSelection); });
     k.editor.subscribe("selectionChange", () => requestAnimationFrame(showSelection));
@@ -247,7 +247,7 @@ async function capData() {
   if (!d) return null;
   const ad = Q("#cap-ad").value;
   try {
-    const r = await (await fetch(`/api/formula?f=${encodeURIComponent(d.formula)}&adduct=${encodeURIComponent(ad)}`)).json();
+    const r = await (await fetch(`api/formula?f=${encodeURIComponent(d.formula)}&adduct=${encodeURIComponent(ad)}`)).json();
     if (r.error) return null;
     return { name: Q("#cap-name").value.trim(), formula: r.formula, neutral: r.neutral, adduct: ad, mz: r.mz, mz1: r.mz1, nominal: r.nominal };
   } catch (_) { return null; }

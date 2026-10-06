@@ -39,7 +39,7 @@ try:
             pg.screenshot(path=SH + "71_" + name.replace(".html", "") + ".png", full_page=True)
         def filemode():
             n0 = len(r.errs)
-            pg.goto("file://" + str(ROOT / "tpfinder" / "web" / "teoria" / "06-quadrupolo.html")); pg.wait_for_timeout(1500)
+            pg.goto("file://" + str(ROOT / "qqq_lab" / "web" / "teoria" / "06-quadrupolo.html")); pg.wait_for_timeout(1500)
             assert pg.locator("#sim-stab canvas").count() == 2
             bad = [e for e in r.errs[n0:] if e[0] in ("pageerror", "console.error")]
             assert not bad, bad

@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tpfinder"
+name = "qqq_lab"
 version = "0.1.0"
 description = "QqQ lab: offline viewer for triple quadrupole mzML data (teaching lab, environmental pollutants)"
 requires-python = ">=3.11"
@@ -14,13 +14,13 @@ license = { text = "MIT" }
 test = ["pytest"]
 
 [project.scripts]
-tpfinder = "tpfinder.cli:main"
+qqq_lab = "qqq_lab.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["tpfinder*"]
+include = ["qqq_lab*"]
 
 [tool.setuptools.package-data]
-tpfinder = ["web/*", "web/teoria/*", "web/vendor/*", "web/vendor/ketcher/*", "web/vendor/ketcher/assets/*"]
+qqq_lab = ["web/*", "web/teoria/*", "web/vendor/*", "web/vendor/ketcher/*", "web/vendor/ketcher/assets/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
