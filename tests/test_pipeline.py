@@ -399,3 +399,16 @@ def test_method_experiments_are_decoded_and_checked_against_the_data():
     assert {r["status"] for r in rows} == {"ok"}
     assert [r for r in check_against({"kind": "full", "scan_window": [100.0, 300.0]}, {"experiments": ex[1:]}) if r["what"].startswith("Intervallo")][0]["status"] == "diff"
     assert check_against({"kind": "mrm"}, {"experiments": ex[1:]})[0]["status"] == "diff"
+
+
+def test_tic_and_bpc_can_be_restricted_to_an_mz_range(tmp_path):
+    """TIC/BPC with mz0/mz1 only use ions inside the range (None = open end); no ions -> zeros."""
+    from tpfinder.explore import Session
+    scans = [_scan_xml(0, 1.0, [100.0, 200.0, 300.0], [10.0, 20.0, 40.0]), _scan_xml(1, 2.0, [100.0, 200.0, 300.0], [1.0, 2.0, 4.0])]
+    (tmp_path / "f.mzML").write_text(_mzml(f'<spectrumList count="2">{"".join(scans)}</spectrumList>'), encoding="utf-8")
+    it = Session([{"file": "f.mzML"}], tmp_path).items[0]
+    assert it.total("tic")[1].tolist() == [70.0, 7.0]
+    assert it.total("tic", 1, 150.0, 250.0)[1].tolist() == [20.0, 2.0]
+    assert it.total("tic", 1, 250.0, None)[1].tolist() == [40.0, 4.0]
+    assert it.total("bpc", 1, None, 250.0)[1].tolist() == [20.0, 2.0]
+    assert it.total("bpc", 1, 400.0, 500.0)[1].tolist() == [0.0, 0.0]

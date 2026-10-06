@@ -19,7 +19,7 @@ const HELP = {
   "pnl-chrom": ["Cromatogramma", `Asse x: tempo di ritenzione; asse y: intensità (cps). <b>Trascina</b> sul grafico per scegliere un intervallo: lo spettro sotto mostra la media di quegli scan; un <b>clic</b> mostra lo spettro di un solo scan.
     <br><b>Clic destro</b>: spettro in un nuovo pannello, estrarre uno ione, <b>integrare</b> il picco, annotare.
     <br>Opzioni: <b>normalizza</b> (ogni traccia sul suo massimo), <b>smoothing</b>, <b>impilati</b> (una riga per file), <b>picchi</b> (etichette con l'RT: solo dove sono, non cosa sono), <b>scala log</b> (vedi i segnali deboli), <b>bianco</b> (sottrae il file bianco), <b>baseline</b> (toglie la linea di base con l'algoritmo SNIP).
-    <br>Zoom: Ctrl + rotella; Maiusc + trascina sposta; doppio clic torna alla vista intera. Clic sulla legenda nasconde una traccia.
+    <br>Zoom: Ctrl + rotella; Maiusc + trascina sposta; il pulsante con i quattro angoli (appare dopo uno zoom) torna alla vista intera; doppio clic su un cromatogramma apre lo spettro a quel tempo e puoi trascinare la linea verticale per spostarlo. Clic sulla legenda nasconde una traccia.
     <br><b>PDA (UV, totale)</b>: segnale del rivelatore a serie di diodi, registrato insieme al massa; serve a confrontare ciò che assorbe nell'UV con ciò che vede lo spettrometro.
     <br>I pannelli stanno in posti fissi, uno sotto l'altro: trascina l'intestazione in su o in giù e gli altri si spostano.`],
   "pnl-spec": ["Spettro di massa", `Mostra gli ioni presenti nell'intervallo di tempo scelto sul cromatogramma. <b>Trascina</b> per ingrandire un intervallo di m/z, doppio clic per tornare indietro.

@@ -106,7 +106,7 @@ class Item:
     def has_pda(self) -> bool:
         return any(c["kind"] == "pda" for c in self.run.chromatograms())
 
-    def total(self, kind: str = "tic", level: int = 1):
+    def total(self, kind: str = "tic", level: int = 1, mz0: float | None = None, mz1: float | None = None):
         if kind == "pda":                       # UV trace recorded by the PDA/DAD (own time axis, not tied to the MS scans)
             for c in self.run.chromatograms():
                 if c["kind"] == "pda":
@@ -121,6 +121,22 @@ class Item:
         t = self.run.table(level)
         if len(t.rt) == 0:
             return np.zeros(0), np.zeros(0)
+        if mz0 is not None or mz1 is not None:          # only the ions inside [mz0, mz1] (None = open end)
+            keep = np.ones(len(t.mz), dtype=bool)
+            if mz0 is not None:
+                keep &= t.mz >= mz0
+            if mz1 is not None:
+                keep &= t.mz <= mz1
+            pos, inten = t.pos[keep], t.inten[keep]
+            if kind == "tic":
+                return t.rt, np.bincount(pos, weights=inten, minlength=len(t.rt))
+            out = np.zeros(len(t.rt))
+            if len(pos):
+                order = np.argsort(pos, kind="stable")
+                ps, ys = pos[order], inten[order]
+                starts = np.flatnonzero(np.r_[True, ps[1:] != ps[:-1]])
+                out[ps[starts]] = np.maximum.reduceat(ys, starts)
+            return t.rt, out
         if kind == "tic":
             return t.rt, np.bincount(t.pos, weights=t.inten, minlength=len(t.rt))
         key = level

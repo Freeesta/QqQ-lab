@@ -52,3 +52,8 @@ Idee non fatte: mappa con soglia regolabile, XIC in ppm per dati HRMS, minimappa
 ## Note
 - Il `_cestino` è stato svuotato il 2026-10-05 alle 23:01 (per tornare indietro c'è solo git); da allora contiene: `2026-10-06_prompt_precedente.md` (cronologia dettagliata delle sessioni del 5-6 ottobre), `2026-10-06_sessione_e2e`, `2026-10-06_teoria_rinumerazione`, `git-index.lock-vuoto-creato-da-claude`, `2026-10-06_git-lock`.
 - In `esempio_conversione/mzml/` il t30 del full scan si chiama `B_FullMass-t30 (2).mzML` (dato grezzo, non rinominato).
+
+
+## Aggiunte del 2026-10-06 (da collaudare a mano)
+- Cursore RT trascinabile nel cromatogramma (lo spettro sotto segue), barra m/z da…a… su TIC/BPC, icone (adatta alla vista, download), x più fitti, PDA sotto zero, spettro isotopico simulato (clic destro sullo spettro). Verificati in container con Playwright; da provare a mano su Mac/Windows.
+- Test pytest: 26 (in container ne passa 25: manca il `.app`).

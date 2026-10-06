@@ -241,8 +241,8 @@ class App:
             raise ValueError("no such file in the session")
         return self.session.items[k]
 
-    def chrom(self, k: int, kind: str, level: int) -> dict:
-        rt, y = self._item(k).total(kind, level)
+    def chrom(self, k: int, kind: str, level: int, mz0: float | None = None, mz1: float | None = None) -> dict:
+        rt, y = self._item(k).total(kind, level, mz0, mz1)
         return {"rt": [round(float(v), 4) for v in rt], "y": [round(float(v), 1) for v in y]}
 
     def xic(self, ks: list[int], mz: float, tol: float, level: int) -> dict:
@@ -459,7 +459,8 @@ def make_handler(app: App):
                 if u.path == "/api/session":
                     return self._json(app.session_state())
                 if u.path == "/api/chrom":
-                    return self._json(app.chrom(int(q["k"]), q.get("kind", "tic"), int(q.get("level", 1))))
+                    return self._json(app.chrom(int(q["k"]), q.get("kind", "tic"), int(q.get("level", 1)),
+                                                float(q["mz0"]) if q.get("mz0") else None, float(q["mz1"]) if q.get("mz1") else None))
                 if u.path == "/api/xic":
                     return self._json(app.xic([int(x) for x in q["k"].split(",") if x], float(q["mz"]),
                                               float(q.get("tol", 0.35)), int(q.get("level", 1))))
