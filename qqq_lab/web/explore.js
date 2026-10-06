@@ -3,6 +3,12 @@
 // Script classico (usa gli helper di index.html: S, setup, nice, fmt, css, esc, smooth, M, setView, applyView).
 const E = { files: [], panels: [], seq: 1, key: "", cur: 0, browse: false, z: 10, fold: false, tab: "full" };
 const NB = { ui: null, session: null };   // taccuino: stato dell'interfaccia (+ disegno, vedi draw.js)
+// user preferences (settings gear, block 5): tooltips, panel numbers, font size, theme. Filled from localStorage by uiPrefsLoad().
+const UIP = { tips: true, num: true, font: 100, theme: "auto", tut: false };
+const tipOf = t => UIP.tips ? t : "";
+// areas: at least 3 decimals in the label (2.243e+6), whole number with thousands separated by a thin space in the tooltip
+const fmtA = v => !Number.isFinite(v) || v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(3) : (+v.toPrecision(4)).toString();
+const fmtFull = v => Number.isFinite(v) ? Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "\u2009") : "";
 const PAL = ["#1f77b4", "#e6550d", "#2ca02c", "#9467bd", "#d62728", "#17becf", "#bcbd22", "#e377c2", "#8c564b", "#0b6e4f", "#f2a900", "#5b5fc7"];
 const Q = s => document.querySelector(s);
 const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -13,7 +19,7 @@ const KIND = { full: "Full Scan", ms2: "MS\u00b2 (Product Ion)", mrm: "MRM", emp
 const kindOf = f => KIND[f.kind] || f.kind;
 // the three kinds of experiment never share a graph: Dati has one sub-tab for each (Full Scan, MS2, MRM); panels and files belong to one
 const TABS = [["full", "Full Scan"], ["ms2", "MS\u00b2 (Product Ion)"], ["mrm", "MRM"]];
-const tabFiles = (t = E.tab) => E.files.filter(f => f.kind === t);
+const tabFiles = (t = E.tab) => E.files.filter(f => f.kind === t && !f.gone);   // f.gone = removed from the session (the file on disk is untouched)
 const tabPanels = (t = E.tab) => E.panels.filter(p => p.tab === t);
 const grpOf = f => E.tab === "mrm" ? ({ standard: "Standard", sample: "Campioni", blank: "Bianchi" }[f.type] || "Campioni") : kindOf(f);
 const TOL0 = 1.0;                                   // strumento datato: finestra XIC di +-1 Da
@@ -75,9 +81,9 @@ function uiSave(now = false) {
   clearTimeout(uiTimer);
   const run = () => {
     if (!E.files.length) return;
-    NB.session = E.files.map(f => ({ file: f.file, label: f.label, time: f.time, type: f.type, conc: f.conc ?? null, cunit: f.cunit ?? null }));
+    NB.session = E.files.filter(f => !f.gone).map(f => ({ file: f.file, label: f.label, time: f.time, type: f.type, conc: f.conc ?? null, cunit: f.cunit ?? null }));
     NB.ui = {
-      tab: E.tab, cur: E.cur, browse: E.browse, fold: E.fold, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis })),
+      tab: E.tab, cur: E.cur, browse: E.browse, fold: E.fold, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined })),
       panels: E.panels.map(p => ({
         type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, kind: p.kind, smooth: p.smooth, tol: p.tol,
         traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label })),
@@ -164,7 +170,7 @@ function restoreUi() {
   if (!u || !u.panels || !u.panels.length) return false;
   const names = new Set(E.files.map(f => f.file));
   if (!u.files.every(f => names.has(f.file))) return false;
-  u.files.forEach(sf => { const f = E.files.find(x => x.file === sf.file); f.label = sf.label || f.label; f.vis = sf.vis !== false; });
+  u.files.forEach(sf => { const f = E.files.find(x => x.file === sf.file); f.label = sf.label || f.label; f.vis = sf.vis !== false; if (sf.color) { f.color = sf.color; f.colorSet = true; } if (sf.gone) { f.gone = true; f.vis = false; } });
   E.cur = Math.min(u.cur || 0, E.files.length - 1); E.browse = !!u.browse; setFold(!!u.fold); E.tab = pickTab(u.tab);
   const kof = n => { const i = E.files.findIndex(f => f.file === n); return i < 0 ? 0 : i; };
   const made = u.panels.map(sp => addPanel(sp.type, {
@@ -178,6 +184,7 @@ function restoreUi() {
 function paintFiles() {
   let n = 0;
   E.files.forEach(f => {
+    if (f.colorSet) return;                                // colour chosen by the student
     if (f.type === "blank") f.color = "#8a8a8a";
     else if (f.type === "standard") f.color = PAL[(n++ + 3) % PAL.length];
     else f.color = PAL[n++ % PAL.length];
@@ -210,11 +217,36 @@ function renderFileList() {
   const pa = Q("#pall"); if (pa) pa.onchange = () => { ms2Exps().forEach(x => { if (!!ms2PairOf(x.prec) !== pa.checked) ms2Toggle(x.prec, pa.checked); }); };
   Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => { tabFiles().filter(f => grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked); renderFileList(); redrawAll(); uiSave(); });
   Q("#flst").querySelectorAll("input[data-k]").forEach(x => x.onchange = () => { E.files[+x.dataset.k].vis = x.checked; redrawAll(); uiSave(); });
+  Q("#flst").querySelectorAll(".fl:not(.ghost)").forEach(el => { const nm = el.querySelector(".nm"); if (nm) el.oncontextmenu = e => fileCtx(e, E.files[+nm.dataset.k]); });
   Q("#flst").querySelectorAll(".fl:not(.ghost) .nm").forEach(x => {
     x.onclick = () => { E.cur = +x.dataset.k; renderFileList(); renderNav(); if (E.browse) redrawAll(); };
-    x.ondblclick = async () => { const f = E.files[+x.dataset.k], v = await ask("Nome del campione", f.label); if (v) { f.label = v; renderFileList(); renderNav(); redrawAll(); uiSave(); } };
+    x.ondblclick = () => renameFile(E.files[+x.dataset.k]);
   });
   renderNav();
+}
+// right click on a file of the list: rename (only a label, the file on disk is not touched), colour, remove from the session
+const FILE_COLORS = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#56B4E9", "#F0E442", "#000000", "#7a3b9b", "#8a8a8a"];   // Okabe-Ito + 2: distinguishable with colour-blindness
+async function renameFile(f) { const v = await ask("Nome del campione <span class='muted sm'>(è solo un'etichetta: il file sul disco non cambia)</span>", f.label); if (v) { f.label = v; renderFileList(); renderNav(); redrawAll(); uiSave(); } }
+function colorFile(f, ev) {
+  Q("#colpop")?.remove();
+  const d = document.createElement("div"); d.id = "colpop";
+  d.innerHTML = `<div class="sm" style="margin-bottom:4px">Colore di ${EH(f.label)}</div><div class="sw">${FILE_COLORS.map(c => `<button data-c="${c}" style="background:${c}" title="${c}"></button>`).join("")}</div><label class="sm">Personalizzato <input type="color" value="${/^#[0-9a-f]{6}$/i.test(f.color) ? f.color : "#1f77b4"}"></label>`;
+  const set = c => { f.color = c; f.colorSet = true; d.remove(); renderFileList(); redrawAll(); uiSave(); };
+  d.querySelectorAll("[data-c]").forEach(b => b.onclick = () => set(b.dataset.c));
+  d.querySelector("input").onchange = e => set(e.target.value);
+  document.body.appendChild(d); d.style.left = Math.min(ev.clientX, innerWidth - 200) + "px"; d.style.top = Math.min(ev.clientY, innerHeight - 150) + "px";
+  setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.contains(e.target)) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
+}
+async function removeFile(f) {
+  if (!await yesno(`Togliere <b>${EH(f.label)}</b> dalla sessione? Il file sul tuo computer non viene toccato; per riaverlo devi caricarlo di nuovo.`)) return;
+  f.gone = true; f.vis = false;
+  E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
+  if (E.cur === f.k) E.cur = (tabFiles()[0] || { k: 0 }).k;
+  renderTabs(); renderFileList(); toolbar(); redrawAll(); uiSave();
+}
+function fileCtx(e, f) {
+  if (!f) return; e.stopPropagation();
+  menu(e, [{ label: "Rinomina…", fn: () => renameFile(f) }, { label: "Cambia colore…", fn: () => colorFile(f, e) }, "-", { label: "Rimuovi dalla sessione…", fn: () => removeFile(f) }]);
 }
 // quick file chooser opened from a graph header: tick/untick files (same switch as the list on the left), click a name to show only that file
 function fileMenu(btn) {
@@ -379,7 +411,18 @@ function restack(drag, final, grp = []) {
 function relayout() {      // after a panel changes height: keep the order, close or open the gap
   let y = 0; tabPanels().filter(q => q.full && q.el).sort((a, b) => a.y - b.y || a.id - b.id).forEach(q => { q.y = y; apply(q); y += q.h + 10; });
 }
-function fitHost() { Q("#dpanels").style.height = Math.max(520, ...tabPanels().map(p => p.y + p.h + 16)) + "px"; arrows(); pairArrows(); }
+// small grey number in the title of every panel of the tab, in order from the top (follows moves); keys 1-9 activate the panel
+function numberPanels() {
+  const st = tabPanels().filter(q => q.el).sort((a, b) => a.y - b.y || a.id - b.id);
+  E.panels.forEach(q => { const n = q.el && q.el.querySelector(".pnum"); if (n) n.hidden = true; });
+  st.forEach((q, i) => { const n = q.el.querySelector(".pnum"); q.num = i + 1; n.textContent = i + 1; n.hidden = !UIP.num; n.title = tipOf("Pannello " + (i + 1) + ": premi il tasto " + (i + 1) + " per attivarlo"); });
+}
+document.addEventListener("keydown", e => {
+  if (S.view !== "data" || e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key) || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || Q("dialog[open]")) return;
+  const q = tabPanels().filter(x => x.el).sort((a, b) => a.y - b.y || a.id - b.id)[+e.key - 1]; if (!q) return;
+  setActive(q); front(q.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + q.y - 70, behavior: "smooth" });
+});
+function fitHost() { numberPanels(); Q("#dpanels").style.height = Math.max(520, ...tabPanels().map(p => p.y + p.h + 16)) + "px"; arrows(); pairArrows(); }
 // MS2 tab: a short arrow between the precursor chromatogram (above) and the product-ion spectrum it feeds (below)
 function pairArrows() {
   const host = Q("#dpanels"); host.querySelectorAll(".parr").forEach(e => e.remove());
@@ -431,7 +474,7 @@ function addPanel(type, o, after) {
   Object.assign(p, g);
   const el = document.createElement("div");
   el.className = "card pnl " + type;
-  el.innerHTML = `<div class="hd"><b class="ttl" title="Doppio clic per rinominare"></b>${type === "spec" ? '<span class="rtl"></span>' : ""}${helpBtn("pnl-" + type)}<span class="ctl"></span><span class="rd"></span>${(() => {
+  el.innerHTML = `<div class="hd"><span class="pnum" hidden></span><b class="ttl" title="Doppio clic per rinominare"></b>${type === "spec" ? '<span class="rtl"></span>' : ""}${helpBtn("pnl-" + type)}<span class="ctl"></span><span class="rd"></span>${(() => {
     // button groups, separated by a vertical bar: [zoom + reset] | [integration] | [XIC] ▲▼ | [PNG / Excel] □ ×
     const lens = type === "chrom" || type === "xic" || type === "mrm";
     const fit = `<button class="bt" data-a="fit" disabled title="Torna a vedere tutto il grafico (attivo solo quando il grafico è ingrandito)">${IC_FIT}</button>`;
@@ -907,15 +950,16 @@ async function drawLines(p) {
     }
     g.strokeStyle = s.color; g.lineWidth = 2.2;
     for (const e of ["a", "b"]) { const px = X(it[e]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
-    const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 9), lab = "A = " + fmt(r.area) + (sr.length > 1 ? " · " + s.name : "");   // above the apex, never on the peak
-    g.font = "bold 11px system-ui"; g.textAlign = "center"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = css("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1; g.font = "11px system-ui";
+    const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + fmtA(r.area) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
+    g.font = "bold 11px system-ui"; g.textAlign = "center"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = css("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
+    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 13, w: lw + 6, h: 16, tip: `<b>Area</b> ${fmtFull(r.area)} <span class="sm">conteggi·s</span><div class="sm">Tasto destro: azioni</div>` }); g.font = "11px system-ui";
   }
   if (p.cur != null && !p._exp) { g.strokeStyle = css("--muted"); g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(p.cur), M.t); g.lineTo(X(p.cur), H - M.b); g.stroke(); g.setLineDash([]); }
   for (const a of p.anns) {
     let top = 0; sr.forEach(s => { const i = nearIdx(s.x, a.x); top = Math.max(top, U(s, s.ys[i])); });
     const px = X(a.x), py = Y(top);
     g.strokeStyle = css("--accent"); g.lineWidth = 1; g.beginPath(); g.moveTo(px, py - 3); g.lineTo(px, py - 12); g.stroke();
-    g.fillStyle = css("--ink"); g.font = "bold 11px system-ui"; g.textAlign = "center"; g.fillText(a.text, px, py - 15); g.font = "11px system-ui";
+    g.fillStyle = css("--ink"); g.font = "bold 11px system-ui"; g.textAlign = "center"; g.fillText(a.text, px, py - 15); const aw = g.measureText(a.text).width; (p._a.lbls = p._a.lbls || []).push({ x: px - aw / 2 - 3, y: py - 28, w: aw + 6, h: 16, tip: `<b>${EH(a.text)}</b><div class="sm">Tasto destro: azioni</div>` }); g.font = "11px system-ui";
   }
   // cosa mostrare quando il mouse passa sul grafico: RT e intensità di ogni traccia visibile in quel punto
   p._a.hov = (px, py) => {
@@ -1103,7 +1147,7 @@ function showInts() {
   const rows = allInts();
   big("Integrazioni dei picchi", rows.length ? `<div class="bar"><button id="ig-xlsx">${IC_DL}Excel</button><label class="muted"><input type="checkbox" id="ig-rel"> area relativa al massimo di ogni ione</label></div>
     <table><tr><th>Pannello</th><th>Traccia</th><th>Campione</th><th class="num">Tempo (min)</th><th class="num">RT inizio</th><th class="num">RT fine</th><th class="num">RT apice</th><th class="num">Area (conteggi·s)</th><th class="num">Altezza</th></tr>` +
-    rows.map(r => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num">${fmt(r.area ?? 0)}</td><td class="num">${fmt(r.height ?? 0)}</td></tr>`).join("") +
+    rows.map(r => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num" title="${fmtFull(r.area ?? 0)}">${fmtA(r.area ?? 0)}</td><td class="num">${fmt(r.height ?? 0)}</td></tr>`).join("") +
     `</table><div class="muted sm">Area: regola dei trapezi con baseline lineare tra i due bordi. Trascina le barre nel pannello per correggere i bordi.</div>
     <h4>Area contro tempo di irraggiamento</h4><canvas id="ig-cv" style="height:240px"></canvas><div class="leg" id="ig-leg"></div>`
     : `<div class="muted">Nessuna integrazione. Clic destro su un picco di un cromatogramma, di un XIC o di una transizione MRM e scegli «Integra».</div>`, () => {
@@ -1193,9 +1237,10 @@ async function drawSpec(p) {
   d0.mz.forEach((m, j) => { if (m >= x0 && m <= x1 && d0.y[j] >= 0.04 * ymax) pk.push([m, d0.y[j]]); });
   pk.sort((a, b) => b[1] - a[1]); const used = [];
   g.fillStyle = css("--ink"); g.textAlign = "center"; g.font = "10.5px system-ui";
-  for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= 18) continue; used.push(px); g.fillText(m.toFixed(1), px, Y(y) - 4); }
+  const lbls = []; p._a.lbls = lbls;                      // clickable labels: hover draws a small box, right click opens the menu
+  for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= 18) continue; used.push(px); const t = m.toFixed(1), w = g.measureText(t).width; g.fillText(t, px, Y(y) - 4); lbls.push({ x: px - w / 2 - 3, y: Y(y) - 16, w: w + 6, h: 15, tip: `<b>m/z ${m.toFixed(2)}</b><div class="sm">Tasto destro: azioni</div>` }); }
   g.font = "11px system-ui";
-  for (const a of p.anns) { const px = X(a.x); g.strokeStyle = css("--accent"); g.beginPath(); g.moveTo(px, M.t + 2); g.lineTo(px, M.t + 12); g.stroke(); g.fillStyle = css("--accent"); g.font = "bold 11px system-ui"; g.textAlign = "center"; g.fillText(a.text, px, M.t + 24); g.font = "11px system-ui"; }
+  for (const a of p.anns) { const px = X(a.x); g.strokeStyle = css("--accent"); g.beginPath(); g.moveTo(px, M.t + 2); g.lineTo(px, M.t + 12); g.stroke(); g.fillStyle = css("--accent"); g.font = "bold 11px system-ui"; g.textAlign = "center"; g.fillText(a.text, px, M.t + 24); const aw = g.measureText(a.text).width; lbls.push({ x: px - aw / 2 - 3, y: M.t + 12, w: aw + 6, h: 16, tip: `<b>${EH(a.text)}</b><div class="sm">Tasto destro: azioni</div>` }); g.font = "11px system-ui"; }
   // theoretical isotope pattern of a formula chosen by the student (red circles), aligned on the nearest observed peak
   let isoNote = "";
   if (p.iso && window.QQQRef) {
@@ -1246,11 +1291,15 @@ function attach(p) {
       if (Math.abs(px - drag.x0) > 4) { zr.hidden = false; zr.style.left = cv.offsetLeft + Math.min(px, drag.x0) + "px"; zr.style.width = Math.abs(px - drag.x0) + "px"; zr.style.top = cv.offsetTop + M.t + "px"; zr.style.height = a.H - M.t - M.b + "px"; }
     } else { p.sel = [Math.min(xd(drag.x0), x), Math.max(xd(drag.x0), x)]; draw(p); } }
     else cv.style.cursor = e.shiftKey ? "grab" : edgeAt(px) ? "col-resize" : onCur(px) ? "ew-resize" : p.imode === "zoom" ? "zoom-in" : p.imode ? "cell" : "crosshair";
+    const lh = !drag && (a.lbls || []).find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
+    if (lh) { cv.style.cursor = "pointer"; lb.hidden = false; lb.style.left = cv.offsetLeft + lh.x + "px"; lb.style.top = cv.offsetTop + lh.y + "px"; lb.style.width = lh.w + "px"; lb.style.height = lh.h + "px"; } else lb.hidden = true;
     p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(1) : "RT " + x.toFixed(2) + " min" + (a.map ? " · m/z " + a.mzAt(py).toFixed(1) : "");
     showHover(p, px, py); if (drag) p.tip.hidden = true;
+    if (lh && UIP.tips) { p.tip.hidden = false; p.tip.innerHTML = lh.tip; p.vl.hidden = true; const tw = p.tip.offsetWidth; let l = cv.offsetLeft + px + 14; if (l + tw > p.el.clientWidth - 4) l = cv.offsetLeft + px - tw - 14; p.tip.style.left = Math.max(2, l) + "px"; p.tip.style.top = cv.offsetTop + py + 14 + "px"; }
   };
+  const lb = document.createElement("div"); lb.className = "lbbox"; lb.hidden = true; p.el.appendChild(lb);   // box around the label under the mouse
   const zr = document.createElement("div"); zr.className = "zr"; zr.hidden = true; p.el.appendChild(zr);   // area being zoomed (spectrum drag)
-  cv.onmouseleave = () => hideHover(p);
+  cv.onmouseleave = () => { hideHover(p); lb.hidden = true; };
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
     if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
