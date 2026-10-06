@@ -943,9 +943,17 @@ def _formula(f):
     return parse_formula(f) if isinstance(f, str) else dict(f)
 
 
+_MASS_CACHE: dict = {}
+
+
 def _mass(f) -> float:
+    if isinstance(f, str) and f in _MASS_CACHE:        # the neutral-loss table is small and queried hundreds of times per report
+        return _MASS_CACHE[f]
     from .chem.elements import mass
-    return mass(_formula(f))
+    m = mass(_formula(f))
+    if isinstance(f, str):
+        _MASS_CACHE[f] = m
+    return m
 
 
 def isotope_pattern(formula, charge_h: int = 1, n: int = 5) -> np.ndarray:

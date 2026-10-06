@@ -302,7 +302,7 @@ class App:
             if sp[2]:
                 ms2 = {"x": (sx[0], sx[1]) if sx[2] else None, "p": (sp[0], sp[1])}
                 break
-        return ionfamily.origin_report(samples, mz, parent, rt0, rt1, ref, formula_p=formula or None, ms2=ms2)
+        return ionfamily.origin_report(samples, mz, parent, rt0, rt1, ref, formula_p=formula or None, top=25, ms2=ms2)   # 25 co-eluting ions are plenty to read (and the browser version is ~10x slower)
 
     def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None) -> dict:
         if bg is not None:
