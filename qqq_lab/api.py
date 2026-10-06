@@ -14,6 +14,9 @@ def _json(obj, code=200):
     return code, "application/json", json.dumps(obj).encode("utf-8"), {}
 
 
+MAX_BODY = 8 << 20  # bytes accepted for a JSON request
+
+
 def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0):
     """(status, content type, body bytes, extra headers) for one request. stream/length: body of a POST."""
     if method == "POST":
@@ -26,6 +29,8 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             if path == "/api/upload":
                 app.save_upload(q.get("name", ""), stream, length)
                 return _json({"files": app.files(), "methods": app.methods()})
+            if length > MAX_BODY:  # a JSON body is small; refuse anything huge instead of reading it into memory
+                raise ValueError("request too large")
             body = json.loads((stream.read(length) if stream is not None else b"") or b"{}")
             if path == "/api/explore":
                 app.open_session(body)
