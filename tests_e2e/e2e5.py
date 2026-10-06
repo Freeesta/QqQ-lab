@@ -83,22 +83,26 @@ try:
             n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)"); pg.click("#xic-go"); pg.wait_for_timeout(1200)
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)") == n0 + 1
         step("calculator", calc)
-        def draw_caption():
+        def draw_ion():
             pg.evaluate("setView('draw')"); pg.wait_for_function("TPDraw.ready()", timeout=60000); pg.wait_for_timeout(1500)
             pg.fill("#ex-smi", "Oc1ccc(cc1)C(=O)N"); pg.click("#ex-load"); pg.wait_for_timeout(2500)
-            pg.fill("#cap-name", "TP1"); pg.check("#cap-on"); pg.wait_for_timeout(800)   # the report caption is off by default
-            t = pg.inner_text("#cap-txt"); print("CAP:", t); assert "TP1" in t and "C7H7NO2" in t and "m/z 138.1" in t and "138" in t
-            pg.screenshot(path=SH + "54_caption.png")
+            # the boxes that did the student's work (caption, formula/adduct table, fragment selection) no longer exist
+            assert pg.evaluate("['selcard','selbody','dcard','dcomp','cap-name','cap-part','cap-ad','cap-on','cap-txt','cap-copy'].every(i=>!document.getElementById(i))")
+            LB = "[...document.getElementById('kframe').contentWindow.ketcher.editor.render.paper.canvas.querySelectorAll('#qqq-labels text')].map(t=>t.textContent)"
+            assert pg.evaluate(LB) == ["C7H7NO2", "M = 137"], pg.evaluate(LB)
+            pg.select_option("#lb-ion", "[M+H]+"); pg.wait_for_timeout(500)
+            t = pg.evaluate(LB); print("ION:", t); assert t == ["C7H8NO2+", "m/z 138"], t
+            pg.screenshot(path=SH + "54_ion.png")
             with pg.expect_download() as d: pg.click("#ex-svg")
-            path = d.value.path(); svg = open(path, encoding="utf-8").read()
-            assert "TP1" in svg and "m/z 138.1" in svg and "<tspan" in svg, svg[-400:]
+            svg = open(d.value.path(), encoding="utf-8").read()
+            assert "m/z" in svg and "138" in svg and 'font-style="italic"' in svg and "<tspan" in svg and "TP1" not in svg, svg[-500:]
             with pg.expect_download() as d: pg.click("#ex-png")
             import os; sz = os.path.getsize(d.value.path()); print("png bytes", sz); assert sz > 5000
-            open(SH + "55_caption.png", "wb").write(open(d.value.path(), "rb").read())
-            pg.uncheck("#cap-on")
+            open(SH + "55_ion.png", "wb").write(open(d.value.path(), "rb").read())
+            pg.select_option("#lb-ion", ""); pg.wait_for_timeout(300)
             with pg.expect_download() as d: pg.click("#ex-svg")
-            assert "TP1" not in open(d.value.path(), encoding="utf-8").read()
-        step("drawing caption (text, svg, png, off)", draw_caption)
+            assert "m/z" not in open(d.value.path(), encoding="utf-8").read()
+        step("drawing: no helper boxes, ion choice in the label (canvas, svg, png)", draw_ion)
         pg.wait_for_timeout(500)
 finally:
     r.close()

@@ -101,11 +101,11 @@ try:
         pg.click("#nav button[data-v=draw]"); pg.wait_for_function("window.TPDraw && TPDraw.ready()", timeout=60000)
         def labels():
             pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); pg.wait_for_timeout(1500)
-            t = pg.evaluate(LBL); assert t == ["C8H9NO2  M = 151"], t
+            t = pg.evaluate(LBL); assert t == ["C8H9NO2", "M = 151"], t            # one text per line: formula, then mass
         step("label under the molecule (formula, nominal mass)", labels)
         def ion():
             pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); pg.wait_for_timeout(1500)
-            t = pg.evaluate(LBL); assert t == ["C8H10NO2+  m/z 152"], t
+            t = pg.evaluate(LBL); assert t == ["C8H10NO2+", "m/z 152"], t
             pg.screenshot(path=SH + "62_ion.png")
         step("charged structure shows m/z", ion)
         def breakbond():
@@ -118,23 +118,34 @@ try:
                const ux=(p1.x+p2.x)/2*40, uy=(p1.y+p2.y)/2*40; return {x:f.left+r.left+(ux-vb.x)*r.width/vb.width, y:f.top+r.top+(uy-vb.y)*r.height/vb.height}})()""" % KQ)
             pg.frame_locator("#kframe").locator("[data-testid=erase]:visible").first.click(); pg.wait_for_timeout(300)
             pg.mouse.click(pos["x"], pos["y"]); pg.wait_for_timeout(1200)
-            t = sorted(pg.evaluate(LBL)); assert t == sorted(["C2H4O  M = 44", "C6H7NO  M = 109"]), t
+            t = sorted(pg.evaluate(LBL)); assert t == sorted(["C2H4O", "M = 44", "C6H7NO", "M = 109"]), t
             pg.screenshot(path=SH + "63_broken.png")
-            pg.evaluate(KQ + ".editor.undo()"); pg.wait_for_timeout(1000); assert pg.evaluate(LBL) == ["C8H9NO2  M = 151"]
+            pg.evaluate(KQ + ".editor.undo()"); pg.wait_for_timeout(1000); assert pg.evaluate(LBL) == ["C8H9NO2", "M = 151"]
         step("erasing a bond gives two labels; undo restores", breakbond)
-        def selection():
+        def no_boxes():
+            # the "fragment selection" box is gone: selecting atoms shows nothing but Ketcher's own selection
             pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); pg.wait_for_timeout(1200)
-            # select the 4-aminophenol part (N, ring, OH): the acetyl C(=O)CH3 stays out -> 1 cut bond
-            pg.evaluate("""(()=>{const k=%s,st=k.editor.struct(),keep=[];const acyl=new Set();
-               st.bonds.forEach(b=>{const a=st.atoms.get(b.begin),c=st.atoms.get(b.end);if(b.type===2&&(a.label==='O'||c.label==='O')){acyl.add(b.begin);acyl.add(b.end)}});
-               const co=[...acyl].find(i=>st.atoms.get(i).label==='C');st.bonds.forEach(b=>{if(b.begin===co&&st.atoms.get(b.end).label==='C')acyl.add(b.end);if(b.end===co&&st.atoms.get(b.begin).label==='C')acyl.add(b.begin)});
-               st.atoms.forEach((a,i)=>{if(!acyl.has(i))keep.push(i)});k.editor.selection({atoms:keep})})()""" % KQ)
-            pg.wait_for_timeout(600)
-            t = pg.inner_text("#selbody"); print("SEL:", t.replace("\n", " | ")[:300])
-            assert pg.is_visible("#selcard") and "C6H6NO" in t.replace("\n", "") and "110.0600" in t and "1 legame tagliato" in t, t
-            pg.screenshot(path=SH + "67_selection.png")
-            pg.evaluate(KQ + ".editor.selection(null)"); pg.wait_for_timeout(400); assert not pg.is_visible("#selcard")
-        step("selected atoms: fragment formula and ion m/z (110 for paracetamol)", selection)
+            pg.evaluate("(()=>{const k=%s,st=k.editor.struct();k.editor.selection({atoms:[...st.atoms.keys()].slice(0,4)})})()" % KQ); pg.wait_for_timeout(500)
+            assert pg.evaluate("['selcard','selbody','dcard','dcomp','cap-name'].every(i=>!document.getElementById(i))")
+            pg.evaluate(KQ + ".editor.selection(null)")
+        step("selection / adduct table / caption boxes removed", no_boxes)
+        def ion_choice():
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); pg.wait_for_timeout(1200)
+            for ad, want in [("[M+H]+", ["C8H10NO2+  m/z 152"]), ("[M-H]-", ["C8H8NO2\u2212  m/z 150"]), ("[M+Na]+", ["C8H9NNaO2+  m/z 174"]), ("[M+NH4]+", ["C8H13N2O2+  m/z 169"])]:
+                pg.select_option("#lb-ion", ad); pg.wait_for_timeout(400)
+                t = pg.evaluate(LBL); assert [x for x in [" ".join(t)]] == [w.replace("  ", " ") for w in want], (ad, t)
+            # a structure drawn with its own charge keeps it: the ion menu adds nothing
+            pg.select_option("#lb-ion", "[M+Na]+")
+            pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); pg.wait_for_timeout(1200)
+            t = pg.evaluate(LBL); assert " ".join(t) == "C8H10NO2+ m/z 152", t
+            pg.select_option("#lb-ion", ""); pg.wait_for_timeout(300)
+            pg.screenshot(path=SH + "67_ion_choice.png")
+        step("ion menu: [M+H]+ 152, [M-H]- 150, [M+Na]+ 174, [M+NH4]+ 169; drawn charge wins", ion_choice)
+        def nh3():
+            pg.evaluate(KQ + ".setMolecule('Oc1ccc([NH3+])cc1>>Oc1cc[c+]cc1')"); pg.wait_for_timeout(1500)
+            t = pg.evaluate(LBL); print("NH3:", t)
+            assert any(x.startswith("\u2212NH3") and x.endswith("\u0394m \u221217") for x in t), t
+        step("neutral loss written NH3 (not H3N) on the arrow", nh3)
         def arrow():
             pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1>>CC(=O)Nc1ccc(O)c(O)c1')"); pg.wait_for_timeout(1500)
             t = pg.evaluate(LBL); print("ARROW:", t)
@@ -142,6 +153,16 @@ try:
             pg.screenshot(path=SH + "68_arrow.png")
             ket = pg.evaluate("(async()=>{const k=%s;return k.getKet()})()" % KQ); assert "\u0394m" not in ket and "+16" not in ket
         step("arrow label shows the change (+O, +16)", arrow)
+        def smiles_and_examples():
+            pg.fill("#ex-smi", "not a smiles((("); pg.click("#ex-load"); pg.wait_for_timeout(1200)
+            assert pg.is_visible("#smi-warn") and "SMILES" in pg.inner_text("#smi-warn"), "warning line missing"
+            pg.fill("#ex-smi", "Nc1ccc(O)cc1"); pg.click("#ex-load"); pg.wait_for_timeout(1200)
+            assert not pg.is_visible("#smi-warn"), "warning should disappear after a valid SMILES"
+            pg.click("#ex-link"); pg.wait_for_timeout(800)
+            w = pg.evaluate("[...document.querySelectorAll('#bigbody img')].map(i=>[i.getAttribute('src'),i.naturalWidth])")
+            assert [x[0] for x in w] == ["static/esempio-trasformazione.png", "static/esempio-frammentazione.png"] and all(x[1] > 500 for x in w), w
+            pg.screenshot(path=SH + "69_examples.png"); pg.click("#bigx"); pg.wait_for_timeout(300)
+        step("invalid SMILES warning line; example link shows the two schemes", smiles_and_examples)
         def macro():
             n = pg.evaluate("[...document.getElementById('kframe').contentDocument.querySelectorAll('[data-testid=polymer-toggler]')].filter(e=>e.getBoundingClientRect().width>0).length")
             assert n == 0, n

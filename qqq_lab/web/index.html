@@ -119,16 +119,12 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
   <div class="card"><div class="sm" style="margin-bottom:6px"><a href="#" id="ex-link">Vedi un esempio di disegno</a></div>
    <div style="font-weight:600;margin-bottom:2px">Sotto ogni struttura</div>
    <div style="margin:3px 0"><label><input type="checkbox" id="lb-f" checked> Formula</label></div>
-   <div style="margin:3px 0"><label><input type="checkbox" id="lb-m" checked> Massa</label> <label class="muted sm" style="margin-left:8px">decimali <select id="lb-dec"><option value="0" selected>0 (all'unit&agrave;)</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label></div></div>
-  <div class="card" id="selcard" hidden><h3>Selezione (frammento)</h3><div id="selbody"></div></div>
-  <div class="card" id="dcard" hidden><div id="dcomp"></div></div>
-  <div class="card"><h3>Didascalia per la relazione</h3><div class="muted sm">Scritta sotto la struttura nelle immagini esportate. Con più strutture sulla tela descrive quella scelta qui sotto.</div>
-   <div class="bar"><label>Nome <input id="cap-name" placeholder="es. TP1" style="width:90px"></label><label>Struttura <select id="cap-part"></select></label><label>Addotto <select id="cap-ad" title="Addotto per l'm/z: in ESI+ di solito [M+H]+"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+Cl]-</option><option>[M+HCOO]-</option></select></label></div>
-   <label class="sm"><input type="checkbox" id="cap-on"> aggiungi la didascalia alle immagini esportate</label>
-   <pre id="cap-txt" class="sm" style="white-space:pre-wrap;margin:6px 0"></pre><div class="bar"><button id="cap-copy" class="sm" title="Copia il testo, da incollare nella relazione">Copia il testo</button></div></div>
+   <div style="margin:3px 0"><label><input type="checkbox" id="lb-m" checked> Massa</label> <label class="muted sm" style="margin-left:8px">decimali <select id="lb-dec"><option value="0" selected>0 (all'unit&agrave;)</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label></div>
+   <div style="margin:3px 0"><label title="Se scegli uno ione, sotto la struttura compare la formula dello ione con la carica e il suo m/z. Se la struttura ha già una carica disegnata, vale quella.">Ione <select id="lb-ion"><option value="" selected>nessuno (molecola neutra)</option><option value="[M+H]+">[M+H]+</option><option value="[M+NH4]+">[M+NH4]+</option><option value="[M+Na]+">[M+Na]+</option><option value="[M+K]+">[M+K]+</option><option value="[M-H]-">[M&minus;H]&minus;</option><option value="[M+Cl]-">[M+Cl]&minus;</option><option value="[M+HCOO]-">[M+HCOO]&minus;</option></select></label></div></div>
   <div class="card"><h3>Esporta la tela</h3><div class="bar"><button id="ex-png">PNG</button><button id="ex-jpg">JPEG</button><button id="ex-svg">SVG</button><button id="ex-ket">Salva (.ket)</button></div>
    <label class="muted" title="Senza spunta lo sfondo è bianco"><input type="checkbox" id="ex-bg"> sfondo color crema</label>
    <div class="bar" style="margin-top:6px"><input id="ex-smi" placeholder="Incolla uno SMILES" style="flex:1"><button id="ex-load">Disegna</button></div>
+   <div id="smi-warn" class="sm" style="color:#b3261e;margin-top:4px" hidden></div>
 </div>   <!-- Ketcher (EPAM, Apache-2.0) and OpenChemLib (BSD-3) are bundled: see README.md and qqq_lab/web/vendor/README.md -->
  </aside>
 </section>

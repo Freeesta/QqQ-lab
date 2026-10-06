@@ -1,16 +1,15 @@
-// "Disegno": Ketcher (structures, fragments, arrows, text) + OpenChemLib (formula and exact mass).
-// Both are bundled in web/vendor: no internet needed. Module script; helpers come from explore.js (window).
-import * as OCL from "./vendor/openchemlib.js";
+// "Disegno": Ketcher (structures, fragments, arrows, text). Bundled in web/vendor: no internet needed.
+// The page only draws and labels: the student does the chemistry (no formula/adduct/fragment tables here, on purpose).
+// Module script; helpers come from explore.js (window).
 
 const Q = s => document.querySelector(s);
 const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const fmtFormula = window.fmtFormula || (f => !f ? "" : EH(f).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>"));
-const fmtAdduct = window.fmtAdduct || (a => !a ? "" : fmtFormula(a).replace(/([+-]+)$/, "<sup>$1</sup>"));
-const PROTON = 1.007276, ADDUCTS = {
-  pos: [["[M+H]+", 1.007276], ["[M+NH4]+", 18.033825], ["[M+Na]+", 22.989221], ["[M+K]+", 38.963158]],
-  neg: [["[M-H]-", -1.007276], ["[M+Cl]-", 34.969402], ["[M+HCOO]-", 44.998203]],
+// ion shown under a structure when the student picks one: atoms to add or remove, and the charge ([M+H]+ = +H, +1 ...)
+const IONS = {
+  "[M+H]+": { add: { H: 1 }, q: 1 }, "[M+NH4]+": { add: { N: 1, H: 4 }, q: 1 }, "[M+Na]+": { add: { Na: 1 }, q: 1 }, "[M+K]+": { add: { K: 1 }, q: 1 },
+  "[M-H]-": { add: { H: -1 }, q: -1 }, "[M+Cl]-": { add: { Cl: 1 }, q: -1 }, "[M+HCOO]-": { add: { C: 1, H: 1, O: 2 }, q: -1 },
 };
-let K = null, starting = null, restored = false, timer = null, PARTS = [], CAP = null;
+let K = null, starting = null, restored = false, timer = null;
 
 function start() {
   if (starting) return starting;
@@ -20,8 +19,7 @@ function start() {
     addEventListener("message", on);
     fr.src = "static/vendor/ketcher/index.html";
     setTimeout(() => reject(new Error("Ketcher non si e' avviato")), 60000);
-  }).then(async k => { await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); requestAnimationFrame(showSelection); });
-    k.editor.subscribe("selectionChange", () => requestAnimationFrame(showSelection));
+  }).then(async k => { await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); });
     hideMacro(fr); changed(); drawLabels(); return k; });
   starting.catch(e => dnote(e.message));
   return starting;
@@ -42,47 +40,12 @@ async function restore() {
 }
 async function changed() {
   if (!K) return;
-  let ket = "", smiles = "";
-  try { ket = await K.getKet(); smiles = await K.getSmiles(); } catch (_) { return; }
+  let ket = "";
+  try { ket = await K.getKet(); } catch (_) { return; }
   NB.ket = ket; nbSave();
-  list(smiles);
 }
-const hill = counts => {
-  const keys = Object.keys(counts).sort((a, b) => a.localeCompare(b));
-  const order = counts.C ? ["C", "H", ...keys.filter(k => k !== "C" && k !== "H")] : keys;
-  return order.filter(k => counts[k]).map(k => k + (counts[k] > 1 ? counts[k] : "")).join("");
-};
-function describe(smi) {
-  try {
-    const m = OCL.Molecule.fromSmiles(smi), f = m.getMolecularFormula(), counts = {};
-    for (const x of f.formula.matchAll(/([A-Z][a-z]?)(\d*)/g)) counts[x[1]] = (counts[x[1]] || 0) + (x[2] ? +x[2] : 1);
-    return { smiles: smi, formula: hill(counts), mass: f.absoluteWeight };
-  } catch (_) { return null; }
-}
-const dnote = msg => { Q("#dcard").hidden = false; Q("#dcomp").textContent = msg; };   // message / table box, visible only when it has content
-function adductTable(d) {
-  const main = ["[M+H]+", "[M+Na]+", "[M-H]-"], all = [...ADDUCTS.pos, ...ADDUCTS.neg];
-  const row = ([n, dm]) => `<tr><td>${fmtAdduct(n)}</td><td class="num">${(d.mass + dm).toFixed(4)}</td><td>${typeof E !== "undefined" && E.files.length ? `<button class="sm" data-x="${(d.mass + dm).toFixed(2)}" data-l="${d.formula} ${n}">XIC</button>` : ""}</td></tr>`;
-  return `<table class="sm">${all.filter(a => main.includes(a[0])).map(row).join("")}</table><details class="sm"><summary class="muted">altri addotti</summary><table class="sm">${all.filter(a => !main.includes(a[0])).map(row).join("")}</table></details>`;
-}
-function list(smiles) {
-  const box = Q("#dcomp");
-  const parts = [...new Set(smiles.split(/[.>]+/).map(s => s.trim()).filter(Boolean))];
-  PARTS = parts; capParts();
-  if (!parts.length) { box.innerHTML = ""; Q("#dcard").hidden = true; return; }
-  Q("#dcard").hidden = false;
-  box.innerHTML = parts.map((s, i) => {
-    const d = describe(s);
-    if (!d) return `<div class="muted sm">${EH(s)}: struttura non riconosciuta (frammento aperto?)</div>`;
-    return `<div style="border-bottom:1px solid var(--line);padding:6px 0"><b>${fmtFormula(d.formula)}</b> <span class="muted">massa esatta ${d.mass.toFixed(4)}</span>
-      ${adductTable(d)}
-      <div class="muted sm" style="word-break:break-all">${EH(s)}</div></div>`;
-  }).join("");
-  box.querySelectorAll("[data-x]").forEach(b => b.onclick = () => {      // same window as every other way of extracting an ion
-    window.setView("data");
-    if (E.files.length) window.openXic(null, { mz: +b.dataset.x, label: b.dataset.l });
-  });
-}
+// small warning line under the SMILES field (invalid SMILES, Ketcher not started); empty = hidden
+const dnote = msg => { const w = Q("#smi-warn"); w.textContent = msg || ""; w.hidden = !msg; };
 
 // ------------------------------------------------------------------ formula and mass written under each structure
 // Optional (checkboxes "#lb-f" formula, "#lb-m" mass + "#lb-dec" decimals). Drawn in an overlay group of Ketcher's own SVG, so the label follows zoom and scroll
@@ -138,7 +101,8 @@ function arrowDeltas() {
     if (!before || !after) return;
     const els = [...new Set([...Object.keys(before.n), ...Object.keys(after.n)])], gain = {}, loss = {};
     for (const e of els) { const d = (after.n[e] || 0) - (before.n[e] || 0); if (d > 0) gain[e] = d; if (d < 0) loss[e] = -d; }
-    const g = formulaOf(gain).formula, l = formulaOf(loss).formula, dm = after.mass - before.mass;
+    const conv = f => f === "H3N" ? "NH3" : f;                              // Hill order would write H3N: students know NH3
+    const g = conv(formulaOf(gain).formula), l = conv(formulaOf(loss).formula), dm = after.mass - before.mass;
     const parts = [];
     const push = (sign, f) => { parts.push([sign, ""]); for (const m of f.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([m[1], ""]); if (m[2]) parts.push([m[2], "sub"]); } parts.push([" ", ""]); };
     if (g) push("+", g); if (l) push("\u2212", l);
@@ -148,9 +112,18 @@ function arrowDeltas() {
   });
   return out;
 }
+// The ion chosen in "Ione" ([M+H]+ ...) applied to a structure drawn without charge: formula of the ion, its charge, and the mass of its atoms
+// (labelParts then removes the electrons). A structure that already carries a charge (drawn by the student) is used as it is.
+function withIon(d) {
+  const ion = IONS[Q("#lb-ion").value];
+  if (!ion || d.q) return d;
+  const n = { ...d.n };
+  for (const [e, k] of Object.entries(ion.add)) n[e] = (n[e] || 0) + k;
+  return { ...d, ...formulaOf(n), n, q: ion.q };
+}
 // text of a label as LINES of pieces: [[text, "sub" | "sup" | "it" | ""], ...] (formula on the first line, "m/z 241" in italics on the next)
-function labelParts(d) {
-  const parts = [], f = Q("#lb-f").checked, m = Q("#lb-m").checked, dec = +Q("#lb-dec").value, lines = [parts];
+function labelParts(d0) {
+  const d = withIon(d0), parts = [], f = Q("#lb-f").checked, m = Q("#lb-m").checked, dec = +Q("#lb-dec").value, lines = [parts];
   if (f) {
     for (const x of d.formula.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([x[1], ""]); if (x[2]) parts.push([x[2], "sub"]); }
     if (d.q) parts.push([(Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "−"), "sup"]);
@@ -195,108 +168,27 @@ function ketWithLabels(ket) {
   for (const a of arrowDeltas()) { const t = plain(a.parts); add([a.parts], a.x - t.length * 0.09, -(a.y - 0.75), 14); }
   return JSON.stringify(j);
 }
-["#lb-f", "#lb-m", "#lb-dec"].forEach(id => Q(id).addEventListener("change", () => { drawLabels(); NB.labF = Q("#lb-f").checked; NB.labM = Q("#lb-m").checked; NB.labDec = +Q("#lb-dec").value; nbSave(); }));
+["#lb-f", "#lb-m", "#lb-dec", "#lb-ion"].forEach(id => Q(id).addEventListener("change", () => {
+  drawLabels(); NB.labF = Q("#lb-f").checked; NB.labM = Q("#lb-m").checked; NB.labDec = +Q("#lb-dec").value; NB.labIon = Q("#lb-ion").value; nbSave();
+}));
 document.addEventListener("nbloaded", () => {      // older notebooks only have NB.labels (both on)
   Q("#lb-f").checked = NB.labF !== undefined ? NB.labF : NB.labels !== false; Q("#lb-m").checked = NB.labM !== undefined ? NB.labM : NB.labels !== false;
-  Q("#lb-dec").value = String(NB.labDec || 0); drawLabels();
+  Q("#lb-dec").value = String(NB.labDec || 0);
+  Q("#lb-ion").value = IONS[NB.labIon] ? NB.labIon : "";
+  drawLabels();
 });
-Q("#ex-link").onclick = e => { e.preventDefault(); window.big("Esempio di disegno", '<img src="static/esempio-disegno.png" alt="Esempio: paracetamolo e il suo prodotto con +O, con formula e massa sotto ogni struttura e la differenza sopra la freccia" style="max-width:100%;height:auto">'); };
-
-// ------------------------------------------------------------------ selected atoms: a fragment without breaking bonds
-// The H are those the atoms carry in the molecule; every bond to an unselected atom is a cut. The ions are hypotheses
-// (even-electron ions, typical of ESI MS/MS): the student compares them with the product ion spectrum.
-const HATOM = MONO.H;   // PROTON is defined at the top of the file
-function showSelection() {
-  const card = Q("#selcard"); if (!K || !card) return;
-  const st = K.editor.struct(), ids = (K.editor.selection() || {}).atoms || [];
-  if (!ids.length) { card.hidden = true; return; }
-  const set = new Set(ids), atoms = ids.map(i => st.atoms.get(i)).filter(Boolean);
-  let cuts = 0; st.bonds.forEach(b => { if (set.has(b.begin) !== set.has(b.end)) cuts += (b.type >= 1 && b.type <= 3) ? b.type : 1; });
-  const c = countAtoms(atoms); card.hidden = false;
-  const body = Q("#selbody");
-  if (!c) { body.innerHTML = '<div class="muted sm">Nella selezione c\'è un atomo senza formula (gruppo R, abbreviazione...).</div>'; return; }
-  const P = formulaOf(c.n), xic = typeof E !== "undefined" && E.files && E.files.length;
-  const row = (lab, f, mz) => `<tr><td>${lab}</td><td>${fmtAdduct(f)}</td><td class="num">${mz.toFixed(4)}</td><td class="num"><b>${Math.round(mz)}</b></td><td>${xic ? `<button class="sm" data-x="${mz.toFixed(1)}" data-l="${EH(f)}">XIC</button>` : ""}</td></tr>`;
-  const ion = (n, z) => ({ ...formulaOf(n), z });
-  let h = `<div class="sm">${atoms.length} atomi: <b>${fmtFormula(P.formula)}</b>${c.q ? (c.q > 0 ? "<sup>+</sup>" : "<sup>&minus;</sup>") : ""} &middot; ${cuts ? `${cuts} legam${cuts > 1 ? "i" : "e"} tagliat${cuts > 1 ? "i" : "o"}` : "nessun legame tagliato"}</div>`;
-  const tbl = [];
-  if (c.q) {
-    const mz = (P.mass - c.q * ELECTRON) / Math.abs(c.q);
-    tbl.push(row("la selezione così com'è (ha già la carica)", P.formula + (c.q > 0 ? "+" : "-"), mz));
-  } else if (!cuts) {
-    tbl.push(row("[M+H]<sup>+</sup>", formulaOf({ ...c.n, H: (c.n.H || 0) + 1 }).formula + "+", P.mass + PROTON));
-    tbl.push(row("[M&minus;H]<sup>&minus;</sup>", formulaOf({ ...c.n, H: (c.n.H || 0) - 1 }).formula + "-", P.mass - PROTON));
-  } else {
-    const Qn = { ...c.n, H: (c.n.H || 0) + cuts }, Qm = P.mass + cuts * HATOM;          // the piece closed with H
-    const acyl = { ...c.n, H: (c.n.H || 0) + cuts - 1 };                                 // charge left on the cut
-    h += `<div class="muted sm">Pezzo chiuso con H (molecola neutra): ${fmtFormula(formulaOf(Qn).formula)}, M = ${Qm.toFixed(4)}</div>`;
-    tbl.push(row("pezzo + H, protonato (prende un H dall'altra parte)", formulaOf({ ...Qn, H: Qn.H + 1 }).formula + "+", Qm + PROTON));
-    tbl.push(row("carica sul taglio (es. acilio, carbocatione)", formulaOf(acyl).formula + "+", formulaOf(acyl).mass - ELECTRON));
-    tbl.push(row("ESI&minus;: pezzo chiuso con H, deprotonato", formulaOf({ ...Qn, H: Qn.H - 1 }).formula + "-", Qm - PROTON));
-  }
-  h += `<table class="sm" style="margin-top:4px"><tr><th>ipotesi</th><th>ione</th><th class="num">m/z</th><th class="num">intero</th><th></th></tr>${tbl.join("")}</table>
-    <div class="muted sm">Sono ipotesi da confrontare con lo spettro di ioni prodotto (MS/MS): in ESI i frammenti sono quasi sempre ioni a numero pari di elettroni. Il calcolo usa gli H che gli atomi hanno nel disegno.</div>`;
-  body.innerHTML = h;
-  body.querySelectorAll("[data-x]").forEach(b => b.onclick = () => { window.setView("data"); if (E.files.length) window.openXic(null, { mz: +b.dataset.x, label: b.dataset.l }); });
-}
-
-// ------------------------------------------------------------------ caption (name, formula, m/z) for the report
-const sub = f => f.replace(/(\d+)/g, "<tspan dy=\"0.28em\" font-size=\"70%\">$1</tspan><tspan dy=\"-0.28em\">\u200b</tspan>");   // graphical subscripts, image only
-const svgAdduct = a => {
-  let s = EH(a).replace(/([A-Z][a-z]?|\))(\d+)/g, (m, g1, g2) => `${g1}<tspan dy="0.28em" font-size="70%">${g2}</tspan><tspan dy="-0.28em">\u200b</tspan>`);
-  return s.replace(/([+-]+)$/, '<tspan dy="-0.32em" font-size="70%">$1</tspan><tspan dy="0.32em">\u200b</tspan>');
+// the two example drawings (made with this very tab: see tests_e2e/make_examples.py)
+Q("#ex-link").onclick = e => {
+  e.preventDefault();
+  const fig = (src, alt, cap) => `<figure style="margin:0 0 14px"><img src="static/${src}" alt="${alt}" style="max-width:100%;height:auto"><figcaption class="muted sm">${cap}</figcaption></figure>`;
+  window.big("Esempi di disegno",
+    fig("esempio-trasformazione.png", "Schema di trasformazione: una molecola madre e tre prodotti collegati da frecce, con il nome o TP e l'm/z sopra ogni struttura",
+      "<b>Schema di trasformazione.</b> Molecola madre e prodotti (TP) sono molecole: sopra ognuna il nome, o &laquo;TP&raquo; con l'm/z dell'ione che si osserva; sopra le frecce la differenza di formula.") +
+    fig("esempio-frammentazione.png", "Schema di frammentazione: lo ione precursore e i suoi frammenti, tutti con la carica, con le perdite neutre sulle frecce",
+      "<b>Schema di frammentazione.</b> Qui sono tutti ioni in fase gas, con la carica; sulle frecce la perdita neutra, sotto ogni ione la formula e l'<i>m/z</i>."));
 };
-async function capData() {
-  const i = +(Q("#cap-part").value || 0), d = PARTS[i] && describe(PARTS[i]);
-  if (!d) return null;
-  const ad = Q("#cap-ad").value;
-  try {
-    const r = await (await fetch(`api/formula?f=${encodeURIComponent(d.formula)}&adduct=${encodeURIComponent(ad)}`)).json();
-    if (r.error) return null;
-    return { name: Q("#cap-name").value.trim(), formula: r.formula, neutral: r.neutral, adduct: ad, mz: r.mz, mz1: r.mz1, nominal: r.nominal };
-  } catch (_) { return null; }
-}
-const capText = c => `${c.name ? c.name + ": " : ""}${c.formula}; M = ${c.neutral.toFixed(4)}; ${c.adduct} m/z ${c.mz1.toFixed(1)} (esatto ${c.mz.toFixed(4)}); all'unità ${c.nominal}`;
-function capParts() {
-  const sel = Q("#cap-part"), cur = sel.value;
-  sel.innerHTML = PARTS.map((s, i) => { const d = describe(s); return `<option value="${i}">${d ? d.formula : "struttura " + (i + 1)}</option>`; }).join("");
-  if (cur && +cur < PARTS.length) sel.value = cur;
-  capShow();
-}
-async function capShow() {
-  const c = await capData(), pre = Q("#cap-txt");
-  pre.innerHTML = c ? `${c.name ? `<b>${EH(c.name)}:</b> ` : ""}${fmtFormula(c.formula)}; M = ${c.neutral.toFixed(4)}; ${fmtAdduct(c.adduct)} m/z ${c.mz1.toFixed(1)} (esatto ${c.mz.toFixed(4)}); all'unit&agrave; ${c.nominal}` : "Disegna una molecola completa per vedere formula e m/z.";
-  NB.cap = { name: Q("#cap-name").value, adduct: Q("#cap-ad").value, on: Q("#cap-on").checked }; nbSave();
-}
-function addCaption(svgText, c) {
-  const doc = new DOMParser().parseFromString(svgText, "image/svg+xml"), root = doc.documentElement;
-  let vb = (root.getAttribute("viewBox") || "").split(/[\s,]+/).map(Number);
-  if (vb.length !== 4 || vb.some(isNaN)) vb = [0, 0, parseFloat(root.getAttribute("width")) || 400, parseFloat(root.getAttribute("height")) || 300];
-  const [x, y, w, h] = vb, lines = [
-    c.name ? `<tspan font-weight="bold">${EH(c.name)}</tspan>` : null,
-    `${sub(EH(c.formula))}<tspan>  \u00b7  M = ${c.neutral.toFixed(4)}</tspan>`,
-    `${svgAdduct(c.adduct)}<tspan>  m/z ${c.mz1.toFixed(1)}  (esatto ${c.mz.toFixed(4)})  \u00b7  all'unit\u00e0: ${c.nominal}</tspan>`,
-  ].filter(Boolean);
-  const longest = Math.max(c.name.length, c.formula.length + 14, 46), fs = Math.max(8, Math.min(w / (longest * 0.52), w / 16));
-  const extra = fs * 1.5 * lines.length + fs * 0.8, bg = Q("#ex-bg").checked ? "#fffbf0" : "#ffffff", ns = "http://www.w3.org/2000/svg";
-  doc.querySelectorAll("rect").forEach(q => { if (/^rgb\(100%,\s*100%,\s*100%\)$/.test(q.getAttribute("fill") || "")) q.setAttribute("fill", bg); });   // Ketcher ignores the background option
-  const r = doc.createElementNS(ns, "rect"); r.setAttribute("x", x); r.setAttribute("y", y + h); r.setAttribute("width", w); r.setAttribute("height", extra); r.setAttribute("fill", bg); root.appendChild(r);
-  lines.forEach((l, i) => {
-    const t = doc.createElementNS(ns, "text"); t.setAttribute("x", x + w / 2); t.setAttribute("y", y + h + fs * 1.5 * (i + 1) - fs * 0.2);
-    t.setAttribute("text-anchor", "middle"); t.setAttribute("font-family", "Arial, Helvetica, sans-serif"); t.setAttribute("font-size", fs); t.setAttribute("fill", "#000");
-    const inner = new DOMParser().parseFromString(`<svg xmlns="${ns}"><text>${l}</text></svg>`, "image/svg+xml").documentElement.firstChild;
-    [...inner.childNodes].forEach(n => t.appendChild(doc.importNode(n, true)));
-    root.appendChild(t);
-  });
-  root.setAttribute("viewBox", `${x} ${y} ${w} ${h + extra}`);
-  const ph = parseFloat(root.getAttribute("height")); if (ph) root.setAttribute("height", ph * (h + extra) / h);
-  return new XMLSerializer().serializeToString(doc);
-}
-["#cap-name", "#cap-part", "#cap-ad", "#cap-on"].forEach(id => Q(id).addEventListener("input", capShow));
-Q("#cap-copy").onclick = async () => { const c = await capData(); if (c) try { await navigator.clipboard.writeText(capText(c)); } catch (_) { /* clipboard blocked */ } };
-document.addEventListener("nbloaded", () => { if (NB.cap) { Q("#cap-name").value = NB.cap.name || ""; Q("#cap-ad").value = NB.cap.adduct || "[M+H]+"; Q("#cap-on").checked = NB.cap.on === true; } capShow(); });
 
-// Labels of the exported image as real SVG text (subscripts and superscripts shifted with dy, like the caption).
+// Labels of the exported image as real SVG text (subscripts and superscripts shifted with dy, like the old caption did).
 // Ketcher turns text objects into glyph outlines and spaces Unicode subscripts badly, so the export is made WITHOUT text objects:
 // the position of the structures in the exported SVG is found by matching the bond end points with the atom positions of the
 // .ket (the export scale is 40 px per unit), then the labels are added as <text>. If the match fails, the old way is used.
@@ -378,6 +270,24 @@ function addExportLabels(svgText, ket) {
 }
 
 // ------------------------------------------------------------------ export
+// Ketcher ignores the background option for the SVG: its white background rectangle is repainted here
+function creamBackground(svgText) {
+  const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
+  doc.querySelectorAll("rect").forEach(q => { if (/^rgb\(100%,\s*100%,\s*100%\)$/.test(q.getAttribute("fill") || "")) q.setAttribute("fill", "#fffbf0"); });
+  return new XMLSerializer().serializeToString(doc);
+}
+// Ketcher crops the picture tightly around the structures and can cut a text object written near the edge: add a margin on every side
+function padSvg(svgText, px) {
+  const doc = new DOMParser().parseFromString(svgText, "image/svg+xml"), root = doc.documentElement;
+  const vb = (root.getAttribute("viewBox") || "").split(/[\s,]+/).map(Number);
+  if (vb.length !== 4 || vb.some(isNaN)) return svgText;
+  const [x, y, w, h] = vb, bg = [...doc.querySelectorAll("rect")].find(r => !r.closest("defs"));
+  root.setAttribute("viewBox", `${x - px} ${y - px} ${w + 2 * px} ${h + 2 * px}`);
+  const pw = parseFloat(root.getAttribute("width")), ph = parseFloat(root.getAttribute("height"));
+  if (pw) root.setAttribute("width", pw * (w + 2 * px) / w); if (ph) root.setAttribute("height", ph * (h + 2 * px) / h);
+  if (bg) { bg.setAttribute("x", x - px); bg.setAttribute("y", y - px); bg.setAttribute("width", w + 2 * px); bg.setAttribute("height", h + 2 * px); }
+  return new XMLSerializer().serializeToString(doc);
+}
 const download = (blob, name) => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
 async function image(format) {
   await start();
@@ -385,8 +295,8 @@ async function image(format) {
   let svgText = null;
   if (labelsOn()) { try { svgText = addExportLabels(await (await gen(raw)).text(), JSON.parse(raw)); } catch (_) { svgText = null; } }   // real SVG text
   if (!svgText) svgText = await (await gen(ketWithLabels(raw))).text();                                                              // fallback: Ketcher text objects
-  const cap = Q("#cap-on").checked ? await capData() : null;
-  if (cap) svgText = addCaption(svgText, cap);
+  if (cream) svgText = creamBackground(svgText);
+  svgText = padSvg(svgText, 16);
   const svg = new Blob([svgText], { type: "image/svg+xml" });
   if (format === "svg") return svg;
   // PNG / JPEG: rasterise the vector at high resolution (the built-in PNG is small)
@@ -402,7 +312,9 @@ Q("#ex-png").onclick = async () => download(await image("png"), "struttura.png")
 Q("#ex-jpg").onclick = async () => download(await image("jpg"), "struttura.jpg");
 Q("#ex-svg").onclick = async () => download(await image("svg"), "struttura.svg");
 Q("#ex-ket").onclick = async () => { await start(); download(new Blob([await K.getKet()], { type: "application/json" }), "disegno.ket"); };
-Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); try { await K.setMolecule(v); } catch (e) { dnote("SMILES non valido: " + e.message); } };
+Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote("");
+  try { const before = await K.getKet(); await K.setMolecule(v); if (await K.getKet() === before) dnote("SMILES non valido o già disegnato: la tela non è cambiata."); }   // Ketcher ignores some invalid SMILES without an error
+  catch (e) { dnote("SMILES non valido: " + e.message); } };
 
 window.TPDraw = { image, smiles: async () => { await start(); return K.getSmiles(); }, ready: () => !!K };
 document.addEventListener("tpview", e => { if (e.detail.view === "draw") start(); });
