@@ -12,7 +12,7 @@ Lavori nella cartella `~/QqQ_lab/QqQ_lab`. Leggi prima `AGENTS.md`. Una sola cha
 - Il programma non deve dare agli studenti le risposte.
 - Un commit solo, con titolo in italiano e le righe di attribuzione richieste. Il push lo fa Federico.
 - Testa con Playwright (e2e e pytest, lanciati separatamente con timeout lunghi), poi fai un report breve.
-- Lavora su un ramo git dedicato (AGENTS.md sez. 8), non su `main`.
+- Lavora direttamente su `main` (una sola chat alla volta), senza creare rami.
 - Risparmio token (AGENTS.md sez. 2): un solo lotto di modifiche, `grep -n` per trovare i punti, non rileggere file già letti, prova UNA volta alla fine, un solo commit.
 - **Ordine di lavoro**: prima la verifica di TP Mine (Sezione 6, breve), poi 2.0 (il disegno non si cancella), poi 2.1-2.2, poi il resto della Sezione 2, poi Sezioni 1, 3, 4, 5, infine 6.
 
