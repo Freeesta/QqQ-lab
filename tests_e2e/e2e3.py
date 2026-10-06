@@ -41,7 +41,7 @@ try:
         def add_ion():
             xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')")
             el = pg.locator(".pnl.xic").first
-            el.locator('[data-o="add"]').fill("200"); el.locator('[data-o="addb"]').click(); pg.wait_for_timeout(2000)
+            el.locator('[data-o="addb"]').click(); pg.fill("#xic-q", "200"); pg.press("#xic-q", "Enter"); pg.wait_for_timeout(300); pg.click("#xic-go"); pg.wait_for_timeout(2000)
             assert pg.evaluate(f"E.panels[{xi}].traces.length") == 2
         step("add second ion", add_ion)
         def split_merge():

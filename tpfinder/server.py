@@ -64,7 +64,7 @@ class App:
     # ------------------------------------------------------------------ browser presence (close the browser -> stop the program)
     def _presence(self):
         if not hasattr(self, "_tabs"):
-            self._tabs, self._plock, self._deadline = {}, threading.Lock(), time.time() + EXIT_FIRST
+            self._tabs, self._live, self._plock, self._deadline = {}, set(), threading.Lock(), time.time() + EXIT_FIRST
         return self._plock
 
     def ping(self, tab: str):
@@ -75,13 +75,25 @@ class App:
     def bye(self, tab: str):
         with self._presence():
             self._tabs.pop(tab, None)
+            self._live.discard(tab)
             if not self._tabs:
                 self._deadline = time.time() + EXIT_GRACE
+
+    def live_open(self, tab: str):
+        """A page holds an open connection (/api/live): it is there as long as the connection lives, however long its timers are throttled."""
+        with self._presence():
+            self._live.add(tab)
+            self._tabs[tab] = time.time()
+            self._deadline = None
+
+    def live_close(self, tab: str):
+        """The connection dropped: the tab or the whole browser was closed (a reload opens a new one within the grace period)."""
+        self.bye(tab)
 
     def should_exit(self) -> bool:
         with self._presence():
             now = time.time()
-            for t in [t for t, seen in self._tabs.items() if now - seen > EXIT_STALE]:
+            for t in [t for t, seen in self._tabs.items() if t not in self._live and now - seen > EXIT_STALE]:
                 del self._tabs[t]
             if not self._tabs and self._deadline is None:
                 self._deadline = now + EXIT_GRACE
@@ -461,6 +473,25 @@ def make_handler(app: App):
             try:
                 if u.path in ("/", "/index.html"):
                     return self._send(200, _page(), "text/html")
+                if u.path == "/api/live":                       # presence by an open connection: when the page goes, the connection drops
+                    tab = q.get("tab", "")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/event-stream")
+                    self.send_header("Cache-Control", "no-cache")
+                    self.send_header("Connection", "close")
+                    self.end_headers()
+                    self.close_connection = True
+                    app.live_open(tab)
+                    try:
+                        while True:
+                            self.wfile.write(b": alive\n\n")
+                            self.wfile.flush()
+                            time.sleep(1.5)
+                    except OSError:                              # BrokenPipe / ConnectionReset: the page is gone
+                        pass
+                    finally:
+                        app.live_close(tab)
+                    return
                 if u.path == "/api/reload":
                     app.load()
                     return self._json(app.state())

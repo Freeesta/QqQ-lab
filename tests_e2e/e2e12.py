@@ -24,21 +24,37 @@ with sync_playwright() as p:
         t = pg.inner_text("#flst"); assert "scan MS1" not in t and "RT 0.5" not in t and "Doppio clic" not in pg.inner_text("#dfiles"), t
         assert "FULL SCAN (EMS)" in t.upper() and "MS2" in t and "MRM" in t, t
         assert pg.locator("#np-export, #np-ints, #kindinfo").count() == 0
+        assert "federico.cristaudo@unito.it" in pg.inner_text("#credits") and pg.locator('.pnl.chrom [data-o=norm]').count() == 0
+        fw = pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').offsetWidth"); assert fw < 60, fw
     step("sidebar slim, EMS chosen at start, no Esporta/Integrazioni/Rilevato", side)
     def integ():
         c = pg.locator('.pnl.chrom').first
-        c.locator('[data-a=iauto]').click()
-        a = pg.evaluate("E.panels[0]._a"); box = c.locator("canvas").bounding_box()
-        x = pg.evaluate("E.panels[0]._a.X(14.33)"); pg.mouse.click(box["x"] + x, box["y"] + 120); pg.wait_for_timeout(600)
-        n1 = pg.evaluate("E.panels[0].ints.length"); assert n1 == 1, n1
-        c.locator('[data-a=iauto]').click()      # off
-        c.locator('[data-a=iman]').click()
-        pg.mouse.move(box["x"] + pg.evaluate("E.panels[0]._a.X(5)"), box["y"] + 100); pg.mouse.down(); pg.mouse.move(box["x"] + pg.evaluate("E.panels[0]._a.X(6)"), box["y"] + 100, steps=5); pg.mouse.up(); pg.wait_for_timeout(500)
-        assert pg.evaluate("E.panels[0].ints.length") == 2
-        assert c.locator('[data-a=itab]').is_visible()
+        c.locator('[data-a=iauto]').click(); box = c.locator("canvas").bounding_box()
+        x = pg.evaluate("E.panels[0]._a.X(14.33)"); pg.mouse.click(box["x"] + x, box["y"] + 120); pg.wait_for_timeout(500)
+        assert pg.is_visible("#askdlg") and "non si integra" in pg.inner_text("#asktxt") and pg.evaluate("E.panels[0].ints.length") == 0
+        pg.click("#askno"); c.locator('[data-a=iauto]').click()
+        # zoom tool on the chromatogram
+        c.locator('[data-a=izoom]').click()
+        pg.mouse.move(box["x"] + pg.evaluate("E.panels[0]._a.X(13)"), box["y"] + 100); pg.mouse.down(); pg.mouse.move(box["x"] + pg.evaluate("E.panels[0]._a.X(16)"), box["y"] + 100, steps=5); pg.mouse.up(); pg.wait_for_timeout(500)
+        z = pg.evaluate("E.panels[0].zoom"); assert z and abs(z[0] - 13) < 0.1 and abs(z[1] - 16) < 0.1, z
+        assert c.locator('[data-a=fit]').is_visible(); c.locator('[data-a=fit]').click(); c.locator('[data-a=izoom]').click()
+        # XIC panel with a chosen window, then auto + manual integration on a chosen file
+        pg.click("#np-xic"); pg.fill("#xic-q", "364.1"); pg.press("#xic-q", "Enter"); pg.wait_for_timeout(300); pg.fill("#xic-lo", "363.6"); pg.fill("#xic-hi", "364.6"); pg.click("#xic-go"); pg.wait_for_timeout(2500)
+        xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')"); xp = pg.locator('.pnl.xic').first
+        assert pg.evaluate(f"E.panels[{xi}].traces[0].w") == 0.5
+        xp.locator('[data-a=iauto]').click(); assert xp.locator('[data-a=intf]').is_visible()
+        xbox = xp.locator("canvas").bounding_box(); xx = pg.evaluate(f"E.panels[{xi}]._a.X(14.33)")
+        xp.locator('[data-a=intf]').select_option("all"); pg.mouse.click(xbox["x"] + xx, xbox["y"] + 120); pg.wait_for_timeout(600)
+        n = pg.evaluate(f"[E.panels[{xi}].ints.length, E.panels[{xi}]._a.sr.length]"); assert n[0] == n[1] and n[0] > 1, n
         pg.screenshot(path=SH + "122_integr.png")
-        c.locator('[data-a=iman]').click()
-    step("integration: auto click + manual drag + table icon", integ)
+        pg.evaluate(f"E.panels[{xi}].ints=[]"); xp.locator('[data-a=intf]').select_option(index=2)
+        pg.mouse.click(xbox["x"] + xx, xbox["y"] + 120); pg.wait_for_timeout(600)
+        assert pg.evaluate(f"E.panels[{xi}].ints.length") == 1
+        xp.locator('[data-a=iauto]').click(); xp.locator('[data-a=iman]').click()
+        pg.mouse.move(xbox["x"] + pg.evaluate(f"E.panels[{xi}]._a.X(5)"), xbox["y"] + 100); pg.mouse.down(); pg.mouse.move(xbox["x"] + pg.evaluate(f"E.panels[{xi}]._a.X(6)"), xbox["y"] + 100, steps=5); pg.mouse.up(); pg.wait_for_timeout(500)
+        assert pg.evaluate(f"E.panels[{xi}].ints.length") == 2 and xp.locator('[data-a=itab]').is_visible()
+        xp.locator('[data-a=iman]').click()
+    step("zoom tool, TIC refuses, XIC window da-a, integration of a chosen file", integ)
     def ms2():
         pg.evaluate("E.files.forEach(f=>f.vis=f.kind==='ms2');renderFileList();redrawAll()"); pg.wait_for_timeout(1500)
         sel = pg.locator('.pnl.chrom [data-o=prec]').first; assert sel.count() == 1

@@ -10,18 +10,24 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
         pg.wait_for_timeout(1000); pg.click("text=Apri i dati"); pg.wait_for_timeout(4000)
-        pg.click("#np-xic"); pg.wait_for_timeout(500)
+        def addion(t, ok=True):
+            pg.locator('.pnl.xic [data-o="addb"]').click() if pg.locator('.pnl.xic').count() else pg.click("#np-xic")
+            pg.fill("#xic-q", t); pg.press("#xic-q", "Enter"); pg.wait_for_timeout(1000)
+            if ok: pg.click("#xic-go"); pg.wait_for_timeout(1200)
+        addion("C14H13F4N3O2S")
         xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')")
         sel = lambda o: f'.pnl.xic [data-o="{o}"]'
         def formula_in_xic():
-            pg.fill(sel("add"), "C14H13F4N3O2S"); pg.press(sel("add"), "Enter"); pg.wait_for_timeout(1500)
-            t = pg.evaluate(f"E.panels[{xi}].traces.map(t=>[t.mz,t.label])"); print("traces:", t)
-            assert t and t[0][0] == 364.1 and "C14H13F4N3O2S" in t[0][1]
-            pg.fill(sel("add"), "163,27"); pg.press(sel("add"), "Enter"); pg.wait_for_timeout(800)
-            assert pg.evaluate(f"E.panels[{xi}].traces[1].mz") == 163.3
-            pg.fill(sel("add"), "C2H6Qq"); pg.press(sel("add"), "Enter"); pg.wait_for_timeout(500)
-            assert "non valida" in pg.inner_text("#asktxt"); pg.click("#askok")
-            pg.evaluate(f"E.panels[{xi}].traces.pop()"); pg.evaluate(f"ctl(E.panels[{xi}]); draw(E.panels[{xi}])") if False else None
+            t = pg.evaluate(f"E.panels[{xi}].traces.map(t=>[t.mz,t.w,t.label])"); print("traces:", t)
+            assert t and abs(t[0][0] - 364.1) < 0.06 and t[0][1] == 1.0 and "C14H13F4N3O2S" in t[0][2] and "363.1-365.1" in t[0][2], t
+            addion("163,27")
+            tr = pg.evaluate(f"E.panels[{xi}].traces[1]"); assert abs(tr["mz"] - 163.3) < 0.06, tr
+            addion("C2H6Qq", ok=False)
+            assert "non valida" in pg.inner_text("#xic-err"); pg.click("#xic-no")
+            # a custom window: da 100 a 100.5
+            pg.locator('.pnl.xic [data-o="addb"]').click(); pg.fill("#xic-lo", "100"); pg.fill("#xic-hi", "100,5"); pg.dispatch_event("#xic-hi", "input"); pg.click("#xic-go"); pg.wait_for_timeout(1200)
+            tr = pg.evaluate(f"E.panels[{xi}].traces[2]"); assert abs(tr["mz"] - 100.25) < 1e-6 and abs(tr["w"] - 0.25) < 1e-6, tr
+            pg.evaluate(f"E.panels[{xi}].traces.pop()"); pg.evaluate(f"E.panels[{xi}].traces.pop()")
         step("formula and 1-decimal input in XIC", formula_in_xic)
         def blank():
             pg.evaluate(f"(()=>{{const p=E.panels[{xi}]; p.traces=p.traces.slice(0,1); p.fk=''}})()"); pg.wait_for_timeout(100)

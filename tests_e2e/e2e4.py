@@ -35,10 +35,9 @@ try:
             a = pg.evaluate("(()=>{const p=E.panels[0],a=p._a;return {n:a.sr.length}})()")
             c = pt(pg, 0, 14.33, ymz=1.45); pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
             pg.locator("#ctx div", has_text="Integra il picco").first.click(); pg.wait_for_timeout(500)
-            k = pg.evaluate("E.panels[0].ints.map(i=>i.key)"); print("integrated:", k, "n series", a["n"])
-            assert len(k) == 1 and k[0] == pg.evaluate("E.panels[0]._a.sr[1].key"), k
-            pg.evaluate("E.panels[0].ints=[]")
-        step("stacked: integrate clicked band", stack_int)
+            assert pg.is_visible("#askdlg") and "non si integra" in pg.inner_text("#asktxt"), "TIC must refuse the integration"
+            pg.click("#askno"); assert pg.evaluate("E.panels[0].ints.length") == 0
+        step("TIC refuses integration (only XIC)", stack_int)
         def logv():
             pg.locator('.pnl.chrom [data-o="mode"]').select_option("ovl"); pg.locator('.pnl.chrom [data-o="log"]').check(); pg.wait_for_timeout(800)
             pg.screenshot(path=SH + "44_log.png"); assert pg.evaluate("E.panels[0]._a.logy === true")
