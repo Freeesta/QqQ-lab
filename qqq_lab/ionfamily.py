@@ -1629,6 +1629,16 @@ def origin_report(samples, mz: float, parent_mz: float, rt0: float | None = None
     rep["timing"]["candidates_s"] = time.time() - t1
     rep["roles"] = annotate_roles(mz, parent_mz, formula_p)
     rep["isotopes"] = isotope_check(w, mz, max(i0, 0), i1, None)
+    # lighter neighbours 1 and 2 Da below X (is X the M+1 / M+2 of another ion?): area ratio X/neighbour and profile correlation
+    rep["neighbors"] = []
+    for kk in (1, 2):
+        if len(w.mz):
+            jn = int(np.argmin(np.abs(w.mz - (mz - kk * 1.003355))))
+            if abs(w.mz[jn] - (mz - kk * 1.003355)) <= 0.5:
+                an = float(w.X[jn, max(i0, 0):i1 + 1].sum())
+                ax = float(Xw[max(i0, 0):i1 + 1].sum())
+                rn = wpearson(Xw[max(i0, 0):i1 + 1], w.X[jn, max(i0, 0):i1 + 1])
+                rep["neighbors"].append({"delta": kk, "mz": float(w.mz[jn]), "area_ratio": ax / an if an > 0 else float("nan"), "pearson": rn})
     # mass coincidence at unit resolution: another strong co-eluting ROI within 1 Da of X
     near = [c for c in cands if 0.4 < abs(c["mz"] - mz) <= 1.0 and c["area_rel"] > 0.05]
     if near:
