@@ -3,10 +3,10 @@
 // Texts for students, in Italian. To add one: a key here and a "?" button where it is needed. Classic script.
 const HELP = {
   "start": ["Caricare i dati", `Trascina qui i file <b>.mzML</b> (o clicca per sceglierli). Puoi caricarne molti insieme: un file per ogni tempo di trattamento, il bianco, gli standard.
-    <br>Il programma indovina dal nome il <b>tempo</b> (es. <i>t15</i> = 15 min) e il <b>tipo</b> (campione, bianco): controllali nella tabella prima di premere <b>Apri i dati</b>.
+    <br>Il tipo di esperimento (Full Scan, MS² Product Ion, MRM) è letto dal contenuto del file. Dal nome il programma indovina il <b>tipo</b> (campione, bianco, standard), il <b>tempo</b> (es. <i>t15</i> = 15 min) e, per gli standard, la <b>concentrazione</b> (es. <i>std_0.5ppm</i>): controllali nella tabella prima di premere <b>Carica dati</b>. Il metodo <b>.dam</b> va nel secondo riquadro (se lo trascini nel primo, ci pensa il programma).
     <br>I file <b>.wiff</b> dello strumento vanno prima convertiti in .mzML con MSConvert (vedi il riquadro qui sotto).`],
   "files": ["Elenco dei file", `Ogni riga è un file aperto, con il suo colore nei grafici. La <b>casella</b> mostra o nasconde la traccia; <b>clic sul nome</b> = file corrente (quello usato da spettro e mappa), <b>doppio clic</b> = rinomina.
-    <br>Sotto il nome: tipo di esperimento (full scan Q1 o EMS, MS2, MRM) e tempo.
+    <br>Sotto il nome: tipo di esperimento (Full Scan, MS², MRM) e tempo.
     <br><b>+</b> carica altri file senza perdere i pannelli; <b>◀</b> nasconde l'elenco per dare più spazio ai grafici.`],
   "toolbar": ["Aggiungere pannelli", `<b>Cromatogramma</b>: TIC (somma di tutti gli ioni) o BPC (ione più intenso) di ogni file.
     <br><b>Spettro</b>: lo spettro di massa in un intervallo di tempo. <b>Mappa RT-m/z</b>: tutti gli ioni nel tempo, come un'immagine.
@@ -29,7 +29,7 @@ const HELP = {
   "pnl-xic": ["Ione estratto (XIC)", `Il cromatogramma di un solo m/z (± la finestra, di solito 1 Da su questo strumento) in tutti i file. Scrivi un <b>m/z</b> o una <b>formula</b> (con l'addotto scelto) e premi + ione.
     <br>Più ioni nello stesso pannello: linea piena per il primo file, tratteggi per gli altri; <b>Separa</b> li divide in pannelli diversi.
     <br><b>Icona dell'integrazione automatica (o clic destro → Integra)</b>: scegli prima il file (traccia cliccata, tutte, o uno specifico) dal menu accanto alle icone; il programma propone i bordi, tu li sposti trascinando le barre. Le aree finiscono nella tabella Integrazioni (per la cinetica in Excel).`],
-  "pnl-mrm": ["Transizioni MRM", `Le tracce precursore > frammento dei file MRM (es. 364.1>194.1 quantificatore, 364.1>152.1 qualificatore). Si integrano come gli XIC: le aree servono per la retta di taratura e la quantificazione, che costruisci tu in Excel.`],
+  "pnl-mrm": ["Transizioni MRM", `Le tracce precursore > frammento dei file MRM (es. 364.1>194.1 quantificatore, 364.1>152.1 qualificatore). Si integrano trascinando sul picco: tutti i file vengono integrati nella stessa finestra. Poi apri <b>Retta di taratura</b> per la tabella delle aree e la retta concentrazione contro area.`],
   "pnl-map": ["Mappa RT-m/z", `Ogni pixel è l'intensità di un m/z (in verticale) a un certo tempo (in orizzontale): i composti sono macchie. Con <b>differenza con</b> un altro file, in rosso ciò che è più intenso nel file mostrato, in blu ciò che è più intenso nell'altro: utile per vedere cosa compare con il trattamento.
     <br><b>Trascina</b>: spettro mediato; <b>clic destro</b>: XIC di quell'm/z. La mappa mostra, non identifica.`],
   "draw-labels": ["Formula e massa sotto le strutture", `Sotto ogni molecola compaiono la formula bruta e la massa esatta all'unità (<b>M</b> se neutra, <b>m/z</b> se ha una carica). Sopra una freccia compare la differenza fra la struttura prima e quella dopo (es. +O Δm +16).

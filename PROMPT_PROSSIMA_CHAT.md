@@ -9,7 +9,9 @@ Sono Federico, dottorando in Chimica e Tecnologie Chimiche (UniTO). Continuiamo 
 
 Se la cartella `QqQ_lab` non è collegata, chiedila con device_request_folder_access.
 
-## Stato (2026-10-06, tarda mattina)
+## Stato (2026-10-06, pomeriggio)
+- **Ultimo lavoro**: schermata Dati rifatta (Carica dati, tipi Full Scan / MS² / MRM letti dal contenuto, Tipo campione/bianco/standard con concentrazione indovinata, smistamento .dam/mzML, tabella metodi) e flusso MRM con retta di taratura (`web/calib.js`, e2e15). Vedi AGENTS.md sez. 10. Da verificare da Federico con file veri: nomi degli standard e finestra di integrazione comune.
+
 - **Git**: ramo `main`, 6 commit, HEAD `c713624`, albero di lavoro pulito, 1 commit avanti a `origin`: Federico deve premere **Push origin** (GitHub Desktop). Il commit lo fa la chat a fine lavoro (AGENTS.md, sezione 2 "Git"). Attenzione: ogni `git status`/`git` dalla VM senza permesso di cancellazione lascia un `.git/index.lock` vuoto: spostarlo in `_cestino/` (successo anche il 2026-10-06, vedi `_cestino/2026-10-06_git-lock/`).
 - **Verifiche**: 25 pytest, e2e3-e2e10 presenti. Ultima esecuzione dichiarata: pytest-sostituto e e2e3-10 senza errori JS nuovi (restano le `api/notebook` ERR_ABORTED dei salvataggi keepalive interrotti dalla chiusura/ricarica, e il 400 voluto di e2e5). Rieseguiti in questa revisione: solo `node --check` su explore/draw/help/tables.js (ok). Prima di dichiarare "funziona" rifare e2e nel container (AGENTS.md sezione 5).
 - **Dati**: TIC di tutti i file in alto, spettro sotto al picco più intenso, MRM sotto, pannelli a tutta larghezza con posti fissi (trascinando un'intestazione gli altri si scambiano), elenco file richiudibile; XIC (anche da formula), MRM, mappa RT-m/z, vista impilata, log, zoom con rettangolo e "Vista intera", cursore sincronizzato, bianco e baseline SNIP, sottrazione di fondo, integrazione con tabella e cinetica, caricamento di altri file a sessione aperta. Frecce scan per scan sul pannello attivo (senza cursore cambiano file). Cromatogramma PDA = `TWC` degli mzML (solo segnale totale).

@@ -9,7 +9,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.wait_for_timeout(1000); pg.click("text=Apri i dati"); pg.wait_for_timeout(4000)
+        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
         def addion(t, ok=True):
             pg.locator('.pnl.xic [data-o="addb"]').click() if pg.locator('.pnl.xic').count() else pg.click("#np-xic")
             pg.fill("#xic-q", t); pg.press("#xic-q", "Enter"); pg.wait_for_timeout(1000)

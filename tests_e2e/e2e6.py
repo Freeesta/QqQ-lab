@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.wait_for_timeout(1000); pg.click("text=Apri i dati"); pg.wait_for_timeout(5000)
+        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); pg.wait_for_timeout(5000)
         pg.screenshot(path=SH + "60_default.png")
         def layout():
             P = pg.evaluate("E.panels.map(p=>({t:p.type,x:p.x,y:p.y,w:p.w,full:p.full,r0:p.r0,k:p.k,cur:p.cur}))"); W = pg.evaluate("Q('#dpanels').clientWidth")

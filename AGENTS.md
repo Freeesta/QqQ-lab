@@ -44,7 +44,7 @@ Radice: `QqQ_lab/QqQ_lab/` (il pacchetto Python è la sottocartella `qqq_lab/`; 
 - `TP_finder/` (cartella accanto a `qqq_lab/`, fuori da questo repository): la ricerca dei prodotti di trasformazione (candidati, punteggi, picchi, cinetica) estratta da QqQ lab perche' serve a Federico per il dottorato, non al laboratorio inquinanti. Non toccarla da qui; QqQ lab non ne dipende. Una copia dei file tolti e' in `../_cestino/tp_finder_estratto/`.
 - `qqq_lab/console.py`: uscita del Terminale (intestazione, spunte, spinner, colori solo su terminale vero, ASCII dove servono); solo libreria standard e Python >= 3.8 perché lo usa anche `scripts/avvia.py`. `serve()` non ristampa l'intestazione se c'è `QQQ_HEADER=1` (lo imposta l'avviatore).
 - `qqq_lab/chem/elements.py`: masse monoisotopiche, `parse_formula` (accetta parentesi), `formula_mz(formula, adduct)` (massa neutra, m/z esatto, `mz1` a 1 decimale, `nominal`; arrotondamento half-up `round_half_up`, non "del banchiere"), addotti (`ADDUCT_SHIFT`). `chem/transformations.py`: candidati dalle reazioni di `config/trasformazioni.csv`.
-- `qqq_lab/project.py`: solo `guess_sample()` (indovina tipo e tempo dal nome file: `t15`, `blank`...).
+- `qqq_lab/project.py`: `guess_sample()` (tipo campione | bianco | standard e tempo dal nome file: `t15`, `blank`, `std_...`) e `guess_conc()` (concentrazione e unita' dal nome: `std_0.5ppm`, `STD10mgL`, `std_5`).
 - `qqq_lab/convert.py`: wiff -> mzML con msconvert (non testato: non c'è msconvert sul Mac di sviluppo).
 - `qqq_lab/demo.py`: dati sintetici (mzML) usati solo dai test.
 - (la cartella `qqq_lab/config/` non c'e' piu': era della pipeline TP).
@@ -99,7 +99,7 @@ Stato lato front end: variabile globale `E` (file, pannelli), `S` (stato pagina)
 - Presenza del browser: la pagina tiene aperta la connessione `/api/live` (event-stream); quando cade (scheda o browser chiusi) il server con `--exit-on-close` si spegne in circa 10 s. Ping/bye restano come rinforzo. Il lanciatore `.command` chiude la finestra del Terminale con osascript (log in `.chiusura.log`; non verificato su Mac vero).
 - Pannelli cromatogramma/XIC/MRM: strumenti esclusivi `p.imode` = zoom (lente) | auto | man. Si integra SOLO da XIC e MRM: TIC/BPC/PDA rifiutano (`guardInt`) e propongono la finestra XIC. Selettore del file da integrare (`intf`); pulsante "Pulisci integrazioni".
 - XIC: ogni traccia ha la sua finestra `{mz (centro), w (semilarghezza)}`; l'intestazione mostra solo "m/z da ... a ..." (modificabile). Il dialogo `#xicdlg` (m/z o formula + addotto, finestra da/a) e' il modo di crearli; la semilarghezza e' ricordata in `E.xw`.
-- File: la lista a sinistra raggruppa per tipo di esperimento (Full scan Q1/EMS, MS2, MRM); ogni grafico ha un pulsante "File n/N" con l'elenco rapido (stesso interruttore `vis` della lista). Non esiste piu' `fk` per pannello, ne' "normalizza", ne' "picchi".
+- File: la lista a sinistra raggruppa per tipo di esperimento (Full Scan, MS² (Product Ion), MRM; Q1/EMS non esiste piu' nell'interfaccia); ogni grafico ha un pulsante "File n/N" con l'elenco rapido (stesso interruttore `vis` della lista). Non esiste piu' `fk` per pannello, ne' "normalizza", ne' "picchi".
 - Il lab non usa piu' la pipeline dei prodotti di trasformazione: vive in `../TP_finder/`.
 
 ## 9. Versione nel browser (GitHub Pages)
@@ -114,3 +114,9 @@ Stato lato front end: variabile globale `E` (file, pannelli), `S` (stato pagina)
 - Offline: `web/sw.js` (messo nella radice del sito dalla build) tiene in cache l'app (rete prima) e i file pesanti Pyodide/Ketcher (cache prima). La build scrive nel nome della cache l'hash dei file, cosi' un nuovo deploy sostituisce la vecchia versione.
 - Browser: provato solo con Chromium (gli altri non sono installati nel container); la sintassi JS e' ES2020 (verificata con esbuild), Pyodide richiede un browser recente. Interfaccia pensata per mouse: nessun gestore touch.
 - Ridimensionamento: `tests_e2e/e2e14.py` prova 360, 768, 1024, 1500, 2560 px, ridimensionamento dal vivo, lista file chiusa e schermo 2x.
+
+## 10. Schermata Dati e flusso MRM (6 ottobre 2026)
+- Schermata di caricamento (`index.html`, sezione `#start`, font +2 pt): riquadro 1 (mzML/wiff, accetta anche .dam) e riquadro 2 (.dam, accetta anche mzML): il file va comunque nel riquadro giusto (smistato per estensione, con una nota "l'ho messo nel riquadro N"). Tabella file: File, Esperimento (letto dal CONTENUTO: livello degli scan o cromatogrammi SRM; mai dal nome, il nome da' solo un avviso), Tipo (campione/bianco/standard), Tempo (solo campioni), Conc. (solo standard; unita' scelta nell'intestazione, i valori si convertono), Dimensione. Il pulsante unico "Carica dati" e' attivo solo se almeno un file scelto e' apribile (`usable`).
+- Tabella dei metodi .dam: stesse colonne della tabella file; "Contenuto" e' una riga fatta da `_method_summary` (server.py) dai parametri letti nel .dam.
+- Standard: `Item.conc` / `Item.cunit` (info() e taccuino), `E.files[k].conc`.
+- Flusso MRM: `defaultLayout` apre il pannello MRM con strumento di integrazione manuale e `intf="all"` (un trascinamento integra tutti i file e le due transizioni nella stessa finestra; in un pannello MRM un'integrazione per traccia: la nuova sostituisce la vecchia). Striscia `#calbar` e bottone "Retta di taratura" aprono `web/calib.js` (`openCalib`): tabella aree quantificatore/qualificatore, rapporto Qual/Quant, retta pesata (nessuno, 1/x, 1/x²), R², LOD/LOQ approssimati, campioni sulla retta, esportazione CSV. Test: `tests_e2e/e2e15.py`.

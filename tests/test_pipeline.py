@@ -3,7 +3,7 @@ import pytest
 
 from qqq_lab.chem import elements as E
 from qqq_lab.demo import make_demo
-from qqq_lab.project import guess_sample
+from qqq_lab.project import guess_conc, guess_sample
 
 
 def test_formula_and_mass():
@@ -17,7 +17,10 @@ def test_guess_sample():
     assert guess_sample("run_blank_01.mzML")[2] == "blank"
     assert guess_sample("CBZ_t30.mzML")[1] == 30
     assert guess_sample("CBZ_2h.mzML")[1] == 120
-    assert guess_sample("CBZ_dark.mzML")[2] == "control"
+    assert guess_sample("CBZ_dark.mzML")[2] == "sample"          # only sample | blank | standard exist
+    assert guess_sample("Std_0.5ppm.mzML")[2] == "standard" and guess_sample("B_MRM-t15.mzML")[2] == "sample"
+    assert guess_conc("Std_0.5ppm.mzML") == (0.5, "ppm") and guess_conc("cal_2p5_ugL.mzML") == (2.5, "ugl")
+    assert guess_conc("Std_5.mzML") == (5.0, None) and guess_conc("B_MRM-t15.mzML") is None
 
 
 @pytest.fixture(scope="module")
@@ -342,7 +345,7 @@ def test_experiment_type_is_read_from_the_file_and_ms2_can_be_filtered_by_precur
     assert sniff(tmp_path / "enhanced_mrm_like_name.mzML")["kind"] == "full"
     assert sniff(tmp_path / "x.mzML")["kind"] == "ms2"
     it = Session([{"file": "x.mzML"}], tmp_path).items[0]
-    assert it.info()["precursors"] == [229.1, 305.0] and it.info()["mode"] is None
+    assert it.info()["precursors"] == [229.1, 305.0]
     assert it.total("tic", 2)[1].tolist() == [10.0, 3.0, 20.0]
     rt, y = it.total("tic", 2, None, None, 229.1)
     assert rt.tolist() == [1.0, 1.2] and y.tolist() == [10.0, 20.0]

@@ -16,7 +16,7 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
         pg.wait_for_timeout(1000)
-        pg.click("text=Apri i dati"); pg.wait_for_timeout(4000)
+        pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
         pg.screenshot(path=SH + "10_opened.png")
         # find the TIC apex of the first full-scan file
         info = pg.evaluate("""()=>{const p=E.panels[0];const s=p._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});return {rt:s.x[m],n:p._a.sr.length}}""")

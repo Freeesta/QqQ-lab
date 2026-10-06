@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.wait_for_timeout(1000); pg.click("text=Apri i dati"); pg.wait_for_timeout(4000)
+        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
         pg.screenshot(path=SH + "40_start.png")
         # --- hover tooltip on the chromatogram
         def hover_chrom():

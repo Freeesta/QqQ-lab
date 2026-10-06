@@ -12,7 +12,7 @@ try:
         pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(1000)
         pg.set_input_files("#pickdam", str(DAM)); pg.wait_for_timeout(800)
         assert DAM.name in pg.inner_text("#mlist"), "the .dam is listed on the start screen"
-        pg.click("text=Apri i dati"); pg.wait_for_timeout(4000)
+        pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
         def pda():
             pg.locator('.pnl.chrom [data-o="kind"]').first.select_option("pda"); pg.wait_for_timeout(2500)
             n = pg.evaluate("E.panels[0]._a.sr.length"); assert n >= 4, n          # one trace per file (MRM files included)

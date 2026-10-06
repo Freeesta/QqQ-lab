@@ -9,8 +9,8 @@ const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", 
 const fmtFormula = f => !f ? "" : EH(f).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>");
 const fmtAdduct = a => !a ? "" : fmtFormula(a).replace(/([+-]+)$/, "<sup>$1</sup>");
 window.fmtFormula = fmtFormula; window.fmtAdduct = fmtAdduct;
-const KIND = { full: "Full scan (Q1)", ms2: "MS2 (ioni prodotto)", mrm: "MRM", empty: "vuoto" };
-const kindOf = f => f.kind === "full" && f.mode === "ems" ? "Full scan (EMS)" : f.kind === "ms2" ? "MS2" : KIND[f.kind] || f.kind;
+const KIND = { full: "Full Scan", ms2: "MS\u00b2 (Product Ion)", mrm: "MRM", empty: "vuoto" };
+const kindOf = f => KIND[f.kind] || f.kind;
 const TOL0 = 1.0;                                   // strumento datato: finestra XIC di +-1 Da
 
 // ------------------------------------------------------------------ schermata di caricamento
@@ -70,14 +70,14 @@ function uiSave(now = false) {
   clearTimeout(uiTimer);
   const run = () => {
     if (!E.files.length) return;
-    NB.session = E.files.map(f => ({ file: f.file, label: f.label, time: f.time, type: f.type }));
+    NB.session = E.files.map(f => ({ file: f.file, label: f.label, time: f.time, type: f.type, conc: f.conc ?? null, cunit: f.cunit ?? null }));
     NB.ui = {
       cur: E.cur, browse: E.browse, fold: E.fold, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis })),
       panels: E.panels.map(p => ({
         type: p.type, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, kind: p.kind, smooth: p.smooth, tol: p.tol,
         traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label })),
         k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
-        link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1,
+        link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, imode: p.imode || null, intf: p.intf || "",
         iso: p.iso || null, sim: p.sim || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
       }))
     };
@@ -134,7 +134,7 @@ function defaultLayout() {
     const sp = addPanel("spec", { link: c.id, k: f0.k, level: f0.lv, x: 0, y: 340, w, h: 310, full: true });
     y = 660; apexSpectrum(c, sp);
   }
-  if (mrm) addPanel("mrm", { x: 0, y, w, h: 310, full: true });
+  if (mrm) addPanel("mrm", { x: 0, y, w, h: scan ? 310 : 420, full: true, imode: "man", intf: "all" });     // drag over a peak: every file is integrated in the same window
 }
 // the spectrum starts at the retention time with the highest intensity (of all the visible full-scan/MS2 files)
 async function apexSpectrum(c, sp) {
@@ -183,7 +183,7 @@ function paintFiles() {
   let n = 0;
   E.files.forEach(f => {
     if (f.type === "blank") f.color = "#8a8a8a";
-    else if (f.type === "control") f.color = "#8c564b";
+    else if (f.type === "standard") f.color = PAL[(n++ + 3) % PAL.length];
     else f.color = PAL[n++ % PAL.length];
   });
 }
@@ -193,7 +193,7 @@ function renderFileList() {
   E.files.forEach(f => { const g = kindOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
   const row = f => `<div class="fl ${f.k === E.cur ? "cur" : ""}"><input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="Mostra o nascondi">
     <i style="background:${f.color}"></i><div><b class="nm" data-k="${f.k}" title="Clic per scegliere il file corrente, doppio clic per rinominare">${EH(f.label)}</b>
-    <small>${f.type === "sample" ? (f.time != null ? f.time + " min" : "") : (f.type === "blank" ? "bianco" : "controllo")}</small>
+    <small>${f.type === "sample" ? (f.time != null ? f.time + " min" : "") : (f.type === "blank" ? "bianco" : "standard" + (f.conc != null ? " " + f.conc + " " + (f.cunit || "") : ""))}</small>
 </div></div>`;
   Q("#flst").innerHTML = groups.map(G => `<div class="fgh"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="Mostra o nascondi tutto il gruppo"><span>${EH(G.g)}</span><em>${G.fs.length}</em></div>` + G.fs.map(row).join("")).join("");
   Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => { E.files.filter(f => kindOf(f) === x.dataset.g).forEach(f => f.vis = x.checked); renderFileList(); redrawAll(); uiSave(); });
@@ -248,7 +248,7 @@ document.addEventListener("keydown", e => {
 document.addEventListener("mousedown", e => { if (E.active && e.target.closest("#dpanels") && !e.target.closest(".pnl")) setActive(null); });
 function toolbar() {
   const scan = E.files.some(f => f.kind !== "mrm"), mrm = E.files.some(f => f.kind === "mrm");
-  Q("#np-spec").hidden = !scan; Q("#np-map").hidden = !scan; Q("#np-xic").hidden = !scan; Q("#np-mrm").hidden = !mrm;
+  Q("#np-spec").hidden = !scan; Q("#np-map").hidden = !scan; Q("#np-xic").hidden = !scan; Q("#np-mrm").hidden = !mrm; Q("#np-cal").hidden = !mrm; Q("#calbar").hidden = !mrm; if (mrm && window.calbar) calbar();
 }
 
 // ------------------------------------------------------------------ piccole finestre e menu
@@ -407,6 +407,7 @@ function addPanel(type, o, after) {
   if (bA) {                                             // tools (one at a time): zoom (drag an interval), automatic integration (click a peak), manual integration (drag an interval)
     const btns = { zoom: bZ, auto: bA, man: bM };
     const setMode = m => { p.imode = p.imode === m ? null : m; Object.entries(btns).forEach(([k, b]) => b.classList.toggle("on", p.imode === k)); p.cv.style.cursor = p.imode === "zoom" ? "zoom-in" : p.imode ? "cell" : "crosshair"; refreshIntf(p); };
+    if (p.imode && btns[p.imode]) { btns[p.imode].classList.add("on"); p.cv.style.cursor = "cell"; }      // MRM panels open with the manual integration tool ready
     bZ.onclick = () => setMode("zoom"); bA.onclick = () => setMode("auto"); bM.onclick = () => setMode("man"); bT.onclick = showInts;
     el.querySelector('[data-a="iclr"]').onclick = () => { p.ints = []; draw(p); };
     el.querySelector('[data-a="intf"]').onchange = e => { p.intf = e.target.value; };
@@ -534,7 +535,7 @@ function ctl(p) {
     const xr = xt ? `${xsel}<label class="muted" title="Intervallo di m/z estratto (XIC). Scrivi i due estremi e premi Invio"><i>m/z</i> da <input data-o="xlo" class="mzf" inputmode="decimal" autocomplete="off" value="${(xt.mz - xw1).toFixed(1)}"> a <input data-o="xhi" class="mzf" inputmode="decimal" autocomplete="off" value="${(xt.mz + xw1).toFixed(1)}"></label>` : "";
     c.innerHTML = `${xr}<button data-o="addb" title="Aggiunge un altro XIC a questo pannello: scegli la finestra di m/z">+ XIC</button>${fsel}${chk("smooth", "smoothing")}${view}${corr}${p.traces.length > 1 ? '<button data-o="split" title="Un pannello per ogni ione">Separa</button>' : ""}`;
   }
-  if (p.type === "mrm") c.innerHTML = `<select data-o="tr" title="Transizione"><option value="">tutte le transizioni</option>${p._trs.map(t => `<option value="${t.key}" ${p.tr === t.key ? "selected" : ""}>${t.key} ${EH(t.name)}</option>`).join("")}</select>${fsel}${chk("smooth", "smoothing")}${view}${corr}`;
+  if (p.type === "mrm") c.innerHTML = `<select data-o="tr" title="Transizione"><option value="">tutte le transizioni</option>${p._trs.map(t => `<option value="${t.key}" ${p.tr === t.key ? "selected" : ""}>${t.key} ${EH(t.name)}</option>`).join("")}</select>${fsel}${chk("smooth", "smoothing")}${view}${corr}<button data-o="cal" title="Tabella delle aree dei file MRM e retta di taratura (concentrazione contro area)">Retta di taratura</button>`;
   if (p.type === "map") {
     const sf = E.files.filter(x => x.kind !== "mrm"), opt = (v, cur, lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
     c.innerHTML = `<select data-o="k" title="File da mostrare">${sf.map(x => opt(x.k, p.k, x.label)).join("")}</select>` +
@@ -561,6 +562,7 @@ function ctl(p) {
       ctl(p); draw(p);
     };
     else if (k === "split") x.onclick = () => splitPanel(p);
+    else if (k === "cal") x.onclick = () => openCalib();
         else x.onchange = () => {
       p[k] = (k === "mz0" || k === "mz1") ? num1(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
       if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" ? "w" : +x.value;
@@ -952,9 +954,10 @@ function guardInt(p) {
   return false;
 }
 function addInt(p, s, a, b) {
-  if (p.ints.some(i => i.key === s.key && Math.abs(i.a - Math.min(a, b)) < 1e-6 && Math.abs(i.b - Math.max(a, b)) < 1e-6)) return;     // same peak clicked twice
+  if (p.type === "mrm") p.ints = p.ints.filter(i => i.key !== s.key);       // calibration: one peak per transition and file, a new window replaces the old one
+  else if (p.ints.some(i => i.key === s.key && Math.abs(i.a - Math.min(a, b)) < 1e-6 && Math.abs(i.b - Math.max(a, b)) < 1e-6)) return;     // same peak clicked twice
   const f = E.files[s.k];
-  p.ints.push({ id: E.seq++, key: s.key, a: Math.min(a, b), b: Math.max(a, b), name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title });
+  p.ints.push({ id: E.seq++, k: s.k, key: s.key, a: Math.min(a, b), b: Math.max(a, b), name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title });
   draw(p);
 }
 function intMenuItems(p, x, near, py) {
@@ -1323,7 +1326,8 @@ Q("#np-chrom").onclick = () => addPanel("chrom", {});
 Q("#np-spec").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(E.files)[0]; addPanel("spec", { k: f?.k ?? 0, level: f?.lv || 1 }); };
 Q("#np-xic").onclick = () => openXic(null);
 Q("#np-map").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(E.files)[0]; addPanel("map", { k: f?.k ?? 0 }); };
-Q("#np-mrm").onclick = () => addPanel("mrm", {});
+Q("#np-mrm").onclick = () => addPanel("mrm", { imode: "man", intf: "all" });
+Q("#np-cal").onclick = () => openCalib();
 Q("#np-tile").onclick = tile;
 Q("#np-merge").onclick = mergeXics;
 Q("#addf").onclick = async () => { S.adding = true; try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };

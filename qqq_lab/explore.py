@@ -15,9 +15,8 @@ from .reader.mzml import Run
 
 
 class Item:
-    def __init__(self, file: str, label: str | None, time, typ: str, path: Path, mode: str | None = None):
-        self.file, self.time, self.type, self.path = file, time, typ, path
-        self.mode = mode if mode in ("q1", "ems") else None        # full scan flavour; the mzML does not say it (chosen by the user or hinted by the name)
+    def __init__(self, file: str, label: str | None, time, typ: str, path: Path, conc: float | None = None, cunit: str | None = None):
+        self.file, self.time, self.type, self.path, self.conc, self.cunit = file, time, typ, path, conc, cunit
         self.label = label or Path(file).stem
         self.run = Run(to_mzml(path))
         self._bpc: dict = {}
@@ -28,7 +27,7 @@ class Item:
         ms2 = [s for s in r.scans if s.level >= 2]
         t1 = r.table(1) if ms1 else None
         pol = sorted({s.polarity for s in r.scans if s.polarity})
-        out = {"file": self.file, "label": self.label, "time": self.time, "type": self.type,
+        out = {"file": self.file, "label": self.label, "time": self.time, "type": self.type, "conc": self.conc, "cunit": self.cunit,
                 "scans": len(r.scans), "ms1": len(ms1), "ms2": len(ms2),
                 "rt_min": float(min((s.rt for s in r.scans), default=0.0)),
                 "rt_max": float(max((s.rt for s in r.scans), default=0.0)),
@@ -36,7 +35,7 @@ class Item:
                 "mz_max": float(t1.mz[-1]) if t1 is not None and len(t1.mz) else None,
                 "polarity": "positive" if pol == [1] else "negative" if pol == [-1] else "mixed" if pol else "unknown",
                 "precursors": sorted({round(s.precursor, 1) for s in ms2 if s.precursor}),
-                "chromatograms": r.n_chromatograms, "kind": self.kind(), "mode": (self.mode or "q1") if self.kind() == "full" else None,
+                "chromatograms": r.n_chromatograms, "kind": self.kind(),
                 "srm": sum(1 for c in r.chromatograms() if c["kind"] == "srm"), "pda": self.has_pda()}
         if not r.scans:                                   # MRM file: no scans, take times and polarity from the chromatograms
             rng = self._srm_rt_range()
@@ -249,7 +248,7 @@ class Session:
             label, t, typ = guess_sample(f.name)
             self.items.append(Item(s["file"], s.get("label") or label,
                                    s["time"] if s.get("time") is not None else t,
-                                   s.get("type") or typ, f if f.is_absolute() else root / f, s.get("mode")))
+                                   s.get("type") or typ, f if f.is_absolute() else root / f, s.get("conc"), s.get("cunit")))
 
     def info(self) -> list[dict]:
         return [it.info() for it in self.items]

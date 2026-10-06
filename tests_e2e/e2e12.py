@@ -12,22 +12,21 @@ with sync_playwright() as p:
     pg.set_input_files("#pick", [mz(f) for f in F]); pg.wait_for_timeout(2500)
     pg.screenshot(path=SH + "120_start.png")
     def column():
-        rows = pg.evaluate("ST.files.map(f=>[f.name,f.kind,f.mode])")
-        d = {n: (k, m) for n, k, m in rows}
-        assert d["B_MRM-t0.mzML"][0] == "mrm" and d["B_MS2-t15.mzML"][0] == "ms2" and d["B_FullMass-t0.mzML"] == ("full", "q1"), d
-        assert "Esperimento" in pg.inner_text("#flist") and "MS2" in pg.inner_text("#flist") and "MRM" in pg.inner_text("#flist")
+        rows = pg.evaluate("ST.files.map(f=>[f.name,f.kind])")
+        d = {n: (k,) for n, k in rows}
+        assert d["B_MRM-t0.mzML"][0] == "mrm" and d["B_MS2-t15.mzML"][0] == "ms2" and d["B_FullMass-t0.mzML"] == ("full",), d
+        assert "Esperimento" in pg.inner_text("#flist") and "MS\u00b2 (Product Ion)" in pg.inner_text("#flist") and "MRM" in pg.inner_text("#flist") and "Full Scan" in pg.inner_text("#flist") and "EMS" not in pg.inner_text("#flist")
     step("start screen detects the experiment from the content", column)
-    pg.locator('#flist select[data-k=mode]').first.select_option("ems")
-    pg.click("text=Apri i dati"); pg.wait_for_timeout(5000)
+    pg.click("text=Carica dati"); pg.wait_for_timeout(5000)
     pg.screenshot(path=SH + "121_data.png")
     def side():
         t = pg.inner_text("#flst"); assert "scan MS1" not in t and "RT 0.5" not in t and "Doppio clic" not in pg.inner_text("#dfiles"), t
-        assert "FULL SCAN (EMS)" in t.upper() and "MS2" in t and "MRM" in t, t
+        assert "FULL SCAN" in t.upper() and "MS\u00b2" in t and "MRM" in t and "EMS" not in t, t
         assert pg.locator("#flst .fgh").count() >= 3 and pg.locator("#flst .tag").count() == 0 and pg.locator('#dfiles .hq').count() == 0
         assert pg.locator("#np-export, #np-ints, #kindinfo").count() == 0
         assert pg.locator("#credits").count() == 0 and pg.locator('.pnl.chrom [data-o=norm]').count() == 0
         fw = pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').offsetWidth"); assert fw < 60, fw
-    step("sidebar slim, EMS chosen at start, no Esporta/Integrazioni/Rilevato", side)
+    step("sidebar slim, no EMS, no Esporta/Integrazioni/Rilevato", side)
     def integ():
         c = pg.locator('.pnl.chrom').first
         c.locator('[data-a=iauto]').click(); box = c.locator("canvas").bounding_box()

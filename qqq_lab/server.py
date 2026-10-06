@@ -19,13 +19,28 @@ import numpy as np
 from .api import dispatch
 from .explore import Session, sniff
 from .reader.methodinfo import check_against, read_methods
-from .project import guess_sample
+from .project import guess_conc, guess_sample
 
 
 UPLOAD_SUFFIXES = (".mzml", ".wiff", ".scan", ".dam")
 # "close the browser = close the program" (only with --exit-on-close): every open page pings the server; when no page is left
 # (after a short grace period that survives a reload) or none ever connected, the server stops
 EXIT_GRACE, EXIT_FIRST, EXIT_STALE = 2.5, 120.0, 150.0
+
+
+def _method_summary(m: dict | None) -> str:
+    """One line for the list of methods: what the .dam says it acquires."""
+    if not m or m.get("error"):
+        return "non leggibile" if m else ""
+    ex = m.get("experiments") or []
+    if not ex:
+        return ""
+    if all(e["kind"] == "mrm" for e in ex):
+        n = sum(len(e["transitions"]) for e in ex)
+        return f"MRM, {n} transizion{'e' if n == 1 else 'i'}"
+    rng = [e["range"] for e in ex if e.get("range")]
+    txt = "scansione" if len(ex) == 1 else f"{len(ex)} scansioni"
+    return txt + (f", m/z {rng[0][0]:g}-{rng[0][1]:g}" if rng and len(ex) == 1 else "")
 
 
 class App:
@@ -96,14 +111,15 @@ class App:
         for p in sorted(self.workdir.iterdir()):
             if p.suffix.lower() in (".mzml", ".wiff") and p.is_file():
                 label, t, typ = guess_sample(p.name)
-                out.append({"name": p.name, "size": p.stat().st_size, "time": t, "type": typ, **self._sniff(p),
+                c = guess_conc(p.name) if typ == "standard" else None
+                out.append({"name": p.name, "size": p.stat().st_size, "time": t, "type": typ, "conc": c[0] if c else None, "cunit": c[1] if c else None, **self._sniff(p),
                             "scan": (p.parent / (p.name + ".scan")).exists() if p.suffix.lower() == ".wiff" else None})
         return out
 
     def _sniff(self, p: Path) -> dict:
-        """Experiment type read from the file content (cached by path and modification time); the name only hints the Q1/EMS flavour."""
+        """Experiment type read from the file content (cached by path and modification time); the name only gives a hint."""
         if p.suffix.lower() != ".mzml":
-            return {"kind": None, "mode": None, "hint": None}
+            return {"kind": None, "hint": None}
         key = (str(p), p.stat().st_mtime)
         cache = self.__dict__.setdefault("_sniff_cache", {})
         if key not in cache:
@@ -112,23 +128,22 @@ class App:
             except Exception:  # noqa: BLE001 -- an unreadable file is reported when it is opened
                 r = {"kind": None}
             n = p.stem.lower()
-            r["mode"] = "ems" if r.get("kind") == "full" and re.search(r"ems|enhanc", n) else "q1" if r.get("kind") == "full" else None
             r["hint"] = next((h for h, rx in (("mrm", r"mrm|srm"), ("ms2", r"ms2|msms|ms-ms|product|epi"), ("full", r"full|q1|ems|scan")) if re.search(rx, n)), None)
             cache[key] = r
         return cache[key]
 
     def methods(self) -> list[dict]:
-        """Acquisition methods (.dam) uploaded in the work folder, oldest first."""
+        """Acquisition methods (.dam) uploaded in the work folder, oldest first (name, size, one-line content)."""
         if not self.workdir:
             return []
         ps = sorted((p for p in self.workdir.iterdir() if p.suffix.lower() == ".dam" and p.is_file()), key=lambda p: p.stat().st_mtime)
-        return [{"name": p.name, "size": p.stat().st_size} for p in ps]
+        info = {m["name"]: m for m in self.lab_methods(ps)}
+        return [{"name": p.name, "size": p.stat().st_size, "info": _method_summary(info.get(p.name))} for p in ps]
 
-    def lab_methods(self) -> list[dict]:
+    def lab_methods(self, paths=None) -> list[dict]:
         """The parameters read from every uploaded .dam: [{name, source, compound, lc, file}]. Nothing is assumed when none is loaded."""
         out = []
-        for m in self.methods():
-            p = self.workdir / m["name"]
+        for p in (paths if paths is not None else [self.workdir / m["name"] for m in self.methods()]):
             key = (str(p), p.stat().st_mtime)
             cache = self.__dict__.setdefault("_dam_cache", {})
             if key not in cache:
@@ -213,8 +228,9 @@ class App:
             if not (self.workdir / n).exists():
                 raise ValueError(f"file not found: {n}")
             t = s_.get("time")
-            samples.append({"file": n, "label": s_.get("label"), "type": s_.get("type", "sample"), "mode": s_.get("mode"),
-                            "time": None if t in (None, "") else float(t)})
+            c = s_.get("conc")
+            samples.append({"file": n, "label": s_.get("label"), "type": s_.get("type", "sample"),
+                            "time": None if t in (None, "") else float(t), "conc": None if c in (None, "") else float(c), "cunit": s_.get("cunit")})
         if not samples:
             raise ValueError("add at least one file")
         self.session = Session(samples, self.workdir)

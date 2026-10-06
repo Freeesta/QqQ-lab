@@ -26,7 +26,7 @@ Come si pubblica: vedi `AGENTS.md`, sezione "Versione nel browser".
 - **Da terminale**: `pip install -e .` una volta, poi `python -m qqq_lab app` (opzioni `--workdir CARTELLA`, `--port`).
 
 Si apre il browser: trascina i file `.mzML` (o "clicca per sceglierli"), controlla tempi e tipi, premi
-**Apri i dati**. I file sono copiati in `~/QqQ_lab_lavoro/sessione_...`: gli originali non vengono
+**Carica dati**. I file sono copiati in `~/QqQ_lab_lavoro/sessione_...`: gli originali non vengono
 toccati. Il taccuino (pannelli, XIC, integrazioni, annotazioni, disegni) si salva da solo
 (`taccuino.json`) e si ripristina alla riapertura.
 

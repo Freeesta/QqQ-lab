@@ -27,7 +27,11 @@ canvas{display:block;width:100%}
 .hq{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;margin:0 4px;border-radius:50%;border:1px solid var(--accent);color:var(--accent);background:var(--panel);font-size:11px;font-weight:700;line-height:1;cursor:help;vertical-align:middle;flex:none}.hq:hover{background:var(--accent);color:#fff}
 #helppop{position:fixed;z-index:10001;max-width:min(420px,92vw);background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;box-shadow:0 8px 26px rgba(20,30,50,.22);padding:8px 12px;font-size:12.5px;line-height:1.5;color:var(--ink)}#helppop .hp-t{display:flex;align-items:center;margin-bottom:4px}#helppop .hp-t b{flex:1;font-size:13px}
 [hidden]{display:none!important}
-#start{max-width:920px;margin:16px auto;padding:0 14px}#flist{overflow-x:auto}#start .card{min-width:0}
+#start{max-width:920px;margin:16px auto;padding:0 14px;font-size:calc(13px + 2pt)}#flist,#mlist{overflow-x:auto}#start .card{min-width:0}#start .card h3{font-size:inherit}#start #drop b,#start #dropdam b{font-size:inherit}
+#start table input,#start table select{font-size:inherit}#start th select{font-weight:400}#start .note{margin-top:6px;color:var(--accent)}
+#calbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;border-color:var(--accent)}#calbar[hidden]{display:none}#calbar .st{display:flex;gap:8px;align-items:center}#calbar .st b{display:inline-flex;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;align-items:center;justify-content:center;font-size:12px;flex:none}
+.cal-t td input{width:84px}.cal-t .off td{opacity:.5}.cal-t .warn{color:var(--bad)}#cal-cv{height:300px}
+#opbtn,#cancadd{display:block;width:100%;font-size:inherit;padding:12px 18px}#cancadd{margin-top:8px}
 .card.req{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle;text-transform:uppercase;letter-spacing:.03em}
 .tag.opt{background:var(--sel);color:var(--muted)}
@@ -90,9 +94,10 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 <div id="err"></div>
 <section id="v-data" hidden>
  <aside id="dfiles"><div class="card"><div class="bar"><b>File</b><span class="sp"></span><button id="addf" title="Carica altri file">+</button><button id="ffold" title="Nascondi l'elenco dei file: più spazio ai grafici">&#9664;</button></div><div id="flst"></div></div></aside>
- <div>  <div class="bar"><button class="hq" data-help="toolbar" title="Che cos'è?">?</button><button id="np-chrom">+ Cromatogramma</button><button id="np-spec">+ Spettro</button><button id="np-map" title="Mappa di tutti gli ioni nel tempo: ogni pixel è un m/z a un certo RT">+ Mappa RT-m/z</button><button id="np-xic" title="Estrai il cromatogramma di uno ione (XIC): scegli tu la finestra di m/z">+ XIC</button><button id="np-calc" title="Scrivi una formula bruta e ottieni l'm/z dello ione (anche arrotondato come lo vede lo strumento)">Calcolatrice m/z</button><button id="np-mrm">+ Transizioni MRM</button><button id="np-merge" title="Porta tutti gli XIC in un solo pannello">Unisci gli XIC</button><button id="np-tile" title="Mette i pannelli uno sotto l'altro, larghi come la pagina">Ordina</button></div>
+ <div>  <div class="bar"><button class="hq" data-help="toolbar" title="Che cos'è?">?</button><button id="np-chrom">+ Cromatogramma</button><button id="np-spec">+ Spettro</button><button id="np-map" title="Mappa di tutti gli ioni nel tempo: ogni pixel è un m/z a un certo RT">+ Mappa RT-m/z</button><button id="np-xic" title="Estrai il cromatogramma di uno ione (XIC): scegli tu la finestra di m/z">+ XIC</button><button id="np-calc" title="Scrivi una formula bruta e ottieni l'm/z dello ione (anche arrotondato come lo vede lo strumento)">Calcolatrice m/z</button><button id="np-mrm">+ Transizioni MRM</button><button id="np-cal" hidden title="Tabella delle aree dei file MRM e retta di taratura">Retta di taratura</button><button id="np-merge" title="Porta tutti gli XIC in un solo pannello">Unisci gli XIC</button><button id="np-tile" title="Mette i pannelli uno sotto l'altro, larghi come la pagina">Ordina</button></div>
   <div class="bar"><button id="funfold" hidden title="Mostra l'elenco dei file">&#9654; File</button><button class="hq" data-help="nav" title="Che cos'è?">?</button><span id="navfile"><button id="fprev" title="File precedente (freccia sinistra)">&#9664;</button> <select id="fsel"></select> <button id="fnext" title="File successivo (freccia destra)">&#9654;</button></span><label title="Mostra solo il file corrente: gli XIC restano, cambia il campione"><input type="checkbox" id="fbrowse"> un file alla volta</label>
    <span class="sp"></span><button id="np-method">Metodo</button><button class="hq" data-help="tools" title="Che cos'è?">?</button></div>
+  <div id="calbar" class="card" hidden></div>
   <div id="dpanels"></div></div>
 </section>
 <section id="v-theory" hidden><iframe id="tframe" title="Teoria"></iframe></section>
@@ -151,7 +156,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 <dialog id="askdlg"><div id="asktxt"></div><input id="askin"><div class="row"><button id="askno">Annulla</button><button class="go" id="askok">OK</button></div></dialog>
 <div id="ctx" hidden></div>
 <section id="start" hidden>
- <div class="card req"><h3>1. Carica i file mzML <button class="hq" data-help="start" title="Che cos'è?">?</button></h3>
+ <div class="card req"><h3>1. Carica i file dei dati (.mzML) <button class="hq" data-help="start" title="Che cos'è?">?</button></h3>
   <div id="drop"><b>Trascina qui i file .mzML</b><br>oppure <u>clicca per sceglierli dal computer</u></div>
   <details id="wiffhelp" class="sm"><summary>Hai i file .wiff dello strumento? Convertili prima in .mzML</summary>
    <ol class="muted">
@@ -165,10 +170,11 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
   <div id="dropdam"><b>Trascina qui il metodo .dam</b><br>oppure <u>clicca per sceglierlo dal computer</u></div>
   <input type="file" id="pickdam" multiple accept=".dam,.DAM" hidden>
   <div id="mlist"></div></div>
- <div class="card"><div class="bar"><button class="go" id="opbtn" disabled>Apri i dati</button><button id="cancadd" hidden>Annulla</button><span id="gomsg" class="muted"></span></div></div>
+ <div class="card"><button class="go" id="opbtn" disabled>Carica dati</button><button id="cancadd" hidden>Annulla</button><div id="gomsg" class="fail"></div></div>
 </section>
 <script src="static/explore.js"></script>
 <script src="static/elements.js"></script>
+<script src="static/calib.js"></script>
 <script src="static/tables.js"></script>
 <script src="static/help.js"></script>
 <script>
@@ -206,46 +212,59 @@ document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.data
 // ------------------------------------------------------------------ start screen: upload, check times and types, open
 const sz=b=>b>1e6?(b/1e6).toFixed(1)+" MB":Math.max(1,Math.round(b/1e3))+" kB";
 async function post(u,body,raw){const r=await fetch(u,{method:"POST",body:raw??JSON.stringify(body||{})});const j=await r.json();if(j.error)throw new Error(j.error);return j}
+// concentration units: key -> [label, factor to mg/L]; the names carry the unit (std_0.5ppm), the table shows the one chosen in its header
+const CU={mgl:["mg/L",1],ugl:["µg/L",1e-3],ngl:["ng/L",1e-6],gl:["g/L",1e3]},CUN={ppm:"mgl",ppb:"ugl",ppt:"ngl",mgl:"mgl",ugl:"ugl",ngml:"ugl",ngl:"ngl",gl:"gl"};
+const CUF={ppm:1,ppb:1e-3,ppt:1e-6,mgl:1,ugl:1e-3,ngml:1e-3,ngl:1e-6,gl:1e3};
+ST.unit="mgl";
+const roundc=v=>v==null?null:+(+v).toPrecision(6);
+const concFrom=f=>f.conc==null?null:roundc(f.cunit&&CUF[f.cunit]?f.conc*CUF[f.cunit]/CU[ST.unit][1]:f.conc);   // value from the name, in the unit of the table
 function mergeFiles(list){const old=Object.fromEntries(ST.files.map(f=>[f.name,f]));
-  ST.files=list.map(f=>({...f,time:old[f.name]?old[f.name].time:f.time,type:old[f.name]?old[f.name].type:f.type,mode:old[f.name]&&f.kind==="full"?old[f.name].mode:f.mode,use:old[f.name]?old[f.name].use:true}));
-  ST.files.sort((a,b)=>(a.type!=="sample")-(b.type!=="sample")||(a.time??1e9)-(b.time??1e9)||a.name.localeCompare(b.name));renderFiles()}
+  ST.files=list.map(f=>{const o=old[f.name];return {...f,time:o?o.time:f.time,type:o?o.type:f.type,conc:o?o.conc:concFrom(f),use:o?o.use:true}});
+  const ord={sample:0,standard:1,blank:2};
+  ST.files.sort((a,b)=>ord[a.type]-ord[b.type]||(a.type==="standard"?(a.conc??1e9)-(b.conc??1e9):(a.time??1e9)-(b.time??1e9))||a.name.localeCompare(b.name));renderFiles()}
 function renderMethods(){const el=$("#mlist");
-  el.innerHTML=ST.methods.map((m,i)=>`<div style="margin-top:4px">${esc(m.name)} <span class="muted">${sz(m.size)}</span> <button data-mrm="${i}" title="Rimuovi (va in _cestino)">&times;</button></div>`).join("");
+  el.innerHTML=ST.methods.length?`<table><tr><th>File</th><th>Contenuto</th><th class="num">Dimensione</th><th></th></tr>`+ST.methods.map((m,i)=>`<tr><td>${esc(m.name)}</td><td class="muted">${esc(m.info||"")}</td><td class="num muted">${sz(m.size)}</td><td><button data-mrm="${i}" title="Rimuovi (va in _cestino)">&times;</button></td></tr>`).join("")+"</table>":"";
   el.querySelectorAll("[data-mrm]").forEach(b=>b.onclick=async()=>{try{const j=await post("api/remove",{name:ST.methods[+b.dataset.mrm].name});mergeFiles(j.files);ST.methods=j.methods||[];renderMethods()}catch(e){fail(e)}})}
-const EXPN={full:"Full scan",ms2:"MS2 (ioni prodotto)",mrm:"MRM",empty:"nessun dato"};
-function expCell(f,i){if(f.kind==="full")return `<select data-i="${i}" data-k="mode" title="Il file non dice se la scansione è Q1 o Enhanced MS (EMS): indicalo tu"><option value="q1" ${f.mode!=="ems"?"selected":""}>Full scan Q1</option><option value="ems" ${f.mode==="ems"?"selected":""}>Full scan EMS</option></select>`;
-  return f.kind?`<b>${EXPN[f.kind]||f.kind}</b>`:'<span class="muted">sarà letto dopo la conversione</span>'}
+const EXPN={full:"Full Scan",ms2:"MS² (Product Ion)",mrm:"MRM",empty:"nessun dato"};
+const expCell=f=>f.kind?`<b>${EXPN[f.kind]||f.kind}</b>`:'<span class="muted">letto dopo la conversione</span>';
 function nameWarn(f){return f.kind&&f.hint&&f.hint!==f.kind?` <div class="fail sm">il nome fa pensare a ${EXPN[f.hint]}, ma nel file ci sono dati ${EXPN[f.kind]}</div>`:""}
 function renderFiles(){const F=ST.files,el=$("#flist");
-  el.innerHTML=F.length?`<table style="margin-top:8px"><tr><th></th><th>File</th><th>Esperimento</th><th class="num">Tempo (min)</th><th>Ruolo</th><th class="num">Dimensione</th><th></th></tr>`+F.map((f,i)=>
-   `<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)}${f.scan===false?' <span class="fail">manca il .wiff.scan</span>':""}${nameWarn(f)}</td><td>${expCell(f,i)}</td>`+
+  const unitSel=`<select id="cunit" title="Unità delle concentrazioni">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
+  el.innerHTML=F.length?`<table style="margin-top:8px"><tr><th></th><th>File</th><th>Esperimento</th><th>Tipo</th><th class="num">Tempo (min)</th><th class="num">Conc. ${unitSel}</th><th class="num">Dimensione</th><th></th></tr>`+F.map((f,i)=>
+   `<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)}${f.scan===false?' <span class="fail">manca il .wiff.scan</span>':""}${nameWarn(f)}</td><td>${expCell(f)}</td>`+
+   `<td><select data-i="${i}" data-k="type"><option value="sample" ${f.type==="sample"?"selected":""}>campione</option><option value="blank" ${f.type==="blank"?"selected":""}>bianco</option><option value="standard" ${f.type==="standard"?"selected":""}>standard</option></select></td>`+
    `<td class="num"><input type="number" step="any" style="width:80px" data-i="${i}" data-k="time" value="${f.time??""}" ${f.type!=="sample"?"disabled":""}></td>`+
-   `<td><select data-i="${i}" data-k="type"><option value="sample" ${f.type==="sample"?"selected":""}>campione</option><option value="blank" ${f.type==="blank"?"selected":""}>bianco</option><option value="control" ${f.type==="control"?"selected":""}>controllo</option></select></td>`+
-   `<td class="num muted">${sz(f.size)}</td><td><button data-rm="${i}" title="Rimuovi (va in _cestino)">&times;</button></td></tr>`).join("")+`</table>
-   <div class="muted" style="margin-top:4px">L'esperimento è letto dal contenuto di ogni file (Q1 o EMS non è scritto nel file: scegli tu). Tempo e ruolo sono indovinati dal nome: controllali.</div>`:"";
-  el.querySelectorAll("[data-k]").forEach(x=>x.onchange=()=>{const f=F[+x.dataset.i],k=x.dataset.k;f[k]=k==="use"?x.checked:k==="time"?(x.value===""?null:+x.value):x.value;if(k==="type")renderFiles();checkGo()});
+   `<td class="num"><input type="number" step="any" min="0" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.type!=="standard"?"disabled":""} title="${f.type==="standard"?"Concentrazione dello standard (indovinata dal nome: controllala)":""}"></td>`+
+   `<td class="num muted">${sz(f.size)}</td><td><button data-rm="${i}" title="Rimuovi (va in _cestino)">&times;</button></td></tr>`).join("")+`</table>`:"";
+  el.querySelectorAll("[data-k]").forEach(x=>x.onchange=()=>{const f=F[+x.dataset.i],k=x.dataset.k;f[k]=k==="use"?x.checked:(k==="time"||k==="conc")?(x.value===""?null:+x.value):x.value;
+    if(k==="type"){if(f.type!=="sample")f.time=null;if(f.type==="standard"&&f.conc==null)f.conc=concFrom(f);if(f.type!=="standard")f.conc=null;renderFiles()}checkGo()});
+  const cu=$("#cunit");if(cu)cu.onchange=()=>{const k=cu.value,r=CU[ST.unit][1]/CU[k][1];F.forEach(f=>{if(f.conc!=null)f.conc=roundc(f.conc*r)});ST.unit=k;renderFiles()};
   el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];const j=await post("api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});checkGo()}
-function checkGo(){const n=ST.files.filter(f=>f.use).length;$("#opbtn").disabled=!n;$("#gomsg").textContent=n?`${n} file selezionati`:"Carica almeno un file"}
+// the button is live only when at least one chosen file can be opened (a .wiff needs its .wiff.scan; an mzML with no data cannot)
+const usable=f=>f.use&&(["full","ms2","mrm"].includes(f.kind)||(/\.wiff$/i.test(f.name)&&f.scan!==false));
+function checkGo(){$("#opbtn").disabled=!ST.files.some(usable);$("#gomsg").textContent=""}
 // sends a file and returns the JSON answer (progress callback: loaded, total); in the browser version there is no network: it goes to the worker
 const sendFile=(url,f,onp)=>window.QQQ_BROWSER?fetch(url,{method:"POST",body:f}).then(r=>{onp(1,1);return r.json()}):new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open("POST",url);
   x.upload.onprogress=e=>{if(e.lengthComputable)onp(e.loaded,e.total)};x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(_){}ok(j)};x.onerror=()=>ko(new Error("upload fallito"));x.send(f)});
-async function upload(files){const box=$("#up");fail();
-  for(const f of files){const row=document.createElement("div");row.innerHTML=`${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row);
+async function upload(files,into){const box=$("#up");fail();
+  for(const f of files){const isDam=/\.dam$/i.test(f.name);
+    if(into&&isDam!==(into==="dam")){const n=document.createElement("div");n.className="note";n.textContent=`${f.name} è ${isDam?"un metodo: l'ho messo nel riquadro 2":"un file di dati: l'ho messo nel riquadro 1"}.`;box.appendChild(n);setTimeout(()=>n.remove(),6000)}
+    const row=document.createElement("div");row.innerHTML=`${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{row.querySelector("i").style.width=(100*a/b)+"%"});
       if(j.error)throw new Error(j.error);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove()}
     catch(e){row.innerHTML=`<span class="fail">${esc(f.name)}: ${esc(e.message)}</span>`}}}
 function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
-$("#dropdam").onclick=()=>$("#pickdam").click();$("#pickdam").onchange=e=>{upload([...e.target.files]);e.target.value=""};
-$("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files]);e.target.value=""};
+$("#dropdam").onclick=()=>$("#pickdam").click();$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
+$("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files],"data");e.target.value=""};
 ["dragenter","dragover"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.add("over")}));
 ["dragleave","drop"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.remove("over")}));
-$("#drop").addEventListener("drop",e=>upload([...e.dataTransfer.files]));
+$("#drop").addEventListener("drop",e=>upload([...e.dataTransfer.files],"data"));
 ["dragenter","dragover"].forEach(t=>$("#dropdam").addEventListener(t,e=>{e.preventDefault();$("#dropdam").classList.add("over")}));
 ["dragleave","drop"].forEach(t=>$("#dropdam").addEventListener(t,e=>{e.preventDefault();$("#dropdam").classList.remove("over")}));
-$("#dropdam").addEventListener("drop",e=>upload([...e.dataTransfer.files]));
+$("#dropdam").addEventListener("drop",e=>upload([...e.dataTransfer.files],"dam"));
 addEventListener("dragover",e=>e.preventDefault());addEventListener("drop",e=>e.preventDefault());   // a missed drop must not open the file
-$("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;$("#gomsg").textContent="Apro i file...";loading(true,"Leggo i file e preparo i cromatogrammi...");
-  try{await post("api/explore",{samples:ST.files.filter(f=>f.use).map(f=>({file:f.name,time:f.time,type:f.type,mode:f.mode,label:(E.files.find(x=>x.file===f.name)||{}).label}))});S.adding=false;await bootSession();applyView();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave()}
+$("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;loading(true,"Leggo i file e preparo i cromatogrammi...");
+  try{await post("api/explore",{samples:ST.files.filter(usable).map(f=>({file:f.name,time:f.time,type:f.type,conc:f.type==="standard"?f.conc:null,cunit:CU[ST.unit][0],label:(E.files.find(x=>x.file===f.name)||{}).label}))});S.adding=false;await bootSession();applyView();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave()}
   catch(e){$("#gomsg").innerHTML=`<span class="fail">${esc(e.message)}</span>`;b.disabled=false}finally{loading(false)}};
 $("#cancadd").onclick=()=>{S.adding=false;applyView()};
 $("#newrun").onclick=async()=>{if(!await yesno("Iniziare una <b>nuova sessione</b>? "+(window.QQQ_BROWSER?"I file caricati in questa pagina vengono chiusi (dovrai ricaricarli).":"Quella attuale resta salvata nella cartella di lavoro.")))return;
