@@ -11,6 +11,18 @@ _UNIT = r"(ppm|ppb|ppt|[mun]?g[/_.\- ]?(?:m?l)(?:-1)?)"
 _STD = r"(^|[_\-\s])(std|stds|standard|stand|cal|calib|calibr|calibrazione|taratura|curva)(?=[_\-\s\d]|$)"
 
 
+_EXTS = {".mzml", ".mzxml", ".wiff", ".scan", ".raw", ".dam", ".d", ".cdf", ".xml", ".txt", ".csv"}
+
+
+def _stem(name: str) -> str:
+    """File name without a REAL extension: 'std_0.5ppm' and 'mrm-t7.5' keep their decimals (Path.stem would cut them)."""
+    base = Path(name).name
+    suf = Path(base).suffix
+    if suf.lower() in _EXTS:
+        base = base[: -len(suf)]
+    return base
+
+
 def _num(s: str) -> float:
     return float(s.replace("p", ".").replace(",", "."))
 
@@ -18,7 +30,13 @@ def _num(s: str) -> float:
 def guess_conc(name: str) -> tuple[float, str | None] | None:
     """(value, unit key of UNITS_MGL) read from a file name such as 'std_0.5ppm', 'STD10mgL', '5_ug-L'; the unit is None
     when only a number follows a standard word ('std_5'). None when no concentration is written."""
-    low = Path(name).stem.lower().replace("\u00b5", "u").replace("\u03bc", "u")
+    low = _stem(name).lower().replace("\u00b5", "u").replace("\u03bc", "u")
+    # laboratory style: the decimal point is written as an underscore, '7_2ppm' = 7.2 ppm (only when a unit follows at once)
+    m = re.search(r"(?<![\d.])(\d+)_(\d+)\s*" + _UNIT + r"(?![a-z])", low)
+    if m:
+        u = re.sub(r"[/_.\- ]|-1$", "", m.group(3))
+        if u in UNITS_MGL:
+            return float(m.group(1) + "." + m.group(2)), u
     m = re.search(r"(?<![\d.])(" + _NUM + r")\s*[_\-]?\s*" + _UNIT + r"(?![a-z])", low)
     if m:
         u = re.sub(r"[/_.\- ]|-1$", "", m.group(2))
@@ -32,7 +50,7 @@ def guess_conc(name: str) -> tuple[float, str | None] | None:
 
 def guess_sample(name: str) -> tuple[str, float | None, str]:
     """(label, time in minutes, type) guessed from a file name: 'blank', 'std_5', 't30', '120min', '2h'."""
-    base = Path(name).stem
+    base = _stem(name)
     low = base.lower()
     if re.search(r"(^|[_\-\s])(blank|blk|bianco)([_\-\s\d]|$)", low):
         return base, None, "blank"
