@@ -14,7 +14,7 @@ Lavori nella cartella `~/QqQ_lab/QqQ_lab`. Leggi prima `AGENTS.md`. Una sola cha
 - Testa con Playwright (e2e e pytest, lanciati separatamente con timeout lunghi), poi fai un report breve.
 - Lavora su un ramo git dedicato (AGENTS.md sez. 8), non su `main`.
 - Risparmio token (AGENTS.md sez. 2): un solo lotto di modifiche, `grep -n` per trovare i punti, non rileggere file già letti, prova UNA volta alla fine, un solo commit.
-- **Ordine di lavoro**: prima 2.0 (il disegno non si cancella), poi 2.1-2.2, poi il resto della Sezione 2, poi Sezioni 1, 3, 4, 5, infine 6.
+- **Ordine di lavoro**: prima la verifica di TP Mine (Sezione 6, breve), poi 2.0 (il disegno non si cancella), poi 2.1-2.2, poi il resto della Sezione 2, poi Sezioni 1, 3, 4, 5, infine 6.
 
 ---
 
@@ -134,7 +134,16 @@ Riferimenti: `qqq_lab/web/tables.js` (`ADD`, `adducts`, `adductTab`, `bindAdduct
 7. **Nota corretta su [M]+.** Spiega meglio che per un catione preformato (ammonio quaternario) si inserisce la formula del *catione* (la massa sottrae l'elettrone), mentre per il radicale catione M+. si inserisce la formula della molecola neutra. Ora i due casi sono confusi nella stessa nota.
 8. Test: spostamenti di massa di tutti gli addotti contro i valori calcolati a mano, coerenza fra gli elenchi, colonna nominale, strumento delle coppie di addotti. Aggiorna Teoria (cap. ESI) e `AGENTS.md`.
 
-## SEZIONE 6: pulizia dei residui dei launcher locali (autorizzata da Federico)
+## SEZIONE 6: verifica dello spostamento di TP Mine (da fare PER PRIMA, poi cancella questa sezione)
+Il 6 ottobre 2026 `QqQ_lab_privato/` è stata spostata dentro il repository (commit afca922). Il repository GitHub è **pubblico** (necessario per Pages): i sorgenti in chiaro sono quindi leggibili da chiunque; la protezione è solo che nell'interfaccia TP Mine si sblocca con la parola d'ordine (5 clic sul «?», `tpmine.enc` cifrato). Scelta di Federico: non è un problema. Verifica che nulla si sia rotto, senza cambiare il comportamento:
+1. `tools/build_tpmine.py` trova `QqQ_lab_privato/tpmine` (default nuovo) e costruisce `qqq_lab/web/tpmine.enc` con una parola d'ordine usa-e-getta (`TPMINE_PASSWORD`); NON usare né chiedere la parola d'ordine vera, e non committare un `.enc` di prova.
+2. `tools/build_site.py` produce `site/` SENZA nessun file con `TPMINE-PRIVATE` in chiaro, senza `QqQ_lab_privato/` e senza file `tpmine*` oltre a `tpmine-loader.js` e `tpmine.enc`; prova anche che rifiuti un sito con un sorgente in chiaro.
+3. `tests_e2e/e2e_tpmine1.py` e `e2e_tpmine2.py` passano con i percorsi nuovi (senza `TPMINE_SRC`); il test privato `python3 -m pytest -q QqQ_lab_privato/tpmine/tests` (con `PYTHONPATH` come in `AGENTS.md` sez. 13) passa.
+4. `pytest -q tests` e la CI non raccolgono la cartella e il pacchetto (`pyproject.toml`: `include = ["qqq_lab*"]`) non la include; `qqq_lab.zip` e il sito non la contengono; nel repo non ci sono parole d'ordine, `__pycache__` o `.DS_Store` della cartella.
+5. `AGENTS.md` sez. 13 e 15 coerenti col nuovo percorso; correggi `AGENTS.md` riga 26 («remote ... (privato)» → pubblico).
+Riporta in 3 righe l'esito; se tutto passa, cancella la sezione da questo file.
+
+## SEZIONE 7: pulizia dei residui dei launcher locali (autorizzata da Federico)
 Dal 6 ottobre 2026 gli studenti usano SOLO il sito (GitHub Pages); `QqQ lab.app`, `Avvia QqQ lab.*`, `scripts/avvia.py` e `.venv-qqq-lab` sono già stati spostati in `_cestino/2026-10-06_launcher_locali/`, e README, AGENTS, `.gitattributes`, `.gitignore` e CI aggiornati. Il server locale resta SOLO per i test e2e e lo sviluppo. Restano da togliere dal codice (grep mirato, non leggere `vendor/`):
 1. `--exit-on-close` (`cli.py`, `server.py`), heartbeat `/api/live` e `/api/bye` lato server e lato pagina (`explore.js`, `index.html`, `browser.js`, `browser-worker.js` se presenti), il test pytest «`--exit-on-close`» in `tests/test_pipeline.py` e `e2e10.py` (adatta: toglie solo la parte sulla chiusura, non le altre prove); il test pytest in meno cambia il numero dei test in `AGENTS.md`.
 2. `qqq_lab/console.py` e le sue chiamate (intestazione del Terminale, spunte, spinner, `QQQ_HEADER`) se non servono più nemmeno al comando `app` di sviluppo: semplifica con un `print` minimo.
@@ -143,7 +152,7 @@ Dal 6 ottobre 2026 gli studenti usano SOLO il sito (GitHub Pages); `QqQ lab.app`
 5. Testi che citano doppio clic, Terminale, `.venv`, «versione offline dal computer» (README, `AGENTS.md` sez. 3, 6, 8, 9, Teoria, aiuto, `help.js`). `convert.py`/`converti.bat` (msconvert per i `.wiff`) restano: non sono launcher.
 6. `pyproject.toml`: controlla che non ci siano voci solo per i launcher (non cambiare le dipendenze).
 
-## SEZIONE 7: lavori in coda (dai vecchi prompt; NON farli senza il via libera di Federico, tranne dove scritto)
+## SEZIONE 8: lavori in coda (dai vecchi prompt; NON farli senza il via libera di Federico, tranne dove scritto)
 
 1. **Frecce ← → sul cromatogramma** (da decidere, analisi e misure in `AGENTS.md` sez. 12). Consiglio: (b) niente svuotamento dello spettro + «ultimo vince» + un draw per frame + niente `ctl()` a ogni passo; poi (c) asse y bloccato sul massimo delle ±20 scansioni con lucchetto, con (a) `api/spectra` a blocco e cache per scansione; (d) sagoma della scansione precedente, opzionale e spenta. Sconsigliata l'evidenziazione automatica dei picchi che cambiano.
 2. **Salvataggio e sicurezza dei dati dello studente** (proposta, da approvare). Oggi nel browser file e taccuino stanno in IndexedDB (si perdono in finestra privata o cancellando i dati del sito).
@@ -156,7 +165,7 @@ Dal 6 ottobre 2026 gli studenti usano SOLO il sito (GitHub Pages); `QqQ lab.app`
 4. **Da verificare a mano da Federico** (non farlo fare alla chat): Mac reale (`QqQ lab.app`: permesso Terminale, icona, Gatekeeper; `Avvia QqQ lab.command`, se «privilegi» `chmod +x`), Windows con Python nuovo e prima apertura offline, Safari, file molto grandi; nomi veri degli standard (concentrazione indovinata), finestra di integrazione comune Quant/Qual, retta di taratura contro Analyst (RT, aree, rapporto Quant/Qual); misura su Pyodide della latenza di `api/spectrum` per scansione.
 5. **Limiti noti** (non nasconderli): file con MS1 e MS2 insieme (data-dependent) trattati come MS2; etichette dell'asse x dello spettro affollate con intervallo MS2 stretto; i controlli del cromatogramma TIC a 1500 px vanno su una seconda riga (voluto); spettri UV del PDA non decodificati (negli mzML c'è solo `TWC`; vedi Sezione 3, punto 3).
 
-## SEZIONE 8: chiusura
+## SEZIONE 9: chiusura
 - `node --check` su `draw.js`, `explore.js` e lo script inline di `index.html` prima dei test.
 - Esegui e2e e pytest, ciascuno separatamente.
 - Aggiorna `AGENTS.md` (riga `draw.js`: proprietà con carica esclusa e «?», ione predefinito nessuno, «Disegna veloce» aggiunge e non sostituisce; impostazioni ridotte, nuova sessione con pulizia cache e avviso, causa del problema del Disegno, schermo intero, limiti RT, estratto PDA, tooltip) e questo file (`PROMPT_PROSSIMA_CHAT.md`): **cancella da esso tutto ciò che hai fatto e verificato**, lascia solo ciò che manca (bug aperti, prossimi passi), rinumera; nello stesso commit.
