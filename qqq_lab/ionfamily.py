@@ -272,21 +272,41 @@ def snip_baseline(y, iters: int = 20) -> np.ndarray:
     return (np.exp(np.exp(v) - 1) - 1) ** 2 - 1
 
 
-def asls_baseline(y, lam: float = 1e5, p: float = 0.01, iters: int = 10) -> np.ndarray:
+_ASLS_P: dict = {}
+
+
+def asls_baseline(y, lam: float = 1e5, p: float = 0.01, iters: int = 10, max_n: int = 160) -> np.ndarray:
     """Asymmetric least squares baseline (Eilers & Boelens 2005): minimise sum w (y-z)^2 + lam sum (D2 z)^2 with weights p for
-    points above the baseline and 1-p below. Dense solve (windows of a few hundred scans); long traces fall back to SNIP."""
+    points above the baseline and 1-p below. The baseline is smooth by construction, so a long trace is first averaged in blocks of k
+    points (k = ceil(n / max_n), lam scaled by k^-4 to keep the same smoothness in time) and the result interpolated back: the dense
+    solve is cubic in n, which matters in the browser (Pyodide, about 10x slower). Very long traces fall back to SNIP."""
     y = np.asarray(y, float)
     n = len(y)
     if n < 5:
         return np.full(n, float(y.min()) if n else 0.0)
-    if n > 1500:
+    if n > 20000:
         return snip_baseline(y)
-    D = np.diff(np.eye(n), 2, axis=0)
-    P = lam * (D.T @ D)
+    k = max(1, -(-n // max_n))
+    if k > 1:
+        m = n // k
+        yd = y[: m * k].reshape(m, k).mean(axis=1)
+        xd = (np.arange(m) + 0.5) * k - 0.5
+        zd = asls_baseline(yd, lam / k ** 4, p, iters, max_n=10 ** 9)
+        return np.minimum(np.interp(np.arange(n), xd, zd), y)
+    key = (n, lam)
+    P = _ASLS_P.get(key)
+    if P is None:
+        D = np.diff(np.eye(n), 2, axis=0)
+        P = lam * (D.T @ D)
+        if len(_ASLS_P) > 64:
+            _ASLS_P.clear()
+        _ASLS_P[key] = P
     w = np.ones(n)
     z = y.copy()
     for _ in range(iters):
-        z = np.linalg.solve(np.diag(w) + P, w * y)
+        A = P.copy()
+        A[np.diag_indices(n)] += w
+        z = np.linalg.solve(A, w * y)
         w_new = np.where(y > z, p, 1 - p)
         if np.array_equal(w_new, w):
             break
@@ -715,7 +735,7 @@ def _deming_origin(P, F, sP, sF):
     r0 = float((F * P).sum() / max((P * P).sum(), 1e-300))
     if r0 <= 0:
         return 0.0
-    grid = r0 * np.geomspace(1 / 60.0, 60.0, 600)
+    grid = r0 * np.geomspace(1 / 60.0, 60.0, 240)
     best = None
     for _ in range(2):
         r = grid[:, None]
@@ -723,7 +743,7 @@ def _deming_origin(P, F, sP, sF):
         k = int(np.argmin(S))
         best = float(grid[k])
         lo, hi = grid[max(k - 1, 0)], grid[min(k + 1, len(grid) - 1)]
-        grid = np.linspace(lo, hi, 400)
+        grid = np.linspace(lo, hi, 120)
     return best
 
 
@@ -812,19 +832,19 @@ def peak_area(rt, y, i0: int, i1: int) -> float:
     return float(_trapz(yc[i0:i1 + 1], rt[i0:i1 + 1]))
 
 
-def fit_decay(t, y, n_boot: int = 300, seed: int = 0) -> dict:
+def fit_decay(t, y, n_boot: int = 120, seed: int = 0) -> dict:
     """First-order decay y = A exp(-k t) (k >= 0) with residual-bootstrap 95% intervals (reported, but with 3-6 points they are
     wide and optimistic: `reliable` is False below 5 points)."""
     t, y = np.asarray(t, float), np.asarray(y, float)
     def solve(yy):
         span = max(float(t.max() - t.min()), 1e-9)
-        ks = np.concatenate([[0.0], np.geomspace(1e-3 / span, 50.0 / span, 400)])
+        ks = np.concatenate([[0.0], np.geomspace(1e-3 / span, 50.0 / span, 160)])
         for _ in range(2):
             E = np.exp(-np.outer(ks, t))
             A = (E * yy).sum(1) / np.maximum((E * E).sum(1), 1e-300)
             S = ((yy[None, :] - A[:, None] * E) ** 2).sum(1)
             i = int(np.argmin(S))
-            ks = np.linspace(ks[max(i - 1, 0)], ks[min(i + 1, len(ks) - 1)], 200)
+            ks = np.linspace(ks[max(i - 1, 0)], ks[min(i + 1, len(ks) - 1)], 60)
             ks = ks[ks >= 0]
             if len(ks) == 0:
                 ks = np.array([0.0])
