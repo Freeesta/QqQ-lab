@@ -76,7 +76,7 @@ def main():
     big = {}
     for s in (32, 64, 128, 192, 256, 512, 1024):
         big[s] = png(app_icon(core, s))
-        if s in (192, 256, 512, 1024):
+        if s in (192, 512):
             (WEB / f"app-icon-{s}.png").write_bytes(big[s])
     res = ROOT / "QqQ lab.app" / "Contents" / "Resources"
     res.mkdir(parents=True, exist_ok=True)
