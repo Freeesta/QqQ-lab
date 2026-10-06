@@ -36,6 +36,18 @@ try:
             r = pg.evaluate("""()=>{const f=document.querySelector('#flst .fl:not(.pr) .fi');const b=f.querySelector('.nm').getBoundingClientRect(),s=f.querySelector('small').getBoundingClientRect();return [b.top,s.top,b.right,s.left]}""")
             assert abs(r[0] - r[1]) < 12 and r[3] >= r[2] - 1, r
         step("sidebar: precursors first, time to the right of the file name", side)
+        def toggle():
+            n = lambda: pg.evaluate("E.panels.filter(p=>p.tab==='ms2').length")
+            assert n() == 4, n()
+            pg.locator("#flst input[data-pr]").first.uncheck(); pg.wait_for_timeout(500); assert n() == 2, n()
+            assert pg.locator("#flst input[data-pr]:checked").count() == 1, pg.locator("#flst input[data-pr]:checked").count()
+            pg.locator("#flst input[data-pr]").first.check(); pg.wait_for_timeout(1500); assert n() == 4, n()
+            pg.locator("#pall").uncheck(); pg.wait_for_timeout(500); assert n() == 0, n()
+            pg.locator("#pall").check(); pg.wait_for_timeout(2000); assert n() == 4, n()
+            pg.locator("#flst [data-pg]").nth(1).click(); pg.wait_for_timeout(600)
+            assert pg.evaluate("E.active&&E.active.prec"), pg.evaluate("[E.active&&E.active.prec, E.active&&E.active.type]")
+            pg.screenshot(path=SH + "19_ms2b.png")
+        step("sidebar precursors: tick = show/close the pair, all, click = go to it", toggle)
         def steps_():
             pg.evaluate("setActive(null)")
             res = pg.evaluate("""async ()=>{

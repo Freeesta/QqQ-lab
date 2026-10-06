@@ -53,12 +53,7 @@ function defaultLayoutTab(t) {
   } else if (t === "ms2") {
     const exps = ms2Exps(), f0 = tabFiles("ms2")[0]; let y = 0;
     const list = exps.length ? exps.slice(0, 4) : [{ prec: null, k: f0.k }];
-    list.forEach(e => {
-      const k = e.k ?? f0.k, label = e.prec != null ? `MS² · precursore ${e.prec}` : "MS²";
-      const c = addPanel("chrom", { tab: "ms2", prec: e.prec, title: label, x: 0, y, w, h: 250, full: true });
-      const sp = addPanel("spec", { tab: "ms2", link: c.id, k, level: 2, prec: e.prec, title: `Spettro degli ioni prodotto${e.prec != null ? " · " + e.prec : ""}`, x: 0, y: y + 260, w, h: 280, full: true });
-      apexSpectrum(c, sp); y += 550;
-    });
+    list.forEach(e => { addMs2Pair(e, y); y += 550; });
   } else if (t === "mrm") {
     if (E._mrmLoading) return; E._mrmLoading = true;
     calLoad().catch(() => {}).then(() => {
@@ -72,6 +67,26 @@ function defaultLayoutTab(t) {
       relayout(); fitHost(); calbar(); uiSave();
     });
   }
+}
+
+// one MS2 experiment = precursor chromatogram (above) + product-ion spectrum (below, linked)
+function addMs2Pair(e, y) {
+  const w = hostWidth(), f0 = tabFiles("ms2")[0], k = e.k ?? f0.k, label = e.prec != null ? `MS² · precursore ${e.prec}` : "MS²";
+  const c = addPanel("chrom", { tab: "ms2", prec: e.prec, title: label, x: 0, y, w, h: 250, full: true });
+  const sp = addPanel("spec", { tab: "ms2", link: c.id, k, level: 2, prec: e.prec, title: `Spettro degli ioni prodotto${e.prec != null ? " · " + e.prec : ""}`, x: 0, y: y + 260, w, h: 280, full: true });
+  apexSpectrum(c, sp); return c;
+}
+const ms2PairOf = prec => E.panels.find(p => p.tab === "ms2" && p.type === "chrom" && String(p.prec) === String(prec));
+// sidebar of the MS2 tab: tick a precursor to show its two graphs (they are created if missing), untick to close them, click the name to go to them
+function ms2Toggle(prec, on) {
+  const c = ms2PairOf(prec);
+  if (on && !c) { const e = ms2Exps().find(x => String(x.prec) === String(prec)); if (e) { addMs2Pair(e, tabPanels().reduce((m, q) => Math.max(m, q.y + q.h + 10), 0)); relayout(); fitHost(); } }
+  if (!on && c) { [...E.panels.filter(q => q.link === c.id), c].forEach(q => q.el.querySelector(".x").click()); }
+  renderFileList(); uiSave();
+}
+function ms2Goto(prec) {
+  const c = ms2PairOf(prec); if (!c) return ms2Toggle(prec, true);
+  setActive(c); front(c.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + c.y - 70, behavior: "smooth" });
 }
 
 // strip of the MS2 tab: how many experiments there are and what each one is
