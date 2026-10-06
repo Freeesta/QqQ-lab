@@ -48,7 +48,7 @@ function ldNext() {
 function loading(on, msg) {
   const L = Q("#loading");
   if (on) {
-    ldSince = Date.now(); Q("#ldsub").textContent = msg || "";
+    ldSince = Date.now(); Q("#ldsub").textContent = msg || window.qqStep || "";
     clearInterval(ldTimer); ldNext(); ldTimer = setInterval(ldNext, 5000); L.hidden = false;
   } else {
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
@@ -187,10 +187,11 @@ function renderFileList() {
   tabFiles().forEach(f => { const g = grpOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
   if (E.tab === "mrm") groups.sort((a, b) => ["Standard", "Campioni", "Bianchi"].indexOf(a.g) - ["Standard", "Campioni", "Bianchi"].indexOf(b.g));
   const row = f => `<div class="fl ${f.k === E.cur ? "cur" : ""}"><input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="Mostra o nascondi">
-    <i style="background:${f.color}"></i><div><b class="nm" data-k="${f.k}" title="Clic per scegliere il file corrente, doppio clic per rinominare">${EH(f.label)}</b>
+    <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}" title="Clic per scegliere il file corrente, doppio clic per rinominare">${EH(f.label)}</b>
     <small>${f.type === "sample" ? (f.time != null ? f.time + " min" : "") : (f.type === "blank" ? "bianco" : "standard" + (f.conc != null ? " " + f.conc + " " + (f.cunit || "") : ""))}</small>
 </div></div>`;
-  Q("#flst").innerHTML = groups.map(G => `<div class="fgh"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="Mostra o nascondi tutto il gruppo"><span>${EH(G.g)}</span><em>${G.fs.length}</em></div>` + G.fs.map(row).join("")).join("");
+  const pre = E.tab === "ms2" && window.ms2Exps && ms2Exps().length ? `<div class="fgh"><span>Precursori</span><em>${ms2Exps().length}</em></div>` + ms2Exps().map(x => `<div class="fl pr"><div class="fi"><b title="Ogni precursore è un esperimento MS²: ha il suo cromatogramma e il suo spettro degli ioni prodotto">${x.prec != null ? "<span style=\"font-style:italic\">m/z</span> " + EH(x.prec) : "?"}</b><small>${x.ce.size ? "CE " + [...x.ce].join(", ") + " V · " : ""}${x.n} scan</small></div></div>`).join("") : "";
+  Q("#flst").innerHTML = pre + groups.map(G => `<div class="fgh"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="Mostra o nascondi tutto il gruppo"><span>${EH(G.g)}</span><em>${G.fs.length}</em></div>` + G.fs.map(row).join("")).join("");
   Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => { tabFiles().filter(f => grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked); renderFileList(); redrawAll(); uiSave(); });
   Q("#flst").querySelectorAll("input[data-k]").forEach(x => x.onchange = () => { E.files[+x.dataset.k].vis = x.checked; redrawAll(); uiSave(); });
   Q("#flst").querySelectorAll(".nm").forEach(x => {
@@ -336,7 +337,19 @@ function restack(drag, final) {
 function relayout() {      // after a panel changes height: keep the order, close or open the gap
   let y = 0; tabPanels().filter(q => q.full && q.el).sort((a, b) => a.y - b.y || a.id - b.id).forEach(q => { q.y = y; apply(q); y += q.h + 10; });
 }
-function fitHost() { Q("#dpanels").style.height = Math.max(520, ...tabPanels().map(p => p.y + p.h + 16)) + "px"; arrows(); }
+function fitHost() { Q("#dpanels").style.height = Math.max(520, ...tabPanels().map(p => p.y + p.h + 16)) + "px"; arrows(); pairArrows(); }
+// MS2 tab: a short arrow between the precursor chromatogram (above) and the product-ion spectrum it feeds (below)
+function pairArrows() {
+  const host = Q("#dpanels"); host.querySelectorAll(".parr").forEach(e => e.remove());
+  tabPanels().filter(s => s.type === "spec" && s.tab === "ms2" && s.link != null && s.el && s.full).forEach(s => {
+    const c = E.panels.find(q => q.id === s.link && q.type === "chrom"); if (!c || !c.el) return;
+    const gap = s.y - (c.y + c.h); if (gap < 0 || gap > 24) return;
+    const a = document.createElement("div"); a.className = "parr"; a.title = "Lo spettro sotto mostra gli ioni prodotto del precursore scelto nel cromatogramma sopra";
+    a.style.top = (c.y + c.h - 3) + "px"; a.style.height = (gap + 6) + "px";
+    a.innerHTML = `<svg width="14" height="${gap + 6}" viewBox="0 0 14 16" preserveAspectRatio="none" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1v12M3 9.5l4 4 4-4"/></svg>`;
+    host.appendChild(a);
+  });
+}
 // up / down buttons: swap a full-width panel with its neighbour (the panels slide); inactive for the first and the last
 function stackOrder() { return tabPanels().filter(q => q.full && q.el).sort((a, b) => a.y - b.y || a.id - b.id); }
 function arrows() {
@@ -462,7 +475,10 @@ function setActive(p) { E.active = p; E.panels.forEach(q => q.el.classList.toggl
 function stepScan(p, d) {
   const a = p._a, ok = s => E.files[s.k]?.kind !== "mrm";
   const k = nearestFile(p, p.cur), s = a.sr.find(x => x.k === k && ok(x)) || a.sr.find(ok) || a.sr[0]; if (!s || !s.x.length) return;
-  const i = Math.max(0, Math.min(s.x.length - 1, nearIdx(s.x, p.cur) + d)), rt = s.x[i];
+  const i0 = nearIdx(s.x, p.cur), yy = s.y || s.ys; let i = i0 + d;
+  while (i >= 0 && i < s.x.length && !(yy[i] > 0)) i += d;             // empty scans (MS2 files have many) are skipped: the cursor jumps to the nearest scan with data
+  if (i < 0 || i >= s.x.length) { p.rd.textContent = d > 0 ? "ultimo scan con dati" : "primo scan con dati"; return; }
+  const rt = s.x[i];
   p.cur = rt; p.sel = null;
   if (p.zoom && (rt < p.zoom[0] || rt > p.zoom[1])) { const w = p.zoom[1] - p.zoom[0]; p.zoom = clampView(rt - w / 2, rt + w / 2, a.full[0], a.full[1]); }
   const dt = Math.abs(s.x[Math.min(i + 1, s.x.length - 1)] - s.x[Math.max(i - 1, 0)]) / 2 || scanStep();
@@ -537,18 +553,25 @@ async function pngWithMeta(blob, fields) {
 function ctl(p) {
   const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl");
   t.textContent = p.title;
-  const chk = (k, lab) => `<label class="muted"><input type="checkbox" data-o="${k}" ${p[k] ? "checked" : ""}> ${lab}</label>`;
-  const view = `<select data-o="mode" title="Come disegnare più tracce: una sopra l'altra, oppure una per riga (come in FreeStyle)"><option value="ovl" ${p.mode !== "stk" ? "selected" : ""}>sovrapposti</option><option value="stk" ${p.mode === "stk" ? "selected" : ""}>impilati</option></select>${chk("log", "scala log")}`;
+  const T0 = p.tab || E.tab, ms2c = p.type === "chrom" && T0 === "ms2", mrmP = p.type === "mrm";
+  if (ms2c) { p.kind = "tic"; p.mz0 = p.mz1 = null; p.bk = ""; p.snip = false; p.log = false; }      // precursor chromatogram: only the MS2 scans of the precursor
+  if (mrmP) { p.bk = ""; p.snip = false; }
+  if (p.type === "spec" && T0 === "ms2") p.level = 2;
+  const NOMS2 = "Non si applica al cromatogramma dei precursori MS²: contiene solo gli scan MS² del precursore scelto.", NOMRM = "Non si applica agli MRM: ogni transizione è già selettiva.";
+  const off = (on, why) => on ? ` disabled title="${why}"` : "";
+  const chk = (k, lab, dis, why) => `<label class="muted${dis ? " dis" : ""}"${dis ? ` title="${why}"` : ""}><input type="checkbox" data-o="${k}" ${p[k] ? "checked" : ""}${dis ? " disabled" : ""}> ${lab}</label>`;
+  const view = `<select data-o="mode" title="Come disegnare più tracce: una sopra l'altra, oppure una per riga (come in FreeStyle)"><option value="ovl" ${p.mode !== "stk" ? "selected" : ""}>sovrapposti</option><option value="stk" ${p.mode === "stk" ? "selected" : ""}>impilati</option></select>${chk("log", "scala log", ms2c, NOMS2)}`;
   const T = p.tab || E.tab, TF = tabFiles(T), sfl = scanFiles(TF), mlo = Math.min(...sfl.map(x => x.mz_min ?? Infinity)), mhi = Math.max(...sfl.map(x => x.mz_max ?? -Infinity));
-  const mzbar = `<label class="muted" title="Mostra il cromatogramma costruito solo con gli ioni in questo intervallo di m/z. Vuoto = tutti gli ioni. Serve per togliere dal TIC gli m/z che non ti interessano (solvente, fondo)"><i>m/z</i> da <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off" value="${p.mz0 != null ? fmz(p.mz0) : ""}" placeholder="${isFinite(mlo) ? mlo.toFixed(1) : ""}"> a <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off" value="${p.mz1 != null ? fmz(p.mz1) : ""}" placeholder="${isFinite(mhi) ? mhi.toFixed(1) : ""}"></label>`;
+  const mzbar = `<label class="muted" title="Mostra il cromatogramma costruito solo con gli ioni in questo intervallo di m/z. Vuoto = tutti gli ioni. Serve per togliere dal TIC gli m/z che non ti interessano (solvente, fondo)"><i>m/z</i> da <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz0 != null ? fmz(p.mz0) : ""}" placeholder="${isFinite(mlo) ? mlo.toFixed(1) : ""}"> a <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz1 != null ? fmz(p.mz1) : ""}" placeholder="${isFinite(mhi) ? mhi.toFixed(1) : ""}"></label>`;
   const hasScan = sfl.length > 0, ms2s = TF.filter(x => x.kind === "ms2"), hasPda = TF.some(x => x.pda);
   if (p.type === "chrom" && ((!hasScan && p.kind === "bpc") || (!hasPda && p.kind === "pda"))) p.kind = "tic";      // options that make no sense for these files are switched off
   const precs = [...new Set(ms2s.flatMap(x => x.precursors))].sort((a, b) => a - b);
   const precSel = precs.length && p.kind !== "pda" ? `<select data-o="prec" style="flex:none" title="File MS2 (ioni prodotto): somma di tutti i precursori oppure solo gli scan di un precursore"><option value="">MS2: tutti i precursori</option>${precs.map(v => `<option value="${v}" ${String(p.prec) === String(v) ? "selected" : ""}>MS2: precursore ${v}</option>`).join("")}</select>` : "";
   const nbk = TF;
-  const corr = `<select data-o="bk" title="Sottrae il file «bianco» da ogni traccia (interpolando sul tempo e portando a zero i valori negativi). Il bianco indica cosa c'è anche senza il campione: ciò che resta è più probabilmente suo">${`<option value="">bianco: nessuno</option>` + nbk.map(x => `<option value="${x.k}" ${String(p.bk) === String(x.k) ? "selected" : ""}>sottrai ${EH(x.label)}</option>`).join("")}</select>${chk("snip", "baseline")}${p.snip ? `<label class="muted" title="Larghezza della finestra SNIP: deve essere più larga dei picchi">&le;<input data-o="snipw" type="number" step="0.5" min="0.2" value="${p.snipw}" style="width:50px"> min</label>` : ""}`;
+  const corr = `<select data-o="bk"${off(ms2c || mrmP, ms2c ? NOMS2 : NOMRM)} title="Sottrae il file «bianco» da ogni traccia (interpolando sul tempo e portando a zero i valori negativi). Il bianco indica cosa c'è anche senza il campione: ciò che resta è più probabilmente suo">${`<option value="">bianco: nessuno</option>` + nbk.map(x => `<option value="${x.k}" ${String(p.bk) === String(x.k) ? "selected" : ""}>sottrai ${EH(x.label)}</option>`).join("")}</select>${chk("snip", "baseline", ms2c || mrmP, ms2c ? NOMS2 : NOMRM)}${p.snip ? `<label class="muted" title="Larghezza della finestra SNIP: deve essere più larga dei picchi">&le;<input data-o="snipw" type="number" step="0.5" min="0.2" value="${p.snipw}" style="width:50px"> min</label>` : ""}`;
   const fsel = `<button data-o="fpop" class="fcount" title="Scegli al volo quali file mostrare (vale per tutti i grafici, come la lista a sinistra)">File ${TF.filter(f => f.vis).length}/${TF.length} &#9662;</button>`;
-  if (p.type === "chrom") c.innerHTML = `<select data-o="kind"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>TIC (somma)</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="Picco base: lo ione più intenso di ogni scan. Non esiste nei file MRM (si registrano solo le transizioni scelte)">BPC (picco base)</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="Segnale del rivelatore a serie di diodi (PDA/UV): non dipende dallo spettrometro di massa">PDA (UV, totale)</option></select>${p.kind === "pda" ? "" : precSel + (hasScan ? mzbar : "")}${chk("smooth", "smoothing")}${view}${corr}`;
+  const kindSel = ms2c ? `<select disabled title="${NOMS2}"><option>scan MS² dei precursori</option></select>` : null;
+  if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>TIC (somma)</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="Picco base: lo ione più intenso di ogni scan. Non esiste nei file MRM (si registrano solo le transizioni scelte)">BPC (picco base)</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="Segnale del rivelatore a serie di diodi (PDA/UV): non dipende dallo spettrometro di massa">PDA (UV, totale)</option></select>`}${p.kind === "pda" ? "" : precSel + (hasScan ? mzbar : "")}${chk("smooth", "smoothing")}${view}${corr}`;
   if (p.type === "xic") {
     p._xt = Math.min(p._xt || 0, Math.max(0, p.traces.length - 1));
     const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0;
@@ -566,7 +589,7 @@ function ctl(p) {
   if (p.type === "spec") {
     const f = TF, hasMs2 = f.some(x => x.ms2);
     c.innerHTML = `<select data-o="k">${f.map(x => `<option value="${x.k}" ${x.k === p.k ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${chk("all", "sovrapponi i file")}` +
-      (hasMs2 ? `<select data-o="level"><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="2" ${p.level === 2 ? "selected" : ""}>MS2</option></select>` : "") +
+      (hasMs2 ? `<select data-o="level"${off(T0 === "ms2", "Nella scheda MS² lo spettro è sempre quello degli ioni prodotto (livello MS2).")}><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="2" ${p.level === 2 ? "selected" : ""}>MS2</option></select>` : "") +
       `<select data-o="bg" title="Sottrae uno spettro di fondo (come «Subtract spectrum» di Xcalibur): un altro intervallo di tempo dello stesso file, oppure lo stesso intervallo nel bianco. I valori negativi diventano zero">` +
       `<option value="">fondo: nessuno</option><option value="w" ${p.bg === "w" ? "selected" : ""}>fondo: altro intervallo</option>${f.filter(x => x.kind !== "mrm").map(x => `<option value="${x.k}" ${String(p.bg) === String(x.k) ? "selected" : ""}>fondo: ${EH(x.label)}</option>`).join("")}</select>` +
       (p.bg === "w" ? `<label class="muted">da <input data-o="bw0" type="number" step="0.1" value="${p.bw0 ?? ""}" style="width:56px"> a <input data-o="bw1" type="number" step="0.1" value="${p.bw1 ?? ""}" style="width:56px"> min</label>` : "") +
