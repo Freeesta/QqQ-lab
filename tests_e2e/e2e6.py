@@ -123,12 +123,56 @@ try:
             pg.evaluate(KQ + ".editor.undo()"); pg.wait_for_timeout(1000); assert pg.evaluate(LBL) == ["C8H9NO2", "M = 151"]
         step("erasing a bond gives two labels; undo restores", breakbond)
         def no_boxes():
-            # the "fragment selection" box is gone: selecting atoms shows nothing but Ketcher's own selection
+            # the boxes that did the student's work are gone for good; the cream background option too
+            assert pg.evaluate("['selcard','selbody','dcard','dcomp','cap-name','cap-on','ex-bg'].every(i=>!document.getElementById(i))")
+        step("caption / adduct table / fragment-calculation boxes and cream option removed", no_boxes)
+        def sel_smiles():
             pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); pg.wait_for_timeout(1200)
-            pg.evaluate("(()=>{const k=%s,st=k.editor.struct();k.editor.selection({atoms:[...st.atoms.keys()].slice(0,4)})})()" % KQ); pg.wait_for_timeout(500)
-            assert pg.evaluate("['selcard','selbody','dcard','dcomp','cap-name'].every(i=>!document.getElementById(i))")
-            pg.evaluate(KQ + ".editor.selection(null)")
-        step("selection / adduct table / caption boxes removed", no_boxes)
+            assert not pg.is_visible("#sel-card")
+            # whole drawing: properties table without selection
+            assert pg.is_visible("#prop-card"); t = pg.inner_text("#prop-body"); print("PROP:", t.replace("\n", " | ")[:200])
+            lp = float(pg.inner_text("#prop-body tr:nth-child(2) td:nth-child(2)")); assert 0.3 < lp < 1.8, lp
+            # select the 4-aminophenol part (N, ring, OH), acetyl C(=O)CH3 stays out: a PIECE, 1 cut bond
+            pg.evaluate("""(()=>{const k=%s,st=k.editor.struct(),acyl=new Set(),keep=[];
+               st.bonds.forEach(b=>{const a=st.atoms.get(b.begin),c=st.atoms.get(b.end);if(b.type===2&&(a.label==='O'||c.label==='O')){acyl.add(b.begin);acyl.add(b.end)}});
+               const co=[...acyl].find(i=>st.atoms.get(i).label==='C');st.bonds.forEach(b=>{if(b.begin===co&&st.atoms.get(b.end).label==='C')acyl.add(b.end);if(b.end===co&&st.atoms.get(b.begin).label==='C')acyl.add(b.begin)});
+               st.atoms.forEach((a,i)=>{if(!acyl.has(i))keep.push(i)});k.editor.selection({atoms:keep})})()""" % KQ)
+            pg.wait_for_timeout(700)
+            assert pg.is_visible("#sel-card"); t = pg.inner_text("#sel-body"); print("SEL:", t.replace("\n", " | "))
+            assert "Nc1ccc(O)cc1" in t or "Oc1ccc(N)cc1" in t, t
+            assert "1 legame tagliato" in t, t
+            assert pg.is_visible("#prop-card") and "Selezione" in pg.inner_text("#prop-body")
+            pg.screenshot(path=SH + "66_sel_smiles.png")
+            # whole molecule selected: its full SMILES; the copy button works on the text
+            pg.evaluate("(()=>{const k=%s;k.editor.selection({atoms:[...k.editor.struct().atoms.keys()]})})()" % KQ); pg.wait_for_timeout(700)
+            whole = pg.evaluate("(async()=>%s.getSmiles())()" % KQ)      # the selection of everything = the SMILES Ketcher gives for the canvas
+            t = pg.inner_text("#sel-body"); assert whole in t and "legam" not in t, (whole, t)
+            assert pg.get_attribute("#sel-body [data-cp]", "data-cp") == whole
+            pg.evaluate(KQ + ".editor.selection(null)"); pg.wait_for_timeout(500); assert not pg.is_visible("#sel-card")
+        step("selection shows its SMILES (also a piece); properties table (logP...)", sel_smiles)
+        def props_ion():
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1.Oc1ccc([NH3+])cc1')"); pg.wait_for_timeout(1500)
+            rows = pg.evaluate("[...document.querySelectorAll('#prop-body tr')].slice(1).map(r=>[...r.cells].map(c=>c.textContent))"); print("PROPS:", rows)
+            assert len(rows) == 2 and rows[1][1] == "\u2013" and rows[0][1] != "\u2013", rows     # the ion has no logP
+        step("properties: ions are excluded (no logP for a charged species)", props_ion)
+        def hires():
+            w = pg.evaluate("""async()=>{const b=await TPDraw.image('png');const i=await createImageBitmap(b);return [i.width,i.height]}"""); print("PNG px:", w)
+            assert w[0] >= 3000, w
+        step("PNG export is high resolution (>= 3000 px wide)", hires)
+        def nobg():
+            corner = """async()=>{const b=await TPDraw.image('png');const i=await createImageBitmap(b);const c=document.createElement('canvas');c.width=i.width;c.height=i.height;
+                const g=c.getContext('2d');g.drawImage(i,0,0);return Array.from(g.getImageData(2,2,1,1).data)}"""
+            assert pg.evaluate(corner) == [255, 255, 255, 255], "default: white background"
+            assert pg.is_enabled("#ex-jpg")
+            pg.check("#ex-nobg"); pg.wait_for_timeout(200)
+            assert not pg.is_enabled("#ex-jpg"), "JPEG must be off without background"
+            assert pg.evaluate(corner)[3] == 0, "transparent PNG"
+            with pg.expect_download() as d: pg.click("#ex-svg")
+            svg = open(d.value.path(), encoding="utf-8").read()
+            assert "rgb(100%, 100%, 100%)" not in svg and "<text" in svg, "SVG: no background rectangle, labels kept"
+            pg.uncheck("#ex-nobg"); pg.wait_for_timeout(200)
+            assert pg.is_enabled("#ex-jpg") and pg.evaluate(corner) == [255, 255, 255, 255]
+        step("\"senza sfondo\": transparent PNG and SVG, JPEG disabled; off = white", nobg)
         def ion_choice():
             pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); pg.wait_for_timeout(1200)
             for ad, want in [("[M+H]+", ["C8H10NO2+  m/z 152"]), ("[M-H]-", ["C8H8NO2\u2212  m/z 150"]), ("[M+Na]+", ["C8H9NNaO2+  m/z 174"]), ("[M+NH4]+", ["C8H13N2O2+  m/z 169"])]:

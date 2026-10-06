@@ -121,10 +121,12 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
    <div style="margin:3px 0"><label><input type="checkbox" id="lb-f" checked> Formula</label></div>
    <div style="margin:3px 0"><label><input type="checkbox" id="lb-m" checked> Massa</label> <label class="muted sm" style="margin-left:8px">decimali <select id="lb-dec"><option value="0" selected>0 (all'unit&agrave;)</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label></div>
    <div style="margin:3px 0"><label title="Se scegli uno ione, sotto la struttura compare la formula dello ione con la carica e il suo m/z. Se la struttura ha già una carica disegnata, vale quella.">Ione <select id="lb-ion"><option value="" selected>nessuno (molecola neutra)</option><option value="[M+H]+">[M+H]+</option><option value="[M+NH4]+">[M+NH4]+</option><option value="[M+Na]+">[M+Na]+</option><option value="[M+K]+">[M+K]+</option><option value="[M-H]-">[M&minus;H]&minus;</option><option value="[M+Cl]-">[M+Cl]&minus;</option><option value="[M+HCOO]-">[M+HCOO]&minus;</option></select></label></div></div>
+  <div class="card"><h3>Disegna veloce</h3><div class="bar"><input id="ex-smi" placeholder="Incolla uno SMILES" style="flex:1"><button id="ex-load">Disegna</button></div>
+   <div id="smi-warn" class="sm" style="color:#b3261e;margin-top:4px" hidden></div></div>
+  <div class="card" id="sel-card" hidden><h3>SMILES della selezione</h3><div id="sel-body"></div></div>
+  <div class="card" id="prop-card" hidden><h3>Propriet&agrave; previste</h3><div id="prop-body"></div></div>
   <div class="card"><h3>Esporta la tela</h3><div class="bar"><button id="ex-png">PNG</button><button id="ex-jpg">JPEG</button><button id="ex-svg">SVG</button><button id="ex-ket">Salva (.ket)</button></div>
-   <label class="muted" title="Senza spunta lo sfondo è bianco"><input type="checkbox" id="ex-bg"> sfondo color crema</label>
-   <div class="bar" style="margin-top:6px"><input id="ex-smi" placeholder="Incolla uno SMILES" style="flex:1"><button id="ex-load">Disegna</button></div>
-   <div id="smi-warn" class="sm" style="color:#b3261e;margin-top:4px" hidden></div>
+   <label class="muted sm" title="PNG e SVG con sfondo trasparente (il JPEG non lo supporta: con questa spunta il pulsante JPEG è disattivato). Senza spunta lo sfondo è bianco."><input type="checkbox" id="ex-nobg"> senza sfondo (trasparente)</label>
 </div>   <!-- Ketcher (EPAM, Apache-2.0) and OpenChemLib (BSD-3) are bundled: see README.md and qqq_lab/web/vendor/README.md -->
  </aside>
 </section>

@@ -1,6 +1,8 @@
 // "Disegno": Ketcher (structures, fragments, arrows, text). Bundled in web/vendor: no internet needed.
 // The page only draws and labels: the student does the chemistry (no formula/adduct/fragment tables here, on purpose).
+// OpenChemLib (also bundled) only turns what is drawn into SMILES and estimates properties of it (logP ...).
 // Module script; helpers come from explore.js (window).
+import * as OCL from "./vendor/openchemlib.js";
 
 const Q = s => document.querySelector(s);
 const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -20,6 +22,7 @@ function start() {
     fr.src = "static/vendor/ketcher/index.html";
     setTimeout(() => reject(new Error("Ketcher non si e' avviato")), 60000);
   }).then(async k => { await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); });
+    k.editor.subscribe("selectionChange", () => requestAnimationFrame(showInfo));
     hideMacro(fr); changed(); drawLabels(); return k; });
   starting.catch(e => dnote(e.message));
   return starting;
@@ -43,9 +46,79 @@ async function changed() {
   let ket = "";
   try { ket = await K.getKet(); } catch (_) { return; }
   NB.ket = ket; nbSave();
+  showInfo();
 }
 // small warning line under the SMILES field (invalid SMILES, Ketcher not started); empty = hidden
 const dnote = msg => { const w = Q("#smi-warn"); w.textContent = msg || ""; w.hidden = !msg; };
+
+// ------------------------------------------------------------------ SMILES of the selection and property estimates
+// Pieces = connected parts of the drawing (or of the selected atoms only). Each piece is written as a molfile from Ketcher's structure; Ketcher's own
+// engine (Indigo, same as the SMILES of the whole canvas) turns it into SMILES and OpenChemLib reads that for MoleculeProperties.
+// Open valences of a cut piece are closed with H (implicit H).
+function pieces(only) {
+  const st = K.editor.struct(), ids = [...st.atoms.keys()].filter(i => !only || only.has(i)), up = new Map(ids.map(i => [i, i]));
+  const root = i => { while (up.get(i) !== i) { up.set(i, up.get(up.get(i))); i = up.get(i); } return i; };
+  st.bonds.forEach(b => { if (up.has(b.begin) && up.has(b.end)) { const a = root(b.begin), c = root(b.end); if (a !== c) up.set(a, c); } });
+  const groups = new Map();
+  ids.forEach(i => { const r = root(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(i); });
+  const out = [...groups.values()].map(g => ({ ids: g, x: Math.min(...g.map(i => st.atoms.get(i).pp.x)), y: Math.min(...g.map(i => st.atoms.get(i).pp.y)) }));
+  return out.sort((a, b) => a.x - b.x || a.y - b.y);
+}
+function pieceMolfile(ids) {
+  const st = K.editor.struct(), set = new Set(ids), idx = new Map(ids.map((id, n) => [id, n + 1])), atoms = ids.map(i => st.atoms.get(i));
+  if (atoms.some(a => !(a.label in MONO))) return null;                      // R groups, abbreviations...: no structure
+  const bonds = []; st.bonds.forEach(b => { if (set.has(b.begin) && set.has(b.end)) bonds.push(b); });
+  const f = (v, w) => v.toFixed(4).padStart(w), n3 = v => String(v).padStart(3), chg = [];
+  const L = ["", "  qqq", "", `${n3(atoms.length)}${n3(bonds.length)}  0  0  0  0  0  0  0  0999 V2000`];
+  atoms.forEach((a, k) => { L.push(`${f(a.pp.x, 10)}${f(-a.pp.y, 10)}${f(0, 10)} ${a.label.padEnd(3)} 0  0  0  0  0  0  0  0  0  0  0  0`); if (a.charge) chg.push([k + 1, a.charge]); });
+  bonds.forEach(b => L.push(`${n3(idx.get(b.begin))}${n3(idx.get(b.end))}${n3(b.type >= 1 && b.type <= 4 ? b.type : 1)}  0  0  0  0`));
+  for (let i = 0; i < chg.length; i += 8) L.push("M  CHG" + n3(Math.min(8, chg.length - i)) + chg.slice(i, i + 8).map(([a, c]) => " " + n3(a) + " " + n3(c)).join(""));
+  L.push("M  END");
+  return L.join("\n");
+}
+async function pieceSmiles(ids) {
+  const mf = pieceMolfile(ids); if (!mf) return null;
+  try {
+    const r = await K.structService.convert({ struct: mf, output_format: "chemical/x-daylight-smiles" }, {});
+    return String(r.struct || "").trim().split(/\s+/)[0] || null;
+  } catch (_) { return null; }
+}
+// cut bonds of a piece selection: bonds between a selected and an unselected atom
+function cutBonds(set) { let n = 0; K.editor.struct().bonds.forEach(b => { if (set.has(b.begin) !== set.has(b.end)) n++; }); return n; }
+const copyBtn = (text, label) => `<button class="sm" data-cp="${EH(text)}" title="Copia negli appunti">${label || "Copia"}</button>`;
+let infoRun = 0;
+async function showInfo() {
+  const sc = Q("#sel-card"), pc = Q("#prop-card"); if (!K || !sc || !pc) return;
+  const run = ++infoRun, sel = K.editor.selection() || {}, st = K.editor.struct(), set = new Set(sel.atoms || []);
+  (sel.bonds || []).forEach(id => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
+  const all = pieces(set.size ? set : null).map(p => ({ ...p, c: countAtoms(p.ids.map(i => st.atoms.get(i))) }));
+  for (const p of all) {                                                       // SMILES (Ketcher) and molecule (OpenChemLib) of each piece
+    p.smi = await pieceSmiles(p.ids); p.mol = null;
+    if (p.smi) { try { p.mol = OCL.Molecule.fromSmiles(p.smi); } catch (_) { /* no properties */ } }
+  }
+  if (run !== infoRun) return;                                                 // the selection changed meanwhile: a newer call wins
+  // 1) SMILES of the selection (also a piece, not a whole molecule)
+  if (!set.size) sc.hidden = true;
+  else {
+    sc.hidden = false;
+    const cuts = cutBonds(set);
+    Q("#sel-body").innerHTML = all.map(p => {
+      const smi = p.smi || "";                                                  // written by Ketcher (Indigo): the same SMILES as for the whole canvas
+      return smi ? `<div style="display:flex;gap:6px;align-items:center;margin:3px 0"><code style="word-break:break-all;flex:1;user-select:all">${EH(smi)}</code>${copyBtn(smi)}</div>` : '<div class="muted sm">Atomo senza formula (gruppo R, abbreviazione...): niente SMILES.</div>';
+    }).join("") + (cuts ? `<div class="muted sm">${cuts} legam${cuts > 1 ? "i tagliati" : "e tagliato"}: i posti liberi sono chiusi con H.</div>` : "");
+  }
+  // 2) property estimates: the selected pieces, or every structure of the drawing
+  const rows = all.filter(p => p.mol && p.c).map(p => {
+    const pr = new OCL.MoleculeProperties(p.mol), ion = p.c.q !== 0, v = (x, d) => ion ? "&ndash;" : x.toFixed(d);
+    const fo = ion ? formulaOf(p.c.n).formula : p.mol.getMolecularFormula().formula;     // a cut piece is closed with H: the formula is that of the SMILES shown
+    return `<tr><td>${fmtF(fo)}${p.c.q ? (p.c.q > 0 ? "<sup>+</sup>" : "<sup>&minus;</sup>") : ""}</td><td class="num"><b>${v(pr.logP, 2)}</b></td><td class="num">${v(pr.logS, 2)}</td><td class="num">${v(pr.polarSurfaceArea, 0)}</td><td class="num">${ion ? "&ndash;" : pr.donorCount + "/" + pr.acceptorCount}</td></tr>`;
+  });
+  pc.hidden = !rows.length;
+  if (rows.length) Q("#prop-body").innerHTML = `<table class="sm"><tr><th>${set.size ? "Selezione" : "Struttura"}</th><th class="num">logP</th><th class="num">logS</th><th class="num">TPSA</th><th class="num" title="donatori / accettori di legame H">D/A</th></tr>${rows.join("")}</table>
+    <div class="muted sm">Stime di OpenChemLib per la forma <b>neutra</b> (logS in log mol/L, TPSA in &Aring;<sup>2</sup>; gli ioni sono esclusi). L'errore tipico del logP &egrave; di circa 0.5 unit&agrave;, a volte 1. In LC (C18, acqua/ACN con HCOOH) la ritenzione dipende anche da pKa e carica (logD): usa il logP per confrontare composti simili, non come valore assoluto.</div>`;
+}
+const fmtF = f => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-cp]"); if (b) { try { navigator.clipboard.writeText(b.dataset.cp); b.textContent = "Copiato"; setTimeout(() => { b.textContent = "Copia"; }, 1200); } catch (_) { /* clipboard blocked */ } } });
 
 // ------------------------------------------------------------------ formula and mass written under each structure
 // Optional (checkboxes "#lb-f" formula, "#lb-m" mass + "#lb-dec" decimals). Drawn in an overlay group of Ketcher's own SVG, so the label follows zoom and scroll
@@ -270,12 +343,6 @@ function addExportLabels(svgText, ket) {
 }
 
 // ------------------------------------------------------------------ export
-// Ketcher ignores the background option for the SVG: its white background rectangle is repainted here
-function creamBackground(svgText) {
-  const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
-  doc.querySelectorAll("rect").forEach(q => { if (/^rgb\(100%,\s*100%,\s*100%\)$/.test(q.getAttribute("fill") || "")) q.setAttribute("fill", "#fffbf0"); });
-  return new XMLSerializer().serializeToString(doc);
-}
 // Ketcher crops the picture tightly around the structures and can cut a text object written near the edge: add a margin on every side
 function padSvg(svgText, px) {
   const doc = new DOMParser().parseFromString(svgText, "image/svg+xml"), root = doc.documentElement;
@@ -288,28 +355,40 @@ function padSvg(svgText, px) {
   if (bg) { bg.setAttribute("x", x - px); bg.setAttribute("y", y - px); bg.setAttribute("width", w + 2 * px); bg.setAttribute("height", h + 2 * px); }
   return new XMLSerializer().serializeToString(doc);
 }
+// transparent export: drop the white background rectangle that Ketcher draws behind the structures
+function noBackground(svgText) {
+  const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
+  doc.querySelectorAll("rect").forEach(q => { if (!q.closest("defs") && /^(rgb\(100%,\s*100%,\s*100%\)|#fff(fff)?|white)$/i.test(q.getAttribute("fill") || "")) q.remove(); });
+  return new XMLSerializer().serializeToString(doc);
+}
 const download = (blob, name) => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
 async function image(format) {
   await start();
-  const raw = await K.getKet(), cream = Q("#ex-bg").checked, gen = k => K.generateImage(k, { outputFormat: "svg", backgroundColor: cream ? "255,251,240" : "255,255,255" });
+  const raw = await K.getKet(), gen = k => K.generateImage(k, { outputFormat: "svg", backgroundColor: "255,255,255" });
   let svgText = null;
   if (labelsOn()) { try { svgText = addExportLabels(await (await gen(raw)).text(), JSON.parse(raw)); } catch (_) { svgText = null; } }   // real SVG text
   if (!svgText) svgText = await (await gen(ketWithLabels(raw))).text();                                                              // fallback: Ketcher text objects
-  if (cream) svgText = creamBackground(svgText);
   svgText = padSvg(svgText, 16);
+  const clear = Q("#ex-nobg").checked && format !== "jpg";       // transparent background: PNG and SVG only (JPEG has no transparency)
+  if (clear) svgText = noBackground(svgText);
   const svg = new Blob([svgText], { type: "image/svg+xml" });
   if (format === "svg") return svg;
-  // PNG / JPEG: rasterise the vector at high resolution (the built-in PNG is small)
+  // PNG / JPEG: rasterise the vector at high resolution (Ketcher's own PNG is small): at least 3x, about 3600 px wide, never more than 12000 px on a side
   const img = new Image(), url = URL.createObjectURL(svg);
   await new Promise((ok, ko) => { img.onload = ok; img.onerror = ko; img.src = url; });
-  const sc = Math.min(6, Math.max(2, 2400 / Math.max(img.width, 1)));
+  const sc = Math.min(8, Math.max(3, 3600 / Math.max(img.width, 1)), 12000 / Math.max(img.width, img.height, 1));
   const c = document.createElement("canvas"); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
-  const g = c.getContext("2d"); g.fillStyle = cream ? "#fffbf0" : "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+  const g = c.getContext("2d"); if (!clear) { g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); }
+  g.drawImage(img, 0, 0, c.width, c.height);
   URL.revokeObjectURL(url);
   return new Promise(r => c.toBlob(r, format === "jpg" ? "image/jpeg" : "image/png", 0.95));
 }
 Q("#ex-png").onclick = async () => download(await image("png"), "struttura.png");
-Q("#ex-jpg").onclick = async () => download(await image("jpg"), "struttura.jpg");
+Q("#ex-jpg").onclick = async () => { if (!Q("#ex-nobg").checked) download(await image("jpg"), "struttura.jpg"); };
+Q("#ex-nobg").addEventListener("change", () => {      // JPEG cannot be transparent: its button is off while "senza sfondo" is on
+  const on = Q("#ex-nobg").checked, j = Q("#ex-jpg");
+  j.disabled = on; j.title = on ? "Il JPEG non supporta la trasparenza: togli la spunta «senza sfondo» oppure usa PNG o SVG" : "";
+});
 Q("#ex-svg").onclick = async () => download(await image("svg"), "struttura.svg");
 Q("#ex-ket").onclick = async () => { await start(); download(new Blob([await K.getKet()], { type: "application/json" }), "disegno.ket"); };
 Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote("");
