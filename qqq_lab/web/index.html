@@ -110,32 +110,20 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 <section id="v-draw" hidden>
  <div><iframe id="kframe" title="Editor chimico" loading="lazy"></iframe></div>
  <aside>
-  <div class="card"><label style="font-weight:600"><input type="checkbox" id="lb-on" checked> Formula e massa sotto ogni struttura</label> <button class="hq" data-help="draw-labels" title="Che cos'è?">?</button>
-   <div class="muted sm" style="margin-top:4px">Sotto ogni molecola (o frammento) disegnata compare la formula bruta con la massa esatta monoisotopica arrotondata all'unit&agrave;: <i>M</i> per una specie neutra, <i>m/z</i> se hai messo una carica (strumento <b>+</b> della barra a sinistra). La scritta compare anche nelle immagini esportate.</div></div>
-  <div class="card" id="selcard" hidden><h3>Selezione (frammento) <button class="hq" data-help="draw-sel" title="Che cos'è?">?</button></h3><div id="selbody"></div></div>
-  <div class="card"><h3>Strutture sulla tela <button class="hq" data-help="draw-structs" title="Che cos'è?">?</button></h3><div id="dcomp" class="muted">Disegna una molecola, un frammento o un intero cammino (frecce e testo sono nella barra a sinistra).</div></div>
-  <div class="card"><h3>Didascalia per la relazione <button class="hq" data-help="draw-caption" title="Che cos'è?">?</button></h3><div class="muted sm">Scritta sotto la struttura nelle immagini esportate. Con più strutture sulla tela descrive quella scelta qui sotto.</div>
+  <div class="card"><div class="sm" style="margin-bottom:6px"><a href="#" id="ex-link">Vedi un esempio di disegno</a></div>
+   <div style="font-weight:600;margin-bottom:2px">Sotto ogni struttura</div>
+   <div style="margin:3px 0"><label><input type="checkbox" id="lb-f" checked> Formula</label></div>
+   <div style="margin:3px 0"><label><input type="checkbox" id="lb-m" checked> Massa</label> <label class="muted sm" style="margin-left:8px">decimali <select id="lb-dec"><option value="0" selected>0 (all'unit&agrave;)</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></label></div></div>
+  <div class="card" id="selcard" hidden><h3>Selezione (frammento)</h3><div id="selbody"></div></div>
+  <div class="card" id="dcard" hidden><div id="dcomp"></div></div>
+  <div class="card"><h3>Didascalia per la relazione</h3><div class="muted sm">Scritta sotto la struttura nelle immagini esportate. Con più strutture sulla tela descrive quella scelta qui sotto.</div>
    <div class="bar"><label>Nome <input id="cap-name" placeholder="es. TP1" style="width:90px"></label><label>Struttura <select id="cap-part"></select></label><label>Addotto <select id="cap-ad" title="Addotto per l'm/z: in ESI+ di solito [M+H]+"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+Cl]-</option><option>[M+HCOO]-</option></select></label></div>
    <label class="sm"><input type="checkbox" id="cap-on"> aggiungi la didascalia alle immagini esportate</label>
    <pre id="cap-txt" class="sm" style="white-space:pre-wrap;margin:6px 0"></pre><div class="bar"><button id="cap-copy" class="sm" title="Copia il testo, da incollare nella relazione">Copia il testo</button></div></div>
-  <div class="card"><h3>Esporta la tela <button class="hq" data-help="draw-export" title="Che cos'è?">?</button></h3><div class="bar"><button id="ex-png">PNG</button><button id="ex-jpg">JPEG</button><button id="ex-svg">SVG</button><button id="ex-ket">Salva (.ket)</button></div>
+  <div class="card"><h3>Esporta la tela</h3><div class="bar"><button id="ex-png">PNG</button><button id="ex-jpg">JPEG</button><button id="ex-svg">SVG</button><button id="ex-ket">Salva (.ket)</button></div>
    <label class="muted" title="Senza spunta lo sfondo è bianco"><input type="checkbox" id="ex-bg"> sfondo color crema</label>
    <div class="bar" style="margin-top:6px"><input id="ex-smi" placeholder="Incolla uno SMILES" style="flex:1"><button id="ex-load">Disegna</button></div>
-   <div class="muted sm" style="margin-top:6px">Ketcher (EPAM, Apache-2.0) e OpenChemLib (BSD-3) sono inclusi: funziona offline.</div></div>
-  <div class="card"><details>
-   <summary style="cursor:pointer;font-weight:600;font-size:13px">Come fare in Ketcher</summary>
-   <div class="muted sm" style="margin-top:8px;line-height:1.6">
-    <b>Atomi</b>: scegli l'elemento nella barra a destra (o il tasto: <kbd>C</kbd>, <kbd>N</kbd>, <kbd>O</kbd>, <kbd>S</kbd>, <kbd>L</kbd> = Cl, <kbd>B</kbd> = Br) e fai clic su un atomo per sostituirlo, o su un punto vuoto per aggiungerlo.<br>
-    <b>Carica + o &minus;</b>: strumenti <b>A+</b> e <b>A&minus;</b> nella barra a sinistra (tasti <kbd>=</kbd> e <kbd>-</kbd>), poi clic sull'atomo. Ogni clic aggiunge una carica. Per uno ione [M+H]<sup>+</sup> metti la carica sull'atomo protonato (di solito N od O) e aggiungi l'H: la formula diventa quella dello ione e la scritta mostra m/z.<br>
-    <b>Aggiungere un atomo (es. +O)</b>: per una struttura vera, scegli O e fai clic su un atomo della molecola (si crea il legame). Per una semplice scritta accanto a una freccia (&laquo;+O&raquo;, &laquo;&minus;CH<sub>2</sub>&raquo;, &laquo;+H<sub>2</sub>O&raquo;) usa lo strumento testo <b>T</b> (<kbd>Alt</kbd>+<kbd>T</kbd>); nel riquadro del testo ci sono i pulsanti pedice e apice.<br>
-    <b>Parentesi</b>: Ketcher non ha parentesi semplici per gli ioni (gli S-Group mettono parentesi da polimero, con una &laquo;n&raquo;). Per uno ione la cosa corretta &egrave; mettere la carica sull'atomo con <b>A+</b>: la scritta sotto diventa m/z. Se vuoi proprio la notazione [&nbsp;]<sup>+</sup>, scrivila con lo strumento testo <b>T</b> (pulsante apice per il +).<br>
-    <b>Vie di trasformazione</b>: freccia di reazione e segno + nella barra a sinistra; testo sopra la freccia con <b>T</b>. Se disegni composto di partenza &rarr; freccia &rarr; prodotto sulla stessa riga, sopra la freccia compare da sola la differenza (es. &laquo;+O &Delta;m +16&raquo;).<br>
-    <b>Un frammento senza rompere legami</b>: seleziona solo gli atomi del pezzo (rettangolo di selezione, oppure clic sugli atomi tenendo premuto <kbd>Maiusc</kbd>): a destra, nel riquadro &laquo;Selezione&raquo;, compaiono la sua formula e gli m/z possibili dello ione. Anche <kbd>Alt</kbd>+<kbd>C</kbd> di Ketcher d&agrave; formula e massa della parte selezionata.<br>
-
-    <b>Rompere un legame (frammenti)</b>: strumento <b>gomma</b> (<kbd>Del</kbd>) e clic sul legame: la molecola si divide e sotto ogni pezzo compaiono formula e massa. Attenzione: un frammento in MS/MS &egrave; uno <i>ione</i>, quasi sempre con un H spostato; aggiungi carica e H dove servono e confronta l'm/z con lo spettro di ioni prodotto. Se sbagli: <kbd>Ctrl</kbd>+<kbd>Z</kbd>.<br>
-    <b>Altro</b>: <kbd>Ctrl</kbd>+<kbd>A</kbd> seleziona tutto, <kbd>Ctrl</kbd>+<kbd>L</kbd> riordina il disegno, <kbd>Ctrl</kbd>+rotella ingrandisce.
-   </div>
-  </details></div>
+</div>   <!-- Ketcher (EPAM, Apache-2.0) and OpenChemLib (BSD-3) are bundled: see README.md and qqq_lab/web/vendor/README.md -->
  </aside>
 </section>
 <dialog id="refdlg"><div class="top" style="display:flex;align-items:center;gap:8px"><nav id="reftabs"></nav><span class="sp"></span><button id="refx" class="x" title="Chiudi">&times;</button></div><div id="refbody"></div></dialog>
