@@ -170,3 +170,6 @@ Stato lato front end: variabile globale `E` (file, pannelli), `S` (stato pagina)
 
 - XIC window from a spectrum click is rounded to 0.1 Da (`setWin(..., rnd)`; formula windows stay exact); `.mzf` inputs 78 px so two decimals show.
 - With a single file in the tab the multi-file controls are disabled (`renderNav`, `ctl`: fprev/fnext/fsel/fmode, mode, fpop, spec `all`, map `ref`); test `tests_e2e/e2e_unfile.py`.
+
+- Work rule (Federico runs several chats in parallel): every block of work goes on its own git branch, never straight on main; branches are compared later.
+- `follow(tab)` in explore.js: with "Solo il selezionato" the per-graph file selectors (spectrum, map) and "sovrapponi i file" are disabled; with "Tutti sovrapposti" the toolbar arrows/selector are disabled. Swatch CSS for `i` uses `:empty` so `<i>m/z</i>` text never gets swatch styling. 3D map: shading, hover tooltip, norm select only with a reference file. Test `tests_e2e/e2e_modo.py`.

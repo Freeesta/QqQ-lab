@@ -265,6 +265,8 @@ function fileMenu(btn) {
   setTimeout(() => document.addEventListener("mousedown", function h(e) { if (!d.contains(e.target)) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
 }
 const vis = () => tabFiles().filter(f => f.vis);
+// "Solo il selezionato": every graph follows the file chosen in the toolbar, so the controls that choose a file inside a graph are switched off
+const follow = tab => !!(E.browse && E.files[E.cur] && E.files[E.cur].kind === tab);
 const shown = () => E.browse && E.files[E.cur] && E.files[E.cur].kind === E.tab ? [E.files[E.cur]] : vis();
 const scanFiles = l => l.filter(f => f.kind !== "mrm");
 
@@ -274,16 +276,18 @@ function renderNav() {
   s.innerHTML = tabFiles().map(f => `<option value="${f.k}" ${f.k === E.cur ? "selected" : ""}>${EH(f.label)}</option>`).join("");
   Q("#fmode").querySelectorAll("button").forEach(b => b.classList.toggle("on", (b.dataset.m === "sel") === !!E.browse));
   const one = tabFiles().length <= 1, why = "Serve più di un file in questa scheda: ne hai caricato uno solo.";   // with a single file nothing here has a meaning
-  [Q("#fprev"), Q("#fnext"), Q("#fsel"), ...Q("#fmode").querySelectorAll("button")].forEach(b => { if (b.dataset.t0 == null) b.dataset.t0 = b.title; b.disabled = one; b.title = one ? why : b.dataset.t0; });
+  const nowhy = "Si usa con «Solo il selezionato»: con «Tutti sovrapposti» i grafici mostrano tutti i file spuntati.";
+  [Q("#fprev"), Q("#fnext"), Q("#fsel"), ...Q("#fmode").querySelectorAll("button")].forEach(b => { if (b.dataset.t0 == null) b.dataset.t0 = b.title; const nav = !b.closest("#fmode"); b.disabled = one || (nav && !E.browse); b.title = one ? why : nav && !E.browse ? nowhy : b.dataset.t0; });
+  const sig = [E.browse, E.cur, tabFiles().length, E.tab].join("|"); if (renderNav._sig !== sig) { renderNav._sig = sig; E.panels.forEach(q => q.el && ctl(q)); }      // the graphs' own file choosers depend on the mode
   Q("#fmode").classList.toggle("dis", one);
 }
 function goFile(d) {
-  const tf = tabFiles(); if (tf.length < 2) return;
-  E.cur = tf[(Math.max(0, tf.findIndex(f => f.k === E.cur)) + d + tf.length) % tf.length].k; E.browse = true;
+  const tf = tabFiles(); if (tf.length < 2 || !E.browse) return;
+  E.cur = tf[(Math.max(0, tf.findIndex(f => f.k === E.cur)) + d + tf.length) % tf.length].k; renderNav();
   renderFileList(); redrawAll(); uiSave();
 }
 Q("#fprev").onclick = () => goFile(-1); Q("#fnext").onclick = () => goFile(1);
-Q("#fsel").onchange = e => { E.cur = +e.target.value; renderFileList(); if (E.browse) redrawAll(); uiSave(); };
+Q("#fsel").onchange = e => { E.cur = +e.target.value; renderFileList(); renderNav(); if (E.browse) redrawAll(); uiSave(); };
 Q("#fmode").querySelectorAll("button").forEach(b => b.onclick = () => { E.browse = b.dataset.m === "sel"; renderNav(); redrawAll(); uiSave(); });
 document.addEventListener("keydown", e => {
   if (S.view !== "data" || !E.files.length || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || Q("dialog[open]")) return;
@@ -704,16 +708,17 @@ function ctl(p) {
   }
   if (p.type === "mrm") c.innerHTML = `<select data-o="tr" title="Transizione"><option value="">tutte le transizioni</option>${p._trs.map(t => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${fsel}${chk("smooth", "smoothing")}${view}${corr}<button data-o="cal" title="Tabella delle aree dei file MRM e retta di taratura (concentrazione contro area)">Retta di taratura</button>`;
   if (p.type === "map") {
-    const sf = TF, opt = (v, cur, lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
+    const rf0 = p.ref !== "" && p.ref != null, sf = TF, opt = (v, cur, lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
     c.innerHTML = `<span class="tbg" role="group" title="Vista della mappa: 2D = colori sul piano RT-m/z; 3D = superficie con l'intensità in altezza (trascina per ruotarla)"><button data-o="view" data-v="2d" class="${p.view !== "3d" ? "on" : ""}">2D</button><button data-o="view" data-v="3d" class="${p.view === "3d" ? "on" : ""}">3D</button></span>` +
-      `<select data-o="k" title="File da mostrare">${sf.map(x => opt(x.k, p.k, x.label)).join("")}</select>` +
+      `<select data-o="k"${follow(p.tab || E.tab) ? ' disabled title="Hai scelto «Solo il selezionato» nella barra: la mappa segue il file scelto lì."' : ' title="File da mostrare"'}>${sf.map(x => opt(x.k, follow(p.tab || E.tab) ? E.cur : p.k, x.label)).join("")}</select>` +
       `<select data-o="scale" title="Scala dei colori: la radice quadrata fa emergere i segnali deboli">${opt("sqrt", p.scale, "colori: radice")}${opt("lin", p.scale, "colori: lineare")}${opt("log", p.scale, "colori: log")}</select>` +
       `<label class="muted" title="Sottrae un altro file: in rosso ciò che è più intenso nel file mostrato, in blu ciò che è più intenso nel riferimento">differenza con <select data-o="ref"${off(sf.length <= 1, "Serve un secondo file full scan da sottrarre.")}><option value="">nessuno</option>${sf.map(x => opt(x.k, p.ref, x.label)).join("")}</select></label>` +
-      `<select data-o="norm" title="Prima di sottrarre due esperimenti diversi conviene renderli confrontabili: «al massimo» divide ogni mappa per il suo punto più intenso; «al totale» per la somma di tutte le intensità (in per mille). Con «assoluta» si sottraggono i conteggi così come sono.">${opt("abs", p.norm, "intensità assoluta")}${opt("max", p.norm, "normalizza al massimo")}${opt("tic", p.norm, "normalizza al totale")}</select>`;
+      `<select data-o="norm"${rf0 ? "" : ' disabled'} title="${rf0 ? "" : "Serve solo per la differenza: scegli prima il file da sottrarre. "}Prima di sottrarre due esperimenti diversi conviene renderli confrontabili: «al massimo» divide ogni mappa per il suo punto più intenso; «al totale» per la somma di tutte le intensità (in per mille). Con «assoluta» si sottraggono i conteggi così come sono.">${opt("abs", p.norm, "intensità assoluta")}${opt("max", p.norm, "normalizza al massimo")}${opt("tic", p.norm, "normalizza al totale")}</select>`;
   }
   if (p.type === "spec") {
     const f = TF, hasMs2 = f.some(x => x.ms2);
-    c.innerHTML = `<select data-o="k">${f.map(x => `<option value="${x.k}" ${x.k === p.k ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${chk("all", "sovrapponi i file", ONEF, "Hai caricato un solo file in questa scheda.")}` +
+    const fol = follow(T0), FW = "Hai scelto «Solo il selezionato» nella barra: questo grafico segue il file scelto lì. Con «Tutti sovrapposti» scegli qui il file.";
+    c.innerHTML = `<select data-o="k"${off(fol, FW)}>${f.map(x => `<option value="${x.k}" ${x.k === (fol ? E.cur : p.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${chk("all", "sovrapponi i file", fol || ONEF, fol ? FW : "Hai caricato un solo file in questa scheda.")}` +
       (hasMs2 ? `<select data-o="level"${off(T0 === "ms2", "Nella scheda MS² lo spettro è sempre quello degli ioni prodotto (livello MS2).")}><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="2" ${p.level === 2 ? "selected" : ""}>MS2</option></select>` : "") +
       `<select data-o="bg" title="Sottrae uno spettro di fondo (come «Subtract spectrum» di Xcalibur): un altro intervallo di tempo dello stesso file, oppure lo stesso intervallo nel bianco. I valori negativi diventano zero">` +
       `<option value="">fondo: nessuno</option><option value="w" ${p.bg === "w" ? "selected" : ""}>fondo: altro intervallo</option>${f.filter(x => x.kind !== "mrm").map(x => `<option value="${x.k}" ${String(p.bg) === String(x.k) ? "selected" : ""}>fondo: ${EH(x.label)}</option>`).join("")}</select>` +
@@ -1062,7 +1067,7 @@ function showHover(p, px, py) {
   const a = p._a; if (!a || !a.hov || px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) return hideHover(p);
   const h = a.hov(px, py); if (!h) return hideHover(p);
   const cv = p.cv, el = p.el;
-  p.vl.hidden = false; p.vl.style.left = cv.offsetLeft + h.px + "px"; p.vl.style.top = cv.offsetTop + M.t + "px"; p.vl.style.height = a.H - M.t - M.b + "px";
+  p.vl.hidden = !!h.novl; p.vl.style.left = cv.offsetLeft + h.px + "px"; p.vl.style.top = cv.offsetTop + M.t + "px"; p.vl.style.height = a.H - M.t - M.b + "px";
   p.tip.hidden = false; p.tip.innerHTML = h.html;
   const tw = p.tip.offsetWidth, th = p.tip.offsetHeight;
   let l = cv.offsetLeft + px + 14; if (l + tw > el.clientWidth - 4) l = cv.offsetLeft + px - tw - 14;
@@ -1170,7 +1175,8 @@ function draw3d(p, g, W, H, A, B, im, f, rf, x0, x1, y0, y1, scaleTxt) {
   for (const [a, b] of cells) {
     const z = (Z[a * ny + b] + Z[(a + 1) * ny + b] + Z[a * ny + b + 1] + Z[(a + 1) * ny + b + 1]) / 4;
     const q = B ? Math.round(127.5 - Math.sign(z) * Math.abs(z) * 127.5) : Math.round(Math.min(1, Math.max(0, z)) * 255);
-    const col = `rgb(${tab[q * 4]},${tab[q * 4 + 1]},${tab[q * 4 + 2]})`, c0 = up(a, b), c1 = up(a + 1, b), c2 = up(a + 1, b + 1), c3 = up(a, b + 1);
+    const lit = Math.min(1.18, Math.max(0.78, 1 + 2.2 * ((Z[a * ny + b] + Z[a * ny + b + 1]) - (Z[(a + 1) * ny + b] + Z[(a + 1) * ny + b + 1])) / 2)), sh = k => Math.min(255, Math.round(k * lit));     // light from the low-RT side: slopes facing it are brighter
+    const col = `rgb(${sh(tab[q * 4])},${sh(tab[q * 4 + 1])},${sh(tab[q * 4 + 2])})`, c0 = up(a, b), c1 = up(a + 1, b), c2 = up(a + 1, b + 1), c3 = up(a, b + 1);
     g.fillStyle = col; g.strokeStyle = col; g.beginPath(); g.moveTo(c0[0], c0[1]); g.lineTo(c1[0], c1[1]); g.lineTo(c2[0], c2[1]); g.lineTo(c3[0], c3[1]); g.closePath(); g.fill(); g.stroke();
   }
   // axes: ticks on the two floor edges nearest to the viewer
@@ -1180,11 +1186,17 @@ function draw3d(p, g, W, H, A, B, im, f, rf, x0, x1, y0, y1, scaleTxt) {
   g.beginPath(); fl.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.stroke();
   for (const t of r0) { const u = (t - x0) / (x1 - x0) - .5, q = P(u, wn, 0), o = P(u, wn * 1.08, 0); g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(o[0], o[1]); g.stroke(); g.fillText(String(+t.toFixed(2)), o[0], o[1] + (wn < 0 ? 12 : -4)); }
   for (const t of m0) { const w = (t - y0) / (y1 - y0) - .5, q = P(un, w, 0), o = P(un * 1.06, w, 0); g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(o[0], o[1]); g.stroke(); g.textAlign = un < 0 ? "right" : "left"; g.fillText(String(Math.round(t)), o[0] + (un < 0 ? -3 : 3), o[1] + 4); g.textAlign = "center"; }
-  const tm = P(0, wn * 1.22, 0), ym = P(un * 1.2, 0, 0), zt = P(-.5, -.5, zmax), zb = P(-.5, -.5, B ? zmin : 0);
-  g.fillText("RT (min)", tm[0], tm[1] + (wn < 0 ? 14 : -10)); g.save(); g.translate(ym[0], ym[1]); g.fillText("m/z", 0, 4); g.restore();
-  g.beginPath(); g.moveTo(zb[0], zb[1]); g.lineTo(zt[0], zt[1]); g.stroke(); g.textAlign = "left"; g.fillText(`intensità (${scaleTxt})`, zt[0] + 4, zt[1] - 12);
-  const mzAtC = () => (y0 + y1) / 2;
-  p._a = { x0, x1, y0, y1, X: v2 => M.l + (v2 - x0) / (x1 - x0) * (W - M.l - M.r), Y: () => 0, W, H, full: [rt0, rt1], fullY: [mzA, mzA + nmz * dmz], f, mzAt: mzAtC, map: true, is3d: true, hov: null };
+  const tm = P(0, wn * 1.32, 0), ym = P(un * 1.3, 0, 0), zt = P(-.5, -.5, zmax), zb = P(-.5, -.5, B ? zmin : 0);
+  g.fillText("RT (min)", tm[0], tm[1] + (wn < 0 ? 18 : -14)); g.save(); g.translate(ym[0], ym[1]); g.fillText("m/z", 0, 4); g.restore();
+  g.beginPath(); g.moveTo(zb[0], zb[1]); g.lineTo(zt[0], zt[1]); g.stroke(); g.textAlign = "left"; g.fillStyle = css("--ink"); g.fillText(`altezza e colore = intensità (${scaleTxt})`, M.l, M.t + 8); g.fillStyle = ink;
+  const mzAtC = () => (y0 + y1) / 2, centres = [];
+  for (let a = 0; a < nx; a++) for (let b = 0; b < ny; b++) { const q = P(a / (nx - 1) - .5, b / (ny - 1) - .5, Z[a * ny + b]); centres.push({ x: q[0], y: q[1], depth: q[2], v: C[a * ny + b], rt: rt0 + (ia + (a + .5) * sx) / nrt * (rt1 - rt0), mz: mzA + (ja + (b + .5) * sy) * dmz }); }
+  p._a = { x0, x1, y0, y1, X: v2 => M.l + (v2 - x0) / (x1 - x0) * (W - M.l - M.r), Y: () => 0, W, H, full: [rt0, rt1], fullY: [mzA, mzA + nmz * dmz], f, mzAt: mzAtC, map: true, is3d: true, hov: (px, py) => {
+    let best = null, bd = 18 * 18;                                  // nearest projected cell centre (the one nearer the viewer wins a tie)
+    for (const c of centres) { const d = (c.x - px) ** 2 + (c.y - py) ** 2; if (d < bd || (best && d < bd + 40 && c.depth < best.depth)) { bd = Math.min(bd, d); best = c; } }
+    if (!best) return null;
+    return { px: best.x, rt: null, novl: true, html: `<b>RT ${best.rt.toFixed(2)} min · m/z ${best.mz.toFixed(1)}</b><div>${B ? "differenza" : "intensità media"}: <b>${B && best.v > 0 ? "+" : ""}${fmt(best.v)}</b></div>` };
+  } };
 }
 async function drawMap(p) {
   const { g, W, H } = setup(p.cv);

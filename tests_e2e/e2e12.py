@@ -29,7 +29,7 @@ with sync_playwright() as p:
         assert pg.locator("#flst .fgh").count() >= 1 and pg.locator("#flst .tag").count() == 0 and pg.locator('#dfiles .hq').count() == 0
         assert pg.locator("#np-export, #np-ints, #kindinfo").count() == 0
         assert pg.locator("#credits").count() == 0 and pg.locator('.pnl.chrom [data-o=norm]').count() == 0
-        fw = pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').offsetWidth"); assert fw < 60, fw
+        fw = pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').offsetWidth"); assert fw < 90, fw
     step("sidebar slim, no EMS, no Esporta/Integrazioni/Rilevato", side)
     def integ():
         c = pg.locator('.pnl.chrom').first

@@ -23,7 +23,8 @@ function emptyTab() {
   if (tabFiles(t).length) { el.hidden = true; return; }
   const other = TABS.filter(([k]) => k !== t && tabFiles(k).length);
   el.hidden = false;
-  el.innerHTML = `<b>Qui non ci sono file ${EH(name)}.</b> ` + (other.length ? "I tuoi file sono nella scheda: " + other.map(([k, n]) => `<button class="go" data-go="${k}">${EH(n)} (${tabFiles(k).length})</button>`).join(" ") : "Carica un file con il pulsante Aggiungi file.");
+  el.innerHTML = `<b>Qui non ci sono file ${EH(name)}.</b> ` + (other.length ? "I tuoi file sono nella scheda: " + other.map(([k, n]) => `<button class="go" data-go="${k}">${EH(n)} (${tabFiles(k).length})</button>`).join(" ") : "Non hai ancora caricato nulla.") + ` <button data-load="1" title="Apre la pagina di caricamento: i file già caricati restano nella sessione">+ Carica file ${EH(name)}</button>`;
+  el.querySelectorAll("[data-load]").forEach(b => b.onclick = () => Q("#addf").click());
   el.querySelectorAll("[data-go]").forEach(b => b.onclick = () => setTab(b.dataset.go));
 }
 window.emptyTab = emptyTab;
