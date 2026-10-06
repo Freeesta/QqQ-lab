@@ -282,6 +282,28 @@ class App:
                 m["lab_pick"] = [i for i, d in enumerate(diffs) if d == best][-1]
         return m
 
+    def origin(self, k: int, mz: float, parent: float, rt0: float | None = None, rt1: float | None = None, formula: str | None = None) -> dict:
+        """"Da dove viene questo ione?": the evidence of qqq_lab.ionfamily for the ion at mz against the candidate precursor `parent`,
+        over every full-scan file of the session (k = the file the student is looking at, used as the reference). No verdict."""
+        from . import ionfamily
+        if not self.session:
+            raise ValueError("nessuna sessione aperta")
+        full = [(i, it) for i, it in enumerate(self.session.items) if it.kind() != "mrm" and it.type != "blank" and len(it.run.table(1).rt)]
+        if not full:
+            raise ValueError("servono file full scan")
+        samples = [{"label": it.label, "time": it.time, "table": it.run.table(1), "key": str(it.path)} for _, it in full]
+        ref = next((j for j, (i, _) in enumerate(full) if i == k), None)
+        ms2 = None
+        for it in self.session.items:                  # product-ion spectra of X and of P, if the student loaded an MS2 file
+            if not any(x.level == 2 for x in it.run.scans):
+                continue
+            lo, hi = it.info()["rt_min"], it.info()["rt_max"]
+            sx, sp = it.spectrum(lo, hi, 2, mz), it.spectrum(lo, hi, 2, parent)
+            if sp[2]:
+                ms2 = {"x": (sx[0], sx[1]) if sx[2] else None, "p": (sp[0], sp[1])}
+                break
+        return ionfamily.origin_report(samples, mz, parent, rt0, rt1, ref, formula_p=formula or None, ms2=ms2)
+
     def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None) -> dict:
         if bg is not None:
             bg = {**bg, "item": self._item(bg["k"])}
