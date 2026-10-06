@@ -44,7 +44,14 @@ function uipOpen(btn) {
     <div class="row">Tema <select id="uip-th"><option value="auto">Come il sistema</option><option value="light">Chiaro</option><option value="dark">Scuro</option></select></div>
     <label class="row"><input type="checkbox" id="uip-tips" ${UIP.tips ? "checked" : ""}> Mostra i suggerimenti (testo che compare passando sopra i pulsanti)</label>
     <label class="row"><input type="checkbox" id="uip-num" ${UIP.num ? "checked" : ""}> Numera i pannelli (tasti 1-9 per attivarli)</label>
-    <div class="row" style="margin-top:8px"><button id="uip-tut">Rivedi il tutorial</button></div>`;
+    <div class="row" style="margin-top:8px"><button id="uip-tut">Rivedi il tutorial</button></div>
+    <details class="sm" style="margin-top:8px"><summary>Installare QqQ lab come app</summary><ul>
+<li><b>Chrome o Edge (computer):</b> nella barra degli indirizzi compare l'icona "Installa" (un monitor con una freccia): clic, poi Installa. Oppure menu a tre puntini, Installa QqQ lab.</li>
+<li><b>Safari su Mac (14 o più recente):</b> menu File, Aggiungi al Dock.</li>
+<li><b>iPhone e iPad (Safari):</b> tasto Condividi, Aggiungi alla schermata Home.</li>
+<li><b>Firefox:</b> non installa le pagine come app; funziona comunque anche senza rete dopo la prima visita.</li>
+</ul>
+<p>Dopo la prima visita QqQ lab funziona anche senza internet, installato o no. Vale per la versione online; la versione locale (doppio clic su Avvia QqQ lab) non si installa.</p></details>`;
   document.body.appendChild(d);
   d.querySelector("#uip-th").value = UIP.theme;
   const r = btn.getBoundingClientRect(); d.style.top = r.bottom + 6 + "px"; d.style.left = Math.max(8, Math.min(r.left, innerWidth - d.offsetWidth - 8)) + "px";

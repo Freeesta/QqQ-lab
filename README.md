@@ -16,6 +16,7 @@ pagina parte subito. I file mzML non vengono caricati su nessun server: restano 
 spazio del browser, così alla riapertura la sessione riprende da dove l'avevi lasciata (sullo stesso computer e
 browser). Dopo la prima visita funziona anche senza internet (copia nel browser). Non c'è la conversione dei `.wiff` (serve msconvert): converti prima in mzML.
 **I tuoi file non lasciano il tuo computer**: la pagina non li invia a nessun server (la pagina stessa limita per regola le connessioni a se stessa).
+**Installare come app** (versione online): Chrome/Edge, icona "Installa" nella barra degli indirizzi; Safari su Mac, File → Aggiungi al Dock; iPhone/iPad, Condividi → Aggiungi alla schermata Home. Dopo la prima visita funziona anche offline (controllato con Chrome: nessun errore di installabilità, service worker attivo, test offline in `tests_e2e/e2e13.py`).
 Come si pubblica: vedi `AGENTS.md`, sezione "Versione nel browser".
 
 ## Avvio (offline)
