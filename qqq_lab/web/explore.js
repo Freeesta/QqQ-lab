@@ -242,7 +242,7 @@ async function removeFile(f) {
   f.gone = true; f.vis = false;
   E.panels.filter(q => q.k === f.k && q.type !== "xic").forEach(q => { const o = tabFiles(q.tab).find(x => x.k !== f.k); if (o) q.k = o.k; });
   if (E.cur === f.k) E.cur = (tabFiles()[0] || { k: 0 }).k;
-  renderTabs(); renderFileList(); toolbar(); redrawAll(); uiSave();
+  renderTabs(); renderFileList(); renderNav(); toolbar(); E.panels.forEach(ctl); redrawAll(); uiSave();
 }
 function fileCtx(e, f) {
   if (!f) return; e.stopPropagation();
@@ -273,9 +273,12 @@ function renderNav() {
   const s = Q("#fsel"); if (!s) return;
   s.innerHTML = tabFiles().map(f => `<option value="${f.k}" ${f.k === E.cur ? "selected" : ""}>${EH(f.label)}</option>`).join("");
   Q("#fmode").querySelectorAll("button").forEach(b => b.classList.toggle("on", (b.dataset.m === "sel") === !!E.browse));
+  const one = tabFiles().length <= 1, why = "Serve più di un file in questa scheda: ne hai caricato uno solo.";   // with a single file nothing here has a meaning
+  [Q("#fprev"), Q("#fnext"), Q("#fsel"), ...Q("#fmode").querySelectorAll("button")].forEach(b => { if (b.dataset.t0 == null) b.dataset.t0 = b.title; b.disabled = one; b.title = one ? why : b.dataset.t0; });
+  Q("#fmode").classList.toggle("dis", one);
 }
 function goFile(d) {
-  const tf = tabFiles(); if (!tf.length) return;
+  const tf = tabFiles(); if (tf.length < 2) return;
   E.cur = tf[(Math.max(0, tf.findIndex(f => f.k === E.cur)) + d + tf.length) % tf.length].k; E.browse = true;
   renderFileList(); redrawAll(); uiSave();
 }
@@ -679,7 +682,8 @@ function ctl(p) {
   const NOMS2 = "Non si applica al cromatogramma dei precursori MS²: contiene solo gli scan MS² del precursore scelto.", NOMRM = "Non si applica agli MRM: ogni transizione è già selettiva.";
   const off = (on, why) => on ? ` disabled title="${why}"` : "";
   const chk = (k, lab, dis, why) => `<label class="muted${dis ? " dis" : ""}"${dis ? ` title="${why}"` : ""}><input type="checkbox" data-o="${k}" ${p[k] ? "checked" : ""}${dis ? " disabled" : ""}> ${lab}</label>`;
-  const view = `<select data-o="mode" title="Come disegnare più tracce: una sopra l'altra, oppure una per riga (come in FreeStyle)"><option value="ovl" ${p.mode !== "stk" ? "selected" : ""}>sovrapposti</option><option value="stk" ${p.mode === "stk" ? "selected" : ""}>impilati</option></select>${chk("log", "scala log", ms2c, NOMS2)}`;
+  const ONEF = tabFiles(p.tab || E.tab).length <= 1, ONEWHY = "Con un solo file non c'è nulla da sovrapporre o impilare.";
+  const view = `<select data-o="mode"${p.type === "chrom" || (p.type === "xic" && p.traces.length <= 1) ? off(ONEF, ONEWHY) : ""} title="Come disegnare più tracce: una sopra l'altra, oppure una per riga (come in FreeStyle)"><option value="ovl" ${p.mode !== "stk" ? "selected" : ""}>sovrapposti</option><option value="stk" ${p.mode === "stk" ? "selected" : ""}>impilati</option></select>${chk("log", "scala log", ms2c, NOMS2)}`;
   const T = p.tab || E.tab, TF = tabFiles(T), sfl = scanFiles(TF), mlo = Math.min(...sfl.map(x => x.mz_min ?? Infinity)), mhi = Math.max(...sfl.map(x => x.mz_max ?? -Infinity));
   const mzbar = `<label class="muted" title="Mostra il cromatogramma costruito solo con gli ioni in questo intervallo di m/z. Vuoto = tutti gli ioni. Serve per togliere dal TIC gli m/z che non ti interessano (solvente, fondo)"><i>m/z</i> da <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz0 != null ? fmz(p.mz0) : ""}" placeholder="${isFinite(mlo) ? mlo.toFixed(1) : ""}"> a <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz1 != null ? fmz(p.mz1) : ""}" placeholder="${isFinite(mhi) ? mhi.toFixed(1) : ""}"></label>`;
   const hasScan = sfl.length > 0, ms2s = TF.filter(x => x.kind === "ms2"), hasPda = TF.some(x => x.pda);
@@ -688,7 +692,7 @@ function ctl(p) {
   const precSel = precs.length && p.kind !== "pda" ? `<select data-o="prec" style="flex:none" title="File MS2 (ioni prodotto): somma di tutti i precursori oppure solo gli scan di un precursore"><option value="">MS2: tutti i precursori</option>${precs.map(v => `<option value="${v}" ${String(p.prec) === String(v) ? "selected" : ""}>MS2: precursore ${v}</option>`).join("")}</select>` : "";
   const nbk = TF;
   const corr = `<select data-o="bk"${off(ms2c || mrmP, ms2c ? NOMS2 : NOMRM)} title="Sottrae il file «bianco» da ogni traccia (interpolando sul tempo e portando a zero i valori negativi). Il bianco indica cosa c'è anche senza il campione: ciò che resta è più probabilmente suo">${`<option value="">bianco: nessuno</option>` + nbk.map(x => `<option value="${x.k}" ${String(p.bk) === String(x.k) ? "selected" : ""}>sottrai ${EH(x.label)}</option>`).join("")}</select>${chk("snip", "baseline", ms2c || mrmP, ms2c ? NOMS2 : NOMRM)}${p.snip ? `<label class="muted" title="Larghezza della finestra SNIP: deve essere più larga dei picchi">&le;<input data-o="snipw" type="number" step="0.5" min="0.2" value="${p.snipw}" style="width:50px"> min</label>` : ""}`;
-  const fsel = `<button data-o="fpop" class="fcount" title="Scegli al volo quali file mostrare (vale per tutti i grafici, come la lista a sinistra)">File ${TF.filter(f => f.vis).length}/${TF.length} &#9662;</button>`;
+  const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, "Hai caricato un solo file in questa scheda.")} title="Scegli al volo quali file mostrare (vale per tutti i grafici, come la lista a sinistra)">File ${TF.filter(f => f.vis).length}/${TF.length} &#9662;</button>`;
   const kindSel = ms2c ? `<select disabled title="${NOMS2}"><option>scan MS² dei precursori</option></select>` : null;
   if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>TIC (somma)</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="Picco base: lo ione più intenso di ogni scan. Non esiste nei file MRM (si registrano solo le transizioni scelte)">BPC (picco base)</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="Segnale del rivelatore a serie di diodi (PDA/UV): non dipende dallo spettrometro di massa">PDA (UV, totale)</option></select>`}${p.kind === "pda" ? "" : precSel + (hasScan ? mzbar : "")}${chk("smooth", "smoothing")}${view}${corr}`;
   if (p.type === "xic") {
@@ -704,12 +708,12 @@ function ctl(p) {
     c.innerHTML = `<span class="tbg" role="group" title="Vista della mappa: 2D = colori sul piano RT-m/z; 3D = superficie con l'intensità in altezza (trascina per ruotarla)"><button data-o="view" data-v="2d" class="${p.view !== "3d" ? "on" : ""}">2D</button><button data-o="view" data-v="3d" class="${p.view === "3d" ? "on" : ""}">3D</button></span>` +
       `<select data-o="k" title="File da mostrare">${sf.map(x => opt(x.k, p.k, x.label)).join("")}</select>` +
       `<select data-o="scale" title="Scala dei colori: la radice quadrata fa emergere i segnali deboli">${opt("sqrt", p.scale, "colori: radice")}${opt("lin", p.scale, "colori: lineare")}${opt("log", p.scale, "colori: log")}</select>` +
-      `<label class="muted" title="Sottrae un altro file: in rosso ciò che è più intenso nel file mostrato, in blu ciò che è più intenso nel riferimento">differenza con <select data-o="ref"><option value="">nessuno</option>${sf.map(x => opt(x.k, p.ref, x.label)).join("")}</select></label>` +
+      `<label class="muted" title="Sottrae un altro file: in rosso ciò che è più intenso nel file mostrato, in blu ciò che è più intenso nel riferimento">differenza con <select data-o="ref"${off(sf.length <= 1, "Serve un secondo file full scan da sottrarre.")}><option value="">nessuno</option>${sf.map(x => opt(x.k, p.ref, x.label)).join("")}</select></label>` +
       `<select data-o="norm" title="Prima di sottrarre due esperimenti diversi conviene renderli confrontabili: «al massimo» divide ogni mappa per il suo punto più intenso; «al totale» per la somma di tutte le intensità (in per mille). Con «assoluta» si sottraggono i conteggi così come sono.">${opt("abs", p.norm, "intensità assoluta")}${opt("max", p.norm, "normalizza al massimo")}${opt("tic", p.norm, "normalizza al totale")}</select>`;
   }
   if (p.type === "spec") {
     const f = TF, hasMs2 = f.some(x => x.ms2);
-    c.innerHTML = `<select data-o="k">${f.map(x => `<option value="${x.k}" ${x.k === p.k ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${chk("all", "sovrapponi i file")}` +
+    c.innerHTML = `<select data-o="k">${f.map(x => `<option value="${x.k}" ${x.k === p.k ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${chk("all", "sovrapponi i file", ONEF, "Hai caricato un solo file in questa scheda.")}` +
       (hasMs2 ? `<select data-o="level"${off(T0 === "ms2", "Nella scheda MS² lo spettro è sempre quello degli ioni prodotto (livello MS2).")}><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="2" ${p.level === 2 ? "selected" : ""}>MS2</option></select>` : "") +
       `<select data-o="bg" title="Sottrae uno spettro di fondo (come «Subtract spectrum» di Xcalibur): un altro intervallo di tempo dello stesso file, oppure lo stesso intervallo nel bianco. I valori negativi diventano zero">` +
       `<option value="">fondo: nessuno</option><option value="w" ${p.bg === "w" ? "selected" : ""}>fondo: altro intervallo</option>${f.filter(x => x.kind !== "mrm").map(x => `<option value="${x.k}" ${String(p.bg) === String(x.k) ? "selected" : ""}>fondo: ${EH(x.label)}</option>`).join("")}</select>` +
@@ -763,7 +767,8 @@ function openXic(panel, pre = {}) {
   ad.innerHTML = ["[M+H]+", "[M+Na]+", "[M+NH4]+", "[M-H]-", "[M+Cl]-", "[M+HCOO]-"].map(a => `<option ${a === (pre.adduct || defAdduct()) ? "selected" : ""}>${a}</option>`).join("");
   let label = pre.label || "", pending = Promise.resolve(), hiOwn = false, tq = 0, edits = 0;     // hiOwn: "a" was written (or built from a formula): it is not overwritten any more
   const upd = () => { const a = numMz(lo.value), b = numMz(hi.value); sum.innerHTML = a != null && b != null && b > a ? `Si estrae l'intervallo <i>m/z</i> ${fmz(a)}-${fmz(b)} (centro ${fmz((a + b) / 2)}, larghezza ${fmz(b - a)} Da).` : ""; };
-  const setWin = (c, half = XIC_HALF) => { lo.value = fmz(Math.max(0.01, c - half)); hi.value = fmz(c + half); hiOwn = true; upd(); };
+  const r1 = v => Math.round(v * 10) / 10;       // window edges of click-generated windows are rounded to 0.1 Da (a unit-resolution instrument gains nothing from 196.16-196.6; the student can still type two decimals)
+  const setWin = (c, half = XIC_HALF, rnd = false) => { const f = rnd ? r1 : (v => v); lo.value = fmz(Math.max(0.1, f(c - half))); hi.value = fmz(f(c + half)); hiOwn = true; upd(); };
   const fromQ = (quiet) => pending = (async () => {
     const t = q.value.trim(), ed = edits; if (!quiet) err.textContent = ""; if (!t) return;
     try {
@@ -789,7 +794,7 @@ function openXic(panel, pre = {}) {
     else addPanel("xic", { traces: [{ id: E.seq++, mz: Math.round(mz * 100) / 100, w, label: lab }] });
   };
   d.showModal();
-  if (pre.formula) fromQ(false); else if (pre.mz != null) setWin(pre.mz, pre.half ?? XIC_HALF);
+  if (pre.formula) fromQ(false); else if (pre.mz != null) setWin(pre.mz, pre.half ?? XIC_HALF, pre.half != null);
   (pre.formula || pre.mz != null ? Q("#xic-go") : lo).focus();
 }
 function splitPanel(p) {
