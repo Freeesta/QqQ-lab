@@ -412,3 +412,29 @@ def test_tic_and_bpc_can_be_restricted_to_an_mz_range(tmp_path):
     assert it.total("tic", 1, 250.0, None)[1].tolist() == [40.0, 4.0]
     assert it.total("bpc", 1, None, 250.0)[1].tolist() == [20.0, 2.0]
     assert it.total("bpc", 1, 400.0, 500.0)[1].tolist() == [0.0, 0.0]
+
+
+def _ms2_scan(i: int, rt: float, prec: float, mz, inten) -> str:
+    return (f'<spectrum index="{i}" id="scan={i + 1}" defaultArrayLength="{len(mz)}">'
+            '<cvParam cvRef="MS" accession="MS:1000511" name="ms level" value="2"/>'
+            '<cvParam cvRef="MS" accession="MS:1000130" name="positive scan" value=""/>'
+            f'<scanList count="1"><scan><cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="{rt}" unitName="minute"/></scan></scanList>'
+            f'<precursorList count="1"><precursor><isolationWindow><cvParam cvRef="MS" accession="MS:1000827" name="isolation window target m/z" value="{prec}"/></isolationWindow>'
+            f'<selectedIonList count="1"><selectedIon><cvParam cvRef="MS" accession="MS:1000744" name="selected ion m/z" value="{prec}"/></selectedIon></selectedIonList></precursor></precursorList>'
+            f'<binaryDataArrayList count="2">{_array("MS:1000514", "m/z array", mz)}{_array("MS:1000515", "intensity array", inten)}</binaryDataArrayList></spectrum>')
+
+
+def test_experiment_type_is_read_from_the_file_and_ms2_can_be_filtered_by_precursor(tmp_path):
+    """The start screen gets the experiment (full / ms2 / mrm) from the content, whatever the name says; MS2 chromatograms can be limited to one precursor."""
+    from tpfinder.explore import Session, sniff
+    (tmp_path / "enhanced_mrm_like_name.mzML").write_text(_mzml(f'<spectrumList count="2">{_scan_xml(0, 1.0, [100.0], [5.0])}{_scan_xml(1, 2.0, [100.0], [5.0])}</spectrumList>'), encoding="utf-8")
+    sc = [_ms2_scan(0, 1.0, 229.1, [90.0], [10.0]), _ms2_scan(1, 1.1, 305.0, [90.0], [3.0]), _ms2_scan(2, 1.2, 229.1, [90.0], [20.0])]
+    (tmp_path / "x.mzML").write_text(_mzml(f'<spectrumList count="3">{"".join(sc)}</spectrumList>'), encoding="utf-8")
+    assert sniff(tmp_path / "enhanced_mrm_like_name.mzML")["kind"] == "full"
+    assert sniff(tmp_path / "x.mzML")["kind"] == "ms2"
+    it = Session([{"file": "x.mzML"}], tmp_path).items[0]
+    assert it.info()["precursors"] == [229.1, 305.0] and it.info()["mode"] is None
+    assert it.total("tic", 2)[1].tolist() == [10.0, 3.0, 20.0]
+    rt, y = it.total("tic", 2, None, None, 229.1)
+    assert rt.tolist() == [1.0, 1.2] and y.tolist() == [10.0, 20.0]
+    it.run.close()

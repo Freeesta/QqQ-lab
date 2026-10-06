@@ -46,7 +46,7 @@ canvas{display:block;width:100%}
 @media (max-width:900px){#v-data{grid-template-columns:1fr}}
 #dfiles{position:sticky;top:8px}#v-data.fold{grid-template-columns:1fr}#v-data.fold #dfiles{display:none}.fl{display:flex;gap:6px;align-items:flex-start;padding:4px 0;border-bottom:1px solid var(--line)}
 .fl.cur{background:var(--sel);border-radius:4px}.tag{background:var(--sel);border:1px solid var(--line);border-radius:8px;padding:0 6px;color:var(--ink)}.fl i{width:12px;height:12px;border-radius:3px;margin-top:3px;flex:none}.fl small{display:block;color:var(--muted)}
-#dpanels{position:relative;min-height:520px}.pnl{position:absolute;display:flex;flex-direction:column;resize:both;overflow:hidden;min-width:300px;min-height:190px;margin:0;box-shadow:0 1px 4px rgba(60,50,20,.08)}.pnl .hd{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px;cursor:move;flex:none}.bt{font-size:11px;padding:1px 6px;color:var(--muted)}.pnl.max{position:fixed;left:12px;top:56px;right:12px;bottom:12px;width:auto!important;height:auto!important;z-index:60;resize:none;box-shadow:0 8px 30px rgba(0,0,0,.25)}.pnl .hd b{cursor:text}
+#dpanels{position:relative;min-height:520px}.pnl{position:absolute;display:flex;flex-direction:column;resize:both;overflow:hidden;min-width:300px;min-height:190px;margin:0;box-shadow:0 1px 4px rgba(60,50,20,.08)}.pnl .hd{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px;cursor:move;flex:none}.bt{font-size:11px;padding:1px 6px;color:var(--muted)}.bt.on{background:var(--accent);color:#fff;border-color:var(--accent)}.bt svg{vertical-align:-2px}.pnl.max{position:fixed;left:12px;top:56px;right:12px;bottom:12px;width:auto!important;height:auto!important;z-index:60;resize:none;box-shadow:0 8px 30px rgba(0,0,0,.25)}.pnl .hd b{cursor:text}
 .pnl .rd{color:var(--muted);font-variant-numeric:tabular-nums;margin-left:auto}.x{border:0;background:none;font-size:16px;color:var(--muted);padding:0 4px}.x:hover{color:var(--bad)}
 .pnl .ctl{display:contents}.pnl .ctl label{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}.pnl .ctl input[type=checkbox]{padding:0;margin:0}.pnl .ctl select{max-width:170px}
 .pnl{transition:top .12s ease}.pnl.drag{transition:none;opacity:.94;box-shadow:0 6px 18px rgba(30,40,60,.25)}.pnl.act{outline:2px solid var(--accent);outline-offset:-2px}.pnl .zr{position:absolute;background:rgba(43,92,138,.16);border:1px solid #2b5c8a;pointer-events:none;z-index:2}.pnl .vl{position:absolute;width:0;border-left:1px dashed var(--muted);pointer-events:none;z-index:2}
@@ -73,7 +73,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 .pt-info{grid-row:1/4;grid-column:3/13;padding:4px 10px;font-size:12px;overflow:auto;max-height:190px}.pt-big{float:left;margin:0 10px 4px 0;border:1px solid var(--line);border-radius:6px;padding:2px 8px;text-align:center}.pt-big span{display:block;font-size:10px;color:var(--muted)}.pt-big b{font-size:26px}
 .pt-gap{grid-row:8;grid-column:3/18;font-size:10px;color:var(--muted);align-self:center}.pt-bar{display:inline-block;height:8px;background:var(--accent);border-radius:2px}
 #refdlg table th,#refdlg table td{padding:2px 6px}
-#bigdlg{max-width:min(960px,95vw);width:95vw;max-height:90vh}#bigdlg h4{margin:14px 0 4px}#bigbody{max-height:72vh;overflow:auto}#bigdlg .top{display:flex;align-items:center}
+#bigdlg{max-width:min(960px,95vw);width:95vw;max-height:90vh}#bigdlg h4{margin:14px 0 6px;padding-bottom:3px;border-bottom:1px solid var(--line)}.mgrid{columns:2 380px;column-gap:26px}.msec{break-inside:avoid}.msub{margin:2px 0 4px}.hw{margin-bottom:6px}.lct td,.lct th{height:27px;padding:0 10px;box-sizing:border-box}.mchips{display:flex;gap:26px;margin-top:10px;flex-wrap:wrap}#bigbody{max-height:72vh;overflow:auto}#bigdlg .top{display:flex;align-items:center}
 #bt{position:fixed;right:14px;bottom:14px;width:380px;max-width:92vw;z-index:10000;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.2);padding:10px 12px}
 #bt ol{margin:6px 0 6px 18px;padding:0}#bt li{margin-bottom:4px}
 #loading{position:fixed;inset:0;z-index:10010;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
@@ -89,12 +89,10 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
   <button id="np-bt" title="Apre BioTransformer in un'altra scheda e spiega come usarlo">BioTransformer &#8599;</button></header>
 <div id="err"></div>
 <section id="v-data" hidden>
- <aside id="dfiles"><div class="card"><div class="bar"><b>File</b><button class="hq" data-help="files" title="Che cos'è?">?</button><span class="sp"></span><button id="addf" title="Carica altri file">+</button><button id="ffold" title="Nascondi l'elenco dei file: più spazio ai grafici">&#9664;</button></div><div id="flst"></div>
-   <div class="muted sm" style="margin-top:6px">Doppio clic sul nome per rinominare. La casella mostra o nasconde la traccia.</div></div></aside>
- <div>  <div class="bar"><button class="hq" data-help="toolbar" title="Che cos'è?">?</button><button id="np-chrom">+ Cromatogramma</button><button id="np-spec">+ Spettro</button><button id="np-map" title="Mappa di tutti gli ioni nel tempo: ogni pixel è un m/z a un certo RT">+ Mappa RT-m/z</button><button id="np-xic">+ XIC (scrivi un m/z)</button><button id="np-calc" title="Scrivi una formula bruta e ottieni l'm/z dello ione (anche arrotondato come lo vede lo strumento)">Calcolatrice m/z</button><button id="np-mrm">+ Transizioni MRM</button><button id="np-merge" title="Porta tutti gli XIC in un solo pannello">Unisci gli XIC</button><button id="np-tile" title="Mette i pannelli uno sotto l'altro, larghi come la pagina">Ordina</button>
-   <span class="sp"></span><span id="kindinfo" class="muted sm"></span></div>
+ <aside id="dfiles"><div class="card"><div class="bar"><b>File</b><button class="hq" data-help="files" title="Che cos'è?">?</button><span class="sp"></span><button id="addf" title="Carica altri file">+</button><button id="ffold" title="Nascondi l'elenco dei file: più spazio ai grafici">&#9664;</button></div><div id="flst"></div></div></aside>
+ <div>  <div class="bar"><button class="hq" data-help="toolbar" title="Che cos'è?">?</button><button id="np-chrom">+ Cromatogramma</button><button id="np-spec">+ Spettro</button><button id="np-map" title="Mappa di tutti gli ioni nel tempo: ogni pixel è un m/z a un certo RT">+ Mappa RT-m/z</button><button id="np-xic">+ XIC (scrivi un m/z)</button><button id="np-calc" title="Scrivi una formula bruta e ottieni l'm/z dello ione (anche arrotondato come lo vede lo strumento)">Calcolatrice m/z</button><button id="np-mrm">+ Transizioni MRM</button><button id="np-merge" title="Porta tutti gli XIC in un solo pannello">Unisci gli XIC</button><button id="np-tile" title="Mette i pannelli uno sotto l'altro, larghi come la pagina">Ordina</button></div>
   <div class="bar"><button id="funfold" hidden title="Mostra l'elenco dei file">&#9654; File</button><button class="hq" data-help="nav" title="Che cos'è?">?</button><span id="navfile"><button id="fprev" title="File precedente (freccia sinistra)">&#9664;</button> <select id="fsel"></select> <button id="fnext" title="File successivo (freccia destra)">&#9654;</button></span><label title="Mostra solo il file corrente: gli XIC restano, cambia il campione"><input type="checkbox" id="fbrowse"> un file alla volta</label>
-   <span class="sp"></span><button id="np-method">Metodo</button><button id="np-ints">Integrazioni</button><button id="np-export">Esporta &#9662;</button><button class="hq" data-help="tools" title="Che cos'è?">?</button></div><datalist id="tols"><option value="0.3"><option value="0.5"><option value="1"><option value="1.5"></datalist>
+   <span class="sp"></span><button id="np-method">Metodo</button><button class="hq" data-help="tools" title="Che cos'è?">?</button></div><datalist id="tols"><option value="0.3"><option value="0.5"><option value="1"><option value="1.5"></datalist>
   <div id="dpanels"></div></div>
 </section>
 <section id="v-theory" hidden><iframe id="tframe" title="Teoria"></iframe></section>
@@ -202,18 +200,22 @@ document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.data
 const sz=b=>b>1e6?(b/1e6).toFixed(1)+" MB":Math.max(1,Math.round(b/1e3))+" kB";
 async function post(u,body,raw){const r=await fetch(u,{method:"POST",body:raw??JSON.stringify(body||{})});const j=await r.json();if(j.error)throw new Error(j.error);return j}
 function mergeFiles(list){const old=Object.fromEntries(ST.files.map(f=>[f.name,f]));
-  ST.files=list.map(f=>({...f,time:old[f.name]?old[f.name].time:f.time,type:old[f.name]?old[f.name].type:f.type,use:old[f.name]?old[f.name].use:true}));
+  ST.files=list.map(f=>({...f,time:old[f.name]?old[f.name].time:f.time,type:old[f.name]?old[f.name].type:f.type,mode:old[f.name]&&f.kind==="full"?old[f.name].mode:f.mode,use:old[f.name]?old[f.name].use:true}));
   ST.files.sort((a,b)=>(a.type!=="sample")-(b.type!=="sample")||(a.time??1e9)-(b.time??1e9)||a.name.localeCompare(b.name));renderFiles()}
 function renderMethods(){const el=$("#mlist");
   el.innerHTML=ST.methods.map((m,i)=>`<div style="margin-top:4px">${esc(m.name)} <span class="muted">${sz(m.size)}</span> <button data-mrm="${i}" title="Rimuovi (va in _cestino)">&times;</button></div>`).join("");
   el.querySelectorAll("[data-mrm]").forEach(b=>b.onclick=async()=>{try{const j=await post("/api/remove",{name:ST.methods[+b.dataset.mrm].name});mergeFiles(j.files);ST.methods=j.methods||[];renderMethods()}catch(e){fail(e)}})}
+const EXPN={full:"Full scan",ms2:"MS2 (ioni prodotto)",mrm:"MRM",empty:"nessun dato"};
+function expCell(f,i){if(f.kind==="full")return `<select data-i="${i}" data-k="mode" title="Il file non dice se la scansione è Q1 o Enhanced MS (EMS): indicalo tu"><option value="q1" ${f.mode!=="ems"?"selected":""}>Full scan Q1</option><option value="ems" ${f.mode==="ems"?"selected":""}>Full scan EMS</option></select>`;
+  return f.kind?`<b>${EXPN[f.kind]||f.kind}</b>`:'<span class="muted">sarà letto dopo la conversione</span>'}
+function nameWarn(f){return f.kind&&f.hint&&f.hint!==f.kind?` <div class="fail sm">il nome fa pensare a ${EXPN[f.hint]}, ma nel file ci sono dati ${EXPN[f.kind]}</div>`:""}
 function renderFiles(){const F=ST.files,el=$("#flist");
-  el.innerHTML=F.length?`<table style="margin-top:8px"><tr><th></th><th>File</th><th class="num">Tempo (min)</th><th>Tipo</th><th class="num">Dimensione</th><th></th></tr>`+F.map((f,i)=>
-   `<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)}${f.scan===false?' <span class="fail">manca il .wiff.scan</span>':""}</td>`+
+  el.innerHTML=F.length?`<table style="margin-top:8px"><tr><th></th><th>File</th><th>Esperimento</th><th class="num">Tempo (min)</th><th>Ruolo</th><th class="num">Dimensione</th><th></th></tr>`+F.map((f,i)=>
+   `<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)}${f.scan===false?' <span class="fail">manca il .wiff.scan</span>':""}${nameWarn(f)}</td><td>${expCell(f,i)}</td>`+
    `<td class="num"><input type="number" step="any" style="width:80px" data-i="${i}" data-k="time" value="${f.time??""}" ${f.type!=="sample"?"disabled":""}></td>`+
    `<td><select data-i="${i}" data-k="type"><option value="sample" ${f.type==="sample"?"selected":""}>campione</option><option value="blank" ${f.type==="blank"?"selected":""}>bianco</option><option value="control" ${f.type==="control"?"selected":""}>controllo</option></select></td>`+
    `<td class="num muted">${sz(f.size)}</td><td><button data-rm="${i}" title="Rimuovi (va in _cestino)">&times;</button></td></tr>`).join("")+`</table>
-   <div class="muted" style="margin-top:4px">Controlla tempi e tipi: sono stati indovinati dal nome del file.</div>`:"";
+   <div class="muted" style="margin-top:4px">L'esperimento è letto dal contenuto di ogni file (Q1 o EMS non è scritto nel file: scegli tu). Tempo e ruolo sono indovinati dal nome: controllali.</div>`:"";
   el.querySelectorAll("[data-k]").forEach(x=>x.onchange=()=>{const f=F[+x.dataset.i],k=x.dataset.k;f[k]=k==="use"?x.checked:k==="time"?(x.value===""?null:+x.value):x.value;if(k==="type")renderFiles();checkGo()});
   el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];const j=await post("/api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});checkGo()}
 function checkGo(){const n=ST.files.filter(f=>f.use).length;$("#opbtn").disabled=!n;$("#gomsg").textContent=n?`${n} file selezionati`:"Carica almeno un file"}
@@ -234,11 +236,18 @@ $("#drop").addEventListener("drop",e=>upload([...e.dataTransfer.files]));
 $("#dropdam").addEventListener("drop",e=>upload([...e.dataTransfer.files]));
 addEventListener("dragover",e=>e.preventDefault());addEventListener("drop",e=>e.preventDefault());   // a missed drop must not open the file
 $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;$("#gomsg").textContent="Apro i file...";loading(true,"Leggo i file e preparo i cromatogrammi...");
-  try{await post("/api/explore",{samples:ST.files.filter(f=>f.use).map(f=>({file:f.name,time:f.time,type:f.type,label:(E.files.find(x=>x.file===f.name)||{}).label}))});S.adding=false;await bootSession();applyView();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave()}
+  try{await post("/api/explore",{samples:ST.files.filter(f=>f.use).map(f=>({file:f.name,time:f.time,type:f.type,mode:f.mode,label:(E.files.find(x=>x.file===f.name)||{}).label}))});S.adding=false;await bootSession();applyView();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave()}
   catch(e){$("#gomsg").innerHTML=`<span class="fail">${esc(e.message)}</span>`;b.disabled=false}finally{loading(false)}};
 $("#cancadd").onclick=()=>{S.adding=false;applyView()};
 $("#newrun").onclick=async()=>{if(!await yesno("Iniziare una <b>nuova sessione</b>? Quella attuale resta salvata nella cartella di lavoro."))return;
   try{await post("/api/new",{fresh:true});S.sess=null;S.adding=false;E.files=[];E.key="";E.panels.forEach(p=>p.el.remove());E.panels=[];NB.ui=null;NB.session=null;$("#dpanels").innerHTML="";await init()}catch(e){fail(e)}};
+// "m/z" is always written in italics: any text node that contains it is split and the symbol wrapped in <i> (not inside inputs, options, scripts or an existing <i>)
+(function(){const SKIP=/^(SCRIPT|STYLE|OPTION|TEXTAREA|INPUT|CANVAS|TITLE|SELECT)$/;
+ function fix(root){const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.nodeValue.includes("m/z")&&n.parentElement&&!SKIP.test(n.parentElement.tagName)&&!(n.parentElement.tagName==="I"&&n.nodeValue==="m/z")?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT});
+  const L=[];while(w.nextNode())L.push(w.currentNode);
+  for(const n of L){const f=document.createDocumentFragment();n.nodeValue.split("m/z").forEach((t,i)=>{if(i){const e=document.createElement("i");e.textContent="m/z";f.appendChild(e)}if(t)f.appendChild(document.createTextNode(t))});n.replaceWith(f)}}
+ let busy=false;new MutationObserver(ms=>{if(busy)return;busy=true;try{for(const m of ms){if(m.type==="characterData"){if(m.target.parentElement)fix(m.target.parentElement)}else m.addedNodes.forEach(a=>{if(a.nodeType===1)fix(a);else if(a.nodeType===3&&a.parentElement)fix(a.parentElement)})}}finally{busy=false}}).observe(document.body,{childList:true,subtree:true,characterData:true});
+ fix(document.body)})();
 init();
 </script><script type="module" src="/static/draw.js"></script>
 </body></html>

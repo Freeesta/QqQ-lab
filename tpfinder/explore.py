@@ -15,8 +15,9 @@ from .reader.mzml import Run
 
 
 class Item:
-    def __init__(self, file: str, label: str | None, time, typ: str, path: Path):
+    def __init__(self, file: str, label: str | None, time, typ: str, path: Path, mode: str | None = None):
         self.file, self.time, self.type, self.path = file, time, typ, path
+        self.mode = mode if mode in ("q1", "ems") else None        # full scan flavour; the mzML does not say it (chosen by the user or hinted by the name)
         self.label = label or Path(file).stem
         self.run = Run(to_mzml(path))
         self._bpc: dict = {}
@@ -35,7 +36,7 @@ class Item:
                 "mz_max": float(t1.mz[-1]) if t1 is not None and len(t1.mz) else None,
                 "polarity": "positive" if pol == [1] else "negative" if pol == [-1] else "mixed" if pol else "unknown",
                 "precursors": sorted({round(s.precursor, 1) for s in ms2 if s.precursor}),
-                "chromatograms": r.n_chromatograms, "kind": self.kind(),
+                "chromatograms": r.n_chromatograms, "kind": self.kind(), "mode": (self.mode or "q1") if self.kind() == "full" else None,
                 "srm": sum(1 for c in r.chromatograms() if c["kind"] == "srm"), "pda": self.has_pda()}
         if not r.scans:                                   # MRM file: no scans, take times and polarity from the chromatograms
             rng = self._srm_rt_range()
@@ -106,7 +107,19 @@ class Item:
     def has_pda(self) -> bool:
         return any(c["kind"] == "pda" for c in self.run.chromatograms())
 
-    def total(self, kind: str = "tic", level: int = 1, mz0: float | None = None, mz1: float | None = None):
+    def total(self, kind: str = "tic", level: int = 1, mz0: float | None = None, mz1: float | None = None,
+              prec: float | None = None):
+        """Chromatogram of the whole file. prec (MS2 files): only the scans of that precursor ion (None = all the precursors)."""
+        rt, y = self._total(kind, level, mz0, mz1)
+        if prec is not None and level > 1 and len(rt):
+            t = self.run.table(level)
+            pr = np.array([self.run.scans[i].precursor or -1.0 for i in t.scan_ids])
+            sm = np.abs(pr - prec) <= 0.6
+            if len(sm) == len(rt):
+                return rt[sm], y[sm]
+        return rt, y
+
+    def _total(self, kind: str, level: int, mz0, mz1):
         if kind == "pda":                       # UV trace recorded by the PDA/DAD (own time axis, not tied to the MS scans)
             for c in self.run.chromatograms():
                 if c["kind"] == "pda":
@@ -236,7 +249,7 @@ class Session:
             label, t, typ = guess_sample(f.name)
             self.items.append(Item(s["file"], s.get("label") or label,
                                    s["time"] if s.get("time") is not None else t,
-                                   s.get("type") or typ, f if f.is_absolute() else root / f))
+                                   s.get("type") or typ, f if f.is_absolute() else root / f, s.get("mode")))
 
     def info(self) -> list[dict]:
         return [it.info() for it in self.items]
@@ -258,3 +271,13 @@ class Session:
         nrt = int(min(600, max(50, round((rt1 - rt0) / rt_bin))))
         mz0, mz1 = float(np.floor(min(mzs))), float(np.ceil(max(mzs)))
         return {"rt0": rt0, "rt1": rt1, "nrt": nrt, "mz0": mz0, "dmz": dmz, "nmz": int(max(1, round((mz1 - mz0) / dmz)))}
+
+
+def sniff(path: Path) -> dict:
+    """What an mzML contains, read from the file itself (not from its name): {kind, scans, srm, polarity}."""
+    it = Item(path.name, None, None, "sample", path)
+    try:
+        i = it.info()
+        return {"kind": i["kind"], "scans": i["scans"], "srm": i["srm"], "polarity": i["polarity"]}
+    finally:
+        it.run.close()

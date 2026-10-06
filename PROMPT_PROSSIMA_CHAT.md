@@ -57,3 +57,5 @@ Idee non fatte: mappa con soglia regolabile, XIC in ppm per dati HRMS, minimappa
 ## Aggiunte del 2026-10-06 (da collaudare a mano)
 - Cursore RT trascinabile nel cromatogramma (lo spettro sotto segue), barra m/z da…a… su TIC/BPC, icone (adatta alla vista, download), x più fitti, PDA sotto zero, spettro isotopico simulato (clic destro sullo spettro). Verificati in container con Playwright; da provare a mano su Mac/Windows.
 - Test pytest: 26 (in container ne passa 25: manca il `.app`).
+
+- Aggiunte (stessa sessione, da collaudare a mano): colonna Esperimento nella schermata di carico (tipo letto dal contenuto; Q1/EMS scelto dallo studente), lista file snella, icone di integrazione automatica/manuale nei grafici, select del precursore per MS2, PNG senza cursore e spettro con RT/scan, Metodo riorganizzato, `m/z` in corsivo ovunque, frasi di caricamento con i tre puntini subito. Test: 27 pytest + e2e12.

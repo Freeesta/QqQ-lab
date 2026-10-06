@@ -65,7 +65,7 @@ try:
         step("integrate + drag bar", integrate)
         pg.screenshot(path=SH + "13_integrated.png")
         def ints_tbl():
-            pg.click("#np-ints"); pg.wait_for_timeout(600)
+            pg.locator('.pnl.xic [data-a="itab"]').first.click(); pg.wait_for_timeout(600)
             assert pg.locator("#bigdlg[open] table").count() == 1
             pg.screenshot(path=SH + "14_ints.png"); pg.click("#bigx")
         step("integration table", ints_tbl)
@@ -89,11 +89,6 @@ try:
             assert pg.evaluate("E.panels.some(p=>p.type==='xic'&&p.traces.length==2)")
         step("file arrows keep XIC", nav)
         pg.screenshot(path=SH + "18_nav.png")
-        def export():
-            pg.click("#np-export"); pg.wait_for_timeout(300); pg.screenshot(path=SH + "19_export_menu.png")
-            with pg.expect_download() as d: click_menu(pg, "CSV")
-            print("download", d.value.suggested_filename)
-        step("export menu / csv", export)
         pg.wait_for_timeout(1500)   # autosave
         # reload page: session restore
         pg.reload(); pg.wait_for_timeout(4000)

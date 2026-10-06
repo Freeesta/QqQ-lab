@@ -20,7 +20,7 @@ import numpy as np
 
 from .chem.elements import formula_mz
 from .core.analysis import Analysis
-from .explore import Session
+from .explore import Session, sniff
 from .reader.methodinfo import check_against, read_methods
 from .project import SAMPLE_TYPES, guess_sample, load_project, write_project
 
@@ -94,9 +94,26 @@ class App:
         for p in sorted(self.workdir.iterdir()):
             if p.suffix.lower() in (".mzml", ".wiff") and p.is_file():
                 label, t, typ = guess_sample(p.name)
-                out.append({"name": p.name, "size": p.stat().st_size, "time": t, "type": typ,
+                out.append({"name": p.name, "size": p.stat().st_size, "time": t, "type": typ, **self._sniff(p),
                             "scan": (p.parent / (p.name + ".scan")).exists() if p.suffix.lower() == ".wiff" else None})
         return out
+
+    def _sniff(self, p: Path) -> dict:
+        """Experiment type read from the file content (cached by path and modification time); the name only hints the Q1/EMS flavour."""
+        if p.suffix.lower() != ".mzml":
+            return {"kind": None, "mode": None, "hint": None}
+        key = (str(p), p.stat().st_mtime)
+        cache = self.__dict__.setdefault("_sniff_cache", {})
+        if key not in cache:
+            try:
+                r = sniff(p)
+            except Exception:  # noqa: BLE001 -- an unreadable file is reported when it is opened
+                r = {"kind": None}
+            n = p.stem.lower()
+            r["mode"] = "ems" if r.get("kind") == "full" and re.search(r"ems|enhanc", n) else "q1" if r.get("kind") == "full" else None
+            r["hint"] = next((h for h, rx in (("mrm", r"mrm|srm"), ("ms2", r"ms2|msms|ms-ms|product|epi"), ("full", r"full|q1|ems|scan")) if re.search(rx, n)), None)
+            cache[key] = r
+        return cache[key]
 
     def methods(self) -> list[dict]:
         """Acquisition methods (.dam) uploaded in the work folder, oldest first."""
@@ -225,7 +242,7 @@ class App:
             if not (self.workdir / n).exists():
                 raise ValueError(f"file not found: {n}")
             t = s_.get("time")
-            samples.append({"file": n, "label": s_.get("label"), "type": s_.get("type", "sample"),
+            samples.append({"file": n, "label": s_.get("label"), "type": s_.get("type", "sample"), "mode": s_.get("mode"),
                             "time": None if t in (None, "") else float(t)})
         if not samples:
             raise ValueError("add at least one file")
@@ -241,8 +258,8 @@ class App:
             raise ValueError("no such file in the session")
         return self.session.items[k]
 
-    def chrom(self, k: int, kind: str, level: int, mz0: float | None = None, mz1: float | None = None) -> dict:
-        rt, y = self._item(k).total(kind, level, mz0, mz1)
+    def chrom(self, k: int, kind: str, level: int, mz0: float | None = None, mz1: float | None = None, prec: float | None = None) -> dict:
+        rt, y = self._item(k).total(kind, level, mz0, mz1, prec)
         return {"rt": [round(float(v), 4) for v in rt], "y": [round(float(v), 1) for v in y]}
 
     def xic(self, ks: list[int], mz: float, tol: float, level: int) -> dict:
@@ -460,7 +477,8 @@ def make_handler(app: App):
                     return self._json(app.session_state())
                 if u.path == "/api/chrom":
                     return self._json(app.chrom(int(q["k"]), q.get("kind", "tic"), int(q.get("level", 1)),
-                                                float(q["mz0"]) if q.get("mz0") else None, float(q["mz1"]) if q.get("mz1") else None))
+                                                float(q["mz0"]) if q.get("mz0") else None, float(q["mz1"]) if q.get("mz1") else None,
+                                                float(q["prec"]) if q.get("prec") else None))
                 if u.path == "/api/xic":
                     return self._json(app.xic([int(x) for x in q["k"].split(",") if x], float(q["mz"]),
                                               float(q.get("tol", 0.35)), int(q.get("level", 1))))

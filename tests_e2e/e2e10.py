@@ -15,7 +15,7 @@ try:
         def missing():
             pg.click("#np-method"); pg.wait_for_timeout(1000)
             t = pg.inner_text("#bigdlg")
-            assert "Manca il metodo di acquisizione" in t and "Strumento" in t, t[:200]
+            assert "Manca il metodo di acquisizione" in t and "3200 QTRAP" in t, t[:200]
             assert "Parametri del metodo" not in t and "Curtain gas" not in t, "no built-in method may appear"
             assert pg.locator("#m-load").count() == 1
             pg.screenshot(path=SH + "100_no_method.png")
