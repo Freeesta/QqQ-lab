@@ -15,7 +15,7 @@ try:
         pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
         def pda():
             pg.locator('.pnl.chrom [data-o="kind"]').first.select_option("pda"); pg.wait_for_timeout(2500)
-            n = pg.evaluate("E.panels[0]._a.sr.length"); assert n >= 4, n          # one trace per file (MRM files included)
+            n = pg.evaluate("E.panels[0]._a.sr.length"); assert n >= 3, n          # one trace per Full Scan file (other types live in their own tab)
             apex = pg.evaluate("(()=>{const s=E.panels[0]._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});return s.x[m]})()")
             print("PDA apex of first file", apex); assert 13 < apex < 19
             assert "PDA" in pg.evaluate("plotName(E.panels[0])")
@@ -33,20 +33,20 @@ try:
             print("blue pixels near axis", n); assert n == 0, n
         step("trace stays off the y axis", edge)
         def slots():
-            pg.evaluate("tile()"); pg.wait_for_timeout(600)
-            before = pg.evaluate("E.panels.map(p=>p.type)"); ys = pg.evaluate("E.panels.map(p=>p.y)")
+            pg.evaluate("addPanel('spec',{tab:E.tab,k:E.cur,level:1,x:0,y:0,w:hostWidth(),h:300,full:true}); tile()"); pg.wait_for_timeout(600)
+            before = pg.evaluate("tabPanels().map(p=>p.type)"); ys = pg.evaluate("tabPanels().map(p=>p.y)"); print('panels', before)
             assert before[0] == "chrom" and len(before) >= 3, before
             # drag the LAST panel's header above the first one
-            last = pg.evaluate("E.panels.length - 1")
-            hd = pg.evaluate(f"(()=>{{const r=E.panels[{last}].el.querySelector('.hd').getBoundingClientRect();return [r.left+60,r.top+8]}})()")
-            top = pg.evaluate("(()=>{const r=E.panels[0].el.getBoundingClientRect();return r.top+4})()")
+            last = pg.evaluate("tabPanels().length - 1")
+            hd = pg.evaluate(f"(()=>{{const r=tabPanels()[{last}].el.querySelector('.hd').getBoundingClientRect();return [r.left+60,r.top+8]}})()")
+            top = pg.evaluate("(()=>{const r=tabPanels()[0].el.getBoundingClientRect();return r.top+4})()")
             pg.mouse.move(hd[0], hd[1]); pg.mouse.down(); pg.mouse.move(hd[0], (hd[1] + top) / 2, steps=6); pg.mouse.move(hd[0], top, steps=6)
             pg.screenshot(path=SH + "91_dragging.png"); pg.mouse.up(); pg.wait_for_timeout(500)
-            after = pg.evaluate("E.panels.map(p=>p.type)"); ys2 = pg.evaluate("E.panels.map(p=>p.y)")
+            after = pg.evaluate("tabPanels().map(p=>p.type)"); ys2 = pg.evaluate("tabPanels().map(p=>p.y)")
             print(before, "->", after, ys2)
             assert after[0] == before[last] and after[1] == before[0], after
             assert ys2[0] == 0 and all(ys2[i] < ys2[i + 1] for i in range(len(ys2) - 1)), ys2
-            hs = pg.evaluate("E.panels.map(p=>p.h)"); assert all(abs(ys2[i + 1] - (ys2[i] + hs[i] + 10)) < 1 for i in range(len(ys2) - 1)), "gaps"
+            hs = pg.evaluate("tabPanels().map(p=>p.h)"); assert all(abs(ys2[i + 1] - (ys2[i] + hs[i] + 10)) < 1 for i in range(len(ys2) - 1)), "gaps"
         step("fixed slots: dragging a panel up swaps the others down", slots)
         pg.screenshot(path=SH + "92_after_swap.png")
         def metodo():

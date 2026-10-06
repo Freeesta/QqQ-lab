@@ -7,6 +7,7 @@ const HELP = {
     <br>I file <b>.wiff</b> dello strumento vanno prima convertiti in .mzML con MSConvert (vedi il riquadro qui sotto).`],
   "files": ["Elenco dei file", `Ogni riga è un file aperto, con il suo colore nei grafici. La <b>casella</b> mostra o nasconde la traccia; <b>clic sul nome</b> = file corrente (quello usato da spettro e mappa), <b>doppio clic</b> = rinomina.
     <br>Sotto il nome: tipo di esperimento (Full Scan, MS², MRM) e tempo.
+    <br>In <b>Dati</b> ci sono tre schede, una per tipo di esperimento (Full Scan, MS², MRM): non si mescolano mai nello stesso grafico. <b>Tempi ed esperimenti</b> mostra quali file hai per ogni tempo e tipo.
     <br><b>+</b> carica altri file senza perdere i pannelli; <b>◀</b> nasconde l'elenco per dare più spazio ai grafici.`],
   "toolbar": ["Aggiungere pannelli", `<b>Cromatogramma</b>: TIC (somma di tutti gli ioni) o BPC (ione più intenso) di ogni file.
     <br><b>Spettro</b>: lo spettro di massa in un intervallo di tempo. <b>Mappa RT-m/z</b>: tutti gli ioni nel tempo, come un'immagine.

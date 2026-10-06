@@ -51,7 +51,8 @@ try:
             assert pg.evaluate("ST.files.find(f=>f.name==='B_MRM-t15.mzML').type") == "blank"
             pg.locator('#flist tr', has_text="B_MRM-t15").locator("select[data-k=type]").select_option("sample")
         step("type is editable", standard_off)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
+        pg.click("text=Carica dati"); pg.wait_for_timeout(3500)
+        pg.click("#dtabs [data-t=mrm]"); pg.wait_for_timeout(3500)
         pg.screenshot(path=SH + "152_mrm.png")
         def mrm_ui():
             assert pg.locator("#calbar").is_visible() and pg.locator("#np-cal").is_visible()
@@ -59,17 +60,17 @@ try:
             assert "standard" in pg.inner_text("#flst")
         step("MRM session: calibration strip, integration tool ready", mrm_ui)
         def integrate():
-            i = pg.evaluate("E.panels.findIndex(p=>p.type==='mrm')")
+            i = pg.evaluate("E.panels.findIndex(p=>p.type==='mrm'&&p.tr===CAL.quant)")
             ap = pg.evaluate("""(i)=>{const p=E.panels[i],s=p._a.sr[0];let m=0;s.y.forEach((v,j)=>{if(v>s.y[m])m=j});return s.x[m]}""", i)
             def pt(x): return pg.evaluate("""([i,x])=>{const p=E.panels[i],r=p.cv.getBoundingClientRect();return {px:r.left+p._a.X(x),py:r.top+r.height/2}}""", [i, x])
             a, b = pt(ap - 0.3), pt(ap + 0.3)
             pg.mouse.move(a["px"], a["py"]); pg.mouse.down(); pg.mouse.move(b["px"], b["py"], steps=8); pg.mouse.up(); pg.wait_for_timeout(1500)
-            n = pg.evaluate(f"E.panels[{i}].ints.length"); assert n == 2 * 5, n          # 5 MRM files x 2 transitions, one window
+            n = pg.evaluate("tabPanels().filter(p=>p.type==='mrm').map(p=>p.ints.length)"); assert n == [5, 5], n          # 5 MRM files; the window goes to the quantifier and the qualifier
             # same drag again: replaced, not doubled
             pg.mouse.move(a["px"], a["py"]); pg.mouse.down(); pg.mouse.move(b["px"], b["py"], steps=8); pg.mouse.up(); pg.wait_for_timeout(800)
-            assert pg.evaluate(f"E.panels[{i}].ints.length") == 10
+            assert pg.evaluate("tabPanels().filter(p=>p.type==='mrm').map(p=>p.ints.length)") == [5, 5]
             # make the areas differ (as real standards do): the window of each standard scales with its concentration
-            pg.evaluate(f"""()=>{{const p=E.panels[{i}];p.ints.forEach(it=>{{const f=E.files[it.k],c=f.type==='standard'?f.conc:3,h=0.12*Math.min(c,10)/10+0.03,ap={ap};it.a=ap-h;it.b=ap+h}});draw(p)}}""")
+            pg.evaluate(f"""()=>{{tabPanels().filter(p=>p.type==='mrm').forEach(p=>{{p.ints.forEach(it=>{{const f=E.files[it.k],c=f.type==='standard'?f.conc:3,h=0.12*Math.min(c,10)/10+0.03,ap={ap};it.a=ap-h;it.b=ap+h}});draw(p)}})}}""")
             pg.wait_for_timeout(1200)
             assert "3/3 standard integrati" in pg.inner_text("#calbar"), pg.inner_text("#calbar").replace("\n", " | ")
         step("drag integrates every file in one window; a new drag replaces", integrate)
@@ -86,7 +87,7 @@ try:
             pg.click("#bigx")
         step("calibration window: fit, exclude a point, weights, CSV", calib)
         def reopen():
-            pg.locator('.pnl.mrm [data-o=cal]').click(); pg.wait_for_timeout(800); assert pg.locator("#cal-cv").is_visible(); pg.click("#bigx")
+            pg.locator('.pnl.mrm [data-o=cal]').first.click(); pg.wait_for_timeout(800); assert pg.locator("#cal-cv").is_visible(); pg.click("#bigx")
         step("panel button opens it too", reopen)
 finally:
     r.close()

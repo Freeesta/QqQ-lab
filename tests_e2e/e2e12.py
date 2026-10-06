@@ -21,8 +21,9 @@ with sync_playwright() as p:
     pg.screenshot(path=SH + "121_data.png")
     def side():
         t = pg.inner_text("#flst"); assert "scan MS1" not in t and "RT 0.5" not in t and "Doppio clic" not in pg.inner_text("#dfiles"), t
-        assert "FULL SCAN" in t.upper() and "MS\u00b2" in t and "MRM" in t and "EMS" not in t, t
-        assert pg.locator("#flst .fgh").count() >= 3 and pg.locator("#flst .tag").count() == 0 and pg.locator('#dfiles .hq').count() == 0
+        assert "FULL SCAN" in t.upper() and "MS\u00b2" not in t and "MRM" not in t and "EMS" not in t, t
+        d = pg.inner_text("#dtabs"); assert "Full Scan" in d and "MS\u00b2 (Product Ion)" in d and "MRM" in d and "Tempi ed esperimenti" in d, d
+        assert pg.locator("#flst .fgh").count() >= 1 and pg.locator("#flst .tag").count() == 0 and pg.locator('#dfiles .hq').count() == 0
         assert pg.locator("#np-export, #np-ints, #kindinfo").count() == 0
         assert pg.locator("#credits").count() == 0 and pg.locator('.pnl.chrom [data-o=norm]').count() == 0
         fw = pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').offsetWidth"); assert fw < 60, fw
@@ -58,24 +59,26 @@ with sync_playwright() as p:
         assert xp.locator('[data-o=xlo]').input_value() == "363.6" and xp.locator('[data-o=xhi]').input_value() == "364.6" and xp.locator('#xic-q, [data-o=tol]').count() == 0
         xp.locator('[data-o=xlo]').fill("363,9"); xp.locator('[data-o=xlo]').press("Enter"); xp.locator('[data-o=xhi]').fill("364.3"); xp.locator('[data-o=xhi]').press("Enter"); pg.wait_for_timeout(1500)
         tw = pg.evaluate(f"[E.panels[{xi}].traces[0].mz, E.panels[{xi}].traces[0].w]"); assert abs(tw[0] - 364.1) < 0.011 and abs(tw[1] - 0.2) < 0.011, tw
-        nv = pg.evaluate("E.files.filter(f=>f.vis).length")
-        xp.locator('.fcount').click(); pg.wait_for_timeout(200); assert pg.locator("#fpop input").count() == len(pg.evaluate("E.files"))
-        pg.locator("#fpop input").first.uncheck(); pg.wait_for_timeout(1200); assert pg.evaluate("E.files.filter(f=>f.vis).length") == nv - 1
-        pg.locator("#fpop .fn").nth(2).click(); pg.wait_for_timeout(1200); assert pg.evaluate("E.files.filter(f=>f.vis).length") == 1
+        nv = pg.evaluate("tabFiles().filter(f=>f.vis).length")
+        xp.locator('.fcount').click(); pg.wait_for_timeout(200); assert pg.locator("#fpop input").count() == pg.evaluate("tabFiles().length")
+        pg.locator("#fpop input").first.uncheck(); pg.wait_for_timeout(1200); assert pg.evaluate("tabFiles().filter(f=>f.vis).length") == nv - 1
+        pg.locator("#fpop .fn").nth(2).click(); pg.wait_for_timeout(1200); assert pg.evaluate("tabFiles().filter(f=>f.vis).length") == 1
         pg.locator("#fpop [data-all='1']").click(); pg.wait_for_timeout(800); pg.mouse.click(5, 5)
         rb, pb = xp.locator(".rd").bounding_box(), xp.bounding_box(); assert rb["x"] > pb["x"] + pb["width"] / 2 and rb["y"] > pb["y"] + pb["height"] - 40, (rb, pb)
         assert xp.locator('[data-a=iclr]').is_visible(); xp.locator('[data-a=iclr]').click(); pg.wait_for_timeout(400)
         assert pg.evaluate(f"E.panels[{xi}].ints.length") == 0 and not xp.locator('[data-a=iclr]').is_visible()
     step("zoom tool, TIC refuses, XIC window da-a, integration of a chosen file", integ)
     def ms2():
-        pg.evaluate("E.files.forEach(f=>f.vis=f.kind==='ms2');renderFileList();redrawAll()"); pg.wait_for_timeout(1500)
-        sel = pg.locator('.pnl.chrom [data-o=prec]').first; assert sel.count() == 1
-        n0 = pg.evaluate("E.panels[0]._a.sr[0].x.length"); sel.select_option("305"); pg.wait_for_timeout(1500)
-        n1 = pg.evaluate("E.panels[0]._a.sr[0].x.length"); assert 0 < n1 < n0, (n0, n1)
+        pg.click("#dtabs [data-t=ms2]"); pg.wait_for_timeout(3500)
+        assert "2 esperimenti" in pg.inner_text("#expbar") and "229.1" in pg.inner_text("#expbar") and "305" in pg.inner_text("#expbar"), pg.inner_text("#expbar")
+        ch = pg.evaluate("tabPanels().filter(p=>p.type==='chrom').map(p=>[p.prec,p._a.sr[0].x.length])")
+        assert len(ch) == 2 and ch[0][0] != ch[1][0] and all(n > 0 for _, n in ch), ch      # one chromatogram per precursor
+        assert pg.locator("#flst").inner_text().upper().count("MS\u00b2") == 1 and "MRM" not in pg.inner_text("#flst")
+        sel = pg.locator('.pnl.chrom [data-o=prec]:visible').first; assert sel.count() == 1
         pg.screenshot(path=SH + "123_ms2.png")
     step("MS2 chromatogram: choose the precursor", ms2)
     def png():
-        pg.evaluate("E.files.forEach(f=>f.vis=true);redrawAll()"); pg.wait_for_timeout(800)
+        pg.click("#dtabs [data-t=full]"); pg.evaluate("E.files.forEach(f=>f.vis=true);redrawAll()"); pg.wait_for_timeout(1200)
         assert pg.evaluate("E.panels[0].cur") is not None
         with pg.expect_download() as d: pg.locator('.pnl.chrom [data-a=png]').first.click()
         pg.wait_for_timeout(500); print("PNG", d.value.suggested_filename); d.value.save_as("/tmp/chrom.png")

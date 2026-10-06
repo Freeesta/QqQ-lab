@@ -57,7 +57,7 @@ try:
         step("Disegno and Teoria tabs work from the static site", tabs)
         def mrm_spec():
             assert pg.evaluate("E.panels.some(p=>p.type==='spec' && p._a)"), "spectrum panel"
-            pg.click("#np-mrm"); pg.wait_for_timeout(2500)
+            pg.click("#dtabs [data-t=mrm]"); pg.wait_for_timeout(2500)
             assert pg.evaluate("E.panels.some(p=>p.type==='mrm' && p._a && p._a.sr.length>0)")
         step("spectrum and MRM panels", mrm_spec)
         def clear_all():

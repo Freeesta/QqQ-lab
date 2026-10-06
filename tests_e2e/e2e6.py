@@ -30,11 +30,12 @@ try:
             n = pg.locator(".hq:visible").count(); assert n >= 5, n
         step("? buttons open the explanation", helpq)
         def csvexcel():
+            pg.click("#dtabs [data-t=mrm]"); pg.wait_for_timeout(2500)
             with pg.expect_download() as d: pg.locator(".pnl.mrm [data-a=csv]").first.click()
             raw = open(d.value.path(), "rb").read(); t = raw.decode("utf-8-sig"); first = t.split("\r\n")[:3]
             print("CSV:", first[0][:120], "|", first[1][:80])
             assert raw[:3] == b"\xef\xbb\xbf" and "RT min" in first[0] and ";" in first[1] and "," in "".join(first[1:]) and "." not in "".join(first[1:]).replace('"', ''), first
-        step("plot CSV for Excel (semicolon, decimal comma, BOM)", csvexcel)
+        step("plot CSV for Excel (semicolon, decimal comma, BOM)", lambda: (csvexcel(), pg.evaluate("setTab('full')"), pg.wait_for_timeout(800)))
         def fold():
             w0 = pg.evaluate("E.panels[0].w"); pg.click("#ffold"); pg.wait_for_timeout(600)
             w1 = pg.evaluate("E.panels[0].w"); assert w1 > w0 + 150 and pg.is_visible("#funfold") and not pg.is_visible("#dfiles"), (w0, w1)

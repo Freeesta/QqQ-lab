@@ -35,7 +35,7 @@ class Item:
                 "mz_max": float(t1.mz[-1]) if t1 is not None and len(t1.mz) else None,
                 "polarity": "positive" if pol == [1] else "negative" if pol == [-1] else "mixed" if pol else "unknown",
                 "precursors": sorted({round(s.precursor, 1) for s in ms2 if s.precursor}),
-                "chromatograms": r.n_chromatograms, "kind": self.kind(),
+                "ms2_exps": self._ms2_exps(ms2), "chromatograms": r.n_chromatograms, "kind": self.kind(),
                 "srm": sum(1 for c in r.chromatograms() if c["kind"] == "srm"), "pda": self.has_pda()}
         if not r.scans:                                   # MRM file: no scans, take times and polarity from the chromatograms
             rng = self._srm_rt_range()
@@ -43,6 +43,15 @@ class Item:
                 out["rt_min"], out["rt_max"] = rng
             out["polarity"] = self._header_polarity()
         return out
+
+    @staticmethod
+    def _ms2_exps(ms2) -> list[dict]:
+        """The MS2 experiments of a file: one per precursor (and collision energy), with the number of scans."""
+        cnt: dict = {}
+        for s in ms2:
+            k = (round(s.precursor, 1) if s.precursor else None, s.collision_energy)
+            cnt[k] = cnt.get(k, 0) + 1
+        return [{"prec": k[0], "ce": k[1], "n": n} for k, n in sorted(cnt.items(), key=lambda kv: (kv[0][0] or 0, kv[0][1] or 0))]
 
     def kind(self) -> str:
         """Experiment type: 'full' (Q1 scan), 'ms2' (product ion scans) or 'mrm' (SRM chromatograms only)."""
