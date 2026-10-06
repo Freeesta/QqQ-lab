@@ -87,6 +87,16 @@
 <div class="box lab"><b>In QqQ lab</b>
 <p>La tabella delle integrazioni raccoglie le aree di ogni traccia in tutti i file e le ordina per tempo di irraggiamento: è il punto di partenza per i grafici della relazione e si esporta in CSV. Le opzioni di sottrazione del bianco e di linea di base (SNIP) aiutano sui picchi piccoli, ma vanno usate con lo stesso criterio su tutti i tempi, altrimenti l'andamento è un artefatto.</p></div>
 
+<h2>Come il programma trova i bordi di un picco</h2>
+<p>Con l'integrazione automatica clicchi sul picco e il programma propone i due bordi; tu li puoi sempre correggere trascinando le barre. L'algoritmo ha quattro passi.</p>
+<ol>
+<li><b>Smoothing di Savitzky-Golay.</b> In ogni finestra scorrevole i punti vengono interpolati con un polinomio di secondo grado: il picco si ripulisce dal rumore senza abbassarsi e allargarsi come con una media mobile. La finestra è circa il 60% della larghezza del picco a met&agrave; altezza, quindi si adatta sia a tracce MRM con un punto ogni 0,05 s sia a un TIC con pochi punti.</li>
+<li><b>Apice dalla derivata.</b> La derivata prima (la pendenza dello stesso polinomio) passa da positiva a negativa nel massimo del picco.</li>
+<li><b>Bordi.</b> Si cammina dall'apice verso i due lati e ci si ferma dove il segnale scende sotto la linea di base locale pi&ugrave; il 3% dell'altezza del picco (e comunque sopra 3 volte il rumore), oppure dove la derivata cambia segno per un tratto continuo: &egrave; la valle che separa dal picco vicino.</li>
+<li><b>Area.</b> Regola dei trapezi sui dati originali (non smussati), meno la linea di base retta tra i due bordi (ogni estremo &egrave; la media di 3 punti, per non dipendere da un solo punto rumoroso). L'etichetta mostra l'area con 3 decimali (2.243e+6); passando sopra compare il valore intero.</li>
+</ol>
+<p>Limiti: due picchi sovrapposti vengono separati solo se tra i due c'&egrave; una valle; una deriva della linea di base molto forte sposta i bordi. Guarda sempre i bordi proposti prima di fidarti dell'area.</p>
+
 <h2>Verifica</h2>
 <details class="q"><summary>Un candidato TP ha cluster 100 : 12 : 33 : 4. Che cosa contiene probabilmente?</summary>
 <p>Un atomo di cloro (M+2 ≈ 32%) e circa 10–11 atomi di carbonio (M+1 ≈ 12%, tenendo conto del piccolo contributo dell'azoto).</p></details>

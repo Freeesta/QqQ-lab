@@ -1077,21 +1077,52 @@ function integ(s, a, b) {
   let ar = 0, mx = -Infinity, at = i0;
   for (let j = i0 + 1; j <= i1; j++) ar += (ys[j] + ys[j - 1]) / 2 * (xs[j] - xs[j - 1]) * 60;
   for (let j = i0; j <= i1; j++) if (ys[j] > mx) { mx = ys[j]; at = j; }
-  const base = (ys[i0] + ys[i1]) / 2 * (xs[i1] - xs[i0]) * 60;
-  const hb = ys[i0] + (ys[i1] - ys[i0]) * (xs[at] - xs[i0]) / ((xs[i1] - xs[i0]) || 1);
+  const e3 = i => { let t = 0, c = 0; for (let j = i - 1; j <= i + 1; j++) if (j >= 0 && j < ys.length) { t += ys[j]; c++; } return t / c; };   // end points of the baseline: mean of 3 points
+  const ya = e3(i0), yb = e3(i1), base = (ya + yb) / 2 * (xs[i1] - xs[i0]) * 60;
+  const hb = ya + (yb - ya) * (xs[at] - xs[i0]) / ((xs[i1] - xs[i0]) || 1);
   return { area: Math.max(ar - base, 0), height: Math.max(mx - hb, 0), rt: xs[at] };       // conteggi x s, baseline lineare
 }
+// Automatic peak edges. Savitzky-Golay smoothing (quadratic polynomial fitted in a sliding window: keeps height and width of the peak, unlike a
+// moving average) and its first derivative (slope of the same polynomial). The window follows the peak: about 60% of its width at half height
+// (found with a coarse smoothing first), so noisy MRM traces sampled every 0.05 s and sparse TIC traces both work. The apex is where the derivative
+// goes from + to -. Each edge is where the signal falls below (local baseline + 3% of the peak height, and at least 3 times the noise), or where
+// the derivative changes sign again (a valley before the next peak) for a sustained stretch. Baseline = straight line between the two edges (integ()).
+function sgFilter(y, m, deriv) {                         // half window m (window 2m+1), edges replicated
+  const n = y.length, out = new Array(n), mm = m * (m + 1) * (2 * m + 1) / 3;
+  const w = []; for (let j = -m; j <= m; j++) w.push(deriv ? j / mm : 3 * (3 * m * m + 3 * m - 1 - 5 * j * j) / ((2 * m - 1) * (2 * m + 1) * (2 * m + 3)));
+  for (let i = 0; i < n; i++) { let v = 0; for (let j = -m; j <= m; j++) v += w[j + m] * y[Math.min(n - 1, Math.max(0, i + j))]; out[i] = v; }
+  return out;
+}
 function autoEdges(s, x) {
-  const xs = s.x, ys = s.ys || s.y;
-  let lo = nearIdx(xs, x - 0.25), hi = nearIdx(xs, x + 0.25), m = lo;
-  for (let j = lo; j <= hi; j++) if (ys[j] > ys[m]) m = j;
-  const w0 = nearIdx(xs, xs[m] - 1), w1 = nearIdx(xs, xs[m] + 1);
-  let base = Infinity; for (let j = w0; j <= w1; j++) base = Math.min(base, ys[j]);
-  const h = ys[m] - base, lim = base + 0.04 * h;
-  let l = m, r = m;
-  while (l > 0 && ys[l - 1] <= ys[l] * 1.02 && ys[l] > lim) l--;
-  while (r < ys.length - 1 && ys[r + 1] <= ys[r] * 1.02 && ys[r] > lim) r++;
-  return [xs[l], xs[r]];
+  const xs = s.x, n = xs.length, ic = nearIdx(xs, x);
+  if (n < 9) return [xs[ic], xs[ic]];
+  const dt = (xs[Math.min(n - 1, ic + 50)] - xs[Math.max(0, ic - 50)]) / (Math.min(n - 1, ic + 50) - Math.max(0, ic - 50) || 1) || 0.01;
+  const a0 = Math.max(0, nearIdx(xs, x - 2)), a1 = Math.min(n - 1, nearIdx(xs, x + 2)), y = s.y.slice(a0, a1 + 1), N = y.length, c0 = ic - a0;
+  const mCoarse = Math.max(2, Math.round(0.03 / dt / 2)), co = sgFilter(y, mCoarse, false);
+  const lo = Math.max(0, nearIdx(xs, x - 0.25) - a0), hi = Math.min(N - 1, nearIdx(xs, x + 0.25) - a0);
+  let m0 = lo; for (let j = lo; j <= hi; j++) if (co[j] > co[m0]) m0 = j;
+  const cmin = Math.min(...co), half = cmin + (co[m0] - cmin) / 2;
+  let hl = m0, hr = m0; while (hl > 0 && co[hl] > half) hl--; while (hr < N - 1 && co[hr] > half) hr++;
+  const m = Math.max(2, Math.min(60, Math.round((hr - hl) * 0.3)));                         // half window = 30% of FWHM -> window about 60% of FWHM
+  const sm = sgFilter(y, m, false), d = sgFilter(y, m, true);
+  let k = Math.max(0, m0 - m); const k1 = Math.min(N - 1, m0 + m); for (let j = k; j <= k1; j++) if (sm[j] > sm[k]) k = j;   // apex of the smoothed trace
+  const w0 = Math.max(0, k - Math.round(1.2 / dt)), w1 = Math.min(N - 1, k + Math.round(1.2 / dt));
+  const res = []; for (let j = w0; j <= w1; j++) res.push(Math.abs(y[j] - sm[j])); res.sort((p, q) => p - q);
+  const noise = Math.max(1.4826 * res[res.length >> 1], 1e-12);                             // MAD of the residual = noise sigma
+  const low = []; for (let j = w0; j <= w1; j++) low.push(sm[j]); low.sort((p, q) => p - q);
+  const base = low[Math.floor(low.length * 0.1)], H = Math.max(sm[k] - base, 0), lim = base + Math.max(0.03 * H, 3 * noise);
+  const need = Math.max(2, Math.round(m / 2)), dth = noise / Math.max(m, 1) * 0.3, maxw = Math.round(1.5 / dt);
+  const walk = dir => {
+    let j = k, bad = 0;
+    while (j + dir >= 0 && j + dir < N && Math.abs(j - k) < maxw) {
+      const nx = j + dir; j = nx;
+      if (sm[nx] <= lim) break;
+      bad = (dir < 0 ? d[nx] < -dth : d[nx] > dth) ? bad + 1 : 0;                         // rising again while moving away from the apex
+      if (bad >= need) { j = nx - dir * need; break; }
+    }
+    return j;
+  };
+  return [xs[a0 + Math.min(walk(-1), k)], xs[a0 + Math.max(walk(1), k)]];
 }
 // trace to integrate at time x: the clicked row when stacked, otherwise the most intense one
 function intSeries(p, x, py) {
