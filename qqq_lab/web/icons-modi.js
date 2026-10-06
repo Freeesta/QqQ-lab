@@ -1,18 +1,23 @@
-// Icons of the three acquisition modes (inline SVG, no dependencies; colour = currentColor, so they follow the theme).
-//   Full Scan   : many bars -> Q1 scans the whole m/z range.
-//   Product ion : one tall bar (the precursor, Q1 fixed) -> arrow (collision in Q2) -> several small bars (fragments, Q3 scans).
-//   MRM         : one bar -> arrow -> one bar highlighted: a single transition (Q1 and Q3 both fixed).
-// Use: QICON.full / QICON.prod / QICON.mrm (SVG strings) or QICON.get("full", 20) for a given size in px.
+// Icons of the three acquisition modes: the triple quadrupole itself, Q1 - Q2 - Q3, with what each stage does.
+//   sweep (<->, tinted box) = the stage scans a range of m/z;  dot = the stage is fixed on one m/z (filter);
+//   X = collision cell (Q2) breaks the ions;  arrow = the stage lets everything through.
+//   Full Scan   : Q1 sweeps, Q2 and Q3 let everything through          -> spectrum of the precursors
+//   Product ion : Q1 fixed (the precursor), Q2 collides, Q3 sweeps      -> spectrum of the fragments
+//   MRM         : Q1 fixed, Q2 collides, Q3 fixed (one transition)      -> chromatogram of one transition
+// Colour = currentColor (follows the theme). Use: QICON.full / .prod / .mrm (SVG strings) or QICON.get("full", 20) (height in px).
 const QICON = (() => {
-  const wrap = (body, label) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="${label}">${body}</svg>`;
-  const axis = '<path d="M2 21h28" stroke-width="1.6"/>';
-  const bars = (xs, hs) => xs.map((x, i) => `<path d="M${x} 21v-${hs[i]}"/>`).join("");
-  const arrow = '<path d="M12 12h6m-2.5-2.5L18 12l-2.5 2.5" stroke-width="1.6"/>';
+  const box = (i, tint) => `<rect x="${1 + i * 16}" y="2" width="14" height="16" rx="3"${tint ? ' fill="currentColor" fill-opacity=".18"' : ""}/>`;
+  const sweep = i => `<path d="M${4 + i * 16} 10h8M${6.5 + i * 16} 7.5L${4 + i * 16} 10l2.5 2.5M${9.5 + i * 16} 7.5L${12 + i * 16} 10l-2.5 2.5" stroke-width="1.5"/>`;
+  const fixed = i => `<circle cx="${8 + i * 16}" cy="10" r="2.6" fill="currentColor" stroke="none"/>`;
+  const hit = i => `<path d="M${5 + i * 16} 6.5l6 7m0-7l-6 7" stroke-width="1.8"/>`;
+  const pass = i => `<path d="M${4.5 + i * 16} 10h7M${9 + i * 16} 7.5l2.5 2.5-2.5 2.5" stroke-width="1.5"/>`;
+  const link = '<path d="M15 10h2M31 10h2" stroke-width="1.6"/>';
+  const wrap = (body, label) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="${label}">${link}${body}</svg>`;
   return {
-    full: wrap(axis + bars([5, 9, 13, 17, 21, 25, 29], [7, 14, 9, 17, 6, 12, 5]), "Full Scan"),
-    prod: wrap(axis + bars([5], [17]) + arrow + bars([22, 25.5, 29], [5, 10, 7]), "Product ion"),
-    mrm: wrap(axis + bars([5], [17]) + arrow + `<path d="M26 21v-13" stroke-width="3.4"/>`, "MRM"),
-    get(k, px = 22) { return this[k].replace("<svg ", `<svg width="${Math.round(px * 32 / 24)}" height="${px}" `); },
+    full: wrap(box(0, 1) + sweep(0) + box(1) + pass(1) + box(2) + pass(2), "Full Scan: Q1 scansiona, Q2 e Q3 lasciano passare"),
+    prod: wrap(box(0) + fixed(0) + box(1) + hit(1) + box(2, 1) + sweep(2), "Product ion: Q1 fisso, Q2 frammenta, Q3 scansiona"),
+    mrm: wrap(box(0) + fixed(0) + box(1) + hit(1) + box(2) + fixed(2), "MRM: Q1 fisso, Q2 frammenta, Q3 fisso"),
+    get(k, px = 20) { return this[k].replace("<svg ", `<svg width="${Math.round(px * 48 / 20)}" height="${px}" `); },
   };
 })();
 if (typeof module !== "undefined") module.exports = QICON;
