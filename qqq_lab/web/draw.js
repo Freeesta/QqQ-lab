@@ -291,13 +291,94 @@ function addCaption(svgText, c) {
 Q("#cap-copy").onclick = async () => { const c = await capData(); if (c) try { await navigator.clipboard.writeText(capText(c)); } catch (_) { /* clipboard blocked */ } };
 document.addEventListener("nbloaded", () => { if (NB.cap) { Q("#cap-name").value = NB.cap.name || ""; Q("#cap-ad").value = NB.cap.adduct || "[M+H]+"; Q("#cap-on").checked = NB.cap.on === true; } capShow(); });
 
+// Labels of the exported image as real SVG text (subscripts and superscripts shifted with dy, like the caption).
+// Ketcher turns text objects into glyph outlines and spaces Unicode subscripts badly, so the export is made WITHOUT text objects:
+// the position of the structures in the exported SVG is found by matching the bond end points with the atom positions of the
+// .ket (the export scale is 40 px per unit), then the labels are added as <text>. If the match fails, the old way is used.
+const EXPORT_SCALE = 40;
+function exportOffset(svgText, ket) {
+  const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
+  doc.querySelectorAll("defs").forEach(d => d.remove());
+  const atoms = [];
+  Object.keys(ket).filter(k => /^mol\d+$/.test(k)).forEach(k => (ket[k].atoms || []).forEach(a => a.location && atoms.push([a.location[0] * EXPORT_SCALE, -a.location[1] * EXPORT_SCALE])));
+  const ends = [];
+  doc.querySelectorAll("path").forEach(pa => {
+    const n = (pa.getAttribute("d") || "").match(/-?\d+(?:\.\d+)?/g);
+    const tr = (pa.getAttribute("transform") || "").match(/matrix\(([^)]*)\)/);                 // Ketcher draws in ket units with matrix(40,0,0,40,tx,ty)
+    const [a, b, c, d, e, f] = tr ? tr[1].split(/[\s,]+/).map(Number) : [1, 0, 0, 1, 0, 0];
+    if (n && (pa.getAttribute("d") || "").trim()[0] === "M") for (let i = 0; i + 1 < n.length; i += 2) ends.push([a * +n[i] + c * +n[i + 1] + e, b * +n[i] + d * +n[i + 1] + f]);
+  });
+  const votes = new Map();
+  for (const [ax, ay] of atoms) for (const [ex, ey] of ends) {
+    const k = Math.round(ex - ax) + "," + Math.round(ey - ay); votes.set(k, (votes.get(k) || 0) + 1);
+  }
+  // symmetric molecules (rings) match well at several shifts: keep only shifts that leave every atom inside the picture
+  // (Ketcher crops the picture tightly around the drawing), then take the best supported one
+  const vb = (doc.documentElement.getAttribute("viewBox") || "0 0 0 0").split(/[\s,]+/).map(Number);
+  const inside = (ox, oy) => atoms.every(([ax, ay]) => ax + ox >= vb[0] - 3 && ax + ox <= vb[0] + vb[2] + 3 && ay + oy >= vb[1] - 3 && ay + oy <= vb[1] + vb[3] + 3);
+  const ranked = [...votes].sort((p, q) => q[1] - p[1]).slice(0, 40);
+  const need = Math.max(2, Math.min(atoms.length, 3));
+  const pick = ranked.find(([k, c]) => c >= need && inside(...k.split(",").map(Number)));
+  if (!pick) return null;
+  const [bx, by] = pick[0].split(",").map(Number);
+  // refine with the matching pairs
+  let sx = 0, sy = 0, m = 0;
+  for (const [ax, ay] of atoms) for (const [ex, ey] of ends) if (Math.abs(ex - ax - bx) <= 1.5 && Math.abs(ey - ay - by) <= 1.5) { sx += ex - ax; sy += ey - ay; m++; }
+  return { ox: sx / m, oy: sy / m };
+}
+const svgNS = "http://www.w3.org/2000/svg";
+let _meas = null;
+const textWidth = (parts, size) => {
+  _meas = _meas || document.createElement("canvas").getContext("2d");
+  return parts.reduce((w, [s, k]) => { _meas.font = `${k ? size * 0.72 : size}px Arial, Helvetica, sans-serif`; return w + _meas.measureText(String(s)).width; }, 0);
+};
+function svgLabel(doc, parts, x, y, size, color) {
+  const t = doc.createElementNS(svgNS, "text");
+  t.setAttribute("x", x); t.setAttribute("y", y); t.setAttribute("text-anchor", "middle");
+  t.setAttribute("font-family", "Arial, Helvetica, sans-serif"); t.setAttribute("font-size", size); t.setAttribute("fill", color);
+  let shift = 0;                                   // current vertical shift in em: tspans carry dy relative to the previous one
+  for (const [txt, k] of parts) {
+    const want = k === "sub" ? 0.28 : k === "sup" ? -0.45 : 0, sp = doc.createElementNS(svgNS, "tspan");
+    sp.textContent = String(txt);
+    if (want !== shift) { sp.setAttribute("dy", ((want - shift) * size).toFixed(2)); shift = want; }
+    if (k) sp.setAttribute("font-size", (size * 0.72).toFixed(2));
+    t.appendChild(sp);
+  }
+  return t;
+}
+function addExportLabels(svgText, ket) {
+  const off = exportOffset(svgText, ket); if (!off) return null;
+  const doc = new DOMParser().parseFromString(svgText, "image/svg+xml"), root = doc.documentElement;
+  const vb = (root.getAttribute("viewBox") || "").split(/[\s,]+/).map(Number);
+  if (vb.length !== 4 || vb.some(isNaN)) return null;
+  const g = doc.createElementNS(svgNS, "g"); g.setAttribute("id", "qqq-labels");
+  let [x0, y0, x1, y1] = [vb[0], vb[1], vb[0] + vb[2], vb[1] + vb[3]];
+  const put = (parts, x, y, size, color) => {
+    g.appendChild(svgLabel(doc, parts, x, y, size, color));
+    const w = textWidth(parts, size);
+    x0 = Math.min(x0, x - w / 2 - 8); x1 = Math.max(x1, x + w / 2 + 8); y0 = Math.min(y0, y - size - 4); y1 = Math.max(y1, y + size * 0.6 + 4);
+  };
+  for (const d of structures()) put(labelParts(d), off.ox + d.cx * EXPORT_SCALE, off.oy + (d.y + 0.6) * EXPORT_SCALE + 14, 16, "#3b3b3b");
+  for (const a of arrowDeltas()) put(a.parts, off.ox + a.x * EXPORT_SCALE, off.oy + (a.y - 0.75) * EXPORT_SCALE + 12, 14, "#2b5c8a");
+  // grow the picture to hold the labels (background rectangle included)
+  const bg = [...doc.querySelectorAll("rect")].find(r => !r.closest("defs"));
+  root.setAttribute("viewBox", `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
+  const sx = (x1 - x0) / vb[2], sy = (y1 - y0) / vb[3];
+  const pw = parseFloat(root.getAttribute("width")), ph = parseFloat(root.getAttribute("height"));
+  if (pw) root.setAttribute("width", pw * sx); if (ph) root.setAttribute("height", ph * sy);
+  if (bg) { bg.setAttribute("x", x0); bg.setAttribute("y", y0); bg.setAttribute("width", x1 - x0); bg.setAttribute("height", y1 - y0); }
+  root.appendChild(g);
+  return new XMLSerializer().serializeToString(doc);
+}
+
 // ------------------------------------------------------------------ export
 const download = (blob, name) => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
 async function image(format) {
   await start();
-  const ket = ketWithLabels(await K.getKet()), cream = Q("#ex-bg").checked;
-  const svg0 = await K.generateImage(ket, { outputFormat: "svg", backgroundColor: cream ? "255,251,240" : "255,255,255" });
-  let svgText = await svg0.text();
+  const raw = await K.getKet(), cream = Q("#ex-bg").checked, gen = k => K.generateImage(k, { outputFormat: "svg", backgroundColor: cream ? "255,251,240" : "255,255,255" });
+  let svgText = null;
+  if (labelsOn()) { try { svgText = addExportLabels(await (await gen(raw)).text(), JSON.parse(raw)); } catch (_) { svgText = null; } }   // real SVG text
+  if (!svgText) svgText = await (await gen(ketWithLabels(raw))).text();                                                              // fallback: Ketcher text objects
   const cap = Q("#cap-on").checked ? await capData() : null;
   if (cap) svgText = addCaption(svgText, cap);
   const svg = new Blob([svgText], { type: "image/svg+xml" });
