@@ -254,3 +254,36 @@ def test_spectrum_background_subtraction(tmp_path):
     mz, y, n = it.spectrum(0.5, 1.5, bg={"item": it, "rt0": 4.5, "rt1": 5.5})
     assert n == 1 and len(mz) == 1                      # 200.2 is 80-200 < 0 -> dropped
     assert mz[0] == pytest.approx(100.2, abs=0.01) and y[0] == pytest.approx(400.0)
+
+
+def test_theory_module_is_served_and_self_contained():
+    """The Teoria pages are static: every local link, script and stylesheet must exist, no external scripts."""
+    import re
+    from importlib import resources
+    from tpfinder.server import _static
+    base = resources.files("tpfinder") / "web" / "teoria"
+    pages = sorted(p.name for p in base.iterdir() if p.name.endswith(".html"))
+    assert "index.html" in pages and len(pages) >= 10
+    body, ctype = _static("teoria/index.html")
+    assert ctype == "text/html" and b"QqQ lab" in body
+    for name in pages:
+        html = (base / name).read_text(encoding="utf-8")
+        assert not re.search(r'<script[^>]+src="https?:', html), name
+        for ref in re.findall(r'(?:src|href)="([^"#:]+)"', html):
+            target = "teoria/" + ref if not ref.startswith("../") else ref[3:]
+            assert _static(target) is not None, (name, ref)
+
+
+def test_mac_app_bundle_and_vector_logo():
+    """The Mac launcher app is complete (plist, executable, icon) and the logo exists as SVG."""
+    import plistlib
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    app = root / "QqQ lab.app" / "Contents"
+    info = plistlib.loads((app / "Info.plist").read_bytes())
+    exe = app / "MacOS" / info["CFBundleExecutable"]
+    text = exe.read_text(encoding="utf-8")
+    assert text.startswith("#!/bin/bash") and "lab.command" in text and "osascript" in text
+    assert (app / "Resources" / (info["CFBundleIconFile"] + ".icns")).read_bytes()[:4] == b"icns"
+    svg = (root / "tpfinder" / "web" / "logo.svg").read_text(encoding="utf-8")
+    assert svg.lstrip().startswith("<svg") and "linearGradient" in svg

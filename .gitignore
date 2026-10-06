@@ -11,6 +11,7 @@ dist/
 .venv-tpfinder/
 .venv-tpfinder-*/
 .venv-tpfinder.salta
+.venv-tpfinder.log
 
 # Caches, work folders and test output
 .tpfinder-cache/

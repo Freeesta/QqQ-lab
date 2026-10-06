@@ -61,7 +61,7 @@ try:
         def draw_caption():
             pg.evaluate("setView('draw')"); pg.wait_for_function("TPDraw.ready()", timeout=60000); pg.wait_for_timeout(1500)
             pg.fill("#ex-smi", "Oc1ccc(cc1)C(=O)N"); pg.click("#ex-load"); pg.wait_for_timeout(2500)
-            pg.fill("#cap-name", "TP1"); pg.wait_for_timeout(800)
+            pg.fill("#cap-name", "TP1"); pg.check("#cap-on"); pg.wait_for_timeout(800)   # the report caption is off by default
             t = pg.inner_text("#cap-txt"); print("CAP:", t); assert "TP1" in t and "C7H7NO2" in t and "m/z 138.1" in t and "138" in t
             pg.screenshot(path=SH + "54_caption.png")
             with pg.expect_download() as d: pg.click("#ex-svg")

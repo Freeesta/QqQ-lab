@@ -45,11 +45,12 @@ try:
             pg.locator('.pnl.chrom [data-o="log"]').uncheck(); pg.wait_for_timeout(300)
         step("log scale", logv)
         def legtoggle():
+            n0 = pg.evaluate("E.panels[0]._a.sr.length")   # full-scan and MS2 files (MRM files have their own panel)
             pg.locator('.pnl.chrom .leg [data-h]').first.click(); pg.wait_for_timeout(600)
-            n = pg.evaluate("E.panels[0]._a.sr.length"); assert n == 4, n
+            n = pg.evaluate("E.panels[0]._a.sr.length"); assert n == n0 - 1, (n0, n)
             pg.screenshot(path=SH + "45_legend_hidden.png")
             pg.locator('.pnl.chrom .leg [data-h]').first.click(); pg.wait_for_timeout(500)
-            assert pg.evaluate("E.panels[0]._a.sr.length") == 5
+            assert pg.evaluate("E.panels[0]._a.sr.length") == n0
         step("legend toggle", legtoggle)
         def wheelpan():
             c = pt(pg, 0, 14.3); pg.mouse.move(c["px"], c["py"])

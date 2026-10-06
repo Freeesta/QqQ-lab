@@ -1,8 +1,8 @@
 "use strict";
 // Esplorazione dei dati: si parte dal cromatogramma totale, lo studente decide cosa estrarre.
 // Script classico (usa gli helper di index.html: S, setup, nice, fmt, css, esc, smooth, M, setView, applyView).
-const E = { files: [], panels: [], seq: 1, key: "", cur: 0, browse: false, z: 10 };
-const NB = { attr: [], ui: null, session: null };   // taccuino: attribuzioni, stato dell'interfaccia (+ disegno, vedi draw.js)
+const E = { files: [], panels: [], seq: 1, key: "", cur: 0, browse: false, z: 10, fold: false };
+const NB = { ui: null, session: null };   // taccuino: stato dell'interfaccia (+ disegno, vedi draw.js)
 const PAL = ["#1f77b4", "#e6550d", "#2ca02c", "#9467bd", "#d62728", "#17becf", "#bcbd22", "#e377c2", "#8c564b", "#0b6e4f", "#f2a900", "#5b5fc7"];
 const Q = s => document.querySelector(s);
 const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -34,16 +34,17 @@ function loading(on, msg) {
 }
 
 // ------------------------------------------------------------------ taccuino (salvato accanto ai dati)
-let nbTimer = null;
+let nbTimer = null, nbLast = "";
 function nbSave(now = false) {
   clearTimeout(nbTimer);
-  const go = () => fetch("/api/notebook", { method: "POST", body: JSON.stringify(NB), keepalive: true }).catch(() => {});
+  const go = () => {
+    const body = JSON.stringify(NB); if (body === nbLast) return;      // nothing changed: no request (fewer aborted saves on reload)
+    nbLast = body; fetch("/api/notebook", { method: "POST", body, keepalive: true }).catch(() => { nbLast = ""; });
+  };
   if (now) go(); else nbTimer = setTimeout(go, 500);
 }
 async function nbLoad() {
   try { Object.assign(NB, await (await fetch("/api/notebook")).json()); } catch (_) { /* prima volta */ }
-  NB.attr = NB.attr || [];
-  renderAttr();
   document.dispatchEvent(new Event("nbloaded"));
 }
 let uiTimer = null;
@@ -53,13 +54,13 @@ function uiSave(now = false) {
     if (!E.files.length) return;
     NB.session = E.files.map(f => ({ file: f.file, label: f.label, time: f.time, type: f.type }));
     NB.ui = {
-      cur: E.cur, browse: E.browse, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis })),
+      cur: E.cur, browse: E.browse, fold: E.fold, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis })),
       panels: E.panels.map(p => ({
-        type: p.type, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, kind: p.kind, norm: p.norm, smooth: p.smooth, tol: p.tol,
+        type: p.type, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, kind: p.kind, norm: p.norm, smooth: p.smooth, tol: p.tol,
         traces: (p.traces || []).map(t => ({ mz: t.mz, label: t.label })), fk: p.fk === "" || p.fk == null ? "" : E.files[+p.fk]?.file ?? "",
         k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
         link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1,
-        mode: p.mode, log: p.log, peaks: p.peaks, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
+        iso: p.iso || null, mode: p.mode, log: p.log, peaks: p.peaks, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
       }))
     };
     nbSave(now);
@@ -106,17 +107,52 @@ async function bootSession() {
   toolbar(); uiSave();
 }
 function defaultLayout() {
+  // TIC of all the files on top, the spectrum below (both as wide as the page), MRM transitions under them if there are MRM files
   const scan = E.files.some(f => f.kind === "full" || f.kind === "ms2"), mrm = E.files.some(f => f.kind === "mrm");
-  if (scan) { const c = addPanel("chrom", {}); const f0 = E.files.find(f => f.kind !== "mrm"); addPanel("spec", { link: c.id, k: f0.k, level: f0.lv }); }
-  if (mrm) addPanel("mrm", {});
+  const w = hostWidth(); let y = 0;
+  if (scan) {
+    const f0 = E.files.find(f => f.kind !== "mrm");
+    const c = addPanel("chrom", { x: 0, y: 0, w, h: 330, full: true });
+    const sp = addPanel("spec", { link: c.id, k: f0.k, level: f0.lv, x: 0, y: 340, w, h: 310, full: true });
+    y = 660; apexSpectrum(c, sp);
+  }
+  if (mrm) addPanel("mrm", { x: 0, y, w, h: 310, full: true });
 }
+// the spectrum starts at the retention time with the highest intensity (of all the visible full-scan/MS2 files)
+async function apexSpectrum(c, sp) {
+  try {
+    const all = (await rawSeries(c)).filter(s => E.files[s.k] && E.files[s.k].kind !== "mrm");
+    let best = null;
+    for (const s of all) for (let i = 0; i < s.y.length; i++) if (!best || s.y[i] > best.v) best = { v: s.y[i], rt: s.x[i], k: s.k };
+    if (!best) return;
+    const f = E.files[best.k], dt = Math.max((f.rt_max - f.rt_min) / Math.max(f.ms1 + f.ms2 - 1, 1), 0.005);
+    c.cur = best.rt; Object.assign(sp, { k: best.k, level: f.lv, r0: best.rt - dt / 2, r1: best.rt + dt / 2, zoom: null });
+    ctl(sp); draw(c); draw(sp); uiSave();
+  } catch (_) { /* the spectrum simply waits for a click */ }
+}
+// width available for the panels (the panel area may still be hidden while the files are being opened)
+function hostWidth() {
+  const w = Q("#dpanels").clientWidth;
+  return w > 100 ? w : Math.max(600, innerWidth - 28 - (E.fold ? 0 : 240));
+}
+// full-width panels follow the page: when the window or the file list changes size
+function fitWidth() {
+  const w = Q("#dpanels").clientWidth; if (w < 100) return;
+  E.panels.forEach(p => { if (p.full && Math.abs(p.w - w) > 1) { p.x = 0; p.w = w; apply(p); } });
+}
+function setFold(on) {
+  E.fold = on; Q("#v-data").classList.toggle("fold", on); Q("#funfold").hidden = !on;
+  requestAnimationFrame(() => { fitWidth(); redrawAll(); });
+}
+Q("#ffold").onclick = () => { setFold(true); uiSave(); };
+Q("#funfold").onclick = () => { setFold(false); uiSave(); };
 function restoreUi() {
   const u = NB.ui;
   if (!u || !u.panels || !u.panels.length) return false;
   const names = new Set(E.files.map(f => f.file));
   if (!u.files.every(f => names.has(f.file))) return false;
   u.files.forEach(sf => { const f = E.files.find(x => x.file === sf.file); f.label = sf.label || f.label; f.vis = sf.vis !== false; });
-  E.cur = Math.min(u.cur || 0, E.files.length - 1); E.browse = !!u.browse;
+  E.cur = Math.min(u.cur || 0, E.files.length - 1); E.browse = !!u.browse; setFold(!!u.fold);
   const kof = n => { const i = E.files.findIndex(f => f.file === n); return i < 0 ? 0 : i; };
   const made = u.panels.map(sp => addPanel(sp.type, {
     ...sp, k: sp.k ? kof(sp.k) : undefined, fk: sp.fk ? kof(sp.fk) : "", ref: sp.ref ? kof(sp.ref) : "", bk: sp.bk ? kof(sp.bk) : "", bg: sp.bg === "w" ? "w" : sp.bg ? kof(sp.bg) : "", traces: (sp.traces || []).map(t => ({ id: E.seq++, ...t })), link: null, ints: sp.ints || [], anns: sp.anns || []
@@ -226,22 +262,34 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") Q("#ctx").hi
 function dl(name, text, type = "text/csv") {
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
-const csvOf = (cols, rows) => "sep=;\n" + cols.join(";") + "\n" + rows.map(r => cols.map(c => `"${String(r[c] ?? "").replace(/"/g, '""')}"`).join(";")).join("\n");
+// CSV for Excel in Italian: ";" between columns, decimal comma, UTF-8 with BOM (accents), headers in Italian
+const cell = v => typeof v === "number" ? (Number.isFinite(v) ? String(+v.toPrecision(10)).replace(".", ",") : "") : `"${String(v ?? "").replace(/"/g, '""')}"`;
+const csvOf = (cols, rows, heads) => "\ufeff" + (heads || cols).map(cell).join(";") + "\r\n" + rows.map(r => cols.map(c => cell(r[c])).join(";")).join("\r\n") + "\r\n";
+const INT_COLS = ["panel", "ion", "file", "time", "a", "b", "rt", "area", "height"];
+const INT_HEADS = ["Pannello", "Traccia", "Campione", "Tempo di trattamento (min)", "RT inizio (min)", "RT fine (min)", "RT apice (min)", "Area (conteggi*s)", "Altezza (cps)"];
+// data of a plot as columns side by side (each trace has its own x): for graphs and tables made in Excel
+function plotCsv(p) {
+  const a = p._a; if (!a) return null;
+  const cols = [];
+  if (p.type === "spec") a.data.forEach(x => { cols.push([`m/z (${x.f.label})`, x.d.mz], [`Intensità cps (${x.f.label})`, x.d.y]); });
+  else if (a.sr) a.sr.forEach(sr => { cols.push([`RT min (${sr.name})`, sr.x], [`Intensità cps (${sr.name})`, sr.y]); });
+  if (!cols.length) return null;
+  const n = Math.max(...cols.map(c => c[1].length)), rows = [];
+  for (let i = 0; i < n; i++) rows.push(cols.map(c => (i < c[1].length ? cell(c[1][i]) : "")).join(";"));
+  return "\ufeff" + cols.map(c => cell(c[0])).join(";") + "\r\n" + rows.join("\r\n") + "\r\n";
+}
 
 // ------------------------------------------------------------------ pannelli mobili
 function place(w, h) {
-  const host = Q("#dpanels"), hw = host.clientWidth || 1000, col = hw < 760 ? hw - 4 : Math.floor((hw - 10) / 2);
-  const W = w || col, H = h || 310;
-  for (let i = 0; i < 200; i++) {
-    const x = hw < 760 ? 0 : (i % 2) * (col + 10), y = Math.floor(hw < 760 ? i : i / 2) * (H + 10);
-    if (!E.panels.some(p => x < p.x + p.w && x + W > p.x && y < p.y + p.h && y + H > p.y)) return { x, y, w: W, h: H };
-  }
-  return { x: 0, y: 0, w: W, h: H };
+  // a new panel goes under the existing ones, as wide as the page
+  const W = w || hostWidth(), H = h || 300;
+  const y = E.panels.length ? Math.max(...E.panels.map(p => p.y + p.h)) + 10 : 0;
+  return { x: 0, y, w: W, h: H, full: !w };
 }
 function fitHost() { Q("#dpanels").style.height = Math.max(520, ...E.panels.map(p => p.y + p.h + 16)) + "px"; }
 function tile() {
-  const keep = E.panels; E.panels = [];
-  keep.forEach(p => { p.w = p.h = null; Object.assign(p, place(null, null)); E.panels.push(p); apply(p); draw(p); });
+  const w = hostWidth(); let y = 0;
+  E.panels.forEach(p => { Object.assign(p, { x: 0, y, w, h: p.h || 310, full: true }); y += p.h + 10; apply(p); draw(p); });
   fitHost(); uiSave();
 }
 const apply = p => { p.el.style.left = p.x + "px"; p.el.style.top = p.y + "px"; p.el.style.width = p.w + "px"; p.el.style.height = p.h + "px"; };
@@ -263,7 +311,7 @@ function addPanel(type, o, after) {
   Object.assign(p, g);
   const el = document.createElement("div");
   el.className = "card pnl " + type;
-  el.innerHTML = `<div class="hd"><b class="ttl" title="Doppio clic per rinominare"></b><span class="ctl"></span><span class="rd"></span><button class="bt" data-a="png" title="Salva il grafico come immagine PNG">PNG</button><button class="bt" data-a="max" title="Ingrandisci o riduci questo pannello">&#9633;</button><button class="x" title="Chiudi il pannello">&times;</button></div><canvas></canvas><div class="vl" hidden></div><div class="tip" hidden></div><div class="leg"></div>`;
+  el.innerHTML = `<div class="hd"><b class="ttl" title="Doppio clic per rinominare"></b>${helpBtn("pnl-" + type)}<span class="ctl"></span><span class="rd"></span><button class="bt" data-a="png" title="Salva il grafico come immagine PNG">PNG</button>${type === "map" ? "" : '<button class="bt" data-a="csv" title="Salva i dati del grafico (le tracce visibili) in un file CSV da aprire con Excel">CSV</button>'}<button class="bt" data-a="max" title="Ingrandisci o riduci questo pannello">&#9633;</button><button class="x" title="Chiudi il pannello">&times;</button></div><canvas></canvas><div class="vl" hidden></div><div class="tip" hidden></div><div class="leg"></div>`;
   p.el = el; p.vl = el.querySelector(".vl"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg");
   Q("#dpanels").appendChild(el);
   E.panels.push(p); apply(p); fitHost();
@@ -279,18 +327,25 @@ function addPanel(type, o, after) {
   let first = true;
   p._ro = new ResizeObserver(() => {
     if (first) { first = false; return; }
-    if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; fitHost(); uiSave(); }
+    if (!el.classList.contains("max") && el.offsetWidth > 60) { p.w = el.offsetWidth; p.h = el.offsetHeight; if (p.full && Math.abs(p.w - Q("#dpanels").clientWidth) > 8) p.full = false; fitHost(); uiSave(); }
     cancelAnimationFrame(p._raf); p._raf = requestAnimationFrame(() => draw(p));
   });
-  p._ro.observe(el);
+  p._ro.observe(el); p._ro.observe(p.cv);   // the canvas too: it shrinks when the legend or the controls wrap to more lines
   el.querySelector('[data-a="max"]').onclick = () => { el.classList.toggle("max"); el.style.zIndex = ++E.z; };
-  el.querySelector('[data-a="png"]').onclick = () => p.cv.toBlob(b => { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = (p.title || "grafico").replace(/[^\w\-]+/g, "_") + ".png"; a.click(); });
+  const csvB = el.querySelector('[data-a="csv"]');
+  if (csvB) csvB.onclick = () => { const t = plotCsv(p); if (t) dl((p.title || "grafico").replace(/[^\w\-]+/g, "_") + ".csv", t); else info("Nessun dato da salvare in questo grafico."); };
+  el.querySelector('[data-a="png"]').onclick = () => whiteCanvas(p.cv).toBlob(b => { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = (p.title || "grafico").replace(/[^\w\-]+/g, "_") + ".png"; a.click(); });
   el.querySelector(".x").onclick = () => { p._ro.disconnect(); if (p._up) removeEventListener("mouseup", p._up); el.remove(); E.panels = E.panels.filter(x => x !== p); fitHost(); uiSave(); };
   el.querySelector(".ttl").ondblclick = async () => { const v = await ask("Nome del pannello", p.title); if (v) { p.title = v; ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
   return p;
 }
 const redrawAll = () => E.panels.forEach(draw);
+// copy of a plot on a white background (for PNG files and the report: a transparent PNG looks black in some viewers)
+function whiteCanvas(cv) {
+  const c = document.createElement("canvas"); c.width = cv.width; c.height = cv.height;
+  const g = c.getContext("2d"); g.fillStyle = "#ffffff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(cv, 0, 0); return c;
+}
 
 function ctl(p) {
   const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl");
@@ -398,7 +453,8 @@ async function corrected(p, all) {
 async function seriesOf(p) { return corrected(p, await rawSeries(p)); }
 async function rawSeries(p) {
   if (p.type === "chrom") {
-    const fl = shown();
+    let fl = shown();
+    if (fl.some(f => f.kind !== "mrm")) fl = fl.filter(f => f.kind !== "mrm");   // MRM files have their own panel: their TIC would be a flat line here
     const r = await Promise.all(fl.map(f => getChrom(f.k, p.kind, f.lv).then(d => ({ x: d.rt, y: d.y, color: f.color, dash: f.type === "blank" ? [4, 3] : [], name: f.label, k: f.k, key: `c|${f.k}|${p.kind}`, ion: p.kind.toUpperCase(), time: f.time }))));
     return r.filter(s => s.x.length);
   }
@@ -427,14 +483,26 @@ async function rawSeries(p) {
 }
 function axes(g, W, H, x0, x1, ymax, yfmt, o = {}) {
   // o.log: logarithmic y axis from o.lo to ymax; o.stack: no numeric y axis (each trace has its own baseline)
+  // o.xt / o.yt: axis titles. No horizontal grid: only the two axes with their ticks (cleaner figures for the report)
   const X = v => M.l + (v - x0) / (x1 - x0) * (W - M.l - M.r), ph = H - M.t - M.b;
   const Y = o.log ? v => H - M.b - (Math.log10(Math.max(v, o.lo)) - Math.log10(o.lo)) / (Math.log10(ymax) - Math.log10(o.lo)) * ph : v => H - M.b - v / ymax * ph;
-  g.clearRect(0, 0, W, H); g.font = "11px system-ui"; g.lineWidth = 1;
+  g.clearRect(0, 0, W, H);
   const yt = o.stack ? [] : o.log ? Array.from({ length: Math.max(0, Math.floor(Math.log10(ymax)) - Math.ceil(Math.log10(o.lo)) + 1) }, (_, i) => Math.pow(10, Math.ceil(Math.log10(o.lo)) + i)) : nice(0, ymax, 4);
-  for (const t of yt) { const y = Y(t); g.strokeStyle = css("--line"); g.beginPath(); g.moveTo(M.l, y); g.lineTo(W - M.r, y); g.stroke(); g.fillStyle = css("--muted"); g.textAlign = "right"; g.fillText(yfmt(t), M.l - 4, y + 3); }
-  g.fillStyle = css("--muted"); g.textAlign = "center"; for (const t of nice(x0, x1, 8)) g.fillText(+t.toFixed(2), X(t), H - 9);
+  frame(g, W, H, nice(x0, x1, 8).map(t => [X(t), +t.toFixed(2)]), yt.map(t => [Y(t), yfmt(t)]), o.xt, o.yt);
   return { X, Y };
 }
+// axis lines, tick marks, tick labels and titles (shared by all the plots)
+function frame(g, W, H, xt, yt, xtitle, ytitle) {
+  const ink = css("--muted"); g.save(); g.lineWidth = 1; g.strokeStyle = ink; g.fillStyle = ink; g.font = "11px system-ui";
+  g.beginPath(); g.moveTo(M.l + .5, M.t); g.lineTo(M.l + .5, H - M.b + .5); g.lineTo(W - M.r, H - M.b + .5); g.stroke();
+  g.textAlign = "right"; for (const [y, lab] of yt) { g.beginPath(); g.moveTo(M.l - 4, Math.round(y) + .5); g.lineTo(M.l, Math.round(y) + .5); g.stroke(); g.fillText(lab, M.l - 6, y + 3.5); }
+  g.textAlign = "center"; for (const [x, lab] of xt) { if (x < M.l - 1 || x > W - M.r + 1) continue; g.beginPath(); g.moveTo(Math.round(x) + .5, H - M.b); g.lineTo(Math.round(x) + .5, H - M.b + 4); g.stroke(); g.fillText(lab, x, H - M.b + 15); }
+  g.fillStyle = css("--ink"); g.font = "12px system-ui";
+  if (xtitle) g.fillText(xtitle, (M.l + W - M.r) / 2, H - 6);
+  if (ytitle) { g.translate(13, (M.t + H - M.b) / 2); g.rotate(-Math.PI / 2); g.fillText(ytitle, 0, 0); }
+  g.restore(); g.font = "11px system-ui"; g.lineWidth = 1;
+}
+const XT_RT = "Tempo di ritenzione (min)", YT_I = "Intensità (cps)";
 async function draw(p) {
   if (!p.cv.clientWidth || p.cv.clientWidth < 30) return;
   try { if (p.type === "spec") await drawSpec(p); else if (p.type === "map") await drawMap(p); else await drawLines(p); uiSave(); } catch (e) { p.rd.textContent = "errore: " + e.message; }
@@ -485,7 +553,8 @@ async function drawLines(p) {
   const U = (s, v) => s.off + v / s.sc;
   const ymax = stk ? sr.length : p.norm ? 1 : G * 1.08;
   const lo10 = p.norm ? 1e-3 : Math.pow(10, Math.max(0, Math.floor(Math.log10(ymax)) - 4));
-  const { X, Y } = axes(g, W, H, x0, x1, ymax, v => p.norm ? (v >= 0.1 ? Math.round(v * 100) : +(v * 100).toPrecision(1)) + "%" : fmt(v), { log: logy, lo: lo10, stack: stk });
+  const yt = stk ? (p.norm ? "Intensità (ogni riga sul suo massimo)" : "Intensità (righe separate)") : p.norm ? "Intensità relativa (%)" : logy ? YT_I + ", scala log" : YT_I;
+  const { X, Y } = axes(g, W, H, x0, x1, ymax, v => p.norm ? (v >= 0.1 ? Math.round(v * 100) : +(v * 100).toPrecision(1)) + "%" : fmt(v), { log: logy, lo: lo10, stack: stk, xt: XT_RT, yt });
   const ph = H - M.t - M.b;
   p._a = { x0, x1, X, Y, W, H, sr, ymax, U, stk, logy, full: [lo, hi], yinv: py => (H - M.b - py) / ph * ymax };
   if (p.sel) { g.fillStyle = "rgba(43,92,138,.10)"; g.fillRect(X(p.sel[0]), M.t, X(p.sel[1]) - X(p.sel[0]), H - M.t - M.b); }
@@ -625,10 +694,7 @@ async function drawMap(p) {
   g.clearRect(0, 0, W, H); g.imageSmoothingEnabled = false;
   g.drawImage(im.off, (x0 - rt0) / (rt1 - rt0) * A.nrt, (mzB - y1) / A.dmz, (x1 - x0) / (rt1 - rt0) * A.nrt, (y1 - y0) / A.dmz, M.l, M.t, pw, ph);
   const X = v => M.l + (v - x0) / (x1 - x0) * pw, Yv = v => H - M.b - (v - y0) / (y1 - y0) * ph;
-  g.strokeStyle = css("--line"); g.lineWidth = 1; g.strokeRect(M.l + .5, M.t + .5, pw - 1, ph - 1);
-  g.font = "11px system-ui"; g.fillStyle = css("--muted"); g.textAlign = "right";
-  for (const t of nice(y0, y1, 6)) g.fillText(Math.round(t), M.l - 4, Yv(t) + 3);
-  g.textAlign = "center"; for (const t of nice(x0, x1, 8)) g.fillText(+t.toFixed(2), X(t), H - 9);
+  frame(g, W, H, nice(x0, x1, 8).map(t => [X(t), +t.toFixed(2)]), nice(y0, y1, 6).map(t => [Yv(t), Math.round(t)]), XT_RT, "m/z");
   if (p.sel) { g.fillStyle = "rgba(43,92,138,.16)"; g.fillRect(X(p.sel[0]), M.t, X(p.sel[1]) - X(p.sel[0]), ph); }
   if (p.cur != null) { g.strokeStyle = css("--muted"); g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(p.cur), M.t); g.lineTo(X(p.cur), H - M.b); g.stroke(); g.setLineDash([]); }
   const mzAt = py => y1 - (py - M.t) / ph * (y1 - y0);
@@ -695,7 +761,7 @@ function showInts() {
     <h4>Area contro tempo di irraggiamento</h4><canvas id="ig-cv" style="height:240px"></canvas><div class="leg" id="ig-leg"></div>`
     : `<div class="muted">Nessuna integrazione. Clic destro su un picco di un cromatogramma, di un XIC o di una transizione MRM e scegli «Integra».</div>`, () => {
     if (!rows.length) return;
-    Q("#ig-csv").onclick = () => dl("integrazioni.csv", "﻿" + csvOf(["panel", "ion", "file", "time", "a", "b", "rt", "area", "height"], rows));
+    Q("#ig-csv").onclick = () => dl("integrazioni.csv", csvOf(INT_COLS, rows, INT_HEADS));
     const plot = () => {
       const cv = Q("#ig-cv"), { g, W, H } = setup(cv), rel = Q("#ig-rel").checked;
       const groups = {}; rows.forEach(r => { if (r.time != null) (groups[r.ion] = groups[r.ion] || []).push(r); });
@@ -703,8 +769,7 @@ function showInts() {
       if (!names.length) { g.fillStyle = css("--muted"); g.fillText("Servono campioni con il tempo di irraggiamento (scheda Dati, tempi dei file).", M.l, 30); return; }
       const val = (n, r) => rel ? (r.area || 0) / Math.max(...groups[n].map(q => q.area || 0), 1e-9) : (r.area || 0);
       const xs = rows.filter(r => r.time != null).map(r => r.time), x0 = Math.min(...xs), x1 = Math.max(...xs), ymax = Math.max(1e-9, ...names.flatMap(n => groups[n].map(r => val(n, r)))) * 1.08;
-      const { X, Y } = axes(g, W, H, x0 === x1 ? x0 - 1 : x0, x0 === x1 ? x1 + 1 : x1, ymax, v => rel ? Math.round(v * 100) + "%" : fmt(v));
-      g.fillStyle = css("--muted"); g.textAlign = "center"; g.fillText("tempo (min)", W / 2, H - 0);
+      const { X, Y } = axes(g, W, H, x0 === x1 ? x0 - 1 : x0, x0 === x1 ? x1 + 1 : x1, ymax, v => rel ? Math.round(v * 100) + "%" : fmt(v), { xt: "Tempo di irraggiamento (min)", yt: rel ? "Area relativa (%)" : "Area (conteggi·s)" });
       names.forEach((n, i) => {
         const pts = groups[n].slice().sort((a, b) => a.time - b.time), c = PAL[i % PAL.length];
         g.strokeStyle = g.fillStyle = c; g.lineWidth = 1.8; g.beginPath(); pts.forEach((r, j) => { const px = X(r.time), py = Y(val(n, r)); j ? g.lineTo(px, py) : g.moveTo(px, py); }); g.stroke();
@@ -733,7 +798,7 @@ async function drawSpec(p) {
   const x0 = p.zoom ? p.zoom[0] : Math.min(...mzs) - 2, x1 = p.zoom ? p.zoom[1] : Math.max(...mzs) + 2;
   const inr = data.map(x => x.d.y.filter((_, i) => x.d.mz[i] >= x0 && x.d.mz[i] <= x1));
   const ymax = Math.max(1e-9, ...inr.flat()) * 1.12;
-  const { X, Y } = axes(g, W, H, x0, x1, ymax, fmt);
+  const { X, Y } = axes(g, W, H, x0, x1, ymax, fmt, { xt: "m/z", yt: YT_I });
   p._a = { x0, x1, X, Y, W, H, data, ymax, full: [Math.min(...mzs) - 2, Math.max(...mzs) + 2] };
   p._a.hov = px => {                                       // picco più vicino al mouse
     let best = null;
@@ -751,7 +816,29 @@ async function drawSpec(p) {
   for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= 18) continue; used.push(px); g.fillText(m.toFixed(1), px, Y(y) - 4); }
   g.font = "11px system-ui";
   for (const a of p.anns) { const px = X(a.x); g.strokeStyle = css("--accent"); g.beginPath(); g.moveTo(px, M.t + 2); g.lineTo(px, M.t + 12); g.stroke(); g.fillStyle = css("--accent"); g.font = "bold 11px system-ui"; g.textAlign = "center"; g.fillText(a.text, px, M.t + 24); g.font = "11px system-ui"; }
-  p.leg.innerHTML = `<span>${p.level === 2 ? "MS/MS" : "MS1"} · RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min · ${data.map(x => x.d.scans + " scan").join(", ")}${bgOf(files[0]) ? " · fondo sottratto" : ""}</span>` + (data.length > 1 ? data.map(x => `<span><i style="background:${x.f.color}"></i>${EH(x.f.label)}</span>`).join("") : "");
+  // theoretical isotope pattern of a formula chosen by the student (red circles), aligned on the nearest observed peak
+  let isoNote = "";
+  if (p.iso && window.QQQRef) {
+    try {
+      const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), pat = QQQRef.isoPattern(ion.n, ion.z), top = pat.reduce((a, b) => (b.rel > a.rel ? b : a));
+      let obs = null; d0.mz.forEach((m, j) => { if (Math.abs(m - top.mz) <= 1.5 && d0.y[j] > 0 && (!obs || d0.y[j] > obs.y)) obs = { m, y: d0.y[j] }; });
+      if (obs) {                                         // profile data: several points per peak -> use the centroid of the peak (+-0.5 Da)
+        let sw = 0, sm = 0; d0.mz.forEach((m, j) => { if (Math.abs(m - obs.m) <= 0.5 && d0.y[j] > 0) { sw += d0.y[j]; sm += m * d0.y[j]; } });
+        if (sw > 0) obs.c = sm / sw;
+      }
+      const shift = obs ? (obs.c ?? obs.m) - top.mz : 0, h = obs ? obs.y : ymax / 1.12 * 0.9;
+      g.save(); g.strokeStyle = g.fillStyle = "#d62728"; g.lineWidth = 1.5;
+      for (const r of pat) {
+        const px = X(r.mz + shift) + 3, py = Y(h * r.rel / 100); if (px < M.l || px > W - M.r) continue;
+        g.setLineDash([3, 2]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, py); g.stroke(); g.setLineDash([]);
+        g.beginPath(); g.arc(px, py, 3.5, 0, 7); g.stroke();
+        if (r.rel >= 1) { g.font = "10px system-ui"; g.textAlign = "left"; g.fillText((r.off ? "M+" + r.off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%", px + 5, py - 4); }
+      }
+      g.restore(); g.font = "11px system-ui";
+      isoNote = `<span><i style="background:#d62728"></i>profilo teorico ${fmtFormula(p.iso.formula)} ${fmtAdduct(p.iso.ad)}${obs ? ` (allineato al picco a m/z ${(obs.c ?? obs.m).toFixed(1)}${Math.abs(shift) >= 0.05 ? `, spostato di ${shift > 0 ? "+" : ""}${shift.toFixed(1)}` : ""})` : ` (nessun picco osservato vicino a m/z ${top.mz.toFixed(1)})`}</span>`;
+    } catch (e) { isoNote = `<span class="sm">profilo isotopico: ${EH(e.message)}</span>`; }
+  }
+  p.leg.innerHTML = `<span>${p.level === 2 ? "MS/MS" : "MS1"} · RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min · ${data.map(x => x.d.scans + " scan").join(", ")}${bgOf(files[0]) ? " · fondo sottratto" : ""}</span>` + (data.length > 1 ? data.map(x => `<span><i style="background:${x.f.color}"></i>${EH(x.f.label)}</span>`).join("") : "") + isoNote;
 }
 
 // ------------------------------------------------------------------ mouse
@@ -830,7 +917,6 @@ function ctxFor(p, e, x, px, py) {
     items.push("-");
     if (p.sel) items.push({ label: `Spettro mediato su ${p.sel[0].toFixed(2)}-${p.sel[1].toFixed(2)} min (nuovo pannello)`, fn: () => newSpec(p, p.sel[0], p.sel[1], f.k) });
     items.push({ label: "Spettro a questo RT (nuovo pannello)", fn: () => newSpec(p, x - dt / 2, x + dt / 2, f.k) });
-    items.push("-", { label: "Aggiungi alle attribuzioni...", fn: () => addAttr({ mz: +mz.toFixed(1), rt: +x.toFixed(2), file: f.label }, true) });
   } else if (p.type === "spec") {
     const a = p._a, d0 = a.data[0].d;
     let m = x, bestd = 1e9;
@@ -840,7 +926,16 @@ function ctxFor(p, e, x, px, py) {
     items.push({ label: `Estrai l'XIC di m/z ${lab} in un nuovo pannello`, fn: () => addPanel("xic", { traces: [{ id: E.seq++, mz: +m.toFixed(2), label: "m/z " + lab }] }, p) });
     E.panels.filter(q => q.type === "xic").forEach(q => items.push({ label: `Aggiungi m/z ${lab} al pannello «${q.title}»`, fn: () => addTrace(q, +m.toFixed(2)) }));
     items.push("-", { label: "Annota questo picco...", fn: async () => { const v = await ask("Annotazione per m/z " + lab, ""); if (v) { p.anns.push({ x: m, text: v }); draw(p); } } });
-    items.push({ label: "Aggiungi alle attribuzioni...", fn: () => addAttr({ mz: +m.toFixed(2), rt: +((p.r0 + p.r1) / 2).toFixed(2), file: E.files[p.k]?.label || "" }, true) });
+    items.push("-", { label: "Confronta con il profilo isotopico di una formula...", fn: async () => {
+      const v = await ask("Formula della molecola neutra (es. C9H10Cl2N2O). Facoltativo l'addotto dopo uno spazio, es. <b>C9H10Cl2N2O [M+Na]+</b>; senza addotto: " + EH(defAdduct()), p.iso ? p.iso.formula + " " + p.iso.ad : "");
+      if (!v) return;
+      const mm = v.match(/^\s*(\S+)\s*(\[.*\].*)?$/); if (!mm) return;
+      try { const r = await getFormula(mm[1], ""); p.iso = { formula: r.formula, ad: (mm[2] || defAdduct()).trim() };
+        const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), pat = QQQRef.isoPattern(ion.n, ion.z);
+        p.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; draw(p); }   // zoom on the pattern (double click: whole spectrum)
+      catch (e) { info("Non riesco a calcolare il profilo: " + EH(e.message)); }
+    } });
+    if (p.iso) items.push({ label: `Togli il profilo isotopico (${p.iso.formula} ${p.iso.ad})`, fn: () => { p.iso = null; draw(p); } });
   } else {
     const k = nearestFile(p, x);
     items.push({ label: `RT ${x.toFixed(2)} min · ${E.files[k]?.label || ""}`, dim: true }, "-");
@@ -852,7 +947,6 @@ function ctxFor(p, e, x, px, py) {
     if (p.type === "chrom") items.push({ label: "Estrai uno ione (XIC): scrivo l'm/z...", fn: async () => { const v = parseFloat(((await ask("m/z dello ione da estrarre", "")) || "").replace(",", ".")); if (v > 0) addPanel("xic", { traces: [{ id: E.seq++, mz: v, label: "m/z " + v.toFixed(2) }] }, p); } });
     if (p.type === "xic") {
       items.push({ label: "Aggiungi un altro ione a questo pannello...", fn: async () => { const v = parseFloat(((await ask("m/z da aggiungere", "")) || "").replace(",", ".")); if (v > 0) addTrace(p, v); } });
-      items.push({ label: "Aggiungi alle attribuzioni...", fn: () => { const t = p.traces[0]; addAttr({ mz: t ? t.mz : null, rt: +x.toFixed(2), file: E.files[k]?.label || "" }, true); } });
     }
     items.push("-", ...intMenuItems(p, x, near, py));
     items.push("-", { label: "Annota questo punto...", fn: async () => { const v = await ask("Annotazione a RT " + x.toFixed(2), ""); if (v) { p.anns.push({ x, text: v }); draw(p); } } });
@@ -861,36 +955,6 @@ function ctxFor(p, e, x, px, py) {
     { label: `Elimina «${near.text}»`, fn: () => { p.anns = p.anns.filter(a => a !== near); draw(p); } });
   menu(e, items);
 }
-
-// ------------------------------------------------------------------ attribuzioni
-const LEVELS = [[5, "5 - solo m/z"], [4, "4 - formula/ipotesi"], [3, "3 - candidato putativo"], [2, "2 - probabile"], [1, "1 - confermato (standard)"]];
-function addAttr(o, go) {
-  NB.attr.push({ id: E.seq++, mz: o.mz ?? null, rt: o.rt ?? null, file: o.file || "", name: "", transf: "", smiles: "", level: 5, note: "" });
-  nbSave(); renderAttr();
-  if (go) { setView("attr"); const last = Q("#at-tbl tr:last-child input"); if (last) last.focus(); }
-}
-function renderAttr() {
-  const T = Q("#at-tbl"); if (!T) return;
-  T.innerHTML = NB.attr.length ? `<table><tr><th>m/z</th><th>RT (min)</th><th>Campione</th><th>Attribuzione (nome)</th><th>Trasformazione</th><th>Struttura (SMILES)</th><th>Livello</th><th>Note</th><th></th></tr>` +
-    NB.attr.map(r => `<tr data-id="${r.id}"><td><input data-f="mz" type="number" step="any" value="${r.mz ?? ""}" style="width:80px"></td><td><input data-f="rt" type="number" step="any" value="${r.rt ?? ""}" style="width:70px"></td>
-      <td><input data-f="file" value="${EH(r.file)}"></td><td><input data-f="name" value="${EH(r.name)}"></td><td><input data-f="transf" placeholder="es. +O, -CH2" value="${EH(r.transf)}"></td>
-      <td><input data-f="smiles" value="${EH(r.smiles)}"><button class="sm" data-d="${r.id}" title="Prendi la struttura dalla tela del Disegno">dal disegno</button></td>
-      <td><select data-f="level">${LEVELS.map(([v, l]) => `<option value="${v}" ${r.level === v ? "selected" : ""}>${l}</option>`).join("")}</select></td><td><input data-f="note" value="${EH(r.note)}"></td>
-      <td><button class="x" data-x="${r.id}" title="Togli dall'elenco">&times;</button></td></tr>`).join("") + "</table>"
-    : '<div class="muted">Ancora nessuna attribuzione. Clic destro su un picco (nello spettro o nel cromatogramma) e scegli «Aggiungi alle attribuzioni».</div>';
-  T.querySelectorAll("[data-f]").forEach(x => x.onchange = () => {
-    const r = NB.attr.find(a => a.id == x.closest("tr").dataset.id), f = x.dataset.f;
-    r[f] = x.type === "number" ? (x.value === "" ? null : +x.value) : f === "level" ? +x.value : x.value; nbSave();
-  });
-  T.querySelectorAll("[data-x]").forEach(b => b.onclick = () => { NB.attr = NB.attr.filter(a => a.id != b.dataset.x); nbSave(); renderAttr(); });
-  T.querySelectorAll("[data-d]").forEach(b => b.onclick = async () => {
-    const r = NB.attr.find(a => a.id == b.dataset.d);
-    if (window.TPDraw) { r.smiles = (await window.TPDraw.smiles()) || ""; nbSave(); renderAttr(); }
-  });
-}
-const attrCsv = () => "﻿" + csvOf(["mz", "rt", "file", "name", "transf", "smiles", "level", "note"], NB.attr);
-Q("#at-add").onclick = () => addAttr({});
-Q("#at-csv").onclick = () => dl("attribuzioni.csv", attrCsv());
 
 // ------------------------------------------------------------------ metodo di acquisizione (letto dagli mzML)
 async function showMethod() {
@@ -914,21 +978,19 @@ Q("#np-method").onclick = showMethod;
 function exportMenu(ev) {
   menu(ev, [
     { label: "Relazione completa (HTML con grafici e tabelle)", fn: report },
-    { label: "Sessione (JSON, tutto il lavoro)", fn: () => dl("sessione.json", JSON.stringify({ attribuzioni: NB.attr, interfaccia: NB.ui, sessione: NB.session }, null, 1), "application/json") },
-    { label: "Integrazioni (CSV)", fn: () => dl("integrazioni.csv", "﻿" + csvOf(["panel", "ion", "file", "time", "a", "b", "rt", "area", "height"], allInts())) },
-    { label: "Attribuzioni (CSV)", fn: () => dl("attribuzioni.csv", attrCsv()) },
+    { label: "Sessione (JSON, tutto il lavoro)", fn: () => dl("sessione.json", JSON.stringify({ interfaccia: NB.ui, sessione: NB.session }, null, 1), "application/json") },
+    { label: "Integrazioni (CSV)", fn: () => dl("integrazioni.csv", csvOf(INT_COLS, allInts(), INT_HEADS)) },
     "-", { label: "Ogni grafico ha il suo pulsante PNG nell'intestazione", dim: true }]);
 }
 Q("#np-export").onclick = e => { e.stopPropagation(); exportMenu(e); };
 async function report() {
-  const imgs = E.panels.map(p => `<h3>${EH(p.title)}</h3><img style="max-width:100%" src="${p.cv.toDataURL("image/png")}">`).join("");
-  const ig = allInts(), at = NB.attr;
+  const imgs = E.panels.map(p => `<h3>${EH(p.title)}</h3><img style="max-width:100%" src="${whiteCanvas(p.cv).toDataURL("image/png")}">`).join("");
+  const ig = allInts();
   const tbl = (cols, rows, head) => `<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse"><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.map(r => `<tr>${cols.map(c => `<td>${EH(r[c] ?? "")}</td>`).join("")}</tr>`).join("")}</table>`;
   let met = ""; try { const m = await J("/api/method?k=" + E.cur); met = `<p>Strumento: ${EH(m.instrument)} (${EH(m.serial)}); tipo: ${KIND[m.kind]}; polarità: ${EH(m.polarity)}; intervallo m/z: ${m.scan_window ? m.scan_window.join("-") : "n.d."}.</p>`; } catch (_) { /* senza metodo */ }
   const html = `<!doctype html><html lang="it"><meta charset="utf-8"><title>Relazione</title><body style="font:14px system-ui;max-width:900px;margin:20px auto"><h1>Relazione di laboratorio: prodotti di trasformazione</h1><p>Generata il ${new Date().toLocaleString("it-IT")}</p>${met}
    <h2>Campioni</h2>${tbl(["label", "type", "time", "kind", "file"], E.files, ["Nome", "Tipo", "Tempo (min)", "Esperimento", "File"])}
-   <h2>Grafici</h2>${imgs}<h2>Integrazioni</h2>${ig.length ? tbl(["panel", "ion", "file", "time", "a", "b", "area"], ig, ["Pannello", "Traccia", "Campione", "t (min)", "RT inizio", "RT fine", "Area"]) : "<p>Nessuna.</p>"}
-   <h2>Attribuzioni</h2>${at.length ? tbl(["mz", "rt", "file", "name", "transf", "smiles", "level", "note"], at, ["m/z", "RT", "Campione", "Attribuzione", "Trasformazione", "SMILES", "Livello", "Note"]) : "<p>Nessuna.</p>"}</body></html>`;
+   <h2>Grafici</h2>${imgs}<h2>Integrazioni</h2>${ig.length ? tbl(["panel", "ion", "file", "time", "a", "b", "area"], ig, ["Pannello", "Traccia", "Campione", "t (min)", "RT inizio", "RT fine", "Area"]) : "<p>Nessuna.</p>"}</body></html>`;
   dl("relazione.html", html, "text/html");
 }
 
@@ -950,8 +1012,8 @@ Q("#np-tile").onclick = tile;
 Q("#np-merge").onclick = mergeXics;
 Q("#addf").onclick = () => { S.adding = true; applyView(); };
 Q("#dhx").onclick = () => { Q("#dhint").hidden = true; };
-addEventListener("resize", () => redrawAll());
-document.addEventListener("tpview", e => { if (e.detail.view === "data") setTimeout(redrawAll, 0); });
+addEventListener("resize", () => { fitWidth(); redrawAll(); });
+document.addEventListener("tpview", e => { if (e.detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });
 
 // ------------------------------------------------------------------ calcolatrice formula -> m/z (come «mass from formula» di Xcalibur)
 Q("#np-calc").onclick = () => { Q("#calcdlg").showModal(); Q("#calcin").focus(); };

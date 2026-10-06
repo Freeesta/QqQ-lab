@@ -20,7 +20,7 @@ tpfinder = "tpfinder.cli:main"
 include = ["tpfinder*"]
 
 [tool.setuptools.package-data]
-tpfinder = ["web/*", "web/vendor/*", "web/vendor/ketcher/*", "web/vendor/ketcher/assets/*", "config/*"]
+tpfinder = ["web/*", "web/teoria/*", "web/vendor/*", "web/vendor/ketcher/*", "web/vendor/ketcher/assets/*", "config/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

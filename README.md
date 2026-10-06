@@ -10,7 +10,7 @@ transformation products. It shows the data; the student does the reasoning.)*
 
 ## Avvio
 
-- **Doppio clic**: Mac `Avvia QqQ lab.command`, Windows `Avvia QqQ lab.bat`. La prima volta crea un
+- **Doppio clic**: Mac **`QqQ lab.app`** (la prima volta macOS chiede il permesso di aprire il Terminale; se dice che lo sviluppatore non è identificato: clic destro → Apri), oppure `Avvia QqQ lab.command`; Windows `Avvia QqQ lab.bat`. La prima volta crea un
   ambiente Python privato (`.venv-tpfinder`) e installa numpy: serve internet e Python 3.11 o più recente
   (consigliato l'ultimo, da https://www.python.org/downloads/). Se in seguito installi un Python più nuovo,
   l'ambiente si aggiorna da solo al doppio clic successivo; quello vecchio non viene cancellato.
@@ -18,23 +18,27 @@ transformation products. It shows the data; the student does the reasoning.)*
 
 Si apre il browser: trascina i file `.mzML` (o "clicca per sceglierli"), controlla tempi e tipi, premi
 **Apri i dati**. I file sono copiati in `~/TPFinder_lavoro/sessione_...`: gli originali non vengono
-toccati. Il taccuino (pannelli, XIC, integrazioni, attribuzioni, disegni) si salva da solo
+toccati. Il taccuino (pannelli, XIC, integrazioni, annotazioni, disegni) si salva da solo
 (`taccuino.json`) e si ripristina alla riapertura.
 
 ## Le schede
 
-- **Dati**: cromatogramma totale (TIC o picco base) di tutti i file sovrapposti. Trascina per vedere lo
-  spettro di massa; clic destro per estrarre uno ione (XIC) o aggiungerlo a un pannello; il campo
+- **Dati**: in alto il cromatogramma totale (TIC) di tutti i file sovrapposti, sotto lo spettro di massa
+  al tempo di ritenzione con l'intensità più alta; l'elenco dei file si chiude (&#9664;) per dare più spazio
+  ai grafici. Trascina sul cromatogramma per lo spettro di un altro intervallo; clic destro per estrarre uno ione (XIC) o aggiungerlo a un pannello; il campo
   "m/z o formula" accetta anche una formula bruta. Pannelli spettro, XIC, MRM e mappa RT-m/z;
   vista impilata, scala log, zoom, cursore con i valori, sottrazione del bianco e linea di base,
   integrazione con tabella delle aree nel tempo (per le cinetiche) esportabile in CSV.
   Popup "Metodo" (parametri dello strumento) e "Calcolatrice m/z".
-- **Disegno**: editor chimico (Ketcher) per molecole, frammenti e vie di trasformazione. Per ogni
-  struttura mostra formula, massa esatta e m/z degli addotti, con pulsante XIC e didascalia per la
-  relazione. Esporta PNG, JPEG, SVG e .ket.
-- **Attribuzioni**: le ipotesi dello studente (m/z, RT, nome, trasformazione, SMILES, confidenza, note), in CSV.
-- **Suggerimenti** (facoltativo): m/z attesi dalle reazioni di `trasformazioni.csv` e criteri (picco,
-  bianco, t0, andamento, isotopi). Sono ipotesi, non risposte.
+- **Tavola periodica** e **Addotti** (pulsanti in alto a destra): masse esatte e abbondanze isotopiche passando sopra gli elementi; tabella degli addotti ESI con l'm/z calcolato da una massa o una formula; profilo isotopico di una formula (M, M+1, M+2..., calcolato dal programma), che si può anche sovrapporre a uno spettro con il clic destro; perdite neutre più comuni.
+- **Teoria**: undici capitoli sulla teoria dell'esperienza (prodotti di trasformazione, fotocatalisi TiO2, LC in fase inversa, elettrospray, vuoto, teoria del quadrupolo, triplo quadrupolo e CID, come si frammentano gli ioni, full scan/MS2/MRM, strategia per i TP, glossario e bibliografia), con figure interattive calcolate nel browser. Si apre anche **senza il programma**, con doppio clic su `Teoria QqQ lab.html` (o `tpfinder/web/teoria/index.html`), in qualsiasi browser e offline.
+- **Disegno**: editor chimico (Ketcher) per molecole, frammenti e vie di trasformazione. Sotto ogni
+  struttura compaiono da sole formula bruta e massa intera (m/z se c'è una carica), sopra ogni freccia la
+  differenza fra le due strutture (es. +O). Selezionando una parte della molecola si vedono la sua formula
+  e gli m/z possibili del frammento; con la gomma si rompe un legame. A destra: m/z degli addotti con
+  pulsante XIC, didascalia per la relazione, guida rapida. Esporta PNG, JPEG, SVG e .ket.
+
+I pulsanti **?** accanto alle funzioni spiegano a cosa servono. Ogni grafico ha i pulsanti **PNG** (immagine) e **CSV** (dati); i CSV e la tabella delle integrazioni sono pronti per **Excel** in italiano (punto e virgola, virgola decimale): le tabelle e i grafici della relazione (cinetica, retta di taratura) si costruiscono lì.
 
 Con risoluzione unitaria **un m/z è un candidato, non un'identificazione**. Sullo strumento del
 laboratorio l'asse m/z è spostato di circa +0.3 Da: usa una finestra XIC di +-1 Da.
@@ -53,7 +57,7 @@ Solo per il docente: `python -m tpfinder metodo FILE.dam -o metodo.json` legge i
 | Cosa | File | Serve programmare? |
 |---|---|---|
 | Reazioni attese | `tpfinder/config/trasformazioni.csv` (nome; variazione di formula, es. `-Cl+H`) | no |
-| Soglie dei suggerimenti | `tpfinder/config/soglie.toml` | no |
+| Soglie del comando `candidates` | `tpfinder/config/soglie.toml` | no |
 | Testi e avvisi | `tpfinder/config/testi.toml` | no |
 | Interfaccia | `tpfinder/web/` (`index.html`, `explore.js`, `draw.js`: JavaScript semplice, nessuna compilazione) | un po' |
 | Calcoli | `tpfinder/explore.py`, `tpfinder/core/` | sì |
@@ -63,8 +67,8 @@ Ketcher (Apache-2.0) e OpenChemLib (BSD-3) sono inclusi in `tpfinder/web/vendor`
 
 ## Altri comandi
 
-`python -m tpfinder demo` (esperimento sintetico), `draft` / `serve` / `candidates` (vecchio flusso con
-`esperimento.toml` e punteggio dei candidati). Test: `python3 -m pytest -q tests`; prove nel browser in
+`draft` / `candidates` (vecchio flusso da terminale con `esperimento.toml` e punteggio dei candidati).
+`metodo` (solo per il docente, vedi sopra). Test: `python3 -m pytest -q tests`; prove nel browser in
 `tests_e2e/` (vedi `AGENTS.md`).
 
 ## Limiti noti

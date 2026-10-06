@@ -20,14 +20,25 @@ function start() {
     addEventListener("message", on);
     fr.src = "/static/vendor/ketcher/index.html";
     setTimeout(() => reject(new Error("Ketcher non si e' avviato")), 60000);
-  }).then(async k => { await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); }); changed(); return k; });
+  }).then(async k => { await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); requestAnimationFrame(showSelection); });
+    k.editor.subscribe("selectionChange", () => requestAnimationFrame(showSelection));
+    hideMacro(fr); changed(); drawLabels(); return k; });
   starting.catch(e => { Q("#dcomp").textContent = e.message; });
   return starting;
+}
+// Ketcher's macromolecule mode (peptides, RNA, DNA) is not needed here and confuses: its switch is hidden
+function hideMacro(fr) {
+  try {
+    const d = fr.contentDocument, st = d.createElement("style");
+    st.textContent = '[data-testid="polymer-toggler"]{display:none!important}';
+    d.head.appendChild(st);
+  } catch (_) { /* not critical */ }
 }
 async function restore() {
   if (restored || !K) return;
   restored = true;
   if (typeof NB !== "undefined" && NB.ket) { try { await K.setMolecule(NB.ket); } catch (_) { /* old or empty drawing */ } }
+  drawLabels();
 }
 async function changed() {
   if (!K) return;
@@ -61,24 +72,167 @@ function list(smiles) {
   box.innerHTML = parts.map((s, i) => {
     const d = describe(s);
     if (!d) return `<div class="muted sm">${EH(s)}: struttura non riconosciuta (frammento aperto?)</div>`;
-    const ions = (document.querySelector("#ppol") && Q("#ppol").value === "negative" ? ADDUCTS.neg : ADDUCTS.pos);
     return `<div style="border-bottom:1px solid var(--line);padding:6px 0"><b>${fmtFormula(d.formula)}</b> <span class="muted">massa esatta ${d.mass.toFixed(4)}</span>
       ${adductTable(d)}
-      <div class="bar"><button class="sm" data-p="${i}">Usa come composto di partenza (suggerimenti)</button><button class="sm" data-a="${i}">Aggiungi alle attribuzioni</button></div>
       <div class="muted sm" style="word-break:break-all">${EH(s)}</div></div>`;
   }).join("");
   box.querySelectorAll("[data-x]").forEach(b => b.onclick = () => {
     window.setView("data");
     window.addPanel("xic", { traces: [{ id: E.seq++, mz: +b.dataset.x, label: b.dataset.l }] });
   });
-  box.querySelectorAll("[data-p]").forEach(b => b.onclick = () => {
-    const d = describe(parts[+b.dataset.p]); Q("#pform").value = d.formula; Q("#pform").dispatchEvent(new Event("input")); window.setView("sugg");
+}
+
+// ------------------------------------------------------------------ formula and mass written under each structure
+// Optional (checkbox "#lb-on"). Drawn in an overlay group of Ketcher's own SVG, so the label follows zoom and scroll
+// but is NOT part of the structure (undo, .ket and SMILES are untouched). Added as text to the exported images.
+const MONO = { H: 1.00782503, D: 2.01410178, C: 12, N: 14.00307401, O: 15.99491462, F: 18.99840322, Na: 22.98976928, Mg: 23.9850417, Al: 26.98153853,
+  Si: 27.97692653, P: 30.97376163, S: 31.97207100, Cl: 34.96885268, K: 38.96370668, Ca: 39.96259098, Fe: 55.9349375, Cu: 62.9295975, Zn: 63.9291422,
+  As: 74.9215965, Se: 79.9165213, Br: 78.9183371, Sn: 119.9021947, I: 126.904473, Hg: 201.970643, B: 11.0093054, Li: 7.01600455 };
+const ELECTRON = 0.00054858;
+const roundHalfUp = v => Math.floor(v + 0.5);
+// one entry per connected structure: formula (Hill order), charge, monoisotopic mass, bounding box (Ketcher coordinates, y down)
+// counts {C: 8, H: 9, ...} -> Hill formula and monoisotopic mass
+function formulaOf(n) {
+  const keys = Object.keys(n).filter(k => n[k] > 0).sort();
+  const order = n.C > 0 ? ["C", ...(n.H > 0 ? ["H"] : []), ...keys.filter(k => k !== "C" && k !== "H")] : keys;
+  return { formula: order.map(k => k + (n[k] > 1 ? n[k] : "")).join(""), mass: order.reduce((m, k) => m + MONO[k] * n[k], 0) };
+}
+// element counts of some atoms of the drawing (with the H they carry in the drawing); null if an atom has no formula
+function countAtoms(atoms) {
+  const n = {}; let q = 0;
+  for (const a of atoms) {
+    if (!(a.label in MONO)) return null;                 // R groups, "any atom", abbreviations: no formula
+    n[a.label] = (n[a.label] || 0) + 1;
+    const h = a.implicitH || 0; if (h) n.H = (n.H || 0) + h;
+    q += a.charge || 0;
+  }
+  return { n, q };
+}
+function structures() {
+  if (!K) return [];
+  const st = K.editor.struct(), ids = [...st.atoms.keys()], up = new Map(ids.map(i => [i, i]));
+  const root = i => { while (up.get(i) !== i) { up.set(i, up.get(up.get(i))); i = up.get(i); } return i; };
+  st.bonds.forEach(b => { const a = root(b.begin), c = root(b.end); if (a !== c) up.set(a, c); });
+  const groups = new Map();
+  ids.forEach(i => { const r = root(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(st.atoms.get(i)); });
+  const out = [];
+  groups.forEach(atoms => {
+    const c = countAtoms(atoms); if (!c || !atoms.length) return;
+    const xs = atoms.map(a => a.pp.x), ys = atoms.map(a => a.pp.y);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    out.push({ ...formulaOf(c.n), n: c.n, q: c.q, cx: (x0 + x1) / 2, y: y1, x0, x1, y0, y1 });
   });
-  box.querySelectorAll("[data-a]").forEach(b => b.onclick = () => {
-    const d = describe(parts[+b.dataset.a]);
-    window.addAttr({ mz: +(d.mass + PROTON).toFixed(2) }, false);
-    NB.attr[NB.attr.length - 1].smiles = d.smiles; NB.attr[NB.attr.length - 1].name = d.formula; nbSave(); window.renderAttr(); window.setView("attr");
+  return out;
+}
+// reaction arrows: what changes from the structure before the arrow to the one after it (e.g. "+O", "-CH2")
+function arrowDeltas() {
+  if (!K) return [];
+  const comps = structures(), out = [];
+  K.editor.struct().rxnArrows.forEach(ar => {
+    const [p0, p1] = ar.pos, left = p0.x <= p1.x ? p0 : p1, right = p0.x <= p1.x ? p1 : p0, ym = (p0.y + p1.y) / 2;
+    const near = c => ym >= c.y0 - 1.5 && ym <= c.y1 + 1.5;                // roughly on the same line as the arrow
+    const before = comps.filter(c => near(c) && c.cx < left.x).sort((a, b) => b.x1 - a.x1)[0];
+    const after = comps.filter(c => near(c) && c.cx > right.x).sort((a, b) => a.x0 - b.x0)[0];
+    if (!before || !after) return;
+    const els = [...new Set([...Object.keys(before.n), ...Object.keys(after.n)])], gain = {}, loss = {};
+    for (const e of els) { const d = (after.n[e] || 0) - (before.n[e] || 0); if (d > 0) gain[e] = d; if (d < 0) loss[e] = -d; }
+    const g = formulaOf(gain).formula, l = formulaOf(loss).formula, dm = after.mass - before.mass;
+    const parts = [];
+    const push = (sign, f) => { parts.push([sign, ""]); for (const m of f.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([m[1], ""]); if (m[2]) parts.push([m[2], "sub"]); } parts.push([" ", ""]); };
+    if (g) push("+", g); if (l) push("\u2212", l);
+    if (!g && !l) parts.push(["stessa formula (isomero) ", ""]);
+    parts.push([`\u0394m ${dm >= 0 ? "+" : "\u2212"}${Math.round(Math.abs(dm))}`, ""]);   // unit resolution: the integer is enough
+    out.push({ x: (p0.x + p1.x) / 2, y: ym, parts });
   });
+  return out;
+}
+// text of a label as pieces: [text, "sub" | "sup" | ""]
+function labelParts(d) {
+  const parts = [];
+  for (const m of d.formula.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([m[1], ""]); if (m[2]) parts.push([m[2], "sub"]); }
+  if (d.q) parts.push([(Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "−"), "sup"]);
+  const v = d.q ? roundHalfUp((d.mass - d.q * ELECTRON) / Math.abs(d.q)) : roundHalfUp(d.mass);
+  parts.push([d.q ? `  m/z ${v}` : `  M = ${v}`, ""]);
+  return parts;
+}
+const labelsOn = () => Q("#lb-on").checked;
+function drawLabels() {
+  if (!K) return;
+  const svg = K.editor.render.paper.canvas, doc = svg.ownerDocument, ns = "http://www.w3.org/2000/svg", sc = K.editor.render.options.microModeScale || 40;
+  let g = svg.querySelector("#qqq-labels");
+  if (!g) { g = doc.createElementNS(ns, "g"); g.id = "qqq-labels"; g.setAttribute("pointer-events", "none"); }
+  svg.appendChild(g);                                     // always last: drawn above the structure
+  g.textContent = "";
+  if (!labelsOn()) return;
+  const text = (x, y, parts, color, size) => {
+    const t = doc.createElementNS(ns, "text");
+    t.setAttribute("x", x); t.setAttribute("y", y); t.setAttribute("text-anchor", "middle");
+    t.setAttribute("font-family", "Arial, Helvetica, sans-serif"); t.setAttribute("font-size", size); t.setAttribute("fill", color);
+    for (const [txt, k] of parts) {
+      const sp = doc.createElementNS(ns, "tspan"); sp.textContent = txt;
+      if (k) { sp.setAttribute("font-size", Math.round(size * 0.77)); sp.setAttribute("baseline-shift", k === "sub" ? "sub" : "super"); }
+      t.appendChild(sp);
+    }
+    g.appendChild(t);
+  };
+  for (const d of structures()) text(d.cx * sc, d.y * sc + 30, labelParts(d), "#3b3b3b", 13);
+  for (const a of arrowDeltas()) text(a.x * sc, a.y * sc - 12, a.parts, "#2b5c8a", 12);
+}
+// the same labels as Ketcher text objects, only in the copy of the drawing that is exported
+const SUBC = "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089", SUPC = "\u2070\u00b9\u00b2\u00b3\u2074\u2075\u2076\u2077\u2078\u2079";
+// pieces -> plain text with Unicode subscripts/superscripts (Ketcher's image renderer spaces them better than styled text)
+const plain = parts => parts.map(([t, k]) => k === "sub" ? String(t).replace(/\d/g, c => SUBC[+c])
+  : k === "sup" ? String(t).replace(/\+/g, "\u207a").replace(/\u2212/g, "\u207b").replace(/\d/g, c => SUPC[+c]) : t).join("");
+function ketWithLabels(ket) {
+  if (!labelsOn()) return ket;
+  const j = JSON.parse(ket);
+  const add = (text, x, y, px) => {
+    const content = JSON.stringify({ blocks: [{ key: "qqq" + j.root.nodes.length, text, type: "unstyled", depth: 0, inlineStyleRanges: [{ offset: 0, length: text.length, style: `CUSTOM_FONT_SIZE_${px}px` }], entityRanges: [], data: {} }], entityMap: {} });
+    j.root.nodes.push({ type: "text", data: { content, position: { x, y, z: 0 } } });
+  };
+  for (const d of structures()) { const t = plain(labelParts(d)); add(t, d.cx - t.length * 0.105, -(d.y + 0.6), 16); }
+  for (const a of arrowDeltas()) { const t = plain(a.parts); add(t, a.x - t.length * 0.09, -(a.y - 0.75), 14); }
+  return JSON.stringify(j);
+}
+Q("#lb-on").addEventListener("change", () => { drawLabels(); NB.labels = labelsOn(); nbSave(); });
+document.addEventListener("nbloaded", () => { Q("#lb-on").checked = NB.labels !== false; drawLabels(); });
+
+// ------------------------------------------------------------------ selected atoms: a fragment without breaking bonds
+// The H are those the atoms carry in the molecule; every bond to an unselected atom is a cut. The ions are hypotheses
+// (even-electron ions, typical of ESI MS/MS): the student compares them with the product ion spectrum.
+const HATOM = MONO.H;   // PROTON is defined at the top of the file
+function showSelection() {
+  const card = Q("#selcard"); if (!K || !card) return;
+  const st = K.editor.struct(), ids = (K.editor.selection() || {}).atoms || [];
+  if (!ids.length) { card.hidden = true; return; }
+  const set = new Set(ids), atoms = ids.map(i => st.atoms.get(i)).filter(Boolean);
+  let cuts = 0; st.bonds.forEach(b => { if (set.has(b.begin) !== set.has(b.end)) cuts += (b.type >= 1 && b.type <= 3) ? b.type : 1; });
+  const c = countAtoms(atoms); card.hidden = false;
+  const body = Q("#selbody");
+  if (!c) { body.innerHTML = '<div class="muted sm">Nella selezione c\'è un atomo senza formula (gruppo R, abbreviazione...).</div>'; return; }
+  const P = formulaOf(c.n), xic = typeof E !== "undefined" && E.files && E.files.length;
+  const row = (lab, f, mz) => `<tr><td>${lab}</td><td>${fmtAdduct(f)}</td><td class="num">${mz.toFixed(4)}</td><td class="num"><b>${Math.round(mz)}</b></td><td>${xic ? `<button class="sm" data-x="${mz.toFixed(1)}" data-l="${EH(f)}">XIC</button>` : ""}</td></tr>`;
+  const ion = (n, z) => ({ ...formulaOf(n), z });
+  let h = `<div class="sm">${atoms.length} atomi: <b>${fmtFormula(P.formula)}</b>${c.q ? (c.q > 0 ? "<sup>+</sup>" : "<sup>&minus;</sup>") : ""} &middot; ${cuts ? `${cuts} legam${cuts > 1 ? "i" : "e"} tagliat${cuts > 1 ? "i" : "o"}` : "nessun legame tagliato"}</div>`;
+  const tbl = [];
+  if (c.q) {
+    const mz = (P.mass - c.q * ELECTRON) / Math.abs(c.q);
+    tbl.push(row("la selezione così com'è (ha già la carica)", P.formula + (c.q > 0 ? "+" : "-"), mz));
+  } else if (!cuts) {
+    tbl.push(row("[M+H]<sup>+</sup>", formulaOf({ ...c.n, H: (c.n.H || 0) + 1 }).formula + "+", P.mass + PROTON));
+    tbl.push(row("[M&minus;H]<sup>&minus;</sup>", formulaOf({ ...c.n, H: (c.n.H || 0) - 1 }).formula + "-", P.mass - PROTON));
+  } else {
+    const Qn = { ...c.n, H: (c.n.H || 0) + cuts }, Qm = P.mass + cuts * HATOM;          // the piece closed with H
+    const acyl = { ...c.n, H: (c.n.H || 0) + cuts - 1 };                                 // charge left on the cut
+    h += `<div class="muted sm">Pezzo chiuso con H (molecola neutra): ${fmtFormula(formulaOf(Qn).formula)}, M = ${Qm.toFixed(4)}</div>`;
+    tbl.push(row("pezzo + H, protonato (prende un H dall'altra parte)", formulaOf({ ...Qn, H: Qn.H + 1 }).formula + "+", Qm + PROTON));
+    tbl.push(row("carica sul taglio (es. acilio, carbocatione)", formulaOf(acyl).formula + "+", formulaOf(acyl).mass - ELECTRON));
+    tbl.push(row("ESI&minus;: pezzo chiuso con H, deprotonato", formulaOf({ ...Qn, H: Qn.H - 1 }).formula + "-", Qm - PROTON));
+  }
+  h += `<table class="sm" style="margin-top:4px"><tr><th>ipotesi</th><th>ione</th><th class="num">m/z</th><th class="num">intero</th><th></th></tr>${tbl.join("")}</table>
+    <div class="muted sm">Sono ipotesi da confrontare con lo spettro di ioni prodotto (MS/MS): in ESI i frammenti sono quasi sempre ioni a numero pari di elettroni. Il calcolo usa gli H che gli atomi hanno nel disegno.</div>`;
+  body.innerHTML = h;
+  body.querySelectorAll("[data-x]").forEach(b => b.onclick = () => { window.setView("data"); window.addPanel("xic", { traces: [{ id: E.seq++, mz: +b.dataset.x, label: b.dataset.l + " (" + b.dataset.x + ")" }] }); });
 }
 
 // ------------------------------------------------------------------ caption (name, formula, m/z) for the report
@@ -136,13 +290,13 @@ function addCaption(svgText, c) {
 }
 ["#cap-name", "#cap-part", "#cap-ad", "#cap-on"].forEach(id => Q(id).addEventListener("input", capShow));
 Q("#cap-copy").onclick = async () => { const c = await capData(); if (c) try { await navigator.clipboard.writeText(capText(c)); } catch (_) { /* clipboard blocked */ } };
-document.addEventListener("nbloaded", () => { if (NB.cap) { Q("#cap-name").value = NB.cap.name || ""; Q("#cap-ad").value = NB.cap.adduct || "[M+H]+"; Q("#cap-on").checked = NB.cap.on !== false; } capShow(); });
+document.addEventListener("nbloaded", () => { if (NB.cap) { Q("#cap-name").value = NB.cap.name || ""; Q("#cap-ad").value = NB.cap.adduct || "[M+H]+"; Q("#cap-on").checked = NB.cap.on === true; } capShow(); });
 
 // ------------------------------------------------------------------ export
 const download = (blob, name) => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
 async function image(format) {
   await start();
-  const ket = await K.getKet(), cream = Q("#ex-bg").checked;
+  const ket = ketWithLabels(await K.getKet()), cream = Q("#ex-bg").checked;
   const svg0 = await K.generateImage(ket, { outputFormat: "svg", backgroundColor: cream ? "255,251,240" : "255,255,255" });
   let svgText = await svg0.text();
   const cap = Q("#cap-on").checked ? await capData() : null;

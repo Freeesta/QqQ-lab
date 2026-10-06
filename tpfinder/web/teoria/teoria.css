@@ -1,0 +1,96 @@
+/* QqQ lab - Teoria. Plain CSS, no build, works from file:// and from the local server. */
+:root{color-scheme:light;--bg:#fbfbf9;--panel:#ffffff;--line:#e4e2dc;--ink:#24231f;--muted:#6b675c;--accent:#2b5c8a;--accent2:#c2410c;--ok:#047857;--bad:#b42318;--warn:#92400e;--sel:#eef3f8;--code:#f4f3ef;
+  --c1:#2b5c8a;--c2:#c2410c;--c3:#047857;--c4:#7c3aed;--c5:#b45309;--c6:#0e7490}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.62 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}a:hover{color:#1d4166}
+sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.22em}sup{top:-.45em}
+code,kbd{font:13.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code);border-radius:4px;padding:1px 5px}
+
+/* header */
+#top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+#top img{height:28px;width:auto}#top .t{font-weight:700}#top .t small{font-weight:500;color:var(--muted)}
+#top .sp{flex:1}#top button,#top a.btn{font:inherit;font-size:14px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:3px 10px;color:var(--ink);cursor:pointer;text-decoration:none}
+#top button:hover,#top a.btn:hover{border-color:var(--accent)}
+#menu{display:none}
+
+/* layout */
+.wrap{display:grid;grid-template-columns:270px minmax(0,1fr);gap:28px;max-width:1240px;margin:0 auto;padding:18px 16px 60px}
+#side{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 80px);overflow:auto;font-size:14px;padding-right:4px}
+#side h4{margin:4px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+#side ol{list-style:none;margin:0 0 14px;padding:0}
+#side li a{display:flex;gap:8px;padding:4px 8px;border-radius:6px;color:var(--ink);text-decoration:none}
+#side li a:hover{background:var(--sel)}#side li a.on{background:var(--sel);font-weight:650;color:var(--accent)}
+#side li a b{min-width:20px;color:var(--muted);font-weight:600}
+#side .toc a{display:block;text-decoration:none;padding:2px 8px;font-size:13px;color:var(--muted)}#side .toc a.l3{padding-left:22px}
+#side .toc a.on{color:var(--accent);background:none;font-weight:600}
+main{min-width:0;max-width:880px}
+@media (max-width:980px){.wrap{grid-template-columns:1fr}#side{display:none;position:static;max-height:none}#side.open{display:block}#menu{display:inline-block}}
+
+/* text */
+main h1{font-size:30px;line-height:1.2;margin:6px 0 4px;letter-spacing:-.01em}
+main .kicker{color:var(--accent);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.08em}
+main .lead{font-size:18px;color:var(--muted);margin:6px 0 18px}
+main h2{font-size:22px;margin:38px 0 8px;padding-top:6px;border-top:1px solid var(--line)}
+main h3{font-size:18px;margin:24px 0 6px}
+main p,main li{max-width:76ch}
+main table{border-collapse:collapse;width:100%;margin:10px 0 16px;font-size:14.5px;background:var(--panel)}
+main th,main td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}
+main th{background:var(--code);font-weight:650}
+main td.n,main th.n{text-align:right;font-variant-numeric:tabular-nums}
+
+/* boxes */
+.box{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--panel);border-radius:6px;padding:10px 14px;margin:14px 0}
+.box>b:first-child{display:block;margin-bottom:2px}
+.box.key{border-left-color:var(--accent)}
+.box.warn{border-left-color:var(--accent2)}
+.box.lab{border-left-color:var(--ok)}
+.box.math{border-left-color:var(--c4)}
+.box p:last-child{margin-bottom:0}.box p:first-of-type{margin-top:2px}
+.eq{display:block;margin:12px 0;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:6px;font:17px/1.6 "Cambria Math","STIX Two Math","Latin Modern Math",Georgia,serif;overflow-x:auto;white-space:nowrap}
+.eq .no{float:right;color:var(--muted);font:13px system-ui,sans-serif;margin-left:14px}
+.eq i{font-style:italic}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 2px}
+.frac>span:first-child{border-bottom:1px solid currentColor;padding:0 3px}.frac>span:last-child{padding:0 3px}
+
+figure{margin:18px 0;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px}
+figure svg{display:block;width:100%;height:auto}
+figcaption{font-size:14px;color:var(--muted);margin-top:8px}
+figcaption b{color:var(--ink)}
+
+/* interactive blocks */
+.sim{margin:18px 0;background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:8px;padding:12px 14px}
+.sim h4{margin:0 0 2px;font-size:16px}.sim h4::before{content:"Interattivo · ";color:var(--accent);font-weight:700}
+.sim .note{font-size:13.5px;color:var(--muted);margin:2px 0 8px}
+.ctl{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px 16px;margin:8px 0}
+.ctl label{display:flex;flex-direction:column;font-size:13.5px;color:var(--muted)}
+.ctl label span{display:flex;justify-content:space-between;gap:8px}.ctl label output{white-space:nowrap;color:var(--ink);font-weight:650;font-variant-numeric:tabular-nums}
+.ctl input[type=range]{width:100%;accent-color:var(--accent)}
+.ctl select,.ctl input[type=text],.ctl input[type=number]{font:inherit;font-size:14px;padding:3px 6px;border:1px solid var(--line);border-radius:5px;background:#fff;color:var(--ink)}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.btns button{font:inherit;font-size:14px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:3px 11px;cursor:pointer;color:var(--ink)}
+.btns button:hover{border-color:var(--accent)}.btns button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.sim canvas{display:block;width:100%;border:1px solid var(--line);border-radius:6px;background:#fff}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media (max-width:760px){.grid2{grid-template-columns:1fr}}
+.readout{font-size:14px;background:var(--code);border-radius:6px;padding:6px 10px;margin-top:8px;font-variant-numeric:tabular-nums}
+.readout b{font-weight:650}
+.ok{color:var(--ok);font-weight:650}.bad{color:var(--bad);font-weight:650}
+
+/* self check, links */
+details.q{border:1px solid var(--line);border-radius:6px;background:var(--panel);margin:8px 0;padding:8px 12px}
+details.q summary{cursor:pointer;font-weight:600}details.q[open] summary{margin-bottom:6px}
+.refs li{margin-bottom:6px}.refs .tag{display:inline-block;font-size:11.5px;border:1px solid var(--line);border-radius:9px;padding:0 7px;color:var(--muted);margin-right:4px;vertical-align:1px}
+.pn{display:flex;justify-content:space-between;gap:12px;margin-top:40px;padding-top:14px;border-top:1px solid var(--line)}
+.pn a{display:block;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);text-decoration:none;max-width:48%}
+.pn a small{display:block;color:var(--muted)}.pn a:hover{border-color:var(--accent)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin:14px 0}
+.cards a{display:block;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;text-decoration:none;color:var(--ink)}
+.cards a:hover{border-color:var(--accent);box-shadow:0 2px 10px rgba(30,40,60,.07)}
+.cards a b{display:block;color:var(--accent);margin-bottom:3px}.cards a span{font-size:14px;color:var(--muted)}
+.pill{display:inline-block;font-size:12px;border-radius:9px;padding:0 8px;background:var(--sel);color:var(--accent);font-weight:650}
+.gl dt{font-weight:700;margin-top:10px}.gl dd{margin:2px 0 0 0;max-width:76ch}
+@media print{#top,#side,.pn,.sim .ctl,.btns{display:none}.wrap{display:block}body{background:#fff}}
+
+.tw{overflow-x:auto;margin:10px 0 16px}.tw table{margin:0}
+main{overflow-wrap:break-word}

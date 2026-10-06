@@ -24,16 +24,16 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+from tpfinder import __version__, console as C   # noqa: E402 -- stdlib only, works on any Python >= 3.8
+
 ENV = ROOT / ".venv-tpfinder"
 SKIP = ROOT / ".venv-tpfinder.salta"
+LOG = ROOT / ".venv-tpfinder.log"            # pip output of the last (re)build, shown only on failure
 MIN = (3, 11)
 SKIP_DAYS = 7
 WIN = os.name == "nt"
 PY_NAME = re.compile(r"python(3(\.\d+)?)?(\.exe)?", re.IGNORECASE)
-
-
-def say(msg: str) -> None:
-    print(msg, flush=True)
 
 
 def env_python(env: Path = ENV) -> Path:
@@ -127,31 +127,58 @@ def archive(path: Path, label: str) -> Path:
 
 
 def run(cmd: list) -> bool:
-    say("  > " + " ".join(str(c) for c in cmd))
-    return subprocess.run([str(c) for c in cmd], cwd=str(ROOT)).returncode == 0
+    """Run a step of the build; its output goes to the log file, not to the screen."""
+    with LOG.open("a", encoding="utf-8") as fh:
+        fh.write(f"\n$ {' '.join(str(c) for c in cmd)}\n")
+        fh.flush()
+        return subprocess.run([str(c) for c in cmd], cwd=str(ROOT), stdout=fh, stderr=subprocess.STDOUT).returncode == 0
+
+
+def _log_tail(n: int = 2) -> list:
+    try:
+        lines = [x.strip() for x in LOG.read_text(encoding="utf-8", errors="replace").splitlines() if x.strip()]
+    except OSError:
+        return []
+    errs = [x for x in lines if x.startswith("ERROR")]
+    return (errs or lines)[-n:]
 
 
 def build(ver: tuple, py: str, old: tuple | None) -> bool:
     """Build the environment with `py`. The previous one is set aside and restored on failure."""
     tag = f"{ver[0]}.{ver[1]}"
-    say(f"\nPreparo l'ambiente con Python {tag} ({py}).\nServe internet; ci vuole qualche minuto, solo questa volta.")
+    LOG.write_text(f"QqQ lab: build with Python {tag} ({py}), {datetime.now():%Y-%m-%d %H:%M}\n", encoding="utf-8")
     aside = None
-    if ENV.exists():
-        aside = ROOT / ".venv-tpfinder-precedente"
-        if aside.exists():
-            archive(aside, "venv-precedente")
-        ENV.rename(aside)
-    envpy = env_python()
-    ok = (run([py, "-m", "venv", ENV])
-          and run([envpy, "-m", "pip", "install", "--quiet", "--upgrade", "pip"])
-          and run([envpy, "-m", "pip", "install", "--quiet", "-e", "."])
-          and env_version() == ver)
+    with C.Spinner(f"Preparo l'ambiente con Python {tag}") as sp:
+        if not C.TTY:
+            C.note("solo questa volta: serve internet e ci vuole qualche minuto")
+        if ENV.exists():
+            aside = ROOT / ".venv-tpfinder-precedente"
+            if aside.exists():
+                archive(aside, "venv-precedente")
+            ENV.rename(aside)
+        envpy = env_python()
+        sp.update("1/3 creo l'ambiente")
+        ok = run([py, "-m", "venv", ENV])
+        if ok:
+            sp.update("2/3 aggiorno pip")
+            ok = run([envpy, "-m", "pip", "install", "--upgrade", "pip"])
+        if ok:
+            sp.update("3/3 installo numpy e QqQ lab (serve internet)")
+            ok = run([envpy, "-m", "pip", "install", "-e", "."]) and env_version() == ver
+        if ok:
+            sp.done(f"Ambiente pronto con Python {tag}", "installato ora")
+        else:
+            sp.failed(f"Installazione con Python {tag} non riuscita", f"la riprovo tra {SKIP_DAYS} giorni")
     if ok:
         if aside:
             old_tag = f"py{old[0]}.{old[1]}" if old else "non-funzionante"
-            say(f"Ambiente precedente spostato in {archive(aside, '.venv-tpfinder-' + old_tag)}")
+            dest = archive(aside, ".venv-tpfinder-" + old_tag)
+            C.note(f"l'ambiente precedente è in {C.home(dest)}")
         return True
-    say(f"Installazione con Python {tag} non riuscita: la riprovo tra {SKIP_DAYS} giorni.")
+    for line in _log_tail():
+        C.note(line[:110])
+    C.note(f"dettagli: {C.home(LOG)}")
+    C.say()
     _skip(ver)
     if ENV.exists():
         archive(ENV, f".venv-tpfinder-py{tag}-fallito")
@@ -160,8 +187,31 @@ def build(ver: tuple, py: str, old: tuple | None) -> bool:
     return False
 
 
+def set_icon() -> None:
+    """Mac: give 'Avvia QqQ lab.command' the app icon. macOS keeps a custom icon in the file's resource fork,
+    which zip files and cloud folders drop: so it is set again whenever it is missing. Silent if it fails."""
+    if sys.platform != "darwin":
+        return
+    target, icon = ROOT / "Avvia QqQ lab.command", ROOT / "tpfinder" / "web" / "app-icon-512.png"
+    if not (target.exists() and icon.exists()):
+        return
+    try:
+        if subprocess.run(["xattr", "-p", "com.apple.ResourceFork", str(target)], capture_output=True, timeout=10).returncode == 0:
+            return  # the icon is already there
+        lines = ['use framework "AppKit"', "on run argv",
+                 "set img to current application's NSImage's alloc()'s initWithContentsOfFile:(item 1 of argv)",
+                 "current application's NSWorkspace's sharedWorkspace()'s setIcon:img forFile:(item 2 of argv) options:0",
+                 "end run"]
+        cmd = ["osascript"] + [x for line in lines for x in ("-e", line)] + [str(icon), str(target)]
+        subprocess.run(cmd, capture_output=True, timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
 def main() -> int:
     os.chdir(ROOT)
+    set_icon()
+    C.header(__version__)
     current = env_version()
     for ver, py in pythons(use_skip=current is not None):
         if current and ver <= current:
@@ -171,10 +221,13 @@ def main() -> int:
             break
         current = env_version()
     if not current:
-        say("\nServe Python 3.11 o piu' recente (consigliato l'ultimo): https://www.python.org/downloads/\n"
-            "Installalo e rifai doppio clic. Se Python c'e' gia', controlla la connessione a internet.")
+        C.fail("Serve Python 3.11 o più recente (consigliato l'ultimo)")
+        C.note("scaricalo da https://www.python.org/downloads/ , installalo e rifai doppio clic")
+        C.note("se Python c'è già, controlla la connessione a internet")
+        C.say()
         return 1
-    say(f"\nQqQ lab (Python {current[0]}.{current[1]}) si apre nel browser. Per chiuderlo, chiudi questa finestra.")
+    C.ok("Ambiente Python pronto", f"Python {current[0]}.{current[1]}")
+    os.environ["QQQ_HEADER"] = "1"           # the app does not print the header again
     cmd = [str(env_python()), "-m", "tpfinder", *(sys.argv[1:] or ["app"])]
     if WIN:
         return subprocess.call(cmd)

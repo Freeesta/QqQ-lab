@@ -18,7 +18,7 @@ class Run:
         time.sleep(2)
     def page(s, p):
         s.b = p.chromium.launch()
-        pg = s.b.new_page(viewport={"width": 1500, "height": 900})
+        pg = s.b.new_page(viewport={"width": 1500, "height": 2200})
         pg.on("pageerror", lambda e: s.errs.append(("pageerror", str(e))))
         pg.on("console", lambda m: s.errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") else None)
         pg.on("requestfailed", lambda r: s.errs.append(("reqfail", r.url, r.failure)))

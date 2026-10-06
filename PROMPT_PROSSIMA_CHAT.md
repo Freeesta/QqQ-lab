@@ -1,41 +1,55 @@
 # Prompt per la prossima chat (copia e incolla)
 
-Sono Federico, dottorando in Chimica e Tecnologie Chimiche (UniTO). Continuiamo QqQ lab, programma didattico offline per il laboratorio inquinanti (QqQ SCIEX 3200 QTRAP, ESI+, Analyst 1.6.3): gli studenti esplorano mzML, scelgono XIC, integrano, attribuiscono, disegnano TP. NON dà risposte. Conciso e critico, non cancellare file (usa `QqQ_lab/_cestino/`).
+Sono Federico, dottorando in Chimica e Tecnologie Chimiche (UniTO). Continuiamo QqQ lab, programma didattico offline per il laboratorio inquinanti (QqQ SCIEX 3200 QTRAP, ESI+, Analyst 1.6.3): gli studenti esplorano gli mzML, scelgono gli XIC, integrano, disegnano TP e frammenti. NON dà risposte: il lavoro manuale e il ragionamento sono lo scopo. Conciso e critico, non cancellare file (usa `QqQ_lab/_cestino/`). Una sola chat alla volta su questa cartella.
 
 ## Leggi prima
-1. `QqQ_lab/tpfinder/AGENTS.md`: obiettivi, convenzioni, mappa del codice, fatti sui dati, come eseguire test ed e2e (tutto il "come" sta lì).
-2. Questo file: stato e cose da fare.
-3. Se serve: `README.md` (guida utente), `docs/PROGETTO_TP_FINDER.md` (progetto originale), `tpfinder/web/vendor/README.md`.
+1. `QqQ_lab/tpfinder/AGENTS.md`: obiettivi, convenzioni, mappa del codice, fatti sui dati, test ed e2e (tutto il "come" sta lì).
+2. Questo file: stato, decisioni prese, prossimi passi.
+3. Se serve: `README.md` (guida utente), `docs/PROGETTO_TP_FINDER.md` (progetto originale, in parte superato).
 
 Se la cartella `QqQ_lab` non è collegata, chiedila con device_request_folder_access.
 
-## Stato (fine sessione 2026-10-05, sera)
-Funziona ed è verificato (18 pytest, e2e3/e2e4/e2e5 senza errori JS):
-- caricamento mzML, rilevamento full/ms2/mrm, cromatogramma totale -> spettro (trascina), XIC (clic destro, campo "m/z o formula", m/z a 1 decimale), Separa/Unisci, integrazione automatica + barre trascinabili, tabella integrazioni + CSV, popup Metodo e BioTransformer, frecce tra file, ripristino della sessione dopo reload;
-- visualizzazione ispirata a Xcalibur/FreeStyle/MZmine: cursore con valori, linea sincronizzata, etichette RT dei picchi, vista impilata, scala log, zoom/sposta, legenda cliccabile, mappa RT-m/z con differenza tra file;
-- sottrazione del bianco e baseline SNIP (cromatogrammi/XIC/MRM), sottrazione dello spettro di fondo, Calcolatrice m/z, didascalia della struttura nel Disegno;
-- logo e favicon integrati;
-- e2e portabili (percorsi relativi, mzML da `../esempio_conversione/mzml` o `QQQ_MZML`).
+## Stato (2026-10-06, mattina)
+Verificato: 20 pytest, e2e3/4/5/6/7 senza errori JS (le `api/notebook` ERR_ABORTED rimaste sono salvataggi keepalive interrotti dalla chiusura/ricarica della pagina: il ripristino della sessione funziona; il taccuino ora si salva solo se cambia). Ultimo commit git: solo il primo (`c7b2904`); tutto il resto è da committare.
+- **Dati**: TIC di tutti i file in alto, spettro sotto al picco più intenso, pannelli a tutta larghezza, elenco file richiudibile; XIC (anche da formula), MRM, mappa RT-m/z, vista impilata, log, zoom, cursore, bianco e baseline SNIP, sottrazione di fondo, integrazione con tabella e cinetica, Metodo, Calcolatrice m/z, assi con titoli, niente griglia, PNG bianchi, esportazioni e relazione HTML; caricamento di altri file a sessione aperta (pannelli mantenuti, provato).
+- **Profilo isotopico**: calcolato dal programma (nessuna libreria): scheda Isotopi nella finestra Addotti e sovrapposizione sullo spettro (clic destro), allineata al picco osservato.
+- **Disegno** (Ketcher offline): formula + massa intera sotto ogni struttura (m/z se carica), differenza sulle frecce (+O Δm +16), riquadro "Selezione (frammento)" con le ipotesi di ione, gomma per rompere legami, guida "Come fare in Ketcher", didascalia (spenta di default), esportazione PNG/JPEG/SVG su sfondo bianco (crema facoltativo).
+- **Tabelle**: Tavola periodica (isotopi, abbondanze; dimensione fissa), Addotti, Isotopi, Perdite neutre (massa intera). Pulsanti PubChem e BioTransformer (link esterni).
+- **Teoria**: scheda con 11 capitoli e simulazioni (quadrupolo, ESI, QqQ, frammentazione CID, cinetica...), apribile anche da disco (`Teoria QqQ lab.html`). Esempio svolto: atrazina.
+- **Avvio**: `Avvia QqQ lab.command`/`.bat` -> `scripts/avvia.py` (ambiente con il Python più recente, Terminale con spunte, icona del .command impostata al primo avvio: da verificare su Mac). Se il doppio clic dice "privilegi di accesso": `chmod +x "Avvia QqQ lab.command"`.
+- **Interfaccia**: sfondo chiaro neutro (non più crema). Tolte per scelta le schede Attribuzioni e Suggerimenti (non reintrodurle).
 
-**Bug corretto (2026-10-05, dopo la pulizia)**: una modifica successiva all'ultimo e2e (probabilmente Qwen: formule con pedici `fmtFormula`/`fmtAdduct`) aveva rotto `index.html`, la pagina non partiva: (1) backtick di troppo nel template di `renderDetail` ("Stessa massa nella finestra"); (2) `fmtFormula`/`fmtAdduct` dichiarati con `const` sia in `explore.js` sia nello script inline ("Identifier already declared"). Tolte le copie inline (restano in `explore.js`). Riverificato: 18 test, e2e3/e2e4/e2e5 tutti ok; schermate di ripristino e Disegno controllate.
+**Aggiornamento 2026-10-06 (tarda mattina)**: logo vettoriale (`tools/genera_logo.py`, icone rigenerate da `tools/genera_icone.py`, header e favicon in SVG); `QqQ lab.app` per il Mac (una sola finestra del Terminale, icona nel pacchetto: da provare su Mac); pulsanti **?** di aiuto (`help.js`); pulsante CSV in ogni grafico e CSV per Excel in italiano (punto e virgola, virgola decimale, BOM). Verificato: 20 pytest, e2e3-7 ok.
 
-Pulizia 2026-10-05: spostati in `QqQ_lab/_cestino/2026-10-05_pulizia/` i file creati da Qwen nella radice (`cli.py`, `session.py`, `session_manager.py`, `server.py` Flask), i vecchi avviatori "TP Finder", 88 file `.!NNNNN!.DS_Store` (artefatti di sincronizzazione), il file vuoto `{}` e `MAP.md` (accorpato in AGENTS.md). Un solo cestino: `QqQ_lab/_cestino/`. Federico può svuotarlo.
+## Decisioni già prese
+- **Excel**: le tabelle e i grafici per la relazione (cinetica, retta di taratura, quantificazione) li costruiscono gli studenti in Excel. Il programma esporta i dati (CSV in italiano), non fa la taratura.
+- **Tablet: rinviato.** Federico ha scelto (2026-10-06) che la strada giusta è un'app web autonoma in JavaScript (lettura mzML e calcoli nel browser, dati sul tablet, sito statico/PWA, interfaccia touch), ma per ora NON va implementata. Promemoria per quando si farà: forse si convertirà tutto in JS (anche la versione per computer, con Python solo come avviatore), per non avere due copie degli stessi calcoli. Cosa tenere a mente: test che confronta i numeri JS con quelli Python sugli stessi mzML; DecompressionStream per lo zlib; tocco (pressione lunga = clic destro, pizzica = zoom, maniglie, bersagli >= 44 px); Safari cancella i dati dopo 7 giorni senza uso (Esporta sessione, PWA sulla Home); hosting https (GitHub Pages) o PC del laboratorio; Ketcher ~29 MB e scomodo col dito; strumenti del docente (`metodo`) restano in Python.
+- Niente strumenti che danno le risposte (frammentatori automatici tipo mass-fragmentation/MetFrag/CFM-ID: solo citati nella Teoria). Ciò che si calcola parte sempre da un'ipotesi dello studente (formula, struttura, selezione).
+- Nessun download di librerie: profilo isotopico e masse fatti in casa; Ketcher e OpenChemLib sono già in `vendor/`.
+- (Superato dalla decisione sul tablet qui sopra) Prima ipotesi di versione web: Pyodide + PWA. sito statico con Pyodide + PWA offline (dati che non lasciano il computer), progettata anche per tablet (iPad/Android: tocco, pressione lunga al posto del clic destro, pizzica per lo zoom, maniglie, bersagli >= 44 px, "Esporta sessione"). Punti tecnici già visti: sostituire i `fetch` con una funzione `api()`; `mmap` in Pyodide da verificare (in alternativa file in memoria); Ketcher ~29 MB (niente Cloudflare Pages, limite 25 MiB; GitHub Pages va bene); prima apertura ~20-25 MB; Safari cancella i dati dopo 7 giorni senza uso se il sito non è aggiunto alla Home. Scartati: server gratuiti, riscrittura in JS. Per ora resta tutto in locale. La versione precedente di questo file (cronologia dettagliata delle sessioni del 5-6 ottobre) è in `QqQ_lab/_cestino/2026-10-06_prompt_precedente.md`.
 
-**Avvio e git (2026-10-05, sera)**: nuovo `scripts/avvia.py` (gli avviatori `.command`/`.bat` lo chiamano; vecchie versioni in `_cestino/2026-10-05_avviatori_vecchi/`): usa il Python più recente installato, ricostruisce `.venv-tpfinder` quando ne compare uno più nuovo, non cancella mai il vecchio. Provato nel container (3.11 -> 3.14, ambiente rotto, offline, ritorno online). Il venv del Mac è ancora quello di Python 3.12.3: Federico deve installare Python 3.14.8 da python.org e fare doppio clic sull'avviatore (l'agente non può digitare nel Terminale). Preparato git: `git init` (ramo `main`, nessun commit, nessun remote), `.gitignore` (esclusi dati, venv, cache), `.gitattributes`, `LICENSE` MIT, CI `.github/workflows/test.yml`, `pyproject` con `[test]`. 18 test verdi, controllo JS ok.
+## Prossimi passi (proposta, in ordine)
+1. **Mettere al sicuro**: commit git dal Mac (non dalla VM di device_bash) e, se Federico vuole, repository GitHub privato come copia remota (la CI c'è già).
+2. **Collaudo reale**: doppio clic su Mac (icona, Terminale), un PC Windows con Python appena installato, prima apertura senza internet dopo l'installazione; un giro completo dell'esperienza 3 fatto da Federico come se fosse uno studente.
+3. **Validazione numerica contro Analyst** (2-3 file): RT, aree degli XIC e delle MRM, rapporto Quant/Qual. Se le aree differiscono, capire perché (smoothing, baseline, integrazione) e scriverlo nella guida.
+4. **Dati per gli studenti**: convertire in mzML tutti i .wiff dell'esperienza (`converti.bat` su Windows), cartelle per gruppo, controllare che tempi e tipi vengano indovinati dal nome (`guess_sample`).
+5. **G2 taratura MRM**: deciso, la fanno gli studenti in Excel con le aree esportate. Eventualmente controllare che il CSV delle integrazioni contenga tutto ciò che serve (nome dello standard, concentrazione ricavata dal nome del file?).
+6. **G3 MS2 ↔ Disegno**: dal picco di uno spettro di ioni prodotto mandare l'm/z al Disegno (e viceversa evidenziare nello spettro gli m/z della selezione), senza proporre strutture.
+7. **Cinetica**: la fanno gli studenti in Excel (C/C0, ln(C/C0), k) dalla tabella Integrazioni.
+8. **Guida breve per lo studente** (1-2 pagine, anche dentro la Teoria) e scheda per il docente allineata a G1/G2/G3 e alla relazione.
+9. **Distribuzione**: nome definitivo del programma; provare `QqQ lab.app` su Mac (permesso Terminale, icona, Gatekeeper); versione tablet rinviata (vedi Decisioni).
+10. **Pulizia codice**: endpoint dei candidati (`/api/build`, `/api/candidate`, `/export/*.csv`, `/export/session.json`) da togliere o tenere per `candidates` e i test; e2e nella CI (Playwright su GitHub Actions).
 
-**Pubblicazione web (decisione presa, non ancora fatta)**: opzione 1 ibrida = sito statico su GitHub Pages con Python nel browser (Pyodide, numpy, Web Worker) + PWA offline; se c'è il server locale l'interfaccia usa quello, altrimenti Pyodide. Gli mzML li sceglie lo studente dal suo PC e non lasciano il computer; copia in OPFS, taccuino in IndexedDB a ogni modifica, `navigator.storage.persist()`, pulsante "Esporta sessione". Punti tecnici: 6 `fetch` da sostituire con una funzione `api()`; `mmap` in Pyodide da verificare (in alternativa leggere il file in memoria); Ketcher 29 MB (no Cloudflare Pages, limite 25 MiB); prima apertura ~20-25 MB; Safari cancella i dati dopo 7 giorni senza uso se il sito non è installato. Scartati: server gratuiti (HF Docker ora a pagamento, Render 0,1 CPU/512 MB), riscrittura in JS. Per ora tutto resta in locale (scelta di Federico).
+## Appunti di Federico (2026-10-06), da fare nella prossima chat
+1. **Frecce = scan per scan**: se il cromatogramma in alto è selezionato o "fissato" (pin), le frecce ← → devono spostare il cursore da una scansione alla successiva/precedente e aggiornare lo spettro sotto (oggi le frecce cambiano file: `goFile` in `explore.js`, keydown globale). Serve un modo per scegliere il pannello attivo (clic sul pannello o pulsante pin) e, solo allora, frecce = scan; altrimenti restano per cambiare file.
+2. **Zoom più chiaro**: mentre si zooma si deve vedere cosa si sta ingrandendo (rettangolo/area evidenziata durante il trascinamento, anche nello spettro dove oggi il trascinamento zooma senza mostrare l'area; eventuale minimappa o indicazione dell'intervallo visibile; pulsante "vista intera").
+3. **Nomi e metadati dei PNG (e CSV) scaricati**: nome sensato e non troppo lungo, ricavato da tipo di grafico + file (o "sovrapposti_N_file") + ione/intervallo, es. `XIC_m-z194_t15.png`, `spettro_t0_RT14.3.png`, `TIC_5file.png`; nei PNG scrivere i metadati (chunk tEXt: titolo, file, RT/m/z, data, "QqQ lab") — oggi il nome è solo il titolo del pannello (`whiteCanvas` + `toBlob` in `addPanel`).
+4. **Bug: il menu del clic destro su uno spettro compare SOTTO il cromatogramma.** Causa probabile: `#ctx` ha `z-index:50`, mentre ogni pannello cliccato riceve `z-index = ++E.z` (parte da 10 e cresce senza limite) e dopo un po' supera 50. Rimedio: z-index di `#ctx`, `#helppop`, dialoghi e tooltip molto alto (es. 10000) oppure non far crescere `E.z` oltre una soglia. Verificare con e2e (clic destro dopo aver cliccato molti pannelli).
+5. Colori diversi per file: già fatti (`paintFiles`: palette `PAL` per i campioni, grigio per il bianco, marrone per il controllo; gli spettri sovrapposti usano il colore del file). Controllare solo che con molti file (> 12) i colori restino distinguibili.
 
-## Da fare (priorità)
-1. Verificare `draw.js` e la scheda Attribuzioni (screenshot `tests_e2e/shots/21_attr.png`): stringhe inglesi residue, `S.adding`/`#cancadd`, caricamento di nuovi file in una sessione aperta (pannelli mantenuti).
-2. Interfaccia: barra dei controlli dei pannelli troppo alta (va a capo su 3 righe); sfondo ancora crema (Federico lo vuole più chiaro); titoli degli assi nella mappa; etichette sovrapposte nella vista impilata.
-3. Decidere se togliere dalla modalità esplora `/export/session.json` e gli endpoint dei candidati (oggi rispondono 400 con messaggio chiaro).
-4. Versione web (vedi sopra): prototipo Pyodide (carica un mzML, mostra il cromatogramma, misura avvio e velocità), poi `api()`, salvataggio nel browser, PWA. Quando Federico lo decide: repository GitHub (pubblico o GitHub Education), primo commit, Pages. Da chiedere al titolare del corso: si possono pubblicare dati di esempio?
-5. Nome definitivo del programma (pacchetto e cartella di lavoro si chiamano ancora `tpfinder`/`TPFinder_lavoro`).
-6. Test su Mac/Parallels reali; conversione diretta dei wiff (msconvert mai provato da `convert.py`).
-7. Icona 1024 px nitida: serve il logo vettoriale.
-
-Idee non fatte: mappa con soglia regolabile, XIC con finestra in ppm per dati HRMS, minimappa del cromatogramma.
+Idee non fatte: mappa con soglia regolabile, XIC in ppm per dati HRMS, minimappa del cromatogramma.
 
 ## Note
+- Il `_cestino` è stato svuotato il 2026-10-05 alle 23:01: per tornare indietro c'è solo git.
+- In `esempio_conversione/mzml/` il t30 del full scan si chiama `B_FullMass-t30 (2).mzML` (dato grezzo, non rinominato).
 - Modifiche non committate di attributio (altro progetto): da riprendere a parte.
-- In `esempio_conversione/mzml/` il t30 del full scan si chiama `B_FullMass-t30 (2).mzML` (manca la versione senza "(2)"): dato grezzo, non rinominato.

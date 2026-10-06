@@ -440,25 +440,41 @@ def default_workdir(new: bool = False) -> Path:
 
 
 def serve(project_path, port: int = 8790, open_browser: bool = True, workdir=None):
-    app = App(project_path, workdir)
+    import platform
+    from . import __version__, console as C
+    if not os.environ.get("QQQ_HEADER"):        # the launcher (scripts/avvia.py) has already printed it
+        C.header(__version__)
+    with C.Spinner("Avvio il server locale") as sp:
+        app = App(project_path, workdir)
+        httpd = None
+        for p in range(port, port + 20):
+            try:
+                httpd = ThreadingHTTPServer(("127.0.0.1", p), make_handler(app))
+                break
+            except OSError:
+                continue
+        if httpd is None:
+            sp.failed("Nessuna porta libera", f"provate {port}-{port + 19}")
+            raise SystemExit(1)
+        sp.done("Server locale avviato", "Python " + platform.python_version() if not os.environ.get("QQQ_HEADER") else "")
     if app.error:
-        print(f"[tpfinder] {app.error}")
-    httpd = None
-    for p in range(port, port + 20):
-        try:
-            httpd = ThreadingHTTPServer(("127.0.0.1", p), make_handler(app))
-            break
-        except OSError:
-            continue
-    if httpd is None:
-        raise SystemExit("no free port")
+        C.warn(app.error)
+    if app.session and app.session.items:
+        n = len(app.session.items)
+        C.ok("Sessione precedente riaperta", f"{n} file")
     url = f"http://127.0.0.1:{httpd.server_address[1]}/"
-    print(f"[tpfinder] {url}   (Ctrl+C to stop)")
+    C.say()
+    C.link(url, "si apre da solo nel browser" if open_browser else "aprilo nel browser")
+    if app.workdir:
+        C.note("cartella di lavoro: " + C.home(app.workdir))
+    C.say()
+    C.say("  " + C.dim("Per chiudere QqQ lab chiudi questa finestra (oppure premi Ctrl+C)."))
     if open_browser:
         webbrowser.open(url)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("[tpfinder] stopped")
+        C.say()
+        C.say("  " + C.dim("QqQ lab chiuso: il lavoro è salvato nella cartella di lavoro."))
     finally:
         httpd.server_close()

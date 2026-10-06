@@ -1,4 +1,7 @@
-"""Command line: tpfinder app | demo | draft | convert | candidates | serve."""
+"""Command line: tpfinder app | draft | convert | candidates | metodo.
+
+The old browser views of the candidates flow (`demo`, `serve`) were removed with the Suggerimenti tab;
+`draft` and `candidates` still work in the terminal."""
 from __future__ import annotations
 
 import argparse
@@ -9,10 +12,6 @@ from pathlib import Path
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="tpfinder", description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    d = sub.add_parser("demo", help="write a synthetic experiment and open it")
-    d.add_argument("folder", nargs="?", default="tpfinder_demo")
-    d.add_argument("--no-open", action="store_true")
-    d.add_argument("--port", type=int, default=8790)
     dr = sub.add_parser("draft", help="write an esperimento.toml for the files of a folder")
     dr.add_argument("folder")
     dr.add_argument("--name", required=True)
@@ -25,10 +24,6 @@ def main(argv=None) -> int:
     ca = sub.add_parser("candidates", help="print the candidates of an experiment (and write a CSV)")
     ca.add_argument("project")
     ca.add_argument("--csv")
-    s = sub.add_parser("serve", help="open an experiment in the browser")
-    s.add_argument("project")
-    s.add_argument("--port", type=int, default=8790)
-    s.add_argument("--no-open", action="store_true")
     am = sub.add_parser("metodo", help="read the source/compound parameters of an Analyst .dam or .wiff and write them as JSON")
     am.add_argument("file")
     am.add_argument("-o", "--out", default="-")
@@ -38,13 +33,7 @@ def main(argv=None) -> int:
     ap_.add_argument("--no-open", action="store_true")
     a = ap.parse_args(argv)
 
-    if a.cmd == "demo":
-        from .demo import make_demo
-        from .server import serve
-        cfg = make_demo(Path(a.folder))
-        print(f"demo experiment in {cfg.parent}")
-        serve(cfg, a.port, not a.no_open)
-    elif a.cmd == "draft":
+    if a.cmd == "draft":
         from .project import draft_project
         text = draft_project(a.folder, a.name, a.formula, a.mz, a.polarity)
         out = Path(a.folder) / "esperimento.toml"
@@ -82,11 +71,7 @@ def main(argv=None) -> int:
     elif a.cmd == "app":
         from .server import default_workdir, serve
         wd = Path(a.workdir) if a.workdir else default_workdir()
-        print(f"[tpfinder] work folder: {wd}")
         serve(None, a.port, not a.no_open, workdir=wd)
-    elif a.cmd == "serve":
-        from .server import serve
-        serve(a.project, a.port, not a.no_open)
     return 0
 
 

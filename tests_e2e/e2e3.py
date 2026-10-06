@@ -94,15 +94,12 @@ try:
             with pg.expect_download() as d: click_menu(pg, "CSV")
             print("download", d.value.suggested_filename)
         step("export menu / csv", export)
-        def sess_export():
-            print(pg.evaluate("(async()=>{const r=await fetch('/export/session.json');return (await r.text()).slice(0,200)})()"))
-        step("session.json", sess_export)
         pg.wait_for_timeout(1500)   # autosave
         # reload page: session restore
         pg.reload(); pg.wait_for_timeout(4000)
         pg.screenshot(path=SH + "20_restored.png")
         print("after reload", pg.evaluate("({f:E.files.length,p:E.panels.map(p=>p.type+':'+(p.traces||[]).length+':'+p.ints.length)})"))
-        pg.click("text=Attribuzioni"); pg.wait_for_timeout(500); pg.screenshot(path=SH + "21_attr.png")
+        step("tabs Dati, Disegno, Teoria", lambda: (lambda n: None if n == ["data", "draw", "theory"] else (_ for _ in ()).throw(AssertionError(n)))(pg.evaluate("[...document.querySelectorAll('#nav button')].map(b=>b.dataset.v)")))
         pg.click("text=Disegno"); pg.wait_for_timeout(5000); pg.screenshot(path=SH + "22_draw.png")
         b = None
 finally:

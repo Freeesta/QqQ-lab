@@ -1,17 +1,16 @@
 <!doctype html>
 <html lang="it"><head><meta charset="utf-8"><title>QqQ lab</title>
-<link rel="icon" href="/static/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png"><link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="icon" href="/static/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="/static/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png"><link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-:root{color-scheme:light;--bg:#faf8f3;--panel:#ffffff;--line:#e7e2d6;--ink:#2b2a27;--muted:#76705f;--accent:#2b5c8a;--ok:#047857;--bad:#b42318;--warn:#92400e;--sel:#f4f0e3}
+:root{color-scheme:light;--bg:#f7f8fa;--panel:#ffffff;--line:#e2e5ea;--ink:#25282c;--muted:#687080;--accent:#2b5c8a;--ok:#047857;--bad:#b42318;--warn:#92400e;--sel:#edf2f8}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline;font-family:inherit;font-weight:inherit}
 sub{bottom:-0.22em}
 sup{top:-0.45em}
 header{display:flex;gap:12px;align-items:center;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
-header b{font-size:15px}header .logo{height:26px;width:auto;display:block}#loading .logo{height:84px;width:auto}.sp{flex:1}
+header b{font-size:15px}header .logo{height:26px;width:auto;display:block}.sp{flex:1}
 button,select,input{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:3px 9px}button{cursor:pointer}button:hover{border-color:var(--accent)}
-.banner{margin:8px 14px 0;padding:6px 10px;border:1px solid var(--line);border-left:4px solid var(--warn);background:var(--panel);border-radius:4px;color:var(--muted)}
 main{display:grid;grid-template-columns:minmax(380px,34%) 1fr;gap:10px;padding:10px 14px}
 @media (max-width:900px){main{grid-template-columns:1fr}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-bottom:10px}
@@ -19,28 +18,28 @@ main{display:grid;grid-template-columns:minmax(380px,34%) 1fr;gap:10px;padding:1
 table{border-collapse:collapse;width:100%}th{position:sticky;top:0;background:var(--panel);text-align:left;font-weight:600;border-bottom:1px solid var(--line);padding:3px 6px}
 td{padding:3px 6px;border-bottom:1px solid var(--line);vertical-align:middle}tr.row{cursor:pointer}tr.row:hover{background:var(--sel)}tr.sel{background:var(--sel)}
 .num{text-align:right;font-variant-numeric:tabular-nums}
-.pill{display:inline-block;min-width:34px;text-align:center;border-radius:9px;padding:0 7px;font-weight:600;font-size:12px;border:1px solid var(--line)}
-.s-strong{background:#dcfce7;color:#14532d;border-color:#86efac}.s-possible{background:#fef9c3;color:#713f12;border-color:#fde047}.s-weak{background:#f1f5f9;color:#475569}.s-parent{background:#dbeafe;color:#1e3a8a;border-color:#93c5fd}
 canvas{display:block;width:100%}
-.crit{display:grid;grid-template-columns:20px 1fr;gap:2px 6px}.pass{color:var(--ok)}.fail{color:var(--bad)}.na{color:var(--muted)}
 .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}.chips span{display:inline-flex;align-items:center;gap:4px;color:var(--muted)}.chips i{width:10px;height:10px;border-radius:2px;display:inline-block}
 .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px}.bar label{display:flex;gap:4px;align-items:center;color:var(--muted)}
 #err{color:var(--bad);padding:6px 14px}#tbl{max-height:62vh;overflow:auto}
 .alt{color:var(--muted);font-size:12px}
 
+.hq{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;margin:0 4px;border-radius:50%;border:1px solid var(--accent);color:var(--accent);background:var(--panel);font-size:11px;font-weight:700;line-height:1;cursor:help;vertical-align:middle;flex:none}.hq:hover{background:var(--accent);color:#fff}
+#helppop{position:fixed;z-index:95;max-width:min(420px,92vw);background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;box-shadow:0 8px 26px rgba(20,30,50,.22);padding:8px 12px;font-size:12.5px;line-height:1.5;color:var(--ink)}#helppop .hp-t{display:flex;align-items:center;margin-bottom:4px}#helppop .hp-t b{flex:1;font-size:13px}
 [hidden]{display:none!important}
 #start{max-width:920px;margin:16px auto;padding:0 14px}
 #drop{border:2px dashed var(--line);border-radius:10px;padding:26px 14px;text-align:center;color:var(--muted);cursor:pointer;background:var(--panel)}
 #drop.over{border-color:var(--accent);background:var(--sel);color:var(--ink)}#drop b{color:var(--ink);font-size:15px}
 .frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:10px}.frm label{display:flex;flex-direction:column;gap:3px;color:var(--muted)}
-.frm input,.frm select{width:100%}.go{background:var(--accent);color:#fff;border-color:var(--accent);padding:6px 18px;font-weight:600}.go:disabled{opacity:.5;cursor:default}
+.frm input,.frm select{width:100%}#wiffhelp{margin-top:8px}#wiffhelp summary{cursor:pointer;color:var(--accent)}#wiffhelp ol{margin:6px 0 0 18px;padding:0;line-height:1.6}
+.go{background:var(--accent);color:#fff;border-color:var(--accent);padding:6px 18px;font-weight:600}.go:disabled{opacity:.5;cursor:default}
 .prog{height:4px;background:var(--line);border-radius:2px;margin-top:4px}.prog i{display:block;height:4px;background:var(--accent);border-radius:2px;width:0}
 
 #nav{display:flex;gap:2px}#nav button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:6px 12px;font-weight:600;color:var(--muted)}
 #nav button.on{color:var(--ink);border-bottom-color:var(--accent)}#nav button:hover{color:var(--ink)}
 #v-data{display:grid;grid-template-columns:230px 1fr;gap:10px;padding:10px 14px;align-items:start}
 @media (max-width:900px){#v-data{grid-template-columns:1fr}}
-#dfiles{position:sticky;top:8px}.fl{display:flex;gap:6px;align-items:flex-start;padding:4px 0;border-bottom:1px solid var(--line)}
+#dfiles{position:sticky;top:8px}#v-data.fold{grid-template-columns:1fr}#v-data.fold #dfiles{display:none}.fl{display:flex;gap:6px;align-items:flex-start;padding:4px 0;border-bottom:1px solid var(--line)}
 .fl.cur{background:var(--sel);border-radius:4px}.tag{background:var(--sel);border:1px solid var(--line);border-radius:8px;padding:0 6px;color:var(--ink)}.fl i{width:12px;height:12px;border-radius:3px;margin-top:3px;flex:none}.fl small{display:block;color:var(--muted)}
 #dpanels{position:relative;min-height:520px}.pnl{position:absolute;display:flex;flex-direction:column;resize:both;overflow:hidden;min-width:300px;min-height:190px;margin:0;box-shadow:0 1px 4px rgba(60,50,20,.08)}.pnl .hd{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px;cursor:move;flex:none}.bt{font-size:11px;padding:1px 6px;color:var(--muted)}.pnl.max{position:fixed;left:12px;top:56px;right:12px;bottom:12px;width:auto!important;height:auto!important;z-index:60;resize:none;box-shadow:0 8px 30px rgba(0,0,0,.25)}.pnl .hd b{cursor:text}
 .pnl .rd{color:var(--muted);font-variant-numeric:tabular-nums;margin-left:auto}.x{border:0;background:none;font-size:16px;color:var(--muted);padding:0 4px}.x:hover{color:var(--bad)}
@@ -57,86 +56,77 @@ dialog{border:1px solid var(--line);border-radius:8px;background:var(--panel);co
 dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justify-content:flex-end}
 .hint{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:4px;padding:6px 10px;margin-bottom:10px;color:var(--muted)}
 #v-draw{display:grid;grid-template-columns:1fr 330px;gap:10px;padding:10px 14px}@media (max-width:1000px){#v-draw{grid-template-columns:1fr}}
+#v-theory{padding:0}#tframe{display:block;width:100%;height:calc(100vh - 52px);border:0;background:#fff}
 #kframe{width:100%;height:calc(100vh - 110px);min-height:520px;border:1px solid var(--line);border-radius:6px;background:#fff}
-#v-attr{padding:10px 14px}#v-attr table input,#v-attr table select{width:100%;min-width:70px}
 .sm{font-size:12px}
+#refdlg{max-width:min(1100px,96vw);width:96vw;max-height:92vh}#refbody{max-height:80vh;overflow:auto}#refdlg h4{margin:12px 0 4px}
+#reftabs{display:flex;gap:2px}#reftabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:6px 12px;font-weight:600;color:var(--muted)}#reftabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
+.pt{display:grid;grid-template-columns:repeat(18,minmax(0,1fr));grid-template-rows:repeat(7,auto) 12px repeat(2,auto);gap:3px;margin:8px 0;position:relative}
+.pt-c{border:1px solid var(--line);border-radius:4px;padding:2px 3px;background:var(--panel);cursor:pointer;line-height:1.15;min-height:44px;display:flex;flex-direction:column;align-items:center}
+.pt-c span{font-size:9px;color:var(--muted);align-self:flex-start}.pt-c b{font-size:15px}.pt-c small{font-size:9px;color:var(--muted)}
+.pt-c.org{background:#e8f0f8;border-color:#b9cde3}.pt-c.nd b{color:var(--muted)}.pt-c:hover,.pt-c.pin{outline:2px solid var(--accent);z-index:1}
+.pt-info{grid-row:1/4;grid-column:3/13;padding:4px 10px;font-size:12px;overflow:auto;max-height:190px}.pt-big{float:left;margin:0 10px 4px 0;border:1px solid var(--line);border-radius:6px;padding:2px 8px;text-align:center}.pt-big span{display:block;font-size:10px;color:var(--muted)}.pt-big b{font-size:26px}
+.pt-gap{grid-row:8;grid-column:3/18;font-size:10px;color:var(--muted);align-self:center}.pt-bar{display:inline-block;height:8px;background:var(--accent);border-radius:2px}
+#refdlg table th,#refdlg table td{padding:2px 6px}
 #bigdlg{max-width:min(960px,95vw);width:95vw;max-height:90vh}#bigdlg h4{margin:14px 0 4px}#bigbody{max-height:72vh;overflow:auto}#bigdlg .top{display:flex;align-items:center}
 #bt{position:fixed;right:14px;bottom:14px;width:380px;max-width:92vw;z-index:70;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.2);padding:10px 12px}
 #bt ol{margin:6px 0 6px 18px;padding:0}#bt li{margin-bottom:4px}
 #loading{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
-#loading h1{margin:0;font-size:22px}.ms{display:flex;align-items:flex-end;gap:5px;height:90px}.ms i{display:block;width:9px;background:var(--accent);border-radius:2px 2px 0 0;animation:pk 1.3s ease-in-out infinite}
+.ms{display:flex;align-items:flex-end;gap:5px;height:90px}.ms i{display:block;width:9px;background:var(--accent);border-radius:2px 2px 0 0;animation:pk 1.3s ease-in-out infinite}
 @keyframes pk{0%,100%{transform:scaleY(.15)}50%{transform:scaleY(1)}}.ms i{transform-origin:bottom}
 #ldmsg{font-size:15px;max-width:520px;min-height:44px}#ldsub{color:var(--muted)}
 </style></head><body>
-<header><img class="logo" src="/static/logo.png" alt="" aria-hidden="true"><b>QqQ lab</b>
-  <nav id="nav"><button data-v="data" class="on">Dati</button><button data-v="draw">Disegno</button><button data-v="attr">Attribuzioni</button><button data-v="sugg">Suggerimenti</button></nav><span id="proj" class="muted"></span><span class="sp"></span>
+<header><img class="logo" src="/static/logo.svg" alt="" aria-hidden="true"><b>QqQ lab</b>
+  <nav id="nav"><button data-v="data" class="on">Dati</button><button data-v="draw">Disegno</button><button data-v="theory" title="Teoria: TP, fotocatalisi, LC, ESI, quadrupolo, triplo quadrupolo">Teoria</button></nav><span class="sp"></span>
   <button id="newrun" hidden title="Inizia una nuova sessione (la precedente resta nella cartella di lavoro)">Nuova sessione</button>
-  <button id="np-bt" title="Apre BioTransformer in un'altra scheda e spiega come usarlo">BioTransformer &#8599;</button><button id="reload" class="hs" title="Rilegge il file di progetto e la configurazione">Ricarica</button>
-  <a class="hs" href="/export/candidates.csv"><button>Candidati (CSV)</button></a>
-  <a class="hs" href="/export/session.json"><button>Sessione (JSON)</button></a></header>
+  <button class="hq" data-help="header" title="Che cos'è?">?</button><button id="np-pt" title="Tavola periodica con masse esatte e abbondanze isotopiche">Tavola periodica</button><button id="np-ad" title="Tabella degli addotti ESI e delle perdite neutre più comuni">Addotti</button>
+  <button id="np-pc" title="Apre PubChem in un'altra scheda: cerca il tuo composto per nome, formula o struttura" onclick="window.open('https://pubchem.ncbi.nlm.nih.gov/','_blank','noopener')">PubChem &#8599;</button>
+  <button id="np-bt" title="Apre BioTransformer in un'altra scheda e spiega come usarlo">BioTransformer &#8599;</button></header>
 <div id="err"></div>
-<section id="suggform" class="card" style="max-width:920px;margin:16px auto" hidden>
- <h3>Suggerimenti: candidati prodotti di trasformazione</h3>
- <div class="muted" style="margin-bottom:8px">Facoltativo. Il programma propone m/z attesi per il composto di partenza (reazioni elencate in <code>trasformazioni.csv</code>) e ti mostra se c'&egrave; un picco; sono ipotesi, non identificazioni. Servono almeno tre tempi per valutare la cinetica.</div>
- <div class="frm"><label>Nome (facoltativo)<input id="pname" placeholder="es. flufenacet"></label>
-  <label>Formula della molecola neutra, oppure m/z dello ione<input id="pform" placeholder="es. C14H13F4N3O2S  oppure  364.07"></label>
-  <label>Polarit&agrave;<select id="ppol"><option value="positive">positiva</option><option value="negative">negativa</option></select></label>
-  <label>Finestra XIC (&plusmn; Da)<input id="ptol" type="number" step="0.05" value="0.5"></label></div>
- <div class="muted" style="line-height:1.5"><b>Formula:</b> quella della molecola neutra (flufenacet: <code>C<sub>14</sub>H<sub>13</sub>F<sub>4</sub>N<sub>3</sub>O<sub>2</sub>S</code>); lo ione lo calcola il programma ([M+H]<sup>+</sup> = 364.07 in positivo). <b>Finestra XIC:</b> ampiezza attorno all'm/z (&plusmn; dalton) con cui si ricostruisce il cromatogramma ione estratto; con risoluzione unitaria 0.3-1 Da; qui parti da 0.5 (nella scheda Dati lo strumento datato usa &plusmn;1 Da).</div>
- <div class="bar" style="margin-top:8px"><button class="go" id="sgo" disabled>Cerca candidati</button><span id="sgomsg" class="muted"></span></div>
-</section>
 <section id="v-data" hidden>
- <aside id="dfiles"><div class="card"><div class="bar"><b>File</b><span class="sp"></span><button id="addf" title="Carica altri file">+</button></div><div id="flst"></div>
+ <aside id="dfiles"><div class="card"><div class="bar"><b>File</b><button class="hq" data-help="files" title="Che cos'è?">?</button><span class="sp"></span><button id="addf" title="Carica altri file">+</button><button id="ffold" title="Nascondi l'elenco dei file: più spazio ai grafici">&#9664;</button></div><div id="flst"></div>
    <div class="muted sm" style="margin-top:6px">Doppio clic sul nome per rinominare. La casella mostra o nasconde la traccia.</div></div></aside>
- <div><div class="hint" id="dhint">Parti dal cromatogramma totale. <b>Trascina</b> sul grafico per scegliere un intervallo e vedere lo spettro di massa; <b>clic destro</b> su un picco (del cromatogramma o dello spettro) per estrarre uno ione, annotare, integrare o aggiungere un'attribuzione. Puoi aprire quanti pannelli vuoi. <b>Ctrl + rotella</b> ingrandisce, <b>Maiusc + trascina</b> sposta, <b>doppio clic</b> torna alla vista intera; un clic sulla legenda nasconde una traccia.
+ <div><div class="hint" id="dhint">Parti dal cromatogramma totale. <b>Trascina</b> sul grafico per scegliere un intervallo e vedere lo spettro di massa; <b>clic destro</b> su un picco (del cromatogramma o dello spettro) per estrarre uno ione, annotare o integrare. Puoi aprire quanti pannelli vuoi. <b>Ctrl + rotella</b> ingrandisce, <b>Maiusc + trascina</b> sposta, <b>doppio clic</b> torna alla vista intera; un clic sulla legenda nasconde una traccia.
    <button class="x" id="dhx" title="Nascondi">&times;</button></div>
-  <div class="bar"><button id="np-chrom">+ Cromatogramma</button><button id="np-spec">+ Spettro</button><button id="np-map" title="Mappa di tutti gli ioni nel tempo: ogni pixel è un m/z a un certo RT">+ Mappa RT-m/z</button><button id="np-xic">+ XIC (scrivi un m/z)</button><button id="np-calc" title="Scrivi una formula bruta e ottieni l'm/z dello ione (anche arrotondato come lo vede lo strumento)">Calcolatrice m/z</button><button id="np-mrm">+ Transizioni MRM</button><button id="np-merge" title="Porta tutti gli XIC in un solo pannello">Unisci gli XIC</button><button id="np-tile" title="Riordina i pannelli in griglia">Ordina</button>
+  <div class="bar"><button class="hq" data-help="toolbar" title="Che cos'è?">?</button><button id="np-chrom">+ Cromatogramma</button><button id="np-spec">+ Spettro</button><button id="np-map" title="Mappa di tutti gli ioni nel tempo: ogni pixel è un m/z a un certo RT">+ Mappa RT-m/z</button><button id="np-xic">+ XIC (scrivi un m/z)</button><button id="np-calc" title="Scrivi una formula bruta e ottieni l'm/z dello ione (anche arrotondato come lo vede lo strumento)">Calcolatrice m/z</button><button id="np-mrm">+ Transizioni MRM</button><button id="np-merge" title="Porta tutti gli XIC in un solo pannello">Unisci gli XIC</button><button id="np-tile" title="Mette i pannelli uno sotto l'altro, larghi come la pagina">Ordina</button>
    <span class="sp"></span><span id="kindinfo" class="muted sm"></span></div>
-  <div class="bar"><span id="navfile"><button id="fprev" title="File precedente (freccia sinistra)">&#9664;</button> <select id="fsel"></select> <button id="fnext" title="File successivo (freccia destra)">&#9654;</button></span><label title="Mostra solo il file corrente: gli XIC restano, cambia il campione"><input type="checkbox" id="fbrowse"> un file alla volta</label>
-   <span class="sp"></span><button id="np-method">Metodo</button><button id="np-ints">Integrazioni</button><button id="np-export">Esporta &#9662;</button></div><datalist id="tols"><option value="0.3"><option value="0.5"><option value="1"><option value="1.5"></datalist>
+  <div class="bar"><button id="funfold" hidden title="Mostra l'elenco dei file">&#9654; File</button><button class="hq" data-help="nav" title="Che cos'è?">?</button><span id="navfile"><button id="fprev" title="File precedente (freccia sinistra)">&#9664;</button> <select id="fsel"></select> <button id="fnext" title="File successivo (freccia destra)">&#9654;</button></span><label title="Mostra solo il file corrente: gli XIC restano, cambia il campione"><input type="checkbox" id="fbrowse"> un file alla volta</label>
+   <span class="sp"></span><button id="np-method">Metodo</button><button id="np-ints">Integrazioni</button><button id="np-export">Esporta &#9662;</button><button class="hq" data-help="tools" title="Che cos'è?">?</button></div><datalist id="tols"><option value="0.3"><option value="0.5"><option value="1"><option value="1.5"></datalist>
   <div id="dpanels"></div></div>
 </section>
+<section id="v-theory" hidden><iframe id="tframe" title="Teoria"></iframe></section>
 <section id="v-draw" hidden>
  <div><iframe id="kframe" title="Editor chimico" loading="lazy"></iframe></div>
  <aside>
-  <div class="card" id="cap-quick" hidden>
-   <div style="font-size:15px;font-weight:600" id="cq-formula"></div>
-   <div class="muted" style="margin-top:2px">M = <span id="cq-mass"></span> Da (massa esatta monoisotopica)</div>
-  </div>
-  <div class="card"><h3>Strutture sulla tela</h3><div id="dcomp" class="muted">Disegna una molecola, un frammento o un intero cammino (frecce e testo sono nella barra a sinistra).</div></div>
-  <div class="card"><h3>Didascalia per la relazione</h3><div class="muted sm">Scritta sotto la struttura nelle immagini esportate. Con più strutture sulla tela descrive quella scelta qui sotto.</div>
+  <div class="card"><label style="font-weight:600"><input type="checkbox" id="lb-on" checked> Formula e massa sotto ogni struttura</label> <button class="hq" data-help="draw-labels" title="Che cos'è?">?</button>
+   <div class="muted sm" style="margin-top:4px">Sotto ogni molecola (o frammento) disegnata compare la formula bruta con la massa esatta monoisotopica arrotondata all'unit&agrave;: <i>M</i> per una specie neutra, <i>m/z</i> se hai messo una carica (strumento <b>+</b> della barra a sinistra). La scritta compare anche nelle immagini esportate.</div></div>
+  <div class="card" id="selcard" hidden><h3>Selezione (frammento) <button class="hq" data-help="draw-sel" title="Che cos'è?">?</button></h3><div id="selbody"></div></div>
+  <div class="card"><h3>Strutture sulla tela <button class="hq" data-help="draw-structs" title="Che cos'è?">?</button></h3><div id="dcomp" class="muted">Disegna una molecola, un frammento o un intero cammino (frecce e testo sono nella barra a sinistra).</div></div>
+  <div class="card"><h3>Didascalia per la relazione <button class="hq" data-help="draw-caption" title="Che cos'è?">?</button></h3><div class="muted sm">Scritta sotto la struttura nelle immagini esportate. Con più strutture sulla tela descrive quella scelta qui sotto.</div>
    <div class="bar"><label>Nome <input id="cap-name" placeholder="es. TP1" style="width:90px"></label><label>Struttura <select id="cap-part"></select></label><label>Addotto <select id="cap-ad" title="Addotto per l'm/z: in ESI+ di solito [M+H]+"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option><option>[M+Cl]-</option><option>[M+HCOO]-</option></select></label></div>
-   <label class="sm"><input type="checkbox" id="cap-on" checked> aggiungi la didascalia alle immagini esportate</label>
+   <label class="sm"><input type="checkbox" id="cap-on"> aggiungi la didascalia alle immagini esportate</label>
    <pre id="cap-txt" class="sm" style="white-space:pre-wrap;margin:6px 0"></pre><div class="bar"><button id="cap-copy" class="sm" title="Copia il testo, da incollare nella relazione">Copia il testo</button></div></div>
-  <div class="card"><h3>Esporta la tela</h3><div class="bar"><button id="ex-png">PNG</button><button id="ex-jpg">JPEG</button><button id="ex-svg">SVG</button><button id="ex-ket">Salva (.ket)</button></div>
-   <label class="muted"><input type="checkbox" id="ex-bg" checked> sfondo chiaro</label>
+  <div class="card"><h3>Esporta la tela <button class="hq" data-help="draw-export" title="Che cos'è?">?</button></h3><div class="bar"><button id="ex-png">PNG</button><button id="ex-jpg">JPEG</button><button id="ex-svg">SVG</button><button id="ex-ket">Salva (.ket)</button></div>
+   <label class="muted" title="Senza spunta lo sfondo è bianco"><input type="checkbox" id="ex-bg"> sfondo color crema</label>
    <div class="bar" style="margin-top:6px"><input id="ex-smi" placeholder="Incolla uno SMILES" style="flex:1"><button id="ex-load">Disegna</button></div>
    <div class="muted sm" style="margin-top:6px">Ketcher (EPAM, Apache-2.0) e OpenChemLib (BSD-3) sono inclusi: funziona offline.</div></div>
   <div class="card"><details>
-   <summary style="cursor:pointer;font-weight:600;font-size:13px">Guida rapida Ketcher ▸</summary>
-   <div class="muted sm" style="margin-top:8px;line-height:1.7">
-    <b>Atomi e legami</b><br>
-    Seleziona un elemento dalla barra a sinistra (o premi il tasto corrispondente, es. <kbd>C</kbd>, <kbd>N</kbd>, <kbd>O</kbd>) e fai clic sulla tela o su un atomo esistente per aggiungere/sostituire.<br><br>
-    <b>Carica positiva o negativa</b><br>
-    Strumenti <b>A+</b> / <b>A−</b> nella barra a sinistra (o tasto <kbd>+</kbd> / <kbd>−</kbd>): fai clic sull'atomo da caricare. In alternativa: clic destro sull'atomo → <i>Proprietà atomo</i> → campo <i>Charge</i>.<br><br>
-    <b>Testo libero sulla tela</b><br>
-    Strumento <b>T</b> nella barra a sinistra: fai clic su un punto vuoto e scrivi. Usa per etichettare frammenti, indicare "+O", "+H<sub>2</sub>O", o frecce di reazione.<br><br>
-    <b>Parentesi e gruppi ripetuti</b><br>
-    Strumento <b>[ ]</b> (S-Group): seleziona gli atomi, poi scegli il tipo di gruppo. Per le parentesi semplici scegli <i>Generic group</i> o disegna manualmente la parentesi con il testo "( )".<br><br>
-    <b>Frecce di reazione</b><br>
-    Strumenti <b>→</b> nella barra a sinistra: trascina per disegnare la freccia. Puoi aggiungere testo sopra con lo strumento <b>T</b>.<br><br>
-    <b>Rompere un legame (trovare frammenti)</b><br>
-    Fai clic sul legame da rompere per selezionarlo (diventa evidenziato), poi premi <kbd>Delete</kbd> o <kbd>Backspace</kbd>: il legame viene eliminato e la molecola si divide in due frammenti separati sulla tela. Puoi poi spostare i frammenti e calcolare la formula di ciascuno nel pannello «Strutture sulla tela».<br><br>
-    <b>Shortcut utili</b><br>
-    <kbd>Ctrl+Z</kbd> annulla · <kbd>Ctrl+A</kbd> seleziona tutto · <kbd>Esc</kbd> deseleziona · <kbd>Del</kbd> cancella · scroll per zomare · tasto destro sul legame per cambiarne il tipo.
+   <summary style="cursor:pointer;font-weight:600;font-size:13px">Come fare in Ketcher</summary>
+   <div class="muted sm" style="margin-top:8px;line-height:1.6">
+    <b>Atomi</b>: scegli l'elemento nella barra a destra (o il tasto: <kbd>C</kbd>, <kbd>N</kbd>, <kbd>O</kbd>, <kbd>S</kbd>, <kbd>L</kbd> = Cl, <kbd>B</kbd> = Br) e fai clic su un atomo per sostituirlo, o su un punto vuoto per aggiungerlo.<br>
+    <b>Carica + o &minus;</b>: strumenti <b>A+</b> e <b>A&minus;</b> nella barra a sinistra (tasti <kbd>=</kbd> e <kbd>-</kbd>), poi clic sull'atomo. Ogni clic aggiunge una carica. Per uno ione [M+H]<sup>+</sup> metti la carica sull'atomo protonato (di solito N od O) e aggiungi l'H: la formula diventa quella dello ione e la scritta mostra m/z.<br>
+    <b>Aggiungere un atomo (es. +O)</b>: per una struttura vera, scegli O e fai clic su un atomo della molecola (si crea il legame). Per una semplice scritta accanto a una freccia (&laquo;+O&raquo;, &laquo;&minus;CH<sub>2</sub>&raquo;, &laquo;+H<sub>2</sub>O&raquo;) usa lo strumento testo <b>T</b> (<kbd>Alt</kbd>+<kbd>T</kbd>); nel riquadro del testo ci sono i pulsanti pedice e apice.<br>
+    <b>Parentesi</b>: Ketcher non ha parentesi semplici per gli ioni (gli S-Group mettono parentesi da polimero, con una &laquo;n&raquo;). Per uno ione la cosa corretta &egrave; mettere la carica sull'atomo con <b>A+</b>: la scritta sotto diventa m/z. Se vuoi proprio la notazione [&nbsp;]<sup>+</sup>, scrivila con lo strumento testo <b>T</b> (pulsante apice per il +).<br>
+    <b>Vie di trasformazione</b>: freccia di reazione e segno + nella barra a sinistra; testo sopra la freccia con <b>T</b>. Se disegni composto di partenza &rarr; freccia &rarr; prodotto sulla stessa riga, sopra la freccia compare da sola la differenza (es. &laquo;+O &Delta;m +16&raquo;).<br>
+    <b>Un frammento senza rompere legami</b>: seleziona solo gli atomi del pezzo (rettangolo di selezione, oppure clic sugli atomi tenendo premuto <kbd>Maiusc</kbd>): a destra, nel riquadro &laquo;Selezione&raquo;, compaiono la sua formula e gli m/z possibili dello ione. Anche <kbd>Alt</kbd>+<kbd>C</kbd> di Ketcher d&agrave; formula e massa della parte selezionata.<br>
+
+    <b>Rompere un legame (frammenti)</b>: strumento <b>gomma</b> (<kbd>Del</kbd>) e clic sul legame: la molecola si divide e sotto ogni pezzo compaiono formula e massa. Attenzione: un frammento in MS/MS &egrave; uno <i>ione</i>, quasi sempre con un H spostato; aggiungi carica e H dove servono e confronta l'm/z con lo spettro di ioni prodotto. Se sbagli: <kbd>Ctrl</kbd>+<kbd>Z</kbd>.<br>
+    <b>Altro</b>: <kbd>Ctrl</kbd>+<kbd>A</kbd> seleziona tutto, <kbd>Ctrl</kbd>+<kbd>L</kbd> riordina il disegno, <kbd>Ctrl</kbd>+rotella ingrandisce.
    </div>
   </details></div>
  </aside>
 </section>
-<section id="v-attr" hidden>
- <div class="card"><div class="bar"><b>Attribuzioni</b><span class="muted">le tue ipotesi, con il livello di confidenza (Schymanski et al. 2014)</span><span class="sp"></span>
-   <button id="at-add">+ Aggiungi</button><button id="at-csv">Esporta CSV</button></div><div id="at-tbl"></div></div>
-</section>
+<dialog id="refdlg"><div class="top" style="display:flex;align-items:center;gap:8px"><nav id="reftabs"></nav><span class="sp"></span><button id="refx" class="x" title="Chiudi">&times;</button></div><div id="refbody"></div></dialog>
 <dialog id="bigdlg"><div class="top"><h3 id="bigtt" style="margin:0;flex:1"></h3><button id="bigx" class="x" title="Chiudi">&times;</button></div><div id="bigbody"></div></dialog>
 <div id="bt" hidden><div class="bar"><b>Come usare BioTransformer</b><span class="sp"></span><button class="x" id="btx" title="Chiudi">&times;</button></div>
  <div class="muted sm">BioTransformer 3.0 (Wishart Lab) prevede i prodotti di trasformazione di una molecola. Si è aperto in un'altra scheda del browser (serve internet).</div>
@@ -144,40 +134,35 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
  <li>Scegli il <b>tipo di trasformazione</b>. Per l'ambiente si provano «Environmental Microbial» e «Abiotic»; «CYP450», «Phase II» e gut microbiota riguardano il metabolismo umano: chiediti se hanno senso per la tua reazione. Nessun modulo simula esplicitamente l'ossidazione radicalica da TiO<sub>2</sub>/UV: usa i risultati come spunto.</li>
  <li>Imposta il numero di <b>iterazioni</b> (passi di reazione): 1 dà i prodotti primari, 2-3 i secondari (ma le liste crescono molto).</li>
  <li>Invia e attendi la tabella dei prodotti (formula, massa monoisotopica, SMILES).</li>
- <li>Torna qui: calcola [M+H]<sup>+</sup> = massa + 1.00728 e controlla nel full scan, con una finestra di ±1 Da, se compare uno ione che cresce con il tempo. Una previsione è un'ipotesi: la conferma viene da MS/MS e tempo di ritenzione. Segna i candidati in Attribuzioni.</li></ol>
+ <li>Torna qui: calcola [M+H]<sup>+</sup> = massa + 1.00728 e controlla nel full scan, con una finestra di ±1 Da, se compare uno ione che cresce con il tempo. Una previsione è un'ipotesi: la conferma viene da MS/MS e tempo di ritenzione. Annota i candidati che trovi (m/z, RT, andamento) per la relazione.</li></ol>
  <div class="bar"><button id="bt-open">Riapri BioTransformer</button><span class="sp"></span><button id="btx2" onclick="document.getElementById('bt').hidden=true">Chiudi</button></div></div>
-<div id="loading"><img class="logo" src="/static/logo.png" alt=""><h1>QqQ lab</h1><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><div id="ldmsg"></div><div id="ldsub">Avvio...</div></div>
+<div id="loading"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><div id="ldmsg"></div><div id="ldsub"></div></div>
 <dialog id="calcdlg" style="max-width:560px"><div class="top" style="display:flex"><h3 style="margin:0;flex:1">Calcolatrice m/z</h3><button class="x" id="calcx" title="Chiudi">&times;</button></div>
  <div class="muted sm">Scrivi la formula bruta (anche con parentesi, es. C9H10N2O). Lo strumento ha risoluzione unitaria: in pratica conta la prima cifra decimale, e a volte solo l'intero.</div>
  <input id="calcin" placeholder="formula bruta, es. C14H12Cl2NO3" autocomplete="off"><div id="calcout"></div></dialog>
 <dialog id="askdlg"><div id="asktxt"></div><input id="askin"><div class="row"><button id="askno">Annulla</button><button class="go" id="askok">OK</button></div></dialog>
 <div id="ctx" hidden></div>
-<div class="banner" id="banner"></div>
 <section id="start" hidden>
- <div class="card"><h3>1. Carica i file</h3>
-  <div id="drop"><b>Trascina qui i file .mzML</b><br>oppure <u>clicca per sceglierli dal computer</u><br>
-   <span class="muted">(anche pi&ugrave; file insieme; .wiff solo se &egrave; installato msconvert, insieme al suo .wiff.scan)</span></div>
+ <div class="card"><h3>1. Carica i file <button class="hq" data-help="start" title="Che cos'è?">?</button></h3>
+  <div id="drop"><b>Trascina qui i file .mzML</b><br>oppure <u>clicca per sceglierli dal computer</u></div>
+  <details id="wiffhelp" class="sm"><summary>Hai i file .wiff dello strumento? Convertili prima in .mzML</summary>
+   <ol class="muted">
+    <li>Scarica <b>ProteoWizard</b> (gratuito) da <a href="https://proteowizard.sourceforge.io/download.html" target="_blank" rel="noopener">proteowizard.sourceforge.io</a>: scegli la versione per <b>Windows a 64 bit</b>, l'unica che legge i file SCIEX (accetta la licenza dei produttori). Su Mac va usato in Windows (per esempio con Parallels).</li>
+    <li>Apri <b>MSConvert</b> e aggiungi i file <code>.wiff</code>: ognuno deve stare nella stessa cartella del suo <code>.wiff.scan</code>.</li>
+    <li>Imposta <b>Output format: mzML</b>, <b>Binary encoding: 64-bit</b>, <b>zlib compression</b> attivo, <b>Numpress</b> disattivato; poi <b>Start</b>.</li>
+    <li>Trascina qui i file <code>.mzML</code> ottenuti.</li></ol></details>
   <input type="file" id="pick" multiple accept=".mzML,.mzml,.wiff,.scan" hidden>
   <div id="up"></div><div id="flist"></div></div>
- <div class="card"><div class="bar"><button class="go" id="opbtn" disabled>Apri i dati</button><button id="cancadd" hidden>Annulla</button><span id="gomsg" class="muted"></span></div>
-  <div class="muted" style="margin-top:6px">Puoi caricare altri file anche dopo: i pannelli aperti restano. Si apre il cromatogramma totale: tutto il resto (spettri, ioni estratti) lo scegli tu.<br>Cartella di lavoro: <span id="wd"></span></div></div>
+ <div class="card"><div class="bar"><button class="go" id="opbtn" disabled>Apri i dati</button><button id="cancadd" hidden>Annulla</button><span id="gomsg" class="muted"></span></div></div>
 </section>
-<main id="mainview">
- <section>
-  <div class="card"><h3>Esperimento</h3><div id="exp"></div></div>
-  <div class="card"><div class="bar"><b>Candidati</b>
-    <label>Mostra <select id="show"><option value="sp">forti e possibili</option><option value="s">solo forti</option><option value="all">tutti</option></select></label>
-    <input id="find" placeholder="cerca nome o m/z" style="width:140px"></div>
-    <div id="tbl"></div></div>
- </section>
- <section id="detail"><div class="card muted">Scegli un candidato nella tabella.</div></section>
-</main>
-<div class="card" id="mrmcard" style="margin:0 14px 14px"><div class="bar"><b>Lista MRM</b><span id="mrmn" class="muted">vuota</span><span class="sp"></span>
-  <button id="mrmclr">Svuota</button><button id="mrmgo">Esporta transizioni (CSV)</button></div></div>
 <script src="/static/explore.js"></script>
+<script src="/static/elements.js"></script>
+<script src="/static/tables.js"></script>
+<script src="/static/help.js"></script>
 <script>
-const $=s=>document.querySelector(s);const S={d:null,sel:null,cur:null,mrm:new Set(),zoom:null};
-const LBL=l=>({"strong candidate":"candidato forte","possible candidate":"candidato possibile","weak":"debole","parent":"origine","n/a":"n.d."}[l]||l);
+// Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views.
+const $=s=>document.querySelector(s);
+const S={view:"data",sess:null,adding:false};
 const fmt=v=>v===0?"0":(Math.abs(v)>=1e4||Math.abs(v)<.01)?v.toExponential(1):(+v.toPrecision(3)).toString();
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -187,80 +172,23 @@ function fail(e){$("#err").textContent=e?(e.message||e):""}
 function setup(c){const r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);const g=c.getContext("2d");g.setTransform(d,0,0,d,0,0);return{g,W:r.width,H:r.height}}
 function nice(a,b,n){const s=(b-a)/n,p=Math.pow(10,Math.floor(Math.log10(s))),m=s/p,st=(m<1.5?1:m<3?2:m<7?5:10)*p,o=[];for(let t=Math.ceil(a/st)*st;t<=b+1e-9;t+=st)o.push(+t.toFixed(10));return o}
 function smooth(y,k){if(!k)return y;return y.map((_,i)=>{const a=y[i-1]??y[i],c=y[i+1]??y[i];return(a+2*y[i]+c)/4})}
-const M={l:58,r:12,t:12,b:26};
-function sampleColor(s,i,n,timed){if(s.type==="blank")return css("--muted");if(s.type==="control")return"#b45309";
-  const f=timed.length>1?timed.indexOf(s)/(timed.length-1):1;const l=Math.round(68-38*f);return`hsl(210 70% ${l}%)`}
+const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles
 
-async function init(){try{loading(true,"Preparo il programma...");await bootSession();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});const d=await api("/api/state");S.d=d;fail();S.hasA=d.phase!=="start";$("#newrun").hidden=!(d.app||S.sess);if(d.phase==="start"){if(!S.sess)showStart(d);else applyView();return}applyView();$("#banner").textContent=d.texts.unit_resolution;
-  const pf = d.parent.formula ? fmtFormula(d.parent.formula) : (d.parent.mz != null ? `m/z ${d.parent.mz}` : "");
-  $("#proj").innerHTML=`${esc(d.parent.name||"origine")} · ${pf} · ${esc(d.parent.polarity)} · finestra &plusmn;${d.settings.tol_da} Da · v${esc(d.version)}`;
-  $("#exp").innerHTML=`<table><tr><th>Campione</th><th class="num">Tempo (min)</th><th>Tipo</th><th>File</th></tr>`+d.samples.map(s=>`<tr><td>${esc(s.label)}</td><td class="num">${s.time??""}</td><td>${s.type}</td><td class="muted">${esc(s.file)}</td></tr>`).join("")+"</table>";
-  renderTable()}catch(e){fail(e)}finally{loading(false)}}
-function rows(){const q=$("#find").value.trim().toLowerCase(),sh=$("#show").value;
-  return S.d.candidates.filter(c=>c.steps===0||(sh==="all"||(c.score!==null&&(sh==="s"?c.score>=75:c.score>=50)))).filter(c=>!q||(c.name+" "+c.mz+" "+c.formula+" "+c.alternatives.join(" ")).toLowerCase().includes(q))
-  .sort((a,b)=>(a.steps===0?-1:0)-(b.steps===0?-1:0)||(b.score??-1)-(a.score??-1)||b.max_area-a.max_area)}
-function spark(k){const v=k.map(x=>x.area),m=Math.max(...v,1e-9);if(v.length<2)return"";const w=64,h=18;
-  return`<svg width="${w}" height="${h}">`+`<polyline fill="none" stroke="${css("--accent")}" stroke-width="1.5" points="${v.map((a,i)=>`${(i/(v.length-1)*(w-2)+1).toFixed(1)},${(h-2-a/m*(h-4)).toFixed(1)}`).join(" ")}"/></svg>`}
-function renderTable(){const r=rows();$("#tbl").innerHTML=`<table><tr><th>Punteggio</th><th class="num">m/z</th><th>Candidato</th><th>Andamento</th></tr>`+r.map(c=>{
-  const cls=c.steps===0?"s-parent":c.label.startsWith("strong")?"s-strong":c.label.startsWith("possible")?"s-possible":"s-weak";
-  return`<tr class="row ${S.sel===c.id?"sel":""}" data-id="${c.id}"><td><span class="pill ${cls}" title="${esc(LBL(c.label))}">${c.steps===0?"origine":c.score??"-"}</span></td><td class="num">${c.mz.toFixed(2)}</td>`+
-  `<td>${esc(c.name)}${c.alternatives.length?` <span class="alt" title="${esc(c.alternatives.join("; "))}">+${c.alternatives.length} stessa massa</span>`:""}<div class="alt">${fmtFormula(c.formula)}</div></td><td>${spark(c.kinetics)}</td></tr>`}).join("")+"</table>";
-  document.querySelectorAll("#tbl tr.row").forEach(t=>t.onclick=()=>select(+t.dataset.id))}
-async function select(id){try{S.sel=id;S.zoom=null;S.cur=await api("/api/candidate?id="+id);fail();renderTable();renderDetail()}catch(e){fail(e)}}
-function renderDetail(){const c=S.cur;const cls=c.label.startsWith("strong")?"s-strong":c.label.startsWith("possible")?"s-possible":c.label==="parent"?"s-parent":"s-weak";
-  const crit=c.criteria.length?`<div class="crit">`+c.criteria.map(k=>`<span class="${k.status}">${k.status==="pass"?"&#10003;":k.status==="fail"?"&#10007;":"&ndash;"}</span><span><b>${esc(k.name)}</b> <span class="muted">${esc(k.text)}</span></span>`).join("")+"</div>":`<span class="muted">Il composto di partenza è il riferimento per gli andamenti nel tempo.</span>`;
-  const ms=c.ms2.scans?`<div class="muted">${c.ms2.scans} scan di ioni prodotto${c.ms2.collision_energy!=null?`, energia di collisione ${c.ms2.collision_energy}`:""}</div><table><tr><th class="num">Q3 m/z</th><th class="num">relativo %</th></tr>`+c.ms2.fragments.map(f=>`<tr><td class="num">${f.mz}</td><td class="num">${f.rel}</td></tr>`).join("")+"</table>":`<span class="muted">Nessuno scan di ioni prodotto per questo precursore dentro il picco.</span>`;
-  $("#detail").innerHTML=`<div class="card"><h3>${esc(c.name)} <span class="pill ${cls}">${LBL(c.label)}${c.score!=null?" "+c.score:""}</span></h3>
-   <div class="muted">${fmtFormula(c.formula)} · ${fmtAdduct(c.adduct)} m/z ${c.mz.toFixed(4)} · RT di riferimento ${c.ref_rt!=null?c.ref_rt.toFixed(2)+" min":"n.d."}</div>`+
-   (c.alternatives.length?`<div class="alt">Stessa massa nella finestra: ${c.alternatives.map(a => esc(a).replace(/\(([A-Za-z0-9+-]+),\s*m\/z/g, (m, f) => `(${fmtFormula(f)}, m/z`)).join("; ")}</div>`:"")+`</div>
-   <div class="card"><div class="bar"><b>Cromatogrammi ione estratto</b><label><input type="checkbox" id="xs" checked> smoothing</label><label><input type="checkbox" id="xn"> normalizza ciascuno</label><button id="xz">Azzera lo zoom</button><span class="muted">trascina per ingrandire</span></div>
-   <canvas id="xic" style="height:250px"></canvas><div class="chips" id="leg"></div></div>
-   <div class="card"><div class="bar"><b>Andamento nel tempo</b><label><input type="checkbox" id="kn"> relativo al massimo</label><label><input type="checkbox" id="kp"> mostra il composto di partenza</label></div><canvas id="kin" style="height:215px"></canvas></div>
-   <div class="card"><h3>Perché questo punteggio</h3>${crit}</div>
-   <div class="card"><div class="bar"><b>Ioni prodotto</b><span class="sp"></span><button id="addm" ${c.ms2.scans?"":"disabled"}>${S.mrm.has(c.id)?"Togli dalla lista MRM":"Aggiungi alla lista MRM"}</button></div>${ms}</div>`;
-  $("#xs").onchange=$("#xn").onchange=drawXic;$("#kn").onchange=$("#kp").onchange=drawKin;$("#xz").onclick=()=>{S.zoom=null;drawXic()};
-  $("#addm").onclick=()=>{S.mrm.has(c.id)?S.mrm.delete(c.id):S.mrm.add(c.id);renderDetail();mrm()};drawXic();drawKin()}
-function drawXic(){const c=S.cur,cv=$("#xic");if(!cv)return;const{g,W,H}=setup(cv);const sm=$("#xs").checked,nm=$("#xn").checked;
-  const smp=S.d.samples,timed=smp.filter(s=>s.type==="sample"&&s.time!=null).sort((a,b)=>a.time-b.time);
-  const all=c.traces.map(t=>t.rt),x0=S.zoom?S.zoom[0]:Math.min(...all.map(r=>r[0])),x1=S.zoom?S.zoom[1]:Math.max(...all.map(r=>r[r.length-1]));
-  const ys=c.traces.map(t=>smooth(t.y,sm?3:0)),vis=ys.map(y=>Math.max(1e-9,...y.filter((_,i)=>c.traces[ys.indexOf(y)].rt[i]>=x0&&c.traces[ys.indexOf(y)].rt[i]<=x1)));
-  const ymax=nm?1:Math.max(...vis),X=v=>M.l+(v-x0)/(x1-x0)*(W-M.l-M.r),Y=v=>H-M.b-v/ymax*(H-M.t-M.b);
-  g.clearRect(0,0,W,H);g.font="11px system-ui";g.lineWidth=1;
-  for(const t of nice(0,ymax,4)){const y=Y(t);g.strokeStyle=css("--line");g.beginPath();g.moveTo(M.l,y);g.lineTo(W-M.r,y);g.stroke();g.fillStyle=css("--muted");g.textAlign="right";g.fillText(nm?Math.round(t*100)+"%":fmt(t),M.l-5,y+4)}
-  g.textAlign="center";for(const t of nice(x0,x1,8))g.fillText(+t.toFixed(2),X(t),H-9);g.textAlign="left";g.fillText("RT (min)",4,H-9);
-  if(c.ref_rt!=null){const tol=S.d.settings.rt_tol_min;g.fillStyle="rgba(29,78,137,.10)";g.fillRect(X(c.ref_rt-tol),M.t,X(c.ref_rt+tol)-X(c.ref_rt-tol),H-M.t-M.b)}
-  const order=c.traces.map((_,i)=>i).sort((a,b)=>(smp[a].type==="blank")-(smp[b].type==="blank"));
-  for(const i of order){const s=smp[i],t=c.traces[i],y=ys[i],m=nm?vis[i]:1;g.strokeStyle=sampleColor(s,i,smp.length,timed);g.lineWidth=s.type==="blank"?1.4:1.7;g.setLineDash(s.type==="blank"?[4,3]:[]);g.beginPath();let st=false;
-    t.rt.forEach((r,k)=>{if(r<x0||r>x1)return;const px=X(r),py=Y(y[k]/m);st?g.lineTo(px,py):g.moveTo(px,py);st=true});g.stroke()}
-  g.setLineDash([]);S._x={x0,x1,X,W,H};
-  $("#leg").innerHTML=smp.map((s,i)=>`<span><i style="background:${sampleColor(s,i,smp.length,timed)}"></i>${esc(s.label)} <span>${c.rows[i].detected?"area "+fmt(c.rows[i].area):"non rilevato"}</span></span>`).join("")}
-function drawKin(){const c=S.cur,cv=$("#kin");if(!cv)return;const{g,W,H}=setup(cv),rel=$("#kn").checked,par=$("#kp").checked;
-  const pts=c.rows.filter(r=>r.type==="sample"&&r.time!=null).sort((a,b)=>a.time-b.time);g.clearRect(0,0,W,H);if(pts.length<2){g.fillStyle=css("--muted");g.fillText("servono almeno due campioni con il tempo",M.l,30);return}
-  const series=[{name:c.name,pts:pts.map(r=>({t:r.time,a:r.detected?r.area:0})),color:css("--accent")}];
-  if(par&&c.id!==0){const p=S.d.candidates[0].kinetics;series.push({name:"origine",pts:p.map(k=>({t:k.time,a:k.area})),color:css("--muted"),dash:true})}
-  const norm=s=>rel?Math.max(...s.pts.map(p=>p.a),1e-9):1;const ymax=rel?1:Math.max(...series.map(s=>Math.max(...s.pts.map(p=>p.a))),1e-9);
-  const mb=M.b+12,t0=pts[0].time,t1=pts[pts.length-1].time,X=v=>M.l+(v-t0)/(t1-t0||1)*(W-M.l-M.r),Y=v=>H-mb-v/ymax*(H-M.t-mb);
-  g.font="11px system-ui";for(const t of nice(0,ymax,4)){g.strokeStyle=css("--line");g.beginPath();g.moveTo(M.l,Y(t));g.lineTo(W-M.r,Y(t));g.stroke();g.fillStyle=css("--muted");g.textAlign="right";g.fillText(rel?Math.round(t*100)+"%":fmt(t),M.l-5,Y(t)+4)}
-  g.textAlign="center";for(const t of pts)g.fillText(t.time,X(t.time),H-22);g.fillText("tempo di trattamento (min)",(M.l+W-M.r)/2,H-6);
-  for(const s of series){g.strokeStyle=s.color;g.fillStyle=s.color;g.lineWidth=1.8;g.setLineDash(s.dash?[4,3]:[]);g.beginPath();s.pts.forEach((p,i)=>{const x=X(p.t),y=Y(p.a/norm(s));i?g.lineTo(x,y):g.moveTo(x,y)});g.stroke();g.setLineDash([]);
-    s.pts.forEach(p=>{g.beginPath();g.arc(X(p.t),Y(p.a/norm(s)),3.2,0,7);g.fill()})}}
-function mrm(){const n=S.mrm.size;$("#mrmn").textContent=n?`${n} candidat${n>1?"i":"o"}`:"vuota"}
-$("#mrmgo").onclick=()=>{if(S.mrm.size)location.href="/export/transitions.csv?ids="+[...S.mrm].join(",")};$("#mrmclr").onclick=()=>{S.mrm.clear();mrm();if(S.cur)renderDetail()};
-$("#show").onchange=$("#find").oninput=renderTable;$("#reload").onclick=async()=>{try{S.d=await api("/api/reload");fail();S.sel=null;$("#detail").innerHTML='<div class="card muted">Scegli un candidato nella tabella.</div>';renderTable()}catch(e){fail(e)}};
-let zd=null;document.addEventListener("mousedown",e=>{const cv=$("#xic");if(!cv||e.target!==cv)return;zd={x:e.offsetX}});
-document.addEventListener("mouseup",e=>{if(!zd||!S._x)return;const a=zd.x,b=e.offsetX;zd=null;if(Math.abs(b-a)<5)return;const t=p=>S._x.x0+(p-M.l)/(S._x.W-M.l-M.r)*(S._x.x1-S._x.x0);S.zoom=[Math.min(t(a),t(b)),Math.max(t(a),t(b))];drawXic()});
+async function init(){try{loading(true);await bootSession();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});
+  const d=await api("/api/state");fail();$("#newrun").hidden=!(d.app||S.sess);if(!S.sess)showStart(d);else applyView()}catch(e){fail(e)}finally{loading(false)}}
 
-// ------------------------------------------------------------------ start screen (app mode)
+// ------------------------------------------------------------------ views: Dati (start screen or panels), Disegno
 const ST={files:[]};
-S.view="data";S.hasA=false;S.sess=null;S.adding=false;
-function applyView(){const v=S.view,d=v==="data",g=v==="sugg";
+function applyView(){const v=S.view,d=v==="data";
   $("#start").hidden=!(d&&(!S.sess||S.adding));$("#v-data").hidden=!(d&&S.sess&&!S.adding);$("#cancadd").hidden=!(S.sess&&S.adding);
-  $("#suggform").hidden=!(g&&!S.hasA);["#banner","#mainview","#mrmcard"].forEach(q=>$(q).hidden=!(g&&S.hasA));
-  $("#v-draw").hidden=v!=="draw";$("#v-attr").hidden=v!=="attr";
-  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));document.querySelectorAll(".hs").forEach(b=>b.hidden=!(g&&S.hasA));
+  $("#v-draw").hidden=v!=="draw";$("#v-theory").hidden=v!=="theory";
+  if(v==="theory"&&!$("#tframe").getAttribute("src"))$("#tframe").src="/static/teoria/index.html"; // theory module, loaded on first open
+  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   document.dispatchEvent(new CustomEvent("tpview",{detail:{view:v}}))}
-function setView(v){S.view=v;applyView();if(v==="sugg"&&!S.hasA)checkSugg()}
+function setView(v){S.view=v;applyView()}
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.dataset.v));
+
+// ------------------------------------------------------------------ start screen: upload, check times and types, open
 const sz=b=>b>1e6?(b/1e6).toFixed(1)+" MB":Math.max(1,Math.round(b/1e3))+" kB";
 async function post(u,body,raw){const r=await fetch(u,{method:"POST",body:raw??JSON.stringify(body||{})});const j=await r.json();if(j.error)throw new Error(j.error);return j}
 function mergeFiles(list){const old=Object.fromEntries(ST.files.map(f=>[f.name,f]));
@@ -276,31 +204,24 @@ function renderFiles(){const F=ST.files,el=$("#flist");
   el.querySelectorAll("[data-k]").forEach(x=>x.onchange=()=>{const f=F[+x.dataset.i],k=x.dataset.k;f[k]=k==="use"?x.checked:k==="time"?(x.value===""?null:+x.value):x.value;if(k==="type")renderFiles();checkGo()});
   el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];const j=await post("/api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});checkGo()}
 function checkGo(){const n=ST.files.filter(f=>f.use).length;$("#opbtn").disabled=!n;$("#gomsg").textContent=n?`${n} file selezionati`:"Carica almeno un file"}
-function checkSugg(){const n=E.files.length,ok=!!$("#pform").value.trim();$("#sgo").disabled=!(n&&ok);
-  $("#sgomsg").textContent=!n?"Apri prima i dati (scheda Dati).":!ok?"Scrivi la formula della molecola neutra (o l'm/z dello ione) del composto di partenza.":`${n} file: pronto`}
 async function upload(files){const box=$("#up");fail();
   for(const f of files){const row=document.createElement("div");row.innerHTML=`${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row);
     try{await new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open("POST","/api/upload?name="+encodeURIComponent(f.name));
       x.upload.onprogress=e=>{if(e.lengthComputable)row.querySelector("i").style.width=(100*e.loaded/e.total)+"%"};
       x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(_){}j.error?ko(new Error(j.error)):(mergeFiles(j.files),ok())};x.onerror=()=>ko(new Error("upload fallito"));x.send(f)});row.remove()}
     catch(e){row.innerHTML=`<span class="fail">${esc(f.name)}: ${esc(e.message)}</span>`}}}
-function showStart(d){$("#wd").textContent=d.workdir||"";mergeFiles(d.files||[]);applyView()}
+function showStart(d){mergeFiles(d.files||[]);applyView()}
 $("#drop").onclick=()=>$("#pick").click();$("#pick").onchange=e=>{upload([...e.target.files]);e.target.value=""};
 ["dragenter","dragover"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.add("over")}));
 ["dragleave","drop"].forEach(t=>$("#drop").addEventListener(t,e=>{e.preventDefault();$("#drop").classList.remove("over")}));
 $("#drop").addEventListener("drop",e=>upload([...e.dataTransfer.files]));
 addEventListener("dragover",e=>e.preventDefault());addEventListener("drop",e=>e.preventDefault());   // a missed drop must not open the file
-$("#pform").oninput=checkSugg;
 $("#opbtn").onclick=async()=>{const b=$("#opbtn");b.disabled=true;$("#gomsg").textContent="Apro i file...";loading(true,"Leggo i file e preparo i cromatogrammi...");
   try{await post("/api/explore",{samples:ST.files.filter(f=>f.use).map(f=>({file:f.name,time:f.time,type:f.type,label:(E.files.find(x=>x.file===f.name)||{}).label}))});S.adding=false;await bootSession();applyView();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});uiSave()}
   catch(e){$("#gomsg").innerHTML=`<span class="fail">${esc(e.message)}</span>`;b.disabled=false}finally{loading(false)}};
 $("#cancadd").onclick=()=>{S.adding=false;applyView()};
-$("#sgo").onclick=async()=>{const b=$("#sgo");b.disabled=true;$("#sgomsg").textContent="Analisi in corso: pu\u00f2 richiedere qualche minuto...";loading(true,"Cerco i candidati: puo' richiedere qualche minuto...");
-  try{await post("/api/build",{name:$("#pname").value,formula:$("#pform").value,polarity:$("#ppol").value,tol_da:$("#ptol").value,
-    samples:E.files.map(f=>({file:f.file,time:f.time,type:f.type}))});S.sel=null;S.cur=null;S.mrm.clear();mrm();await init();setView("sugg")}
-  catch(e){$("#sgomsg").innerHTML=`<span class="fail">${esc(e.message)}</span>`;b.disabled=false}finally{loading(false)}};
 $("#newrun").onclick=async()=>{if(!await yesno("Iniziare una <b>nuova sessione</b>? Quella attuale resta salvata nella cartella di lavoro."))return;
-  try{await post("/api/new",{fresh:true});S.sess=null;S.adding=false;E.files=[];E.key="";E.panels.forEach(p=>p.el.remove());E.panels=[];NB.ui=null;NB.attr=[];NB.session=null;renderAttr();$("#dpanels").innerHTML="";S.hasA=false;await init()}catch(e){fail(e)}};
-addEventListener("resize",()=>{if(S.cur){drawXic();drawKin()}});init();
+  try{await post("/api/new",{fresh:true});S.sess=null;S.adding=false;E.files=[];E.key="";E.panels.forEach(p=>p.el.remove());E.panels=[];NB.ui=null;NB.session=null;$("#dpanels").innerHTML="";await init()}catch(e){fail(e)}};
+init();
 </script><script type="module" src="/static/draw.js"></script>
 </body></html>
