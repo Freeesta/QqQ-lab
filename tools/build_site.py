@@ -22,6 +22,20 @@ CDN = f"https://cdn.jsdelivr.net/pyodide/v{PYODIDE}/full/"
 CORE = ["pyodide.mjs", "pyodide.asm.mjs", "pyodide.asm.wasm", "python_stdlib.zip", "pyodide-lock.json"]
 
 
+# Web app manifest (PWA). Paths are relative to the manifest, which sits in the site root, so it works under /QqQ-lab/.
+MANIFEST = {
+    "name": "QqQ lab", "short_name": "QqQ lab", "lang": "it", "dir": "ltr",
+    "description": "Esplora i dati LC-MS/MS del triplo quadrupolo (Full Scan, Product ion, MRM) direttamente nel browser.",
+    "start_url": "./", "scope": "./", "id": "./", "display": "standalone",
+    "background_color": "#ffffff", "theme_color": "#ffffff", "categories": ["education", "science"],
+    "icons": [
+        {"src": "static/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+        {"src": "static/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+        {"src": "static/app-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+    ],
+}
+
+
 def fetch(name: str, dest: Path, src_dir: Path | None) -> None:
     if src_dir is not None:
         shutil.copy2(src_dir / name, dest / name)
@@ -43,6 +57,9 @@ def main() -> None:
     # the page: same index.html, plus the bridge that answers api/... without a server
     html = (static / "index.html").read_text(encoding="utf-8")
     html = html.replace("<head>", '<head>\n<script src="static/browser.js"></script>', 1)
+    # installable app (PWA): manifest at the site root + theme colour; the local program does not use it
+    html = html.replace("</head>", '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#ffffff"></head>', 1)
+    (out / "manifest.webmanifest").write_text(json.dumps(MANIFEST, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "index.html").write_text(html, encoding="utf-8")
     (static / "index.html").unlink()
     (out / ".nojekyll").write_text("", encoding="utf-8")
