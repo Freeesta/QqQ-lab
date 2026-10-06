@@ -56,7 +56,7 @@ try:
             si = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')"); a = pg.evaluate(f"""()=>{{const p=E.panels[{si}],r=p.cv.getBoundingClientRect(),d=p._a.data[0].d;let j=0;d.y.forEach((v,i)=>{{if(v>d.y[j])j=i}});return {{px:r.left+p._a.X(d.mz[j]),py:r.top+p._a.Y(d.y[j])+6}}}}""")
             pg.mouse.click(a["px"], a["py"], button="right"); pg.wait_for_timeout(300)
             pg.locator("#ctx div", has_text="Estrai l'XIC").first.click(); pg.wait_for_timeout(400)
-            lo, hi = float(pg.input_value("#xic-lo")), float(pg.input_value("#xic-hi")); assert abs((hi - lo) - 0.5) < 1e-6 and dlg(), (lo, hi)
+            lo, hi = float(pg.input_value("#xic-lo")), float(pg.input_value("#xic-hi")); assert abs((hi - lo) - 0.8) < 1e-6 and dlg(), (lo, hi)
             pg.click("#xic-no")
         step("right click on a peak of the spectrum opens the window already filled in", spec_menu)
         def groups():

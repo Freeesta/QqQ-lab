@@ -757,6 +757,7 @@ const fmz = v => String(+(+v).toFixed(2));          // 194.5, 363.57 (no trailin
 // TIC, right click on a chromatogram, on a spectrum, on the RT-m/z map, Calcolatrice m/z, Disegno) opens this window, possibly pre-filled:
 //   pre = { mz, half, label }   window mz-half ... mz+half (half = XIC_HALF if missing)        pre = { formula, adduct }   neutral formula + adduct
 const XIC_HALF = 0.5;    // half width (Da) of the window built around a calculated m/z: the m/z axis of this instrument is shifted by about +0.3 Da (centroids of the lab files, 6 Oct 2026), so +-0.25 would miss the peak
+const XIC_HALF_CLICK = 0.4;   // half width (Da) around a CLICKED centroid (spectrum): measured on the lab files (7 full scans, 17 strong ions), +-0.4 keeps 99% of the ion signal even with the file-to-file drift of the centroid (~0.1 Da) while the neighbouring ions (M+1 etc.) sit at +-1.0; +-0.25 kept 96% (81% in the worst 5%), +-0.5 adds noise without more signal
 function openXic(panel, pre = {}) {
   const d = Q("#xicdlg"), q = Q("#xic-q"), lo = Q("#xic-lo"), hi = Q("#xic-hi"), sum = Q("#xic-sum"), err = Q("#xic-err"), ad = Q("#xic-ad");
   ad.innerHTML = ["[M+H]+", "[M+Na]+", "[M+NH4]+", "[M-H]-", "[M+Cl]-", "[M+HCOO]-"].map(a => `<option ${a === (pre.adduct || defAdduct()) ? "selected" : ""}>${a}</option>`).join("");
@@ -1599,8 +1600,8 @@ function ctxFor(p, e, x, px, py) {
     const srcP = p.src && E.panels.find(q => q.id === p.src && q.el);
     if (p.link) items.push({ label: "Congela questo spettro (smette di seguire il cromatogramma)", fn: () => { freezeSpec(p); uiSave(); } }, "-");
     else if (srcP) items.push({ label: "Ricollega al cromatogramma (lo spettro che lo seguiva si ferma)", fn: () => liveSpec(p, srcP) }, "-");
-    items.push({ label: `Estrai l'XIC di m/z ${lab} (scegli la finestra)...`, fn: () => openXic(null, { mz: m, half: 0.25 }) });
-    tabPanels().filter(q => q.type === "xic").forEach(q => items.push({ label: `Aggiungi m/z ${lab} al pannello «${q.title}»...`, fn: () => openXic(q, { mz: m, half: 0.25 }) }));
+    items.push({ label: `Estrai l'XIC di m/z ${lab} (scegli la finestra)...`, fn: () => openXic(null, { mz: m, half: XIC_HALF_CLICK }) });
+    tabPanels().filter(q => q.type === "xic").forEach(q => items.push({ label: `Aggiungi m/z ${lab} al pannello «${q.title}»...`, fn: () => openXic(q, { mz: m, half: XIC_HALF_CLICK }) }));
     items.push("-", { label: "Annota questo picco...", fn: async () => { const v = await ask("Annotazione per m/z " + lab, ""); if (v) { p.anns.push({ x: m, text: v }); draw(p); } } });
     items.push("-", { label: p.sim ? `Cambia la formula dello spettro simulato (${p.sim.formula} ${p.sim.ad})...` : "Simula lo spettro isotopico di una formula...", fn: () => simSpec(p) });
     if (p.sim) items.push({ label: "Togli lo spettro simulato", fn: () => unsim(p) });
