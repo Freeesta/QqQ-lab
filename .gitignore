@@ -38,3 +38,7 @@ desktop.ini
 
 # Static site built by tools/build_site.py (published by .github/workflows/pages.yml)
 site/
+
+# TP Mine: private sources live outside the repo (../QqQ_lab_privato/); never in plain text here
+QqQ_lab_privato/
+tpmine_src/

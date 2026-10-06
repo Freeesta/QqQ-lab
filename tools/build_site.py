@@ -44,6 +44,17 @@ def fetch(name: str, dest: Path, src_dir: Path | None) -> None:
         shutil.copyfileobj(r, fh)
 
 
+def check_no_private(out: Path) -> None:
+    """Of TP Mine only the encrypted tpmine.enc and the public loader may be in the site; no private source in plain text."""
+    for f in out.rglob("*"):
+        if not f.is_file() or "vendor" in f.parts or "pyodide" in f.parts:
+            continue
+        if f.name.startswith("tpmine") and f.name not in ("tpmine-loader.js", "tpmine.enc"):
+            raise SystemExit(f"{f}: a TP Mine file that must not be published")
+        if f.suffix in (".js", ".py", ".html", ".json", ".txt", ".css", ".mjs", ".toml") and b"TPMINE-PRIVATE" in f.read_bytes():
+            raise SystemExit(f"{f}: contains private TP Mine source in plain text")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pyodide-dir", type=Path)
@@ -86,6 +97,7 @@ def main() -> None:
             h.update(f.relative_to(out).as_posix().encode() + f.read_bytes())
     big = PYODIDE + "-" + hashlib.sha1("".join(f"{f.name}{f.stat().st_size}" for f in sorted((static / "vendor").rglob("*")) if f.is_file()).encode()).hexdigest()[:8]
     (out / "sw.js").write_text(sw.replace("__APP__", h.hexdigest()[:10]).replace("__BIG__", big), encoding="utf-8")
+    check_no_private(out)
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
     print(f"site/ ready: {size / 1e6:.1f} MB")
 
