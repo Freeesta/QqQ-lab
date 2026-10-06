@@ -148,18 +148,19 @@ function arrowDeltas() {
   });
   return out;
 }
-// text of a label as pieces: [text, "sub" | "sup" | ""]
+// text of a label as LINES of pieces: [[text, "sub" | "sup" | "it" | ""], ...] (formula on the first line, "m/z 241" in italics on the next)
 function labelParts(d) {
-  const parts = [], f = Q("#lb-f").checked, m = Q("#lb-m").checked, dec = +Q("#lb-dec").value;
+  const parts = [], f = Q("#lb-f").checked, m = Q("#lb-m").checked, dec = +Q("#lb-dec").value, lines = [parts];
   if (f) {
     for (const x of d.formula.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([x[1], ""]); if (x[2]) parts.push([x[2], "sub"]); }
     if (d.q) parts.push([(Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "−"), "sup"]);
   }
   if (m) {
     const raw = d.q ? (d.mass - d.q * ELECTRON) / Math.abs(d.q) : d.mass;
-    parts.push([`${f ? "  " : ""}${d.q ? "m/z" : "M ="} ${dec ? raw.toFixed(dec) : roundHalfUp(raw)}`, ""]);
+    const line = f ? (lines.push([]), lines[1]) : parts;
+    line.push([d.q ? "m/z" : "M", "it"], [` ${d.q ? "" : "= "}${dec ? raw.toFixed(dec) : roundHalfUp(raw)}`, ""]);
   }
-  return parts;
+  return lines;
 }
 const labelsOn = () => Q("#lb-f").checked || Q("#lb-m").checked;
 function drawLabels() {
@@ -170,34 +171,28 @@ function drawLabels() {
   svg.appendChild(g);                                     // always last: drawn above the structure
   g.textContent = "";
   if (!labelsOn()) return;
-  const text = (x, y, parts, color, size) => {
-    const t = doc.createElementNS(ns, "text");
-    t.setAttribute("x", x); t.setAttribute("y", y); t.setAttribute("text-anchor", "middle");
-    t.setAttribute("font-family", "Arial, Helvetica, sans-serif"); t.setAttribute("font-size", size); t.setAttribute("fill", color);
-    for (const [txt, k] of parts) {
-      const sp = doc.createElementNS(ns, "tspan"); sp.textContent = txt;
-      if (k) { sp.setAttribute("font-size", Math.round(size * 0.77)); sp.setAttribute("baseline-shift", k === "sub" ? "sub" : "super"); }
-      t.appendChild(sp);
-    }
-    g.appendChild(t);
-  };
+  const text = (x, y, lines, color, size) => lines.forEach((parts, i) => g.appendChild(svgLabel(doc, parts, x, y + i * size * 1.3, size, color)));
   for (const d of structures()) text(d.cx * sc, d.y * sc + 30, labelParts(d), "#3b3b3b", 13);
-  for (const a of arrowDeltas()) text(a.x * sc, a.y * sc - 12, a.parts, "#2b5c8a", 12);
+  for (const a of arrowDeltas()) text(a.x * sc, a.y * sc - 12, [a.parts], "#2b5c8a", 12);
 }
 // the same labels as Ketcher text objects, only in the copy of the drawing that is exported
 const SUBC = "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089", SUPC = "\u2070\u00b9\u00b2\u00b3\u2074\u2075\u2076\u2077\u2078\u2079";
-// pieces -> plain text with Unicode subscripts/superscripts (Ketcher's image renderer spaces them better than styled text)
+// pieces -> plain text with Unicode subscripts/superscripts (only for the fallback: Ketcher text objects)
 const plain = parts => parts.map(([t, k]) => k === "sub" ? String(t).replace(/\d/g, c => SUBC[+c])
   : k === "sup" ? String(t).replace(/\+/g, "\u207a").replace(/\u2212/g, "\u207b").replace(/\d/g, c => SUPC[+c]) : t).join("");
 function ketWithLabels(ket) {
   if (!labelsOn()) return ket;
   const j = JSON.parse(ket);
-  const add = (text, x, y, px) => {
-    const content = JSON.stringify({ blocks: [{ key: "qqq" + j.root.nodes.length, text, type: "unstyled", depth: 0, inlineStyleRanges: [{ offset: 0, length: text.length, style: `CUSTOM_FONT_SIZE_${px}px` }], entityRanges: [], data: {} }], entityMap: {} });
-    j.root.nodes.push({ type: "text", data: { content, position: { x, y, z: 0 } } });
+  const add = (lines, x, y, px) => {                       // one Ketcher text object, one block per line, italic pieces marked
+    const blocks = lines.map((parts, n) => {
+      const text = plain(parts), ranges = [{ offset: 0, length: text.length, style: `CUSTOM_FONT_SIZE_${px}px` }]; let off = 0;
+      for (const [t, k] of parts) { const len = plain([[t, k]]).length; if (k === "it") ranges.push({ offset: off, length: len, style: "ITALIC" }); off += len; }
+      return { key: "qqq" + j.root.nodes.length + "_" + n, text, type: "unstyled", depth: 0, inlineStyleRanges: ranges, entityRanges: [], data: {} };
+    });
+    j.root.nodes.push({ type: "text", data: { content: JSON.stringify({ blocks, entityMap: {} }), position: { x, y, z: 0 } } });
   };
-  for (const d of structures()) { const t = plain(labelParts(d)); add(t, d.cx - t.length * 0.105, -(d.y + 0.6), 16); }
-  for (const a of arrowDeltas()) { const t = plain(a.parts); add(t, a.x - t.length * 0.09, -(a.y - 0.75), 14); }
+  for (const d of structures()) { const L = labelParts(d), n = Math.max(...L.map(p => plain(p).length)); add(L, d.cx - n * 0.105, -(d.y + 0.6), 16); }
+  for (const a of arrowDeltas()) { const t = plain(a.parts); add([a.parts], a.x - t.length * 0.09, -(a.y - 0.75), 14); }
   return JSON.stringify(j);
 }
 ["#lb-f", "#lb-m", "#lb-dec"].forEach(id => Q(id).addEventListener("change", () => { drawLabels(); NB.labF = Q("#lb-f").checked; NB.labM = Q("#lb-m").checked; NB.labDec = +Q("#lb-dec").value; nbSave(); }));
@@ -340,7 +335,7 @@ const svgNS = "http://www.w3.org/2000/svg";
 let _meas = null;
 const textWidth = (parts, size) => {
   _meas = _meas || document.createElement("canvas").getContext("2d");
-  return parts.reduce((w, [s, k]) => { _meas.font = `${k ? size * 0.72 : size}px Arial, Helvetica, sans-serif`; return w + _meas.measureText(String(s)).width; }, 0);
+  return parts.reduce((w, [s, k]) => { _meas.font = `${k === "it" ? "italic " : ""}${k && k !== "it" ? size * 0.72 : size}px Arial, Helvetica, sans-serif`; return w + _meas.measureText(String(s)).width; }, 0);
 };
 function svgLabel(doc, parts, x, y, size, color) {
   const t = doc.createElementNS(svgNS, "text");
@@ -351,7 +346,7 @@ function svgLabel(doc, parts, x, y, size, color) {
     const want = k === "sub" ? 0.28 : k === "sup" ? -0.45 : 0, sp = doc.createElementNS(svgNS, "tspan");
     sp.textContent = String(txt);
     if (want !== shift) { sp.setAttribute("dy", ((want - shift) * size).toFixed(2)); shift = want; }
-    if (k) sp.setAttribute("font-size", (size * 0.72).toFixed(2));
+    if (k === "it") sp.setAttribute("font-style", "italic"); else if (k) sp.setAttribute("font-size", (size * 0.72).toFixed(2));
     t.appendChild(sp);
   }
   return t;
@@ -363,13 +358,14 @@ function addExportLabels(svgText, ket) {
   if (vb.length !== 4 || vb.some(isNaN)) return null;
   const g = doc.createElementNS(svgNS, "g"); g.setAttribute("id", "qqq-labels");
   let [x0, y0, x1, y1] = [vb[0], vb[1], vb[0] + vb[2], vb[1] + vb[3]];
-  const put = (parts, x, y, size, color) => {
-    g.appendChild(svgLabel(doc, parts, x, y, size, color));
+  const put = (lines, x, y, size, color) => lines.forEach((parts, i) => {
+    const yy = y + i * size * 1.3;
+    g.appendChild(svgLabel(doc, parts, x, yy, size, color));
     const w = textWidth(parts, size);
-    x0 = Math.min(x0, x - w / 2 - 8); x1 = Math.max(x1, x + w / 2 + 8); y0 = Math.min(y0, y - size - 4); y1 = Math.max(y1, y + size * 0.6 + 4);
-  };
+    x0 = Math.min(x0, x - w / 2 - 8); x1 = Math.max(x1, x + w / 2 + 8); y0 = Math.min(y0, yy - size - 4); y1 = Math.max(y1, yy + size * 0.6 + 4);
+  });
   for (const d of structures()) put(labelParts(d), off.ox + d.cx * EXPORT_SCALE, off.oy + (d.y + 0.6) * EXPORT_SCALE + 14, 16, "#3b3b3b");
-  for (const a of arrowDeltas()) put(a.parts, off.ox + a.x * EXPORT_SCALE, off.oy + (a.y - 0.75) * EXPORT_SCALE + 12, 14, "#2b5c8a");
+  for (const a of arrowDeltas()) put([a.parts], off.ox + a.x * EXPORT_SCALE, off.oy + (a.y - 0.75) * EXPORT_SCALE + 12, 14, "#2b5c8a");
   // grow the picture to hold the labels (background rectangle included)
   const bg = [...doc.querySelectorAll("rect")].find(r => !r.closest("defs"));
   root.setAttribute("viewBox", `${x0} ${y0} ${x1 - x0} ${y1 - y0}`);
