@@ -4,7 +4,7 @@ import os, secrets, shutil, subprocess, sys, time, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
-SRC = Path(os.environ.get("TPMINE_SRC", ROOT.parent / "QqQ_lab_privato" / "tpmine"))
+SRC = Path(os.environ.get("TPMINE_SRC", ROOT / "QqQ_lab_privato" / "tpmine"))
 MZ = Path(os.environ.get("QQQ_MZML", ROOT.parent / "Data" / "mzML"))
 PORT = 8842
 steps = []

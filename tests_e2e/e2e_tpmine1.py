@@ -5,7 +5,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "tools"))
-SRC = Path(os.environ.get("TPMINE_SRC", ROOT.parent / "QqQ_lab_privato" / "tpmine"))
+SRC = Path(os.environ.get("TPMINE_SRC", ROOT / "QqQ_lab_privato" / "tpmine"))
 PORT = 8841
 steps = []
 def step(name, fn):
