@@ -241,7 +241,6 @@ const svgAdduct = a => {
   let s = EH(a).replace(/([A-Z][a-z]?|\))(\d+)/g, (m, g1, g2) => `${g1}<tspan dy="0.28em" font-size="70%">${g2}</tspan><tspan dy="-0.28em">\u200b</tspan>`);
   return s.replace(/([+-]+)$/, '<tspan dy="-0.32em" font-size="70%">$1</tspan><tspan dy="0.32em">\u200b</tspan>');
 };
-const capPol = () => (Q("#cap-ad").value.endsWith("-") ? "-" : "+");
 async function capData() {
   const i = +(Q("#cap-part").value || 0), d = PARTS[i] && describe(PARTS[i]);
   if (!d) return null;

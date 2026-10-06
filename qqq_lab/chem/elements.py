@@ -82,37 +82,14 @@ def formula_mz(formula: str, adduct: str | None = None) -> dict:
     return out
 
 
-def parse_delta(s: str) -> dict[str, int]:
-    """A formula change: '+O', '-H2', '-Cl+H', '+C2H4O'. Returns signed counts (zeros removed)."""
-    s = s.replace(" ", "")
-    if not s or s[0] not in "+-":
-        s = "+" + s
-    out: dict[str, int] = {}
-    for sign, body in re.findall(r"([+-])([A-Za-z0-9]+)", s):
-        for el, n in parse_formula(body).items():
-            out[el] = out.get(el, 0) + (n if sign == "+" else -n)
-    return {k: v for k, v in out.items() if v}
-
-
 def mass(f: dict[str, int]) -> float:
     return sum(MASS[e] * n for e, n in f.items())
-
-
-def add(a: dict[str, int], b: dict[str, int]) -> dict[str, int]:
-    out = dict(a)
-    for e, n in b.items():
-        out[e] = out.get(e, 0) + n
-    return {k: v for k, v in out.items() if v}
 
 
 def fmt(f: dict[str, int]) -> str:
     """Hill order: C, H, then alphabetical."""
     order = [e for e in ("C", "H") if e in f] + sorted(e for e in f if e not in ("C", "H"))
     return "".join(e + (str(f[e]) if f[e] != 1 else "") for e in order if f[e])
-
-
-def fmt_delta(f: dict[str, int]) -> str:
-    return "".join(("+" if n > 0 else "-") + e + (str(abs(n)) if abs(n) != 1 else "") for e, n in sorted(f.items()))
 
 
 def ion_mz(neutral: float, adduct: str) -> float:

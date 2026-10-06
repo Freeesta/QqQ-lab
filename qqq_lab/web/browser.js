@@ -4,7 +4,13 @@
 // This script is added to index.html only by tools/build_site.py; the local program does not load it.
 (() => {
   window.QQQ_BROWSER = true;
-  const worker = new Worker(new URL("browser-worker.js", document.currentScript.src), { type: "module" });
+  const SRC = document.currentScript.src;
+  // an old browser cannot run the engine: say it clearly instead of staying blank
+  const modern = !!(window.Worker && window.WebAssembly && window.indexedDB && window.Promise && window.Response);
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (_) { /* optional: keeps the files from being evicted */ }
+  try { if ("serviceWorker" in navigator) navigator.serviceWorker.register(new URL("../sw.js", SRC)).catch(() => {}); } catch (_) { /* offline copy is optional */ }
+  let worker;
+  try { if (modern) worker = new Worker(new URL("browser-worker.js", SRC), { type: "module" }); } catch (_) { worker = null; }
   const pending = new Map();
   let seq = 0, isReady = false, failed = null;
 
@@ -19,6 +25,7 @@
   const step = t => { const e = document.getElementById("qq-load"); if (e) e.textContent = t; };
 
   const ready = new Promise((res, rej) => {
+    if (!worker) { const t = "questo browser è troppo vecchio: usa una versione recente di Chrome, Edge, Firefox o Safari."; failed = t; document.addEventListener("DOMContentLoaded", () => { attach(); step(t); }); return rej(new Error(t)); }
     worker.onmessage = ev => {
       const m = ev.data;
       if (m.type === "step") return step(m.text);

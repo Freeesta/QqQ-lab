@@ -111,3 +111,6 @@ Stato lato front end: variabile globale `E` (file, pannelli), `S` (stato pagina)
 - Impostazioni GitHub (una volta, le fa Federico): repository **pubblico**; Settings > Pages > Build and deployment > Source = **GitHub Actions**. Indirizzo: https://freeesta.github.io/QqQ-lab/
 - Test: `tests_e2e/e2e13.py` (serve `site/` e prova upload, TIC, XIC, ricaricamento) dopo `tools/build_site.py`; `test_browser_entry_answers_like_the_server` in pytest.
 - Aggiornare Pyodide: cambia `PYODIDE` in `tools/build_site.py`, ricostruisci, rilancia e2e13 e pytest.
+- Offline: `web/sw.js` (messo nella radice del sito dalla build) tiene in cache l'app (rete prima) e i file pesanti Pyodide/Ketcher (cache prima). La build scrive nel nome della cache l'hash dei file, cosi' un nuovo deploy sostituisce la vecchia versione.
+- Browser: provato solo con Chromium (gli altri non sono installati nel container); la sintassi JS e' ES2020 (verificata con esbuild), Pyodide richiede un browser recente. Interfaccia pensata per mouse: nessun gestore touch.
+- Ridimensionamento: `tests_e2e/e2e14.py` prova 360, 768, 1024, 1500, 2560 px, ridimensionamento dal vivo, lista file chiusa e schermo 2x.

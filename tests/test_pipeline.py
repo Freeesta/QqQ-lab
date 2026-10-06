@@ -10,8 +10,7 @@ def test_formula_and_mass():
     f = E.parse_formula("C15H12N2O")
     assert f == {"C": 15, "H": 12, "N": 2, "O": 1}
     assert E.ion_mz(E.mass(f), "[M+H]+") == pytest.approx(237.1022, abs=2e-4)
-    assert E.parse_delta("-Cl+H") == {"Cl": -1, "H": 1}
-    assert E.fmt(E.add(f, E.parse_delta("+O"))) == "C15H12N2O2"
+    assert E.fmt({"C": 15, "H": 12, "N": 2, "O": 2}) == "C15H12N2O2"
 
 
 def test_guess_sample():
@@ -373,3 +372,6 @@ def test_browser_entry_answers_like_the_server(tmp_path, demo, monkeypatch):
     code, text = browser.handle("GET", "api/formula?f=C15H12N2O&adduct=%5BM%2BH%5D%2B")
     assert code == 200 and abs(json.loads(text)["mz"] - 237.1022) < 1e-3
     assert browser.handle("GET", "api/nope")[0] == 404
+    assert browser.handle("POST", "api/upload?name=x.wiff", Body(b"x"))[0] == 400
+    code, text = browser.handle("POST", "api/remove", Body(json.dumps({"name": src.name}).encode()))
+    assert code == 200 and not (tmp_path / "work" / "_cestino").exists()

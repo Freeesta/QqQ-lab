@@ -74,7 +74,7 @@ function uiSave(now = false) {
     NB.ui = {
       cur: E.cur, browse: E.browse, fold: E.fold, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis })),
       panels: E.panels.map(p => ({
-        type: p.type, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, kind: p.kind, norm: p.norm, smooth: p.smooth, tol: p.tol,
+        type: p.type, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, kind: p.kind, smooth: p.smooth, tol: p.tol,
         traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label })),
         k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
         link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1,
@@ -352,10 +352,10 @@ const apply = p => { p.el.style.left = p.x + "px"; p.el.style.top = p.y + "px"; 
 function addPanel(type, o, after) {
   const p = { id: E.seq++, type, anns: [], ints: [], ...o };
   const lv0 = (E.files[o?.k ?? 0] || {}).lv || 1;
-  if (type === "chrom") Object.assign(p, { prec: o.prec ?? null, kind: o.kind || "tic", sel: null, cur: null, norm: false, smooth: o.smooth ?? true, zoom: o.zoom || null, title: o.title || "Cromatogramma" });
+  if (type === "chrom") Object.assign(p, { prec: o.prec ?? null, kind: o.kind || "tic", sel: null, cur: null, smooth: o.smooth ?? true, zoom: o.zoom || null, title: o.title || "Cromatogramma" });
   if (type === "spec") Object.assign(p, { k: o.k ?? 0, all: !!o.all, r0: o.r0 ?? null, r1: o.r1 ?? null, level: o.level ?? lv0, prec: o.prec ?? null, zoom: o.zoom || null, title: o.title || "Spettro di massa" });
-  if (type === "xic") Object.assign(p, { traces: o.traces || [], tol: o.tol ?? xw(), norm: false, smooth: o.smooth ?? true, sel: null, cur: null, zoom: o.zoom || null, title: o.title || "Ione estratto (XIC)" });
-  if (type === "mrm") Object.assign(p, { tr: o.tr ?? "", norm: false, smooth: false, sel: null, cur: null, zoom: o.zoom || null, title: o.title || "Transizioni MRM", _trs: [] });
+  if (type === "xic") Object.assign(p, { traces: o.traces || [], tol: o.tol ?? xw(), smooth: o.smooth ?? true, sel: null, cur: null, zoom: o.zoom || null, title: o.title || "Ione estratto (XIC)" });
+  if (type === "mrm") Object.assign(p, { tr: o.tr ?? "", smooth: false, sel: null, cur: null, zoom: o.zoom || null, title: o.title || "Transizioni MRM", _trs: [] });
   if (type === "map") Object.assign(p, { k: o.k ?? 0, scale: o.scale || "sqrt", ref: o.ref ?? "", zoom: o.zoom || null, zoomY: o.zoomY || null, sel: null, cur: null, title: o.title || "Mappa RT-m/z" });
   if (type !== "spec" && type !== "map") Object.assign(p, { mode: o.mode || "ovl", log: !!o.log, hid: o.hid || {} });
   if (type !== "spec" && type !== "map") Object.assign(p, { bk: o.bk ?? "", snip: !!o.snip, snipw: o.snipw ?? 1 });
@@ -608,7 +608,7 @@ function openXic(panel) {
 }
 function splitPanel(p) {
   const rest = p.traces.slice(1); p.traces = p.traces.slice(0, 1); ctl(p); draw(p);
-  rest.forEach(t => addPanel("xic", { traces: [t], tol: p.tol, norm: p.norm, smooth: p.smooth, mode: p.mode, log: p.log }));
+  rest.forEach(t => addPanel("xic", { traces: [t], tol: p.tol, smooth: p.smooth, mode: p.mode, log: p.log }));
 }
 function mergeXics() {
   const xs = E.panels.filter(p => p.type === "xic");
@@ -744,16 +744,16 @@ async function drawLines(p) {
   const x0 = p.zoom ? p.zoom[0] : lo, x1 = p.zoom ? p.zoom[1] : hi;
   sr.forEach(s => { s.ys = smooth(s.y, p.smooth ? 3 : 0); let m = 1e-9; for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.ys[i] > m) m = s.ys[i]; s.mx = m; });
   const stk = p.mode === "stk", logy = !!p.log && !stk && p.kind !== "pda", G = Math.max(...sr.map(s => s.mx));
-  // unità del grafico: sovrapposti = intensità (o 0-1 se normalizzato); impilati = riga i + frazione dell'altezza (scala comune, o ognuna normalizzata)
-  sr.forEach((s, i) => { s.off = stk ? i : 0; s.sc = stk ? (p.norm ? s.mx : G) / 0.92 : (p.norm ? s.mx : 1); });
+  // unità del grafico: sovrapposti = intensità; impilati = riga i + frazione dell'altezza (scala comune)
+  sr.forEach((s, i) => { s.off = stk ? i : 0; s.sc = stk ? G / 0.92 : 1; });
   const U = (s, v) => s.off + v / s.sc;
-  const ymax = stk ? sr.length : p.norm ? 1 : G * (p.ints.length ? 1.2 : 1.08);   // room above the peaks for the area labels
+  const ymax = stk ? sr.length : G * (p.ints.length ? 1.2 : 1.08);   // room above the peaks for the area labels
   let ymin = 0;                                          // PDA and baseline-corrected traces can be negative: extend the axis instead of drawing outside it
-  if (!stk && !p.norm && !logy) for (const s of sr) for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.ys[i] < ymin) ymin = s.ys[i];
+  if (!stk && !logy) for (const s of sr) for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.ys[i] < ymin) ymin = s.ys[i];
   if (ymin < 0) ymin *= 1.08;
-  const lo10 = p.norm ? 1e-3 : Math.pow(10, Math.max(0, Math.floor(Math.log10(ymax)) - 4));
-  const yt = stk ? (p.norm ? "Intensità (ogni riga sul suo massimo)" : "Intensità (righe separate)") : p.norm ? "Intensità relativa (%)" : logy ? YT_I + ", scala log" : p.kind === "pda" && p.type === "chrom" ? "Segnale PDA (unità del file)" : YT_I;
-  const { X, Y } = axes(g, W, H, x0, x1, ymax, v => p.norm ? (v >= 0.1 ? Math.round(v * 100) : +(v * 100).toPrecision(1)) + "%" : fmt(v), { log: logy, lo: lo10, stack: stk, xt: XT_RT, yt, ymin });
+  const lo10 = Math.pow(10, Math.max(0, Math.floor(Math.log10(ymax)) - 4));
+  const yt = stk ? "Intensità (righe separate)" : logy ? YT_I + ", scala log" : p.kind === "pda" && p.type === "chrom" ? "Segnale PDA (unità del file)" : YT_I;
+  const { X, Y } = axes(g, W, H, x0, x1, ymax, fmt, { log: logy, lo: lo10, stack: stk, xt: XT_RT, yt, ymin });
   const ph = H - M.t - M.b;
   p._a = { x0, x1, X, Y, W, H, sr, ymax, U, stk, logy, full: [lo, hi], yinv: py => ymin + (H - M.b - py) / ph * (ymax - ymin) };
   if (p.sel && !p._exp) { g.fillStyle = "rgba(43,92,138,.10)"; g.fillRect(X(p.sel[0]), M.t, X(p.sel[1]) - X(p.sel[0]), H - M.t - M.b); }

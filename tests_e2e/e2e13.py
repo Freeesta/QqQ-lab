@@ -64,6 +64,16 @@ try:
             pg.click("#newrun"); pg.click("#askyes") if pg.locator("#askyes").count() else None
             pg.wait_for_timeout(2000)
         step("new session", clear_all)
+        def offline():
+            c2 = b.new_context(); q = c2.new_page(); q.goto(f"http://127.0.0.1:{PORT}/{BASE + '/' if BASE else ''}"); q.wait_for_selector("#drop", timeout=120000)
+            q.evaluate("navigator.serviceWorker.ready.then(()=>1)")
+            q.reload(); q.wait_for_selector("#drop", timeout=120000); q.wait_for_timeout(2000)      # now served through the service worker: fills the cache
+            n = q.evaluate("caches.keys().then(async ks=>{let n=0;for(const k of ks){n+=(await (await caches.open(k)).keys()).length}return n})"); assert n > 10, n
+            c2.set_offline(True)
+            q.reload(); q.wait_for_selector("#drop", timeout=120000)
+            q.set_input_files("#pick", [mz("B_FullMass-t0")]); q.wait_for_function("document.querySelectorAll('#flist tr').length >= 2", timeout=60000)
+            c2.close()
+        step("works offline after the first visit (service worker)", offline)
         b.close()
 finally:
     srv.terminate()

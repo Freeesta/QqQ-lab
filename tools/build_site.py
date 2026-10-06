@@ -9,6 +9,7 @@ site/index.html + site/static/ (the web folder as is) + site/static/qqq_lab.zip 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shutil
 import urllib.request
@@ -59,6 +60,15 @@ def main() -> None:
         fetch(n, py, a.pyodide_dir)
     lock = json.loads((py / "pyodide-lock.json").read_text(encoding="utf-8"))
     fetch(lock["packages"]["numpy"]["file_name"], py, a.pyodide_dir)
+    # service worker at the site root (scope = the whole site): offline use after the first visit
+    sw = (static / "sw.js").read_text(encoding="utf-8")
+    (static / "sw.js").unlink()
+    h = hashlib.sha1()
+    for f in sorted(out.rglob("*")):
+        if f.is_file() and "pyodide" not in f.parts and "vendor" not in f.parts:
+            h.update(f.relative_to(out).as_posix().encode() + f.read_bytes())
+    big = PYODIDE + "-" + hashlib.sha1("".join(f"{f.name}{f.stat().st_size}" for f in sorted((static / "vendor").rglob("*")) if f.is_file()).encode()).hexdigest()[:8]
+    (out / "sw.js").write_text(sw.replace("__APP__", h.hexdigest()[:10]).replace("__BIG__", big), encoding="utf-8")
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
     print(f"site/ ready: {size / 1e6:.1f} MB")
 

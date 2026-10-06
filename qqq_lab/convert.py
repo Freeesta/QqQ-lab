@@ -16,7 +16,7 @@ class ConversionError(RuntimeError):
 
 
 def find_msconvert() -> str | None:
-    env = os.environ.get("TPFINDER_MSCONVERT")
+    env = os.environ.get("QQQ_LAB_MSCONVERT") or os.environ.get("TPFINDER_MSCONVERT")
     if env and Path(env).exists():
         return env
     exe = shutil.which("msconvert")
@@ -43,7 +43,7 @@ def to_mzml(path: Path, extra_args: list[str] | None = None) -> Path:
     if not exe:
         raise ConversionError(
             f"{path.name} needs msconvert (ProteoWizard) to be converted, and it was not found. Install "
-            "ProteoWizard once (set TPFINDER_MSCONVERT to msconvert.exe if it is somewhere else), or give "
+            "ProteoWizard once (set QQQ_LAB_MSCONVERT to msconvert.exe if it is somewhere else), or give "
             "the .mzML file.")
     out_dir.mkdir(exist_ok=True)
     cmd = [exe, str(path), "--mzML", "--zlib", "--64", "-o", str(out_dir), *(extra_args or [])]

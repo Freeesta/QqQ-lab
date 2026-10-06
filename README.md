@@ -10,11 +10,11 @@ transformation products. It shows the data; the student does the reasoning.)*
 
 ## Versione online (nessuna installazione)
 
-Apri https://freeesta.github.io/QqQ-lab/ in Chrome, Edge, Firefox o Safari recenti: Python e numpy girano
+Apri https://freeesta.github.io/QqQ-lab/ in un browser recente (Chrome o Edge 90+, Firefox 114+, Safari 16+; pensato per computer con mouse, non per il telefono): Python e numpy girano
 **dentro il tuo browser** (Pyodide, WebAssembly). La prima volta si scaricano circa 15 MB (mezzo minuto), poi la
 pagina parte subito. I file mzML non vengono caricati su nessun server: restano nella memoria della pagina e nello
 spazio del browser, così alla riapertura la sessione riprende da dove l'avevi lasciata (sullo stesso computer e
-browser). Non c'è la conversione dei `.wiff` (serve msconvert): converti prima in mzML.
+browser). Dopo la prima visita funziona anche senza internet (copia nel browser). Non c'è la conversione dei `.wiff` (serve msconvert): converti prima in mzML.
 Come si pubblica: vedi `AGENTS.md`, sezione "Versione nel browser".
 
 ## Avvio (offline)
