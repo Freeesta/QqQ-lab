@@ -190,8 +190,11 @@ function renderFileList() {
     <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}" title="Clic per scegliere il file corrente, doppio clic per rinominare">${EH(f.label)}</b>
     <small>${f.type === "sample" ? (f.time != null ? f.time + " min" : "") : (f.type === "blank" ? "bianco" : "standard" + (f.conc != null ? " " + f.conc + " " + (f.cunit || "") : ""))}</small>
 </div></div>`;
-  const pre = E.tab === "ms2" && window.ms2Exps && ms2Exps().length ? `<div class="fgh"><span>Precursori</span><em>${ms2Exps().length}</em></div>` + ms2Exps().map(x => `<div class="fl pr"><div class="fi"><b title="Ogni precursore è un esperimento MS²: ha il suo cromatogramma e il suo spettro degli ioni prodotto">${x.prec != null ? "<span style=\"font-style:italic\">m/z</span> " + EH(x.prec) : "?"}</b><small>${x.ce.size ? "CE " + [...x.ce].join(", ") + " V · " : ""}${x.n} scan</small></div></div>`).join("") : "";
+  const pre = E.tab === "ms2" && window.ms2Exps && ms2Exps().length ? `<div class="fgh"><input type="checkbox" id="pall" ${ms2Exps().every(x => ms2PairOf(x.prec)) ? "checked" : ""} title="Mostra o chiudi i grafici di tutti i precursori"><span>Precursori</span><em>${ms2Exps().length}</em></div>` + ms2Exps().map(x => `<div class="fl pr"><input type="checkbox" data-pr="${x.prec}" ${ms2PairOf(x.prec) ? "checked" : ""} title="Mostra o chiudi i due grafici di questo precursore (cromatogramma e spettro degli ioni prodotto)"><div class="fi"><b class="pn" data-pg="${x.prec}" title="Clic: vai ai grafici di questo precursore (li crea se non ci sono). Presente in ${x.files.size} file">${x.prec != null ? "<span style=\"font-style:italic\">m/z</span> " + EH(x.prec) : "?"}</b><small>${x.ce.size ? "CE " + [...x.ce].join(", ") + " V · " : ""}${x.n} scan</small></div></div>`).join("") : "";
   Q("#flst").innerHTML = pre + groups.map(G => `<div class="fgh"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="Mostra o nascondi tutto il gruppo"><span>${EH(G.g)}</span><em>${G.fs.length}</em></div>` + G.fs.map(row).join("")).join("");
+  Q("#flst").querySelectorAll("input[data-pr]").forEach(x => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));
+  Q("#flst").querySelectorAll("[data-pg]").forEach(x => x.onclick = () => ms2Goto(x.dataset.pg));
+  const pa = Q("#pall"); if (pa) pa.onchange = () => { ms2Exps().forEach(x => { if (!!ms2PairOf(x.prec) !== pa.checked) ms2Toggle(x.prec, pa.checked); }); };
   Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => { tabFiles().filter(f => grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked); renderFileList(); redrawAll(); uiSave(); });
   Q("#flst").querySelectorAll("input[data-k]").forEach(x => x.onchange = () => { E.files[+x.dataset.k].vis = x.checked; redrawAll(); uiSave(); });
   Q("#flst").querySelectorAll(".nm").forEach(x => {
@@ -445,7 +448,7 @@ function addPanel(type, o, after) {
     el.querySelector('[data-a="intf"]').onchange = e => { p.intf = e.target.value; };
   }
   if (bX) bX.onclick = () => openXic(null);
-  el.querySelector(".x").onclick = () => { p._ro.disconnect(); if (p._up) removeEventListener("mouseup", p._up); el.remove(); E.panels = E.panels.filter(x => x !== p); relayout(); fitHost(); uiSave(); };
+  el.querySelector(".x").onclick = () => { p._ro.disconnect(); if (p._up) removeEventListener("mouseup", p._up); el.remove(); E.panels = E.panels.filter(x => x !== p); relayout(); fitHost(); uiSave(); if (E.tab === "ms2") renderFileList(); };
   el.querySelector(".ttl").ondblclick = async () => { const v = await ask("Nome del pannello", p.title); if (v) { p.title = v; ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
   return p;
