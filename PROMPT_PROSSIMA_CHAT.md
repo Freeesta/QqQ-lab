@@ -9,60 +9,45 @@ Sono Federico, dottorando in Chimica e Tecnologie Chimiche (UniTO). Continuiamo 
 
 Se la cartella `QqQ_lab` non è collegata, chiedila con device_request_folder_access.
 
-## Stato (2026-10-06, mattina)
-Verificato: 20 pytest, e2e3/4/5/6/7 senza errori JS (le `api/notebook` ERR_ABORTED rimaste sono salvataggi keepalive interrotti dalla chiusura/ricarica della pagina: il ripristino della sessione funziona; il taccuino ora si salva solo se cambia). Ultimo commit git: solo il primo (`c7b2904`); tutto il resto è da committare.
-- **Dati**: TIC di tutti i file in alto, spettro sotto al picco più intenso, pannelli a tutta larghezza, elenco file richiudibile; XIC (anche da formula), MRM, mappa RT-m/z, vista impilata, log, zoom, cursore, bianco e baseline SNIP, sottrazione di fondo, integrazione con tabella e cinetica, Metodo, Calcolatrice m/z, assi con titoli, niente griglia, PNG bianchi, esportazioni e relazione HTML; caricamento di altri file a sessione aperta (pannelli mantenuti, provato).
-- **Profilo isotopico**: calcolato dal programma (nessuna libreria): scheda Isotopi nella finestra Addotti e sovrapposizione sullo spettro (clic destro), allineata al picco osservato.
-- **Disegno** (Ketcher offline): formula + massa intera sotto ogni struttura (m/z se carica), differenza sulle frecce (+O Δm +16), riquadro "Selezione (frammento)" con le ipotesi di ione, gomma per rompere legami, guida "Come fare in Ketcher", didascalia (spenta di default), esportazione PNG/JPEG/SVG su sfondo bianco (crema facoltativo).
-- **Tabelle**: Tavola periodica (isotopi, abbondanze; dimensione fissa), Addotti, Isotopi, Perdite neutre (massa intera). Pulsanti PubChem e BioTransformer (link esterni).
-- **Teoria**: scheda con 11 capitoli e simulazioni (quadrupolo, ESI, QqQ, frammentazione CID, cinetica...), apribile anche da disco (`Teoria QqQ lab.html`). Esempio svolto: atrazina.
-- **Avvio**: `Avvia QqQ lab.command`/`.bat` -> `scripts/avvia.py` (ambiente con il Python più recente, Terminale con spunte, icona del .command impostata al primo avvio: da verificare su Mac). Se il doppio clic dice "privilegi di accesso": `chmod +x "Avvia QqQ lab.command"`.
-- **Interfaccia**: sfondo chiaro neutro (non più crema). Tolte per scelta le schede Attribuzioni e Suggerimenti (non reintrodurle).
+## Stato (2026-10-06, tarda mattina)
+- **Git**: ramo `main`, 6 commit, HEAD `c713624`, albero di lavoro pulito, 1 commit avanti a `origin`: Federico deve premere **Push origin** (GitHub Desktop). Il commit lo fa la chat a fine lavoro (AGENTS.md, sezione 2 "Git"). Attenzione: ogni `git status`/`git` dalla VM senza permesso di cancellazione lascia un `.git/index.lock` vuoto: spostarlo in `_cestino/` (successo anche il 2026-10-06, vedi `_cestino/2026-10-06_git-lock/`).
+- **Verifiche**: 24 pytest (non 20: AGENTS.md ha ancora "20", da correggere), e2e3-e2e10 presenti. Ultima esecuzione dichiarata: pytest-sostituto e e2e3-10 senza errori JS nuovi (restano le `api/notebook` ERR_ABORTED dei salvataggi keepalive interrotti dalla chiusura/ricarica, e il 400 voluto di e2e5). Rieseguiti in questa revisione: solo `node --check` su explore/draw/help/tables.js (ok). Prima di dichiarare "funziona" rifare e2e nel container (AGENTS.md sezione 5).
+- **Dati**: TIC di tutti i file in alto, spettro sotto al picco più intenso, MRM sotto, pannelli a tutta larghezza con posti fissi (trascinando un'intestazione gli altri si scambiano), elenco file richiudibile; XIC (anche da formula), MRM, mappa RT-m/z, vista impilata, log, zoom con rettangolo e "Vista intera", cursore sincronizzato, bianco e baseline SNIP, sottrazione di fondo, integrazione con tabella e cinetica, caricamento di altri file a sessione aperta. Frecce scan per scan sul pannello attivo (senza cursore cambiano file). Cromatogramma PDA = `TWC` degli mzML (solo segnale totale).
+- **Metodo**: nessun metodo predefinito; i parametri (sorgente, composti, LC/PDA) vengono solo dai `.dam` caricati dallo studente (card 2 della schermata di carico o pulsante nella scheda Metodo). Gradiente e PDA ricavati dai .wiff servono solo al docente (`python -m tpfinder metodo`).
+- **Esportazioni**: PNG su sfondo bianco con metadati tEXt, nomi file parlanti (`TIC_t0`, `XIC_m-z194_t15`...), pulsante CSV in ogni grafico (non sui cromatogrammi totali) e CSV per Excel in italiano (punto e virgola, virgola decimale, BOM), relazione HTML.
+- **Disegno** (Ketcher offline): formula + massa intera sotto ogni struttura (m/z se carica), differenza sulle frecce, riquadro "Selezione (frammento)" con ipotesi di ione e pulsante XIC, gomma per rompere legami, didascalia (spenta di default), esportazione PNG/JPEG/SVG.
+- **Tabelle**: Tavola periodica (isotopi, abbondanze), Addotti, Isotopi (spettro a barre + profilo calcolato in casa, sovrapponibile allo spettro con clic destro), Perdite neutre (massa intera; 4 riferimenti con link). Pulsanti PubChem e BioTransformer (link esterni). Pulsanti **?** di aiuto (`help.js`).
+- **Teoria**: 11 capitoli con simulazioni (quadrupolo, ESI, QqQ, frammentazione CID, cinetica...), apribile anche da disco (`Teoria QqQ lab.html`). Esempio svolto: atrazina.
+- **Avvio e aspetto**: `QqQ lab.app` (Mac), `Avvia QqQ lab.command`/`.bat` -> `scripts/avvia.py` (ambiente col Python più recente, Terminale con spunte); chiusura del browser = si ferma il programma (`--exit-on-close`). Logo vettoriale (`tools/genera_logo.py`, `genera_icone.py`). Interfaccia su sfondo chiaro neutro. Schede Attribuzioni e Suggerimenti tolte per scelta: non reintrodurle.
 
-**Aggiornamento 2026-10-06 (tarda mattina)**: logo vettoriale (`tools/genera_logo.py`, icone rigenerate da `tools/genera_icone.py`, header e favicon in SVG); `QqQ lab.app` per il Mac (una sola finestra del Terminale, icona nel pacchetto: da provare su Mac); pulsanti **?** di aiuto (`help.js`); pulsante CSV in ogni grafico e CSV per Excel in italiano (punto e virgola, virgola decimale, BOM). Verificato: 20 pytest, e2e3-7 ok.
+## Non ancora verificato
+- **Mac reale**: `QqQ lab.app` (permesso Terminale, icona, Gatekeeper), icona del `.command`, chiusura della finestra del Terminale con osascript: mai provati. Se il doppio clic dice "privilegi di accesso": `chmod +x "Avvia QqQ lab.command"` (vale anche per `QqQ lab.app/Contents/MacOS/QqQ lab`).
+- Windows con Python appena installato e prima apertura senza internet.
+- Colori dei file quando sono più di 12.
+- Perdite neutre: le colonne "tipica di" sono sintesi mie; Federico deve controllare i riferimenti (Levsen 2007, De Vijlder 2018, Demarque 2016, Holcapek 2010; pagine di Demarque non verificate).
+- Spettri UV del PDA: non decodificati (`DADRealTimeData` dei .wiff); negli mzML c'è solo `TWC`.
+- Da chiedere a Federico: nella sessione serale del 6 ottobre il suo messaggio si era interrotto dopo "Inoltre".
+- Modifiche non committate di attributio (altro progetto, non in questa cartella): da riprendere a parte.
 
 ## Decisioni già prese
-- **Excel**: le tabelle e i grafici per la relazione (cinetica, retta di taratura, quantificazione) li costruiscono gli studenti in Excel. Il programma esporta i dati (CSV in italiano), non fa la taratura.
-- **Tablet: rinviato.** Federico ha scelto (2026-10-06) che la strada giusta è un'app web autonoma in JavaScript (lettura mzML e calcoli nel browser, dati sul tablet, sito statico/PWA, interfaccia touch), ma per ora NON va implementata. Promemoria per quando si farà: forse si convertirà tutto in JS (anche la versione per computer, con Python solo come avviatore), per non avere due copie degli stessi calcoli. Cosa tenere a mente: test che confronta i numeri JS con quelli Python sugli stessi mzML; DecompressionStream per lo zlib; tocco (pressione lunga = clic destro, pizzica = zoom, maniglie, bersagli >= 44 px); Safari cancella i dati dopo 7 giorni senza uso (Esporta sessione, PWA sulla Home); hosting https (GitHub Pages) o PC del laboratorio; Ketcher ~29 MB e scomodo col dito; strumenti del docente (`metodo`) restano in Python.
-- Niente strumenti che danno le risposte (frammentatori automatici tipo mass-fragmentation/MetFrag/CFM-ID: solo citati nella Teoria). Ciò che si calcola parte sempre da un'ipotesi dello studente (formula, struttura, selezione).
+- **Excel**: tabelle e grafici per la relazione (cinetica C/C0, ln(C/C0), k; retta di taratura MRM; quantificazione) li costruiscono gli studenti in Excel dai CSV esportati. Il programma non li calcola.
+- **Tablet: rinviato.** Strada scelta (2026-10-06): app web autonoma in JavaScript (mzML e calcoli nel browser, sito statico/PWA, interfaccia touch), NON ancora da implementare; forse tutto in JS anche per il computer, con Python solo come avviatore, per non avere due copie dei calcoli. Da tenere a mente: test che confronta i numeri JS con quelli Python sugli stessi mzML; DecompressionStream per lo zlib; tocco (pressione lunga = clic destro, pizzica = zoom, maniglie, bersagli >= 44 px); Safari cancella i dati dopo 7 giorni senza uso (Esporta sessione, PWA sulla Home); hosting https (GitHub Pages) o PC del laboratorio; Ketcher ~29 MB e scomodo col dito; `metodo` resta in Python. Pyodide e server gratuiti scartati.
+- Niente strumenti che danno le risposte (frammentatori automatici tipo MetFrag/CFM-ID: solo citati nella Teoria). Ciò che si calcola parte sempre da un'ipotesi dello studente (formula, struttura, selezione).
 - Nessun download di librerie: profilo isotopico e masse fatti in casa; Ketcher e OpenChemLib sono già in `vendor/`.
-- (Superato dalla decisione sul tablet qui sopra) Prima ipotesi di versione web: Pyodide + PWA. sito statico con Pyodide + PWA offline (dati che non lasciano il computer), progettata anche per tablet (iPad/Android: tocco, pressione lunga al posto del clic destro, pizzica per lo zoom, maniglie, bersagli >= 44 px, "Esporta sessione"). Punti tecnici già visti: sostituire i `fetch` con una funzione `api()`; `mmap` in Pyodide da verificare (in alternativa file in memoria); Ketcher ~29 MB (niente Cloudflare Pages, limite 25 MiB; GitHub Pages va bene); prima apertura ~20-25 MB; Safari cancella i dati dopo 7 giorni senza uso se il sito non è aggiunto alla Home. Scartati: server gratuiti, riscrittura in JS. Per ora resta tutto in locale. La versione precedente di questo file (cronologia dettagliata delle sessioni del 5-6 ottobre) è in `QqQ_lab/_cestino/2026-10-06_prompt_precedente.md`.
 
 ## Prossimi passi (proposta, in ordine)
-1. **Git (fatto, da tenere come abitudine)**: secondo commit fatto da Federico (`4469cde`) e repository pubblicato su GitHub (privato, `Freeesta/QqQ-lab`). D'ora in poi il commit lo fa la chat stessa alla fine di ogni lavoro verificato (procedura in AGENTS.md, sezione 2 "Git": prima chiedere il permesso di cancellazione per la cartella, poi `git add -A` e `git commit`); il push lo fa Federico con "Push origin" in GitHub Desktop.
-2. **Collaudo reale**: doppio clic su Mac (icona, Terminale), un PC Windows con Python appena installato, prima apertura senza internet dopo l'installazione; un giro completo dell'esperienza 3 fatto da Federico come se fosse uno studente.
-3. **Validazione numerica contro Analyst** (2-3 file): RT, aree degli XIC e delle MRM, rapporto Quant/Qual. Se le aree differiscono, capire perché (smoothing, baseline, integrazione) e scriverlo nella guida.
+1. **Push** del commit locale (Federico) e abitudine di commit a fine lavoro.
+2. **Collaudo reale**: Mac (doppio clic, icona, Terminale), PC Windows nuovo, apertura senza internet, un giro completo dell'esperienza 3 fatto da Federico come studente.
+3. **Validazione numerica contro Analyst** (2-3 file): RT, aree di XIC e MRM, rapporto Quant/Qual. Se le aree differiscono, capire perché (smoothing, baseline, integrazione) e scriverlo nella guida.
 4. **Dati per gli studenti**: convertire in mzML tutti i .wiff dell'esperienza (`converti.bat` su Windows), cartelle per gruppo, controllare che tempi e tipi vengano indovinati dal nome (`guess_sample`).
-5. **G2 taratura MRM**: deciso, la fanno gli studenti in Excel con le aree esportate. Eventualmente controllare che il CSV delle integrazioni contenga tutto ciò che serve (nome dello standard, concentrazione ricavata dal nome del file?).
-6. **G3 MS2 ↔ Disegno**: dal picco di uno spettro di ioni prodotto mandare l'm/z al Disegno (e viceversa evidenziare nello spettro gli m/z della selezione), senza proporre strutture.
-7. **Cinetica**: la fanno gli studenti in Excel (C/C0, ln(C/C0), k) dalla tabella Integrazioni.
-8. **Guida breve per lo studente** (1-2 pagine, anche dentro la Teoria) e scheda per il docente allineata a G1/G2/G3 e alla relazione.
-9. **Distribuzione**: nome definitivo del programma; provare `QqQ lab.app` su Mac (permesso Terminale, icona, Gatekeeper); versione tablet rinviata (vedi Decisioni).
-10. **Pulizia codice**: endpoint dei candidati (`/api/build`, `/api/candidate`, `/export/*.csv`, `/export/session.json`) da togliere o tenere per `candidates` e i test; e2e nella CI (Playwright su GitHub Actions).
-
-## Fatto il 2026-10-06 (notte): metodo .dam, isotopi, chiusura
-- Metodo: si carica il .dam (card 2 della schermata di carico o pulsante nella scheda Metodo); niente più metodo predefinito: senza .dam la scheda dice che manca e offre il pulsante. Più .dam: selettore (scelta automatica per tipo di file).
-- Isotopi: spettro a barre (M, M+1, M+2...) sopra la tabella. Tolte le due scritte; fonti dati nei commenti. Perdite neutre: elenco di 4 riferimenti con link (Levsen 2007, De Vijlder 2018, Demarque 2016, Holcapek 2010): le colonne "tipica di" sono mie sintesi, Federico deve controllare i riferimenti (pagine di Demarque non verificate).
-- Chiusura del browser = si ferma il programma (`--exit-on-close`, vedi AGENTS.md); chiusura della finestra del Terminale su Mac da provare su un Mac vero.
-- Verificato: e2e3-10, pytest-sostituto (nel container manca pytest).
-
-## Fatto il 2026-10-06 (sera): gradiente, PDA, posti fissi
-- Gradiente e metodo LC: ricavati dai .wiff/.dam (non dagli mzML) e messi in `metodo_laboratorio.json` (`lc`); la scheda Metodo mostra grafico %B, tabella, flusso, PDA, forno.
-- PDA: cromatogramma `TWC` degli mzML come tipo "PDA (UV, totale)" nel pannello Cromatogramma (anche per i file MRM). Spettri UV e canali singoli NON ci sono negli mzML: servirebbe decodificare `DADRealTimeData` dei .wiff (non fatto) o un altro export.
-- Asse y: la linea non copre più l'asse. Tolto il CSV dai cromatogrammi totali (TIC/BPC/PDA); resta su XIC, MRM, spettri. Posti fissi: trascinando un pannello gli altri si scambiano. Regola m/z in inglese scritta in AGENTS.md.
-- Verificato: e2e3-9 senza errori JS nuovi, 2 nuovi test Python (PDA, LC). Da decidere con Federico: il messaggio si era interrotto dopo "Inoltre".
-
-## Fatto il 2026-10-06 (pomeriggio) dagli appunti di Federico
-1. Frecce = scan per scan: il clic su un pannello lo rende attivo (contorno blu); se ha un cursore le frecce spostano di una scansione e lo spettro collegato segue (mantiene lo zoom); senza cursore o senza pannello attivo cambiano file. Clic sullo sfondo vuoto disattiva.
-2. Zoom: rettangolo durante il trascinamento nello spettro, barra in alto a destra con la finestra visibile, pulsante "Vista intera", voce di menu per ingrandire l'intervallo selezionato nei cromatogrammi.
-3. Nomi dei PNG e CSV (`TIC_t0`, `XIC_m-z194_t15`, `spettro_t0_RT14.3`, `MRM_364.1-194.1_t0`, `5file`...) e metadati tEXt nei PNG (Title, Description, Source, Software, Creation Time). Un pannello rinominato dallo studente usa il suo nome. I CSV non hanno metadati.
-4. Bug del menu sotto i pannelli risolto (z-index dei menu 10000+, `front()` rinumera).
-5. Colori con > 12 file: NON ancora controllato.
-Verificato: e2e3-8 senza errori JS (restano solo le `api/notebook` ERR_ABORTED note e il 400 voluto di e2e5). pytest non rieseguito (nessuna modifica Python; nel container pip non trova pytest).
+5. **CSV delle integrazioni**: controllare che contenga quanto serve per taratura e cinetica in Excel (nome dello standard, concentrazione ricavata dal nome del file?).
+6. **G3 MS2 e Disegno**: dal picco di uno spettro di ioni prodotto mandare l'm/z al Disegno (e viceversa evidenziare nello spettro gli m/z della selezione), senza proporre strutture.
+7. **Guida breve per lo studente** (1-2 pagine, anche dentro la Teoria) e scheda per il docente allineata a G1/G2/G3 e alla relazione.
+8. **Distribuzione**: nome definitivo del programma.
+9. **Pulizia codice**: endpoint dei candidati (`/api/build`, `/api/candidate`, `/export/*.csv`, `/export/session.json`) da togliere o tenere per `candidates` e i test; e2e nella CI (Playwright su GitHub Actions; oggi la CI esegue solo pytest e il controllo di sintassi JS).
 
 Idee non fatte: mappa con soglia regolabile, XIC in ppm per dati HRMS, minimappa del cromatogramma.
 
 ## Note
-- Il `_cestino` è stato svuotato il 2026-10-05 alle 23:01: per tornare indietro c'è solo git.
+- Il `_cestino` è stato svuotato il 2026-10-05 alle 23:01 (per tornare indietro c'è solo git); da allora contiene: `2026-10-06_prompt_precedente.md` (cronologia dettagliata delle sessioni del 5-6 ottobre), `2026-10-06_sessione_e2e`, `2026-10-06_teoria_rinumerazione`, `git-index.lock-vuoto-creato-da-claude`, `2026-10-06_git-lock`.
 - In `esempio_conversione/mzml/` il t30 del full scan si chiama `B_FullMass-t30 (2).mzML` (dato grezzo, non rinominato).
-- Modifiche non committate di attributio (altro progetto): da riprendere a parte.
