@@ -68,7 +68,7 @@ Radice: `QqQ_lab/QqQ_lab/` (il pacchetto Python è la sottocartella `qqq_lab/`; 
 
 Stato lato front end: variabile globale `E` (file, pannelli), `S` (stato pagina), `NB` (taccuino: layout dei pannelli, file aperti, didascalia; eventuali `attr` di vecchi taccuini restano nel file ma non sono usati; salvato in `taccuino.json` nella cartella di lavoro tramite `/api/notebook`; così la sessione si ripristina alla riapertura). Stato dei pannelli salvato: mode, log, peaks, hid, scale, ref, zoomY, bk, snip.
 
-- **Chiusura**: i launcher avviano `app --exit-on-close`: la pagina manda un ping ogni 5 s (`/api/ping`) e `/api/bye` alla chiusura; senza pagine il server si ferma dopo 8 s (ricarica tollerata; 120 s se nessuna pagina si collega mai). `.command` chiude anche la finestra del Terminale (osascript, NON provato su un Mac reale); `.bat` fa `pause` solo in caso di errore.
+- **Chiusura**: i launcher avviano `app --exit-on-close`: la pagina tiene aperto `/api/live` (heartbeat 0,5 s) e manda `/api/bye` alla chiusura; senza pagine il server si ferma dopo 2,5 s (ricarica tollerata; 120 s se nessuna pagina si collega mai). `.command` chiude anche la finestra del Terminale (osascript, NON provato su un Mac reale); `.bat` fa `pause` solo in caso di errore.
 
 ## 4. Fatti sui dati (verificati)
 - PDA/DAD: nei .wiff ci sono `SampleSubtree/SampleN/Devices/Device_1/DAD/` (DADIdx, DADRealTimeData ~4 MB, spettri 200-400 nm, NON decodificati). Negli mzML c'è solo il cromatogramma `TWC` (segnale totale, 4.17 Hz, 22 min nel t0 e 20 min negli altri; stesse unità del file, non dichiarate): niente spettri UV e niente canali singoli.

@@ -157,16 +157,16 @@ def build(ver: tuple, py: str, old: tuple | None) -> bool:
                 archive(aside, "venv-precedente")
             ENV.rename(aside)
         envpy = env_python()
-        sp.update("1/3 creo l'ambiente")
+        sp.update("1/3")
         ok = run([py, "-m", "venv", ENV])
         if ok:
-            sp.update("2/3 aggiorno pip")
+            sp.update("2/3")
             ok = run([envpy, "-m", "pip", "install", "--upgrade", "pip"])
         if ok:
-            sp.update("3/3 installo numpy e QqQ lab (serve internet)")
+            sp.update("3/3 numpy (serve internet)")
             ok = run([envpy, "-m", "pip", "install", "-e", "."]) and env_version() == ver
         if ok:
-            sp.done(f"Ambiente pronto con Python {tag}", "installato ora")
+            sp.done(f"Ambiente pronto (Python {tag})")
         else:
             sp.failed(f"Installazione con Python {tag} non riuscita", f"la riprovo tra {SKIP_DAYS} giorni")
     if ok:
@@ -226,7 +226,6 @@ def main() -> int:
         C.note("se Python c'è già, controlla la connessione a internet")
         C.say()
         return 1
-    C.ok("Ambiente Python pronto", f"Python {current[0]}.{current[1]}")
     os.environ["QQQ_HEADER"] = "1"           # the app does not print the header again
     cmd = [str(env_python()), "-m", "qqq_lab", *(sys.argv[1:] or ["app", "--exit-on-close"])]
     if WIN:

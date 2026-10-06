@@ -25,7 +25,7 @@ from .project import guess_sample
 UPLOAD_SUFFIXES = (".mzml", ".wiff", ".scan", ".dam")
 # "close the browser = close the program" (only with --exit-on-close): every open page pings the server; when no page is left
 # (after a short grace period that survives a reload) or none ever connected, the server stops
-EXIT_GRACE, EXIT_FIRST, EXIT_STALE = 8.0, 120.0, 150.0
+EXIT_GRACE, EXIT_FIRST, EXIT_STALE = 2.5, 120.0, 150.0
 
 
 class App:
@@ -362,7 +362,7 @@ def make_handler(app: App):
                     while True:
                         self.wfile.write(b": alive\n\n")
                         self.wfile.flush()
-                        time.sleep(1.5)
+                        time.sleep(0.5)
                 except OSError:                              # BrokenPipe / ConnectionReset: the page is gone
                     pass
                 finally:
@@ -389,40 +389,29 @@ def default_workdir(new: bool = False) -> Path:
 
 
 def serve(workdir, port: int = 8790, open_browser: bool = True, exit_on_close: bool = False):
-    import platform
     from . import __version__, console as C
-    if not os.environ.get("QQQ_HEADER"):        # the launcher (scripts/avvia.py) has already printed it
+    if not os.environ.get("QQQ_HEADER"):        # the launcher (scripts/avvia.py) has already printed the header
         C.header(__version__)
-    with C.Spinner("Avvio il server locale") as sp:
-        app = App(workdir)
-        httpd = None
-        for p in range(port, port + 20):
-            try:
-                httpd = ThreadingHTTPServer(("127.0.0.1", p), make_handler(app))
-                break
-            except OSError:
-                continue
-        if httpd is None:
-            sp.failed("Nessuna porta libera", f"provate {port}-{port + 19}")
-            raise SystemExit(1)
-        sp.done("Server locale avviato", "Python " + platform.python_version() if not os.environ.get("QQQ_HEADER") else "")
-    if app.session and app.session.items:
-        n = len(app.session.items)
-        C.ok("Sessione precedente riaperta", f"{n} file")
+    app = App(workdir)
+    httpd = None
+    for p in range(port, port + 20):
+        try:
+            httpd = ThreadingHTTPServer(("127.0.0.1", p), make_handler(app))
+            break
+        except OSError:
+            continue
+    if httpd is None:
+        C.fail("Nessuna porta libera", f"provate {port}-{port + 19}")
+        raise SystemExit(1)
     url = f"http://127.0.0.1:{httpd.server_address[1]}/"
-    C.say()
-    C.link(url, "si apre da solo nel browser" if open_browser else "aprilo nel browser")
-    if app.workdir:
-        C.note("cartella di lavoro: " + C.home(app.workdir))
-    C.say()
-    C.say("  " + C.dim("Per chiudere QqQ lab chiudi la pagina del browser (oppure questa finestra, o premi Ctrl+C)." if exit_on_close
-                       else "Per chiudere QqQ lab chiudi questa finestra (oppure premi Ctrl+C)."))
+    C.link(url, "pronto" + (f" · sessione precedente riaperta ({len(app.session.items)} file)" if app.session and app.session.items else ""))
+    C.say("  " + C.dim("Per uscire chiudi la pagina del browser (o premi Ctrl+C)." if exit_on_close else "Per uscire chiudi questa finestra (o premi Ctrl+C)."))
     if exit_on_close:
         app._presence()            # starts the clock: if no page ever connects (EXIT_FIRST), the program stops by itself
 
         def watch():
             while not app.should_exit():
-                time.sleep(1)
+                time.sleep(0.3)
             httpd.shutdown()
         threading.Thread(target=watch, daemon=True).start()
     if open_browser:
@@ -430,11 +419,9 @@ def serve(workdir, port: int = 8790, open_browser: bool = True, exit_on_close: b
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        C.say()
-        C.say("  " + C.dim("QqQ lab chiuso: il lavoro è salvato nella cartella di lavoro."))
+        C.say("  " + C.dim("QqQ lab chiuso. Il lavoro è salvato."))
     else:
         if exit_on_close:
-            C.say()
-            C.say("  " + C.dim("Pagina chiusa: QqQ lab si ferma. Il lavoro è salvato nella cartella di lavoro."))
+            C.say("  " + C.dim("Pagina chiusa: QqQ lab si ferma. Il lavoro è salvato."))
     finally:
         httpd.server_close()

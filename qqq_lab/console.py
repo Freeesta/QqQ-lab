@@ -8,6 +8,7 @@ print the symbols (old Windows console, redirected output with a limited encodin
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 import threading
 import time
@@ -124,8 +125,15 @@ class Spinner:
         return self
 
     def _line(self, frame: str) -> str:
+        """One line that never wraps (a wrapped line would be repeated at every turn of the spinner)."""
         s = int(time.time() - self.t0)
-        return "  " + paint(frame, ACCENT) + " " + self.text + (dim(" · " + self.sub) if self.sub else "") + (dim(f"  {s} s") if s >= 3 else "")
+        tail = f"  {s} s" if s >= 3 else ""
+        room = max(10, shutil.get_terminal_size((80, 24)).columns - 6 - len(tail))
+        text = self.text + (" · " + self.sub if self.sub else "")
+        if len(text) > room:
+            text = text[:room - 1] + "…" if FANCY else text[:room - 3] + "..."
+        head, rest = text[:len(self.text)], text[len(self.text):]
+        return "  " + paint(frame, ACCENT) + " " + head + dim(rest) + (dim(tail) if tail else "")
 
     def _spin(self):
         i = 0
