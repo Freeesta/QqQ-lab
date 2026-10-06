@@ -32,15 +32,22 @@ try:
             pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('241.0641')", timeout=60000)
             assert "C10H12N2O3S" in pg.inner_text("#tp-prev")
             assert "idrossilazione" in pg.input_value("#tp-tr")
-            pg.click("#tp-go"); pg.wait_for_selector("#tp-t tr.clk", timeout=300000)
+            pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=300000)
+            assert pg.evaluate("document.querySelectorAll('.gem.forte').length") == 3
+            pg.wait_for_timeout(1300)
+            assert pg.inner_text(".stat.g b").strip() == "3" and "Filone trovato" in pg.inner_text(".hero")
+            assert pg.evaluate("document.querySelector('#tp-struct svg') !== null")          # parent structure drawn from the SMILES (needs vendor/openchemlib.js)
+            pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk")
             t = pg.inner_text("#tp-t")
             for need in ("idrossilazione", "perdita di propene", "deidrogenazione"): assert need in t, need
-            assert pg.evaluate("[...document.querySelectorAll('#tp-t tr.clk')].filter(r=>r.innerText.includes('forte')).length") == 3
-            pg.click("#tp-t tr.clk:has-text('idrossilazione')"); pg.wait_for_selector("#tp-c-xic", timeout=60000); pg.wait_for_timeout(500)
+            pg.click('.vt[data-v="map"]'); pg.wait_for_selector(".mnode"); assert pg.evaluate("document.querySelectorAll('.mnode').length") >= 4
+            pg.click('.vt[data-v="kin"]'); pg.wait_for_selector("#tp-c-all"); assert pg.evaluate("document.getElementById('tp-c-all').width") > 0
+            pg.click('.vt[data-v="film"]'); pg.wait_for_selector(".frow"); pg.click("#tp-play"); pg.wait_for_timeout(2200)
+            assert "t = 5" in pg.inner_text("#tp-tl") or "t = 10" in pg.inner_text("#tp-tl"), pg.inner_text("#tp-tl")
+            pg.click('.vt[data-v="gems"]'); pg.click(".gem:has-text('idrossilazione')"); pg.wait_for_selector("#tp-c-xic", timeout=60000); pg.wait_for_timeout(500)
             d = pg.inner_text("#tp-det")
-            assert "frammento del progenitore" in d and "Livello 3" in d and "257.1" in d, d[:600]
-            assert pg.evaluate("document.getElementById('tp-c-xic').getContext('2d').getImageData(0,0,50,50).data.length") > 0
-            pg.screenshot(path=str(HERE / "shots" / "tpmine2_demo.png")) if (HERE / "shots").exists() else None
+            assert "In parole" in d and "frammento del progenitore" in d and "Livello 3" in d and "257.1" in d, d[:700]
+            pg.screenshot(path=str(HERE / "shots" / "tpmine2_demo.png"), full_page=True)
         step("bentazone (synthetic): files, formula from SMILES, search, ranking, detail with MS2 and level 3", demo)
         def xl():
             with pg.expect_download(timeout=120000) as dl: pg.click("#tp-x-xlsx")
@@ -56,11 +63,11 @@ try:
                 pg.set_input_files("#tp-in", [str(MZ / (n + ".mzML")) for n in names])
                 pg.wait_for_function("document.querySelectorAll('#tp-files tr').length >= 24", timeout=300000)
                 pg.fill("#tp-mol", "CC(C)N(C(=O)COc1nnc(s1)C(F)(F)F)c1ccc(F)cc1"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('364.0737')", timeout=60000)
-                pg.click("#tp-go"); pg.wait_for_selector("#tp-t tr.clk", timeout=600000)
-                head = pg.inner_text("#tp-right .card")
-                assert "+0.29" in head or "+0.3" in head, head[:300]
-                assert "t½" in head
-                assert pg.evaluate("[...document.querySelectorAll('#tp-t tr.clk')].filter(r=>r.innerText.includes('forte')).length") >= 3
+                pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=600000); pg.wait_for_timeout(1300)
+                head = pg.inner_text(".hero")
+                assert "t½" in head and "offset" in head
+                vals = pg.evaluate("[...document.querySelectorAll('.stat b')].map(b=>parseFloat(b.textContent))")
+                assert 0.25 <= vals[4] <= 0.35 and 2.0 < vals[3] < 4.0 and vals[0] >= 3, vals
                 m = pg.inner_text("#tp-right")
                 assert "MRM: integrazione automatica" in m and "Retta: area" in m and "364.1>194.1" in m, m[:400]
                 assert pg.evaluate("document.getElementById('tp-c-cal').width") > 0
