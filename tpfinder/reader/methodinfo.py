@@ -94,9 +94,50 @@ def _lc(ole: Ole, base: str) -> dict | None:
     return out
 
 
+# one MRM transition inside MassRangeEx: Q1, 0, Q3, dwell (ms), 0, length-prefixed UTF-16 name, then the compound parameters (DP first)
+_MRM = re.compile(rb"(.{4})\x00{4}(.{4})(.{4})\x00{4}(.)\x00((?:[\x20-\x7e]\x00)*)\x04\x00D\x00P\x00", re.S)
+_CE = re.compile(rb"\x04\x00C\x00E\x00(.{4})", re.S)
+
+
+def _experiments(ole: Ole, base: str) -> list[dict]:
+    """What each experiment of the method scans: MRM transitions, or the start/stop m/z of a scan.
+
+    Decoded from MassRangeEx and checked against the .dam files and mzML of the course: the MRM layout reproduces
+    Q1/Q3/dwell/CE of the mzML chromatograms exactly; for scans the start m/z is the first float and the stop m/z sits at
+    byte 240 (long layout) or 44 (short layout). Other layouts are reported without a range instead of guessing.
+    """
+    out = []
+    for i in range(16):
+        key = f"{base}DeviceMethod0/Period0/Experiment{i}/MassRangeEx/MassRangeEx"
+        if key not in ole.streams:
+            break
+        d = ole.read(key)
+        hits = [m for m in _MRM.finditer(d) if m.group(5) and len(m.group(5)) == m.group(4)[0]]
+        ces = sorted({round(struct.unpack("<f", m.group(1))[0], 2) for m in _CE.finditer(d)})
+        if hits:
+            tr = []
+            for j, m in enumerate(hits):
+                end = hits[j + 1].start() if j + 1 < len(hits) else len(d)
+                ce = _CE.search(d, m.end(), end)
+                q1, q3, dw = (struct.unpack("<f", m.group(g))[0] for g in (1, 2, 3))
+                tr.append({"q1": round(q1, 2), "q3": round(q3, 2), "dwell": round(dw, 1), "name": m.group(5).decode("utf-16le"),
+                           "ce": round(struct.unpack("<f", ce.group(1))[0], 2) if ce else None})
+            out.append({"index": i, "kind": "mrm", "transitions": tr})
+            continue
+        rng = None
+        if len(d) >= 244:
+            a = struct.unpack_from("<f", d, 40)[0]
+            b = struct.unpack_from("<f", d, 240 if len(d) == 432 else 44)[0] if len(d) in (432, 236) else None
+            if b is not None and 10 <= a < b <= 3000:
+                rng = [round(a, 2), round(b, 2)]
+        out.append({"index": i, "kind": "scan", "range": rng, "ce": ces})
+    return out
+
+
 def _method(ole: Ole, base: str) -> dict:
     """Decode one method whose streams live under `base` ('' for .dam, 'MethodSubtree/Method3/' for .wiff)."""
     out: dict = {"source": [], "compound": [], "file": {}}
+    out["experiments"] = _experiments(ole, base)
     lc = _lc(ole, base)
     if lc:
         out["lc"] = lc
@@ -167,3 +208,66 @@ def read_methods(path) -> list[dict]:
         return [m]
     finally:
         ole.close()
+
+
+def check_against(data: dict, lab: dict) -> list[dict]:
+    """Compare a method (.dam, from read_methods) with what an mzML says about its own acquisition (Item.method()).
+
+    Returns rows {what, method, data, status} with status "ok", "diff" or "na" (cannot be checked). Only things that are
+    stored in both places are compared: experiment type, m/z range, MS2 collision energies and precursors, MRM transitions
+    (Q1, Q3, CE, dwell), run length and PDA. A match does not prove the method was the one used, a difference shows it was not.
+    """
+    exps = lab.get("experiments") or []
+    rows: list[dict] = []
+    if not exps:
+        return rows
+
+    def add(what, method, got, status):
+        rows.append({"what": what, "method": method, "data": got, "status": status})
+    kind = data.get("kind")
+    m_mrm = all(e["kind"] == "mrm" for e in exps)
+    m_name = "MRM" if m_mrm else "scansione (full scan o ioni prodotto)"
+    d_name = {"full": "full scan", "ms2": "ioni prodotto (MS/MS)", "mrm": "MRM"}.get(kind, "non riconosciuto")
+    add("Tipo di esperimento", m_name, d_name, "ok" if (kind == "mrm") == m_mrm and kind in ("full", "ms2", "mrm") else "diff")
+    fmt = lambda v: f"{v:g}"  # noqa: E731
+    if kind == "mrm" and m_mrm:
+        m_tr = [t for e in exps for t in e["transitions"]]
+        d_tr = list(data.get("transitions") or [])
+        used = set()
+        for t in m_tr:
+            hit = next((i for i, x in enumerate(d_tr) if i not in used and x.get("q1") is not None and abs(x["q1"] - t["q1"]) <= 0.2 and abs(x["q3"] - t["q3"]) <= 0.2), None)
+            mtxt = f"CE {fmt(t['ce'])} eV, dwell {fmt(t['dwell'])} ms" if t.get("ce") is not None else f"dwell {fmt(t['dwell'])} ms"
+            if hit is None:
+                add(f"Transizione {fmt(t['q1'])} > {fmt(t['q3'])}", mtxt, "assente nel file", "diff")
+                continue
+            used.add(hit)
+            x = d_tr[hit]
+            dw = x["dwell"] * 1000 if x.get("dwell") is not None and x["dwell"] < 5 else x.get("dwell")
+            ok = (x.get("ce") is None or t.get("ce") is None or abs(x["ce"] - t["ce"]) < 0.5) and (dw is None or abs(dw - t["dwell"]) < 1)
+            add(f"Transizione {fmt(t['q1'])} > {fmt(t['q3'])}", mtxt, f"CE {fmt(x['ce'])} eV, dwell {fmt(dw)} ms" if x.get("ce") is not None and dw is not None else "presente", "ok" if ok else "diff")
+        for i, x in enumerate(d_tr):
+            if i not in used and x.get("q1") is not None:
+                add(f"Transizione {fmt(x['q1'])} > {fmt(x['q3'])}", "assente nel metodo", "presente nel file", "diff")
+    elif kind in ("full", "ms2") and not m_mrm:
+        rngs = [e.get("range") for e in exps]
+        win = data.get("scan_window")
+        if win and all(rngs):
+            lo, hi = min(r[0] for r in rngs), max(r[1] for r in rngs)
+            add("Intervallo di massa (m/z)", f"{fmt(lo)}-{fmt(hi)}", f"{fmt(win[0])}-{fmt(win[1])}", "ok" if abs(lo - win[0]) <= 1 and abs(hi - win[1]) <= 1 else "diff")
+        elif win:
+            add("Intervallo di massa (m/z)", "non decodificabile per tutti gli esperimenti", f"{fmt(win[0])}-{fmt(win[1])}", "na")
+        if kind == "ms2":
+            ces = sorted({c for e in exps for c in e.get("ce", [])})
+            dce = sorted(data.get("ce") or [])
+            if ces and dce:
+                add("Energia di collisione (eV)", ", ".join(map(fmt, ces)), ", ".join(map(fmt, dce)), "ok" if len(ces) == len(dce) and all(abs(a - b) < 0.5 for a, b in zip(ces, dce)) else "diff")
+            prec = data.get("precursors") or []
+            if prec:
+                add("Esperimenti (un precursore ciascuno)", str(len(exps)), f"{len(prec)} precursori: {', '.join(fmt(p) for p in prec)}", "ok" if len(prec) == len(exps) else "diff")
+    rt = (lab.get("lc") or {}).get("run_time")
+    if rt and data.get("rt_max"):
+        add("Durata della corsa (min)", fmt(rt), f"il file arriva a {data['rt_max']:.1f}", "ok" if data["rt_max"] <= rt + 0.1 else "diff")
+    pda = (lab.get("lc") or {}).get("pda")
+    if pda:
+        add("PDA", "attivo", "segnale presente (TWC)" if data.get("pda") else "segnale assente nel file", "ok" if data.get("pda") else "diff")
+    return rows

@@ -362,3 +362,40 @@ def test_method_dam_upload_is_listed_and_unknown_is_empty(tmp_path):
     lab = app.lab_methods()
     assert lab[0]["name"] == "Lab_x.dam" and "error" in lab[0]       # a broken file is reported, it does not crash
     assert app.files() == []                                        # a method is not a data file
+
+
+def test_method_experiments_are_decoded_and_checked_against_the_data():
+    """MRM transitions and scan ranges are read from MassRangeEx and compared with what the mzML says."""
+    import struct
+    from tpfinder.reader.methodinfo import _experiments, check_against
+
+    def mrm_entry(q1, q3, dwell, name, ce):
+        nm = name.encode("utf-16le")
+        return (struct.pack("<f", q1) + b"\0" * 4 + struct.pack("<ff", q3, dwell) + b"\0" * 4
+                + struct.pack("<H", len(nm)) + nm + b"\x04\x00D\x00P\x00" + struct.pack("<ff", 50, 50) + b"\0" * 4
+                + b"\x04\x00C\x00E\x00" + struct.pack("<ff", ce, ce) + b"\0" * 4)
+    mrm = b"\0" * 40 + mrm_entry(364.1, 194.1, 25.0, "Quant", 20.0) + mrm_entry(364.1, 152.1, 25.0, "Qual", 20.0)
+    scan = bytearray(432)
+    struct.pack_into("<f", scan, 40, 120.0)
+    struct.pack_into("<f", scan, 240, 480.0)
+
+    class FakeOle:
+        streams = {"DeviceMethod0/Period0/Experiment0/MassRangeEx/MassRangeEx": 1, "DeviceMethod0/Period0/Experiment1/MassRangeEx/MassRangeEx": 1}
+        data = [mrm, bytes(scan)]
+
+        def read(self, key):
+            return self.data[int(key.split("Experiment")[1][0])]
+    ex = _experiments(FakeOle(), "")
+    assert ex[0]["kind"] == "mrm" and [(t["q1"], t["q3"], t["ce"], t["dwell"], t["name"]) for t in ex[0]["transitions"]] == \
+        [(364.1, 194.1, 20.0, 25.0, "Quant"), (364.1, 152.1, 20.0, 25.0, "Qual")]
+    assert ex[1] == {"index": 1, "kind": "scan", "range": [120.0, 480.0], "ce": []}
+    # same transitions in the file: all rows agree; a different Q3 or a full-scan file is flagged
+    tr = [{"q1": 364.1, "q3": 194.1, "ce": 20.0, "dwell": 0.025}, {"q1": 364.1, "q3": 152.1, "ce": 20.0, "dwell": 0.025}]
+    rows = check_against({"kind": "mrm", "transitions": tr}, {"experiments": ex[:1]})
+    assert {r["status"] for r in rows} == {"ok"}
+    rows = check_against({"kind": "mrm", "transitions": [tr[0], {"q1": 364.1, "q3": 100.0, "ce": 20.0, "dwell": 0.025}]}, {"experiments": ex[:1]})
+    assert [r["status"] for r in rows].count("diff") == 2          # missing 152.1 in the file, extra 100.0 in the file
+    rows = check_against({"kind": "full", "scan_window": [120.0, 480.0], "rt_max": 21.9}, {"experiments": ex[1:], "lc": {"run_time": 22.0}})
+    assert {r["status"] for r in rows} == {"ok"}
+    assert [r for r in check_against({"kind": "full", "scan_window": [100.0, 300.0]}, {"experiments": ex[1:]}) if r["what"].startswith("Intervallo")][0]["status"] == "diff"
+    assert check_against({"kind": "mrm"}, {"experiments": ex[1:]})[0]["status"] == "diff"

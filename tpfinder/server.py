@@ -21,7 +21,7 @@ import numpy as np
 from .chem.elements import formula_mz
 from .core.analysis import Analysis
 from .explore import Session
-from .reader.methodinfo import read_methods
+from .reader.methodinfo import check_against, read_methods
 from .project import SAMPLE_TYPES, guess_sample, load_project, write_project
 
 
@@ -247,11 +247,17 @@ class App:
 
     def method(self, k: int) -> dict:
         m = self._item(k).method()
-        m["lab"] = self.lab_methods()            # only what the user uploaded as .dam: no built-in method is assumed
+        m["lab"] = [{**x, "check": check_against(m, x)} for x in self.lab_methods()]   # only what the user uploaded as .dam: no built-in method is assumed
         pick = {"full": "full", "ms2": "ms2", "mrm": "mrm"}.get(m.get("kind"), "")
         names = [x["name"].lower() for x in m["lab"]]
         hit = [i for i, n in enumerate(names) if pick and pick in n] or [i for i, n in enumerate(names) if m.get("kind") == "ms2" and "ms2" in n]
         m["lab_pick"] = hit[-1] if hit else (len(names) - 1 if names else None)
+        # several .dam loaded: preselect the one that agrees best with this file (fewest differences), name as tie-break
+        if len(m["lab"]) > 1:
+            diffs = [sum(r["status"] == "diff" for r in x["check"]) for x in m["lab"]]
+            best = min(diffs)
+            if diffs[m["lab_pick"]] > best:
+                m["lab_pick"] = [i for i, d in enumerate(diffs) if d == best][-1]
         return m
 
     def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None) -> dict:

@@ -30,10 +30,11 @@ canvas{display:block;width:100%}
 #start{max-width:920px;margin:16px auto;padding:0 14px}
 .card.req{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle;text-transform:uppercase;letter-spacing:.03em}
-.tag.must{background:var(--accent);color:#fff}.tag.opt{background:var(--sel);color:var(--muted)}
+.tag.opt{background:var(--sel);color:var(--muted)}
 .card.req #drop{border-color:var(--accent);background:var(--sel);color:var(--ink);padding:38px 14px}
 #drop,#dropdam{border:2px dashed var(--line);border-radius:10px;padding:26px 14px;text-align:center;color:var(--muted);cursor:pointer;background:var(--panel)}
-#drop.over,#dropdam.over{border-color:var(--accent);background:var(--sel);color:var(--ink)}#drop b,#dropdam b{color:var(--ink);font-size:15px}
+#drop *,#dropdam *{pointer-events:none}
+#drop.over,#dropdam.over,.card.req #drop.over{border-style:solid;border-color:var(--accent);background:#d6e4f5;color:var(--ink);box-shadow:inset 0 0 0 3px var(--accent)}#drop b,#dropdam b{color:var(--ink);font-size:15px}
 .frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:10px}.frm label{display:flex;flex-direction:column;gap:3px;color:var(--muted)}
 .frm input,.frm select{width:100%}#wiffhelp{margin-top:8px}#wiffhelp summary{cursor:pointer;color:var(--accent)}#wiffhelp ol{margin:6px 0 0 18px;padding:0;line-height:1.6}
 .go{background:var(--accent);color:#fff;border-color:var(--accent);padding:6px 18px;font-weight:600}.go:disabled{opacity:.5;cursor:default}
@@ -147,7 +148,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 <dialog id="askdlg"><div id="asktxt"></div><input id="askin"><div class="row"><button id="askno">Annulla</button><button class="go" id="askok">OK</button></div></dialog>
 <div id="ctx" hidden></div>
 <section id="start" hidden>
- <div class="card req"><h3>1. Carica i file mzML <span class="tag must">obbligatorio</span> <button class="hq" data-help="start" title="Che cos'è?">?</button></h3>
+ <div class="card req"><h3>1. Carica i file mzML <button class="hq" data-help="start" title="Che cos'è?">?</button></h3>
   <div id="drop"><b>Trascina qui i file .mzML</b><br>oppure <u>clicca per sceglierli dal computer</u></div>
   <details id="wiffhelp" class="sm"><summary>Hai i file .wiff dello strumento? Convertili prima in .mzML</summary>
    <ol class="muted">
