@@ -1071,19 +1071,17 @@ function lcHtml(lc, row) {
   const g = lc.gradient || [], T = lc.run_time || (g.length ? g[g.length - 1].t : 22);
   const w = 440, hh = 170, l = 40, r = 10, t = 10, b = 32, X = v => l + v / T * (w - l - r), Y = v => t + (100 - v) / 100 * (hh - t - b);
   let pts = []; g.forEach((q, i) => { pts.push([q.t, q.b]); });
-  const flowTxt = g.map(q => q.flow).filter((v, i, a) => i === 0 || v !== a[i - 1]);
   const ink = css("--muted"), acc = css("--accent");
   let svg = `<svg viewBox="0 0 ${w} ${hh}" width="100%" style="max-width:${w}px;background:#fff;border:1px solid ${css("--line")};border-radius:6px" font-family="system-ui" font-size="11"><path d="M${l} ${t}V${hh - b}H${w - r}" fill="none" stroke="${ink}"/>`;
   for (const v of [0, 25, 50, 75, 100]) svg += `<path d="M${l - 3} ${Y(v)}H${l}" stroke="${ink}"/><text x="${l - 6}" y="${Y(v) + 4}" text-anchor="end" fill="${ink}">${v}</text>`;
   for (let v = 0; v <= T; v += 5) svg += `<path d="M${X(v)} ${hh - b}v3" stroke="${ink}"/><text x="${X(v)}" y="${hh - b + 15}" text-anchor="middle" fill="${ink}">${v}</text>`;
   svg += `<polyline fill="none" stroke="${acc}" stroke-width="2" points="${pts.map(q => X(q[0]) + "," + Y(q[1])).join(" ")}"/>${pts.map(q => `<circle cx="${X(q[0])}" cy="${Y(q[1])}" r="2.6" fill="${acc}"/>`).join("")}`;
   svg += `<text x="${(l + w - r) / 2}" y="${hh - 4}" text-anchor="middle" fill="${css("--ink")}">Tempo (min)</text><text transform="translate(11 ${(t + hh - b) / 2}) rotate(-90)" text-anchor="middle" fill="${css("--ink")}">% B</text></svg>`;
-  const pda = lc.pda || {}, ch = (lc.pda_channels || []).map(c => c.wl + " nm").join(", ");
-  const tbl = `<table><tr><th class="num">Tempo (min)</th><th class="num">% B</th><th class="num">Flusso (mL/min)</th></tr>${g.map(q => `<tr><td class="num">${q.t}</td><td class="num">${q.b}</td><td class="num">${q.flow}</td></tr>`).join("")}</table>`;
-  return `<h4>Metodo cromatografico (LC) e PDA</h4><div class="muted sm">Non è scritto negli mzML: l\u0027ho letto dal file .dam che hai caricato. Il tempo è quello della pompa: i picchi arrivano al rivelatore più tardi, per il volume morto del sistema.</div>
-   ${svg}<div class="muted sm" style="margin:2px 0 6px">Gradiente: % di fase organica B nel tempo (secondo la procedura del corso: A = acqua con acido formico 0.05%, B = acetonitrile). La tabella mostra anche i cambi di flusso.</div>${tbl}
-   <table style="margin-top:6px">${row("Flusso iniziale", lc.flow != null ? lc.flow + " mL/min" : "")}${row("Variazioni di flusso", flowTxt.length > 1 ? flowTxt.join(" → ") + " mL/min" : "")}${row("Durata della corsa", lc.run_time != null ? lc.run_time + " min" : "")}${row("Temperatura del forno", lc.oven != null ? lc.oven + " °C" : "")}
-   ${row("PDA: intervallo", pda.start != null ? `${pda.start}-${pda.stop} nm (passo ${pda.step} nm)` : "")}${row("PDA: canali registrati", ch)}${row("PDA: frequenza", pda.freq != null ? pda.freq + " Hz" : "")}${row("PDA: lampade", pda.lamp)}${row("PDA: cella", pda.cell != null ? pda.cell + " °C" : "")}</table>`;
+  const pda = lc.pda || {};
+  const tbl = `<table><tr><th class="num">Tempo (min)</th><th class="num">% A</th><th class="num">% B</th><th class="num">Flusso (mL/min)</th></tr>${g.map(q => `<tr><td class="num">${q.t}</td><td class="num">${+(100 - q.b).toFixed(1)}</td><td class="num">${q.b}</td><td class="num">${q.flow}</td></tr>`).join("")}</table>`;
+  return `<h4>Metodo cromatografico (LC) e PDA</h4>${svg}${tbl}
+   <table style="margin-top:6px">${row("Durata della corsa", lc.run_time != null ? lc.run_time + " min" : "")}${row("Temperatura del forno", lc.oven != null ? lc.oven + " °C" : "")}
+   ${row("PDA: intervallo", pda.start != null ? `${pda.start}-${pda.stop} nm (passo ${pda.step} nm)` : "")}</table>`;
 }
 
 // ------------------------------------------------------------------ metodo di acquisizione (letto dagli mzML)
@@ -1094,7 +1092,7 @@ async function showMethod(sel) {
   const pol = { positive: "positivo (ESI+)", negative: "negativo (ESI-)", mixed: "misto", unknown: "non indicata" }[m.polarity] || m.polarity;
   const labs = m.lab || [], li = labs.length ? Math.min(Math.max(sel ?? m.lab_pick ?? 0, 0), labs.length - 1) : -1, lab = labs[li];
   let h = labs.length ? "" : `<div style="background:#fff4e0;border-left:4px solid #e08a00;border-radius:6px;padding:8px 12px;margin-bottom:8px"><b>Manca il metodo di acquisizione.</b> Gli mzML non contengono i parametri della sorgente, le energie di collisione e il gradiente: li leggo dal file <b>.dam</b> del metodo (quello di Analyst).<div style="margin-top:6px"><button class="go" id="m-load">Carica il metodo (.dam)</button></div></div>`;
-  h += `<div class="muted sm">File: <b>${EH(f.label)}</b> (cambia file con le frecce nella barra). Informazioni lette dall'mzML.</div><h4>Strumento</h4><table>${row("Modello", EH(m.instrument))}${row("Numero di serie", EH(m.serial))}${row("Componenti", EH(m.components.join(" → ")))}</table>
+  h += `<div class="muted sm">File: <b>${EH(f.label)}</b> (cambia file con le frecce nella barra). Informazioni lette dall'mzML.</div><h4>Strumento</h4><table>${row("Modello", EH(m.instrument))}${row("Numero di serie", EH(m.serial))}</table>
    <h4>Esperimento</h4><table>${row("Tipo rilevato", `<b>${KIND[m.kind]}</b>`)}${row("Polarità", pol)}${row("Intervallo di massa", m.scan_window ? `m/z ${m.scan_window[0]}-${m.scan_window[1]}` : "")}${row("Durata", `${m.rt_min.toFixed(2)}-${m.rt_max.toFixed(2)} min`)}${row("Scan", m.scans || "")}${row("Tempo di ciclo", m.cycle_s ? m.cycle_s.toFixed(2) + " s" : "")}${row("Precursori (Q1)", m.precursors.join(", "))}${row("Energia di collisione", m.ce.length ? m.ce.join(", ") + " eV" : "")}</table>`;
   if (m.transitions.length) h += `<h4>Transizioni MRM</h4><table><tr><th>Nome</th><th class="num">Q1 (m/z)</th><th class="num">Q3 (m/z)</th><th class="num">CE (eV)</th><th class="num">Dwell (ms)</th></tr>${m.transitions.map(t => `<tr><td>${EH(t.name || "")}</td><td class="num">${t.q1}</td><td class="num">${t.q3}</td><td class="num">${t.ce ?? ""}</td><td class="num">${t.dwell != null ? Math.round(t.dwell * 1000) : ""}</td></tr>`).join("")}</table>`;
   if (lab && lab.check && lab.check.length) {
@@ -1105,14 +1103,13 @@ async function showMethod(sel) {
       ${bad ? `<div class="sm" style="margin-top:4px;color:var(--bad)">${bad} differenz${bad === 1 ? "a" : "e"}: controlla di aver caricato il metodo giusto per questo file${labs.length > 1 ? " (puoi sceglierne un altro qui sopra)" : ""}.</div>` : ""}`;
   }
   if (lab) {
-    const pr = a => a.map(s => `<tr><td class="muted">${EH(s.label)}</td><td>${s.value} ${s.unit}</td></tr>`).join("");
+    const pr = a => a.map(s => `<tr><td class="muted">${EH(s.label)}</td><td>${s.id === "ihe" ? (s.value ? "acceso" : "spento") : s.value + " " + s.unit}</td></tr>`).join("");
     h += `<h4>Parametri del metodo (file .dam)</h4>${labs.length > 1 ? `<div class="sm">Metodo: <select id="m-sel">${labs.map((x, i) => `<option value="${i}" ${i === li ? "selected" : ""}>${EH(x.name)}</option>`).join("")}</select> <button id="m-load">Carica un altro .dam</button></div>` : `<div class="muted sm">Letti dal file <b>${EH(lab.name)}</b> che hai caricato. <button id="m-load">Carica un altro .dam</button></div>`}
       ${lab.error ? `<div class="fail">${EH(lab.error)}</div>` : lab.source.length || lab.compound.length ? `<table>${pr(lab.source)}${pr(lab.compound)}</table>` : `<div class="muted sm">In questo file non ho trovato parametri della sorgente.</div>`}`;
     if (lab.lc) h += lcHtml(lab.lc, row);
     else if (!lab.error) h += `<div class="muted sm" style="margin-top:6px">Questo .dam non contiene il metodo cromatografico (gradiente) né le impostazioni del PDA.</div>`;
   }
-  if (m.pda) h += `<div class="muted sm" style="margin-top:8px">Questo file contiene anche il segnale del PDA: nel pannello Cromatogramma scegli «PDA (UV, totale)».</div>`;
-  h += `<h4>Origine dei dati</h4><table>${row("File originali", EH(m.source_files.join(", ")))}${row("Software", EH(m.software.join("; ")))}</table>`;
+  h = h.replace(/m\/z/g, "<i>m/z</i>");   // m/z is always in italics
   const d = Q("#bigdlg"); if (d.open) d.close();
   big("Metodo di acquisizione", h, () => {
     const sl = Q("#m-sel"); if (sl) sl.onchange = () => showMethod(+sl.value);

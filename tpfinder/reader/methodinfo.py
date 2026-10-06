@@ -13,12 +13,12 @@ from pathlib import Path
 
 from .ole import Ole
 
-NAMES = {
-    "CUR": ("Gas tenda (CUR)", "psi"), "GS1": ("Gas di nebulizzazione (GS1)", "psi"), "GS2": ("Gas di desolvatazione (GS2)", "psi"),
-    "CAD": ("Gas di collisione (CAD), valore grezzo", ""), "IS": ("Tensione dello spray (IS)", "V"),
-    "TEM": ("Temperatura della sorgente (TEM)", "°C"), "ihe": ("Interface heater (ihe), 1 = acceso", ""),
+NAMES = {  # standard Analyst names (kept in English on purpose: they are the names used on the instrument and in papers)
+    "CUR": ("Curtain gas (CUR)", "psi"), "GS1": ("Ion source gas 1 (GS1)", "psi"), "GS2": ("Ion source gas 2 (GS2)", "psi"),
+    "CAD": ("Collision gas (CAD)", ""), "IS": ("IonSpray voltage (IS)", "V"),
+    "TEM": ("Source temperature (TEM)", "°C"), "ihe": ("Interface heater (ihe)", ""),
     "DP": ("Declustering potential (DP)", "V"), "EP": ("Entrance potential (EP)", "V"), "CEP": ("Collision cell entrance potential (CEP)", "V"),
-    "CE": ("Energia di collisione (CE)", "eV"), "CXP": ("Collision cell exit potential (CXP)", "V"), "CES": ("Collision energy spread (CES)", "eV"),
+    "CE": ("Collision energy (CE)", "eV"), "CXP": ("Collision cell exit potential (CXP)", "V"), "CES": ("Collision energy spread (CES)", "eV"),
 }
 _SRC = re.compile(rb"((?:[A-Za-z0-9]\x00){2,6})")
 _CMP = re.compile(rb"[\x02-\x0c]\x00((?:[A-Za-z0-9]\x00){2,4})")

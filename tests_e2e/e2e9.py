@@ -52,7 +52,7 @@ try:
         def metodo():
             pg.click("#np-method"); pg.wait_for_timeout(1200)
             t = pg.inner_text("body")
-            assert "Metodo cromatografico (LC) e PDA" in t and "Flusso iniziale" in t and "PDA: canali registrati" in t and "210 nm" in t
+            assert "Metodo cromatografico (LC) e PDA" in t and "% A" in t and "Flusso iniziale" not in t and "PDA: canali" not in t
             assert pg.locator("svg polyline").count() >= 1
             pg.screenshot(path=SH + "93_metodo.png")
         step("Metodo window shows gradient, flow, PDA", metodo)

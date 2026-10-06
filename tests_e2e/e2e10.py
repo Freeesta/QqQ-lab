@@ -16,7 +16,7 @@ try:
             pg.click("#np-method"); pg.wait_for_timeout(1000)
             t = pg.inner_text("#bigdlg")
             assert "Manca il metodo di acquisizione" in t and "Strumento" in t, t[:200]
-            assert "Parametri del metodo" not in t and "Gas tenda" not in t, "no built-in method may appear"
+            assert "Parametri del metodo" not in t and "Curtain gas" not in t, "no built-in method may appear"
             assert pg.locator("#m-load").count() == 1
             pg.screenshot(path=SH + "100_no_method.png")
         step("no .dam: warning + load button, no invented parameters", missing)
@@ -24,7 +24,7 @@ try:
             with pg.expect_file_chooser() as fc: pg.click("#m-load")
             fc.value.set_files(str(DAM)); pg.wait_for_timeout(1500)
             t = pg.inner_text("#bigdlg")
-            assert "Manca il metodo" not in t and "Gas tenda (CUR)" in t and "Metodo cromatografico (LC) e PDA" in t and DAM.name in t, t[:300]
+            assert "Manca il metodo" not in t and "Curtain gas (CUR)" in t and "Metodo cromatografico (LC) e PDA" in t and DAM.name in t, t[:300]
             pg.screenshot(path=SH + "101_method_loaded.png")
         step("loading the .dam from the Metodo window shows all parameters", load_here)
         def two():
@@ -32,7 +32,7 @@ try:
             fc.value.set_files(str(DAM.parent / "Lab_inq_MRM_Flufe.dam")); pg.wait_for_timeout(1500)
             assert pg.locator("#m-sel option").count() == 2
             pg.select_option("#m-sel", index=0); pg.wait_for_timeout(500)
-            assert "Gas tenda" in pg.inner_text("#bigdlg")
+            assert "Curtain gas" in pg.inner_text("#bigdlg")
         step("two methods: selector", two)
         pg.click("#bigx"); pg.wait_for_timeout(300)
         def isotopes():
