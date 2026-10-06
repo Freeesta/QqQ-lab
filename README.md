@@ -50,24 +50,20 @@ msconvert su Windows: vedi `../esempio_conversione/converti.bat`, oppure `python
 se msconvert è installato (l'mzML va in `.tpfinder-cache/`).
 
 Solo per il docente: `python -m tpfinder metodo FILE.dam -o metodo.json` legge i parametri del metodo
-(sorgente e composto) per il popup "Metodo" (`tpfinder/config/metodo_laboratorio.json`).
+(sorgente e composto) per il popup "Metodo".
 
 ## Cosa puoi modificare, dal più semplice al più profondo
 
 | Cosa | File | Serve programmare? |
 |---|---|---|
-| Reazioni attese | `tpfinder/config/trasformazioni.csv` (nome; variazione di formula, es. `-Cl+H`) | no |
-| Soglie del comando `candidates` | `tpfinder/config/soglie.toml` | no |
-| Testi e avvisi | `tpfinder/config/testi.toml` | no |
 | Interfaccia | `tpfinder/web/` (`index.html`, `explore.js`, `draw.js`: JavaScript semplice, nessuna compilazione) | un po' |
-| Calcoli | `tpfinder/explore.py`, `tpfinder/core/` | sì |
+| Calcoli | `tpfinder/explore.py` | sì |
 | Chimica | `tpfinder/chem/` | sì |
 
 Ketcher (Apache-2.0) e OpenChemLib (BSD-3) sono inclusi in `tpfinder/web/vendor` (vedi il suo README).
 
 ## Altri comandi
 
-`draft` / `candidates` (vecchio flusso da terminale con `esperimento.toml` e punteggio dei candidati).
 `metodo` (solo per il docente, vedi sopra). Test: `python3 -m pytest -q tests`; prove nel browser in
 `tests_e2e/` (vedi `AGENTS.md`).
 

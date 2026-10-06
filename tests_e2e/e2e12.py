@@ -23,6 +23,7 @@ with sync_playwright() as p:
     def side():
         t = pg.inner_text("#flst"); assert "scan MS1" not in t and "RT 0.5" not in t and "Doppio clic" not in pg.inner_text("#dfiles"), t
         assert "FULL SCAN (EMS)" in t.upper() and "MS2" in t and "MRM" in t, t
+        assert pg.locator("#flst .fgh").count() >= 3 and pg.locator("#flst .tag").count() == 0 and pg.locator('#dfiles .hq').count() == 0
         assert pg.locator("#np-export, #np-ints, #kindinfo").count() == 0
         assert "federico.cristaudo@unito.it" in pg.inner_text("#credits") and pg.locator('.pnl.chrom [data-o=norm]').count() == 0
         fw = pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').offsetWidth"); assert fw < 60, fw
@@ -54,6 +55,18 @@ with sync_playwright() as p:
         pg.mouse.move(xbox["x"] + pg.evaluate(f"E.panels[{xi}]._a.X(5)"), xbox["y"] + 100); pg.mouse.down(); pg.mouse.move(xbox["x"] + pg.evaluate(f"E.panels[{xi}]._a.X(6)"), xbox["y"] + 100, steps=5); pg.mouse.up(); pg.wait_for_timeout(500)
         assert pg.evaluate(f"E.panels[{xi}].ints.length") == 2 and xp.locator('[data-a=itab]').is_visible()
         xp.locator('[data-a=iman]').click()
+        # header: only the m/z range; quick file chooser; RT readout bottom right; clear integrations
+        assert xp.locator('[data-o=xlo]').input_value() == "363.6" and xp.locator('[data-o=xhi]').input_value() == "364.6" and xp.locator('#xic-q, [data-o=tol]').count() == 0
+        xp.locator('[data-o=xlo]').fill("363,9"); xp.locator('[data-o=xlo]').press("Enter"); xp.locator('[data-o=xhi]').fill("364.3"); xp.locator('[data-o=xhi]').press("Enter"); pg.wait_for_timeout(1500)
+        tw = pg.evaluate(f"[E.panels[{xi}].traces[0].mz, E.panels[{xi}].traces[0].w]"); assert abs(tw[0] - 364.1) < 0.011 and abs(tw[1] - 0.2) < 0.011, tw
+        nv = pg.evaluate("E.files.filter(f=>f.vis).length")
+        xp.locator('.fcount').click(); pg.wait_for_timeout(200); assert pg.locator("#fpop input").count() == len(pg.evaluate("E.files"))
+        pg.locator("#fpop input").first.uncheck(); pg.wait_for_timeout(1200); assert pg.evaluate("E.files.filter(f=>f.vis).length") == nv - 1
+        pg.locator("#fpop .fn").nth(2).click(); pg.wait_for_timeout(1200); assert pg.evaluate("E.files.filter(f=>f.vis).length") == 1
+        pg.locator("#fpop [data-all='1']").click(); pg.wait_for_timeout(800); pg.mouse.click(5, 5)
+        rb, pb = xp.locator(".rd").bounding_box(), xp.bounding_box(); assert rb["x"] > pb["x"] + pb["width"] / 2 and rb["y"] > pb["y"] + pb["height"] - 40, (rb, pb)
+        assert xp.locator('[data-a=iclr]').is_visible(); xp.locator('[data-a=iclr]').click(); pg.wait_for_timeout(400)
+        assert pg.evaluate(f"E.panels[{xi}].ints.length") == 0 and not xp.locator('[data-a=iclr]').is_visible()
     step("zoom tool, TIC refuses, XIC window da-a, integration of a chosen file", integ)
     def ms2():
         pg.evaluate("E.files.forEach(f=>f.vis=f.kind==='ms2');renderFileList();redrawAll()"); pg.wait_for_timeout(1500)

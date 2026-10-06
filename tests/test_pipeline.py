@@ -2,11 +2,8 @@ import numpy as np
 import pytest
 
 from tpfinder.chem import elements as E
-from tpfinder.chem.transformations import generate
-from tpfinder.core.analysis import Analysis
-from tpfinder.core.peaks import find_peak
 from tpfinder.demo import make_demo
-from tpfinder.project import guess_sample, load_project
+from tpfinder.project import guess_sample
 
 
 def test_formula_and_mass():
@@ -24,110 +21,23 @@ def test_guess_sample():
     assert guess_sample("CBZ_dark.mzML")[2] == "control"
 
 
-def test_generate_dedupes_and_flags():
-    from tpfinder.project import _packaged
-    from tpfinder.chem.transformations import load_transformations
-    tr = load_transformations(_packaged("trasformazioni.csv"))
-    c = generate({"formula": "C15H12N2O", "polarity": "positive"}, tr, 2, 0.35)
-    assert c[0]["name"] == "parent" and c[0]["mz"] == pytest.approx(237.1022, abs=2e-4)
-    masses = [round(r["neutral_mass"], 4) for r in c]
-    assert len(masses) == len(set(masses))                       # one row per distinct mass
-    oh = next(r for r in c if r["delta"] == "+O")
-    assert oh["mz"] == pytest.approx(253.0972, abs=2e-4)
-
-
-def test_find_peak_on_synthetic():
-    rt = np.arange(0, 10, 0.05)
-    y = 1e5 * np.exp(-0.5 * ((rt - 5) / 0.07) ** 2) + np.random.default_rng(1).normal(0, 300, len(rt)).clip(0)
-    pk = find_peak(rt, y, rt_center=5.0)
-    assert pk["apex_rt"] == pytest.approx(5.0, abs=0.06)
-    assert pk["snr"] > 20 and pk["ok"]
-    assert pk["area"] == pytest.approx(1e5 * 0.07 * np.sqrt(2 * np.pi) * 60, rel=0.15)
-
-
 @pytest.fixture(scope="module")
-def analysis(tmp_path_factory):
-    cfg = make_demo(tmp_path_factory.mktemp("demo"))
-    return Analysis(load_project(cfg))
+def demo(tmp_path_factory):
+    folder = make_demo(tmp_path_factory.mktemp("demo"))
+    return folder, sorted(folder.glob("*.mzML"))
 
 
-def test_demo_ranking(analysis):
-    by_mz = {round(r["mz"], 1): r for r in analysis.summary()}
-    oh = by_mz[253.1]
-    assert oh["score"] >= 75 and oh["label"] == "strong candidate"
-    oh2 = by_mz[269.1]
-    assert oh2["score"] >= 75
-    contaminant = by_mz[223.1]                                   # -CH2: present in the blank and at t0
-    assert contaminant["score"] < 50
-
-
-def test_parent_decays_and_candidate_rises(analysis):
-    s = {round(r["mz"], 1): r for r in analysis.summary()}
-    parent = [k["area"] for k in s[237.1]["kinetics"]]
-    assert parent[0] > parent[-1] * 5
-    oh = [k["area"] for k in s[253.1]["kinetics"]]
-    assert oh[0] == 0 and max(oh) > 0
-
-
-def test_ms2_and_transitions(analysis):
-    oh = next(r for r in analysis.summary() if round(r["mz"], 1) == 253.1)
-    m = analysis.ms2(oh["id"])
-    assert m["scans"] > 0 and m["collision_energy"] == 30.0
-    assert 235.1 in [round(f["mz"], 1) for f in m["fragments"]]
-    t = analysis.transitions([oh["id"]])
-    assert t and t[0]["Q1"] == 253.1
-
-
-def test_provenance(analysis):
-    p = analysis.provenance()
-    assert p["tpfinder"] and all(len(s["sha256_16"]) == 16 for s in p["samples"])
-
-
-def test_server_exports(analysis):
-    from tpfinder.server import App
-    app = App(analysis.p.config_files["project"])
-    assert app.error is None
-    text = app.candidates_csv()
-    assert text.startswith("sep=;\n") and "hydroxylation" in text
-    oh = next(r for r in app.summary if round(r["mz"], 1) == 253.1)
-    t = app.transitions_csv([oh["id"]])
-    assert "253.1" in t and "relative_intensity_pct" in t
-    d = app.candidate(oh["id"])
-    assert len(d["traces"]) == len(app.analysis.p.samples) and d["ms2"]["scans"] > 0
-
-
-def test_project_errors(tmp_path):
-    from tpfinder.project import load_project
-    (tmp_path / "esperimento.toml").write_text('[parent]\nname = "x"\n[[samples]]\nfile = "a.mzML"\n')
-    with pytest.raises(ValueError, match="formula or an mz"):
-        load_project(tmp_path)
-
-
-def test_peak_with_one_scan_dip_keeps_its_area():
-    """A one-scan dip in the upper half of a peak (spray instability) must not cut the integration."""
-    import numpy as np
-    from tpfinder.core.peaks import find_peak
-    rt = np.arange(0, 20, 0.0176)
-    y = 6e7 * np.exp(-0.5 * ((rt - 14.35) / 0.08) ** 2)
-    clean = find_peak(rt, y)["area"]
-    k = int(np.argmin(np.abs(rt - 14.33)))
-    y2 = y.copy()
-    y2[k] *= 0.5
-    dipped = find_peak(rt, y2)["area"]
-    assert abs(dipped - clean) / clean < 0.08
-
-
-def test_explore_session(analysis):
+def test_explore_session(demo):
     """Chromatograms, spectra and ion chromatograms on demand, with no compound given."""
     import numpy as np
     from tpfinder.explore import Session
-    p = analysis.p
-    s = Session([{"file": str(x.path), "time": x.time, "type": x.type} for x in p.samples], p.root)
-    it = s.items[0]
+    folder, files = demo
+    s = Session([{"file": str(x), "time": guess_sample(x.name)[1], "type": guess_sample(x.name)[2]} for x in files], folder)
+    it = next(i for i in s.items if "t0min" in str(i.path))
     rt, tic = it.total("tic")
     _, bpc = it.total("bpc")
     assert len(rt) == len(tic) == len(bpc) and np.all(bpc <= tic + 1e-6)
-    parent_mz = analysis.candidates[0]["mz"]
+    parent_mz = 237.1022                                          # carbamazepine [M+H]+
     _, y = it.xic(parent_mz, 0.35)
     k = int(np.argmax(y))
     mz, sy, n = it.spectrum(rt[k] - 0.02, rt[k] + 0.02)
@@ -135,13 +45,13 @@ def test_explore_session(analysis):
     assert it.info()["polarity"] == "positive"
 
 
-def test_app_mode_upload_and_open(tmp_path, analysis):
+def test_app_mode_upload_and_open(tmp_path, demo):
     import io
     import shutil
 
     from tpfinder.server import App
-    app = App(None, tmp_path / "w")
-    src = analysis.p.samples[0].path
+    app = App(tmp_path / "w")
+    src = demo[1][0]
     app.save_upload("../evil/" + src.name, io.BytesIO(src.read_bytes()), src.stat().st_size)   # path parts are dropped
     assert [f["name"] for f in app.files()] == [src.name]
     try:
@@ -332,7 +242,7 @@ def test_lc_method_xml_is_decoded():
 def test_browser_presence_stops_the_program(tmp_path, monkeypatch):
     """--exit-on-close: the program stops when no page is left (after a grace period), not before; a reload (bye then ping) is tolerated."""
     from tpfinder import server
-    app = server.App(None, tmp_path / "w")
+    app = server.App(tmp_path / "w")
     monkeypatch.setattr(server, "EXIT_GRACE", 0.2)
     monkeypatch.setattr(server, "EXIT_FIRST", 0.5)
     import time
@@ -353,7 +263,7 @@ def test_browser_presence_stops_the_program(tmp_path, monkeypatch):
 def test_method_dam_upload_is_listed_and_unknown_is_empty(tmp_path):
     """A .dam is accepted as an upload, listed as a method and never replaced by a built-in method; with none, the list is empty."""
     from tpfinder import server
-    app = server.App(None, tmp_path / "w")
+    app = server.App(tmp_path / "w")
     (tmp_path / "w").mkdir(exist_ok=True)
     assert app.methods() == [] and app.lab_methods() == []
     import io

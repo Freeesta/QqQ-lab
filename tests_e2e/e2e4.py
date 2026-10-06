@@ -23,9 +23,9 @@ try:
             pg.screenshot(path=SH + "41_hover.png")
         step("hover tooltip + synced line", hover_chrom)
         # --- peaks, stack, log, legend toggle on chromatogram
-        def peaks():
-            pg.locator('.pnl.chrom [data-o="peaks"]').check(); pg.wait_for_timeout(700); pg.screenshot(path=SH + "42_peaks.png")
-        step("peak labels", peaks)
+        def nopeaks():
+            assert pg.locator('[data-o="peaks"]').count() == 0
+        step("no peak-label option anywhere", nopeaks)
         def stack():
             pg.locator('.pnl.chrom [data-o="mode"]').select_option("stk"); pg.wait_for_timeout(800); pg.screenshot(path=SH + "43_stack.png")
             assert pg.evaluate("E.panels[0]._a.stk === true")
@@ -102,7 +102,7 @@ try:
         pg.reload(); pg.wait_for_timeout(5000)
         def restored():
             print(pg.evaluate("E.panels.map(p=>p.type+':'+(p.mode||'')+':'+(p.peaks?'P':'')+':'+(p.scale||'')+':'+(p.ref===''?'':p.ref))"))
-            assert pg.evaluate("E.panels.some(p=>p.type==='map')") and pg.evaluate("E.panels.find(p=>p.type==='chrom').peaks === true")
+            assert pg.evaluate("E.panels.some(p=>p.type==='map')")
             pg.screenshot(path=SH + "50_restored.png")
         step("session restore of new panel options", restored)
 finally:

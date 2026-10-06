@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import base64
-import csv
-import io
 import json
 import os
 import re
@@ -19,10 +17,9 @@ from urllib.parse import parse_qs, urlparse
 import numpy as np
 
 from .chem.elements import formula_mz
-from .core.analysis import Analysis
 from .explore import Session, sniff
 from .reader.methodinfo import check_against, read_methods
-from .project import SAMPLE_TYPES, guess_sample, load_project, write_project
+from .project import guess_sample
 
 
 UPLOAD_SUFFIXES = (".mzml", ".wiff", ".scan", ".dam")
@@ -32,22 +29,15 @@ EXIT_GRACE, EXIT_FIRST, EXIT_STALE = 8.0, 120.0, 150.0
 
 
 class App:
-    """With a project path: opens that experiment. With only a workdir: 'app mode', the page lets the user
-    drop files, describe the experiment and start the analysis."""
+    """The page lets the user drop files and open them for exploration; the work folder keeps the files and the notebook."""
 
-    def __init__(self, project_path=None, workdir=None):
-        self.path = project_path
+    def __init__(self, workdir=None):
         self.workdir = Path(workdir) if workdir else None
         if self.workdir:
             self.workdir.mkdir(parents=True, exist_ok=True)
         self.lock = threading.Lock()
-        self.analysis: Analysis | None = None
-        self.summary: list = []
-        self.error: str | None = None
         self.session: Session | None = None
-        if self.path:
-            self.load()
-        elif self.workdir:
+        if self.workdir:
             self._resume()
 
     def _resume(self):
@@ -198,39 +188,8 @@ class App:
             if f.exists():
                 os.replace(f, trash / f.name)
 
-    def build(self, payload: dict):
-        """Write esperimento.toml from the form and run the analysis."""
-        parent = {"name": (payload.get("name") or "").strip() or "parent",
-                  "polarity": payload.get("polarity", "positive")}
-        f = (payload.get("formula") or "").strip()
-        if re.fullmatch(r"\d+(\.\d+)?", f):
-            parent["mz"] = float(f)
-        elif f:
-            parent["formula"] = f
-        else:
-            raise ValueError("enter the formula of the parent compound (or its m/z)")
-        samples = []
-        for s in payload.get("samples", []):
-            typ = s.get("type", "sample")
-            if typ not in SAMPLE_TYPES:
-                raise ValueError(f"unknown type {typ!r}")
-            n = self.safe_name(s["file"])
-            if not (self.workdir / n).exists():
-                raise ValueError(f"file not found: {n}")
-            t = s.get("time")
-            samples.append({"file": n, "type": typ, "time": None if t in (None, "") else float(t)})
-        if not samples:
-            raise ValueError("add at least one file")
-        self.path = write_project(self.workdir / "esperimento.toml", parent, samples,
-                                  {k: payload[k] for k in ("tol_da", "max_steps") if payload.get(k) not in (None, "")})
-        self.load()
-        if self.error:
-            raise ValueError(self.error)
-
     def notebook_path(self) -> Path | None:
-        if self.workdir:
-            return self.workdir / "taccuino.json"
-        return Path(self.path).parent / "taccuino.json" if self.path else None
+        return self.workdir / "taccuino.json" if self.workdir else None
 
     def notebook(self) -> dict:
         p = self.notebook_path()
@@ -263,7 +222,7 @@ class App:
     def session_state(self) -> dict:
         return {"session": self.session.info() if self.session else None, "app": bool(self.workdir),
                 "workdir": str(self.workdir) if self.workdir else None, "files": self.files(), "methods": self.methods(),
-                "has_analysis": self.analysis is not None, "version": __import__("tpfinder").__version__}
+                "version": __import__("tpfinder").__version__}
 
     def _item(self, k: int):
         if not self.session or not 0 <= k < len(self.session.items):
@@ -317,70 +276,11 @@ class App:
             if fresh and self.workdir:
                 self.workdir = default_workdir(new=True)
                 self.workdir.mkdir(parents=True, exist_ok=True)
-            self.analysis, self.summary, self.error, self.path, self.session = None, [], None, None, None
-
-    def load(self):
-        with self.lock:
-            try:
-                self.analysis = Analysis(load_project(self.path))
-                self.summary = self.analysis.summary()
-                if self.session is None:
-                    self.session = Session([{"file": str(x.path), "label": x.label, "time": x.time, "type": x.type}
-                                            for x in self.analysis.p.samples], Path(self.path).parent)
-                self.error = None
-            except Exception as e:  # noqa: BLE001 -- shown in the page, never kills the server
-                self.analysis, self.summary, self.error = None, [], f"{type(e).__name__}: {e}"
+            self.session = None
 
     def state(self):
-        if self.analysis is None:
-            if self.workdir and not self.path:
-                return {"error": None, "phase": "start", "app": True, "workdir": str(self.workdir),
-                        "files": self.files(), "methods": self.methods(), "version": __import__("tpfinder").__version__}
-            return {"error": self.error}
-        a = self.analysis
-        return {"error": None, "phase": "analysis", "app": bool(self.workdir),
-                "version": __import__("tpfinder").__version__, "parent": a.p.parent,
-                "settings": a.p.settings, "texts": a.p.texts, "config_files": a.p.config_files,
-                "samples": [{"label": s.label, "time": s.time, "type": s.type, "file": s.path.name} for s in a.p.samples],
-                "candidates": self.summary}
-
-    def candidate(self, cid: int):
-        a = self.analysis
-        r, c = a.analyse(cid), a.candidates[cid]
-        peaks = []
-        for pk in r["peaks"]:
-            peaks.append({"left": pk["left"], "right": pk["right"], "apex": pk["apex_rt"]} if pk else None)
-        return {"id": cid, "name": c["name"], "alternatives": c["alternatives"], "formula": c["formula"], "mz": c["mz"],
-                "adduct": c["adduct"], "delta": c["delta"], "score": r["score"], "label": r["label"],
-                "criteria": r["criteria"], "ref_rt": r["ref_rt"], "rows": r["rows"], "peaks": peaks,
-                "traces": [{"rt": [round(float(v), 4) for v in rt], "y": [round(float(v), 1) for v in y]}
-                           for rt, y in r["traces"]], "ms2": a.ms2(cid)}
-
-    def candidates_csv(self) -> str:
-        out = io.StringIO()
-        out.write("sep=;\n")                      # tells Excel the separator
-        w = csv.writer(out, delimiter=";", lineterminator="\n")
-        times = [(s.label, s.time) for s in self.analysis.p.samples]
-        w.writerow(["id", "name", "alternatives", "formula", "delta", "mz", "score", "label", "ref_rt_min"] +
-                   [f"area_{l}" for l, _ in times])
-        for c in self.summary:
-            rows = self.analysis.analyse(c["id"])["rows"]
-            w.writerow([c["id"], c["name"], " | ".join(c["alternatives"]), c["formula"], c["delta"], c["mz"],
-                        "" if c["score"] is None else c["score"], c["label"],
-                        "" if c["ref_rt"] is None else round(c["ref_rt"], 3)] +
-                       [round(r["area"]) if r["detected"] else 0 for r in rows])
-        return out.getvalue()
-
-    def transitions_csv(self, ids: list[int]) -> str:
-        rows = self.analysis.transitions(ids)
-        out = io.StringIO()
-        out.write("sep=;\n")
-        w = csv.writer(out, delimiter=";", lineterminator="\n")
-        cols = ["compound", "Q1", "Q3", "CE", "expected_RT_min", "RT_window_min", "relative_intensity_pct", "ms2_scans", "note"]
-        w.writerow(cols)
-        for r in rows:
-            w.writerow([r[c] for c in cols])
-        return out.getvalue()
+        return {"error": None, "phase": "start", "app": bool(self.workdir), "workdir": str(self.workdir) if self.workdir else None,
+                "files": self.files(), "methods": self.methods(), "version": __import__("tpfinder").__version__}
 
 
 STATIC_TYPES = {".html": "text/html", ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf",
@@ -449,9 +349,6 @@ def make_handler(app: App):
                 if u.path == "/api/explore":
                     app.open_session(body)
                     return self._json(app.session_state())
-                if u.path == "/api/build":
-                    app.build(body)
-                    return self._json(app.state())
                 if u.path == "/api/remove":
                     app.remove_file(body.get("name", ""))
                     return self._json({"files": app.files(), "methods": app.methods()})
@@ -532,21 +429,6 @@ def make_handler(app: App):
                         return self._json({"error": str(e)}, 400)
                 if u.path == "/api/map":
                     return self._json(app.ionmap(int(q["k"]), int(q.get("level", 1))))
-                if app.analysis is None:
-                    return self._json({"error": app.error or "Questa funzione serve solo nella scheda Suggerimenti: apri prima un esperimento con il composto."}, 400)
-                if u.path == "/api/candidate":
-                    return self._json(app.candidate(int(q["id"])))
-                if u.path == "/export/candidates.csv":
-                    return self._send(200, app.candidates_csv().encode("utf-8"), "text/csv",
-                                      {"Content-Disposition": 'attachment; filename="candidates.csv"'})
-                if u.path == "/export/transitions.csv":
-                    ids = [int(x) for x in q.get("ids", "").split(",") if x]
-                    return self._send(200, app.transitions_csv(ids).encode("utf-8"), "text/csv",
-                                      {"Content-Disposition": 'attachment; filename="transitions.csv"'})
-                if u.path == "/export/session.json":
-                    return self._send(200, json.dumps({"provenance": app.analysis.provenance(),
-                                                       "candidates": app.summary}, indent=1).encode("utf-8"),
-                                      "application/json", {"Content-Disposition": 'attachment; filename="session.json"'})
                 return self._json({"error": "unknown endpoint"}, 404)
             except Exception as e:  # noqa: BLE001
                 return self._json({"error": f"{type(e).__name__}: {e}"}, 500)
@@ -564,13 +446,13 @@ def default_workdir(new: bool = False) -> Path:
     return root / datetime.now().strftime("sessione_%Y%m%d_%H%M%S")
 
 
-def serve(project_path, port: int = 8790, open_browser: bool = True, workdir=None, exit_on_close: bool = False):
+def serve(workdir, port: int = 8790, open_browser: bool = True, exit_on_close: bool = False):
     import platform
     from . import __version__, console as C
     if not os.environ.get("QQQ_HEADER"):        # the launcher (scripts/avvia.py) has already printed it
         C.header(__version__)
     with C.Spinner("Avvio il server locale") as sp:
-        app = App(project_path, workdir)
+        app = App(workdir)
         httpd = None
         for p in range(port, port + 20):
             try:
@@ -582,8 +464,6 @@ def serve(project_path, port: int = 8790, open_browser: bool = True, workdir=Non
             sp.failed("Nessuna porta libera", f"provate {port}-{port + 19}")
             raise SystemExit(1)
         sp.done("Server locale avviato", "Python " + platform.python_version() if not os.environ.get("QQQ_HEADER") else "")
-    if app.error:
-        C.warn(app.error)
     if app.session and app.session.items:
         n = len(app.session.items)
         C.ok("Sessione precedente riaperta", f"{n} file")

@@ -1,7 +1,4 @@
-"""Command line: tpfinder app | draft | convert | candidates | metodo.
-
-The old browser views of the candidates flow (`demo`, `serve`) were removed with the Suggerimenti tab;
-`draft` and `candidates` still work in the terminal."""
+"""Command line: tpfinder app | convert | metodo."""
 from __future__ import annotations
 
 import argparse
@@ -12,18 +9,8 @@ from pathlib import Path
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="tpfinder", description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    dr = sub.add_parser("draft", help="write an esperimento.toml for the files of a folder")
-    dr.add_argument("folder")
-    dr.add_argument("--name", required=True)
-    g = dr.add_mutually_exclusive_group(required=True)
-    g.add_argument("--formula")
-    g.add_argument("--mz", type=float)
-    dr.add_argument("--polarity", default="positive", choices=["positive", "negative"])
     c = sub.add_parser("convert", help="convert .wiff files to mzML with msconvert")
     c.add_argument("files", nargs="+")
-    ca = sub.add_parser("candidates", help="print the candidates of an experiment (and write a CSV)")
-    ca.add_argument("project")
-    ca.add_argument("--csv")
     am = sub.add_parser("metodo", help="read the source/compound parameters of an Analyst .dam or .wiff and write them as JSON")
     am.add_argument("file")
     am.add_argument("-o", "--out", default="-")
@@ -34,16 +21,7 @@ def main(argv=None) -> int:
     ap_.add_argument("--exit-on-close", action="store_true", help="stop the program when the browser page is closed (used by the launchers)")
     a = ap.parse_args(argv)
 
-    if a.cmd == "draft":
-        from .project import draft_project
-        text = draft_project(a.folder, a.name, a.formula, a.mz, a.polarity)
-        out = Path(a.folder) / "esperimento.toml"
-        if out.exists():
-            print(f"{out} exists: not overwritten (printed below)\n\n{text}")
-            return 1
-        out.write_text(text, encoding="utf-8")
-        print(f"written {out}: check the times and types of the samples")
-    elif a.cmd == "convert":
+    if a.cmd == "convert":
         from .convert import ConversionError, to_mzml
         for f in a.files:
             try:
@@ -51,19 +29,6 @@ def main(argv=None) -> int:
             except ConversionError as e:
                 print(e, file=sys.stderr)
                 return 1
-    elif a.cmd == "candidates":
-        from .core.analysis import Analysis
-        from .project import load_project
-        from .server import App
-        app = App(a.project)
-        if app.error:
-            print(app.error, file=sys.stderr)
-            return 1
-        for r in sorted(app.summary, key=lambda r: (-(r["score"] if r["score"] is not None else -1), -r["max_area"]))[:25]:
-            print(f"{r['mz']:9.4f}  {str(r['score'] if r['score'] is not None else '-'):>4}  {r['label']:<20} {r['name']}")
-        if a.csv:
-            Path(a.csv).write_text(app.candidates_csv(), encoding="utf-8")
-            print(f"table written to {a.csv}")
     elif a.cmd == "metodo":
         import json
         from .reader.methodinfo import read_methods
@@ -72,7 +37,7 @@ def main(argv=None) -> int:
     elif a.cmd == "app":
         from .server import default_workdir, serve
         wd = Path(a.workdir) if a.workdir else default_workdir()
-        serve(None, a.port, not a.no_open, workdir=wd, exit_on_close=a.exit_on_close)
+        serve(wd, a.port, not a.no_open, exit_on_close=a.exit_on_close)
     return 0
 
 

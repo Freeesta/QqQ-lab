@@ -88,17 +88,11 @@ def write_mzml(path: Path, t: float | None, blank: bool, rng: np.random.Generato
 
 
 def make_demo(folder: Path) -> Path:
+    """Synthetic carbamazepine time course (t0..t60 + blank) as mzML files; used by the tests. Returns the folder."""
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(7)
-    lines = ['# Synthetic demo experiment (carbamazepine). Edit freely.', "[parent]", 'name = "Carbamazepine (demo)"',
-             'formula = "C15H12N2O"', 'polarity = "positive"', "", "[settings]", "tol_da = 0.35", "rt_tol_min = 0.25",
-             "max_steps = 2", "rt_min = 0.5", ""]
     for t in TIMES:
         write_mzml(folder / f"demo_t{t}min.mzML", t, False, rng)
-        lines += ["[[samples]]", f'file = "demo_t{t}min.mzML"', f'label = "t{t}"', f"time = {t}", 'type = "sample"', ""]
     write_mzml(folder / "demo_blank.mzML", None, True, rng)
-    lines += ["[[samples]]", 'file = "demo_blank.mzML"', 'label = "blank"', 'type = "blank"', ""]
-    cfg = folder / "esperimento.toml"
-    cfg.write_text("\n".join(lines), encoding="utf-8")
-    return cfg
+    return folder
