@@ -14,22 +14,32 @@ const TOL0 = 1.0;                                   // strumento datato: finestr
 
 // ------------------------------------------------------------------ schermata di caricamento
 const PHRASES = [
-  "Accordando il quadrupolo...", "Contando gli ioni, uno per uno...", "Ricorda: m/z è massa diviso carica, non solo massa.",
-  "[M+H]+ pesa 1.00728 in più della molecola neutra: è un protone, non un atomo di idrogeno.", "Un cloro lascia un M+2 al 32%: gli isotopi non mentono.",
-  "Facendo il vuoto (non è una metafora)...", "Elettrospray: goccioline che esplodono in ioni.", "In Q2 gli ioni urtano l'azoto: vince sempre l'azoto.",
-  "Il rumore di fondo è sempre colpa del solvente. O dell'acido formico.", "Un picco senza il bianco non è un picco.",
-  "Risoluzione unitaria: ±1 Da non è un errore, è lo strumento.", "Ogni prodotto di trasformazione è un'ipotesi finché non hai lo standard.",
-  "Lo ione più intenso non è sempre quello giusto.", "Integrare un picco è un atto di fede, con una baseline.", "Pesando elettroni con una bilancia molto, molto piccola..."];
-let ldTimer = null, ldSince = 0;
+  "Ignorando i warning", "Schivando gli ftalati", "Minando crypto di nascosto", "Litigando coi file", "Allineando i quadrupolo",
+  "Compilando preghiere", "Aggiornando Matrix", "Cercando il segnale perduto", "Riavviando l'universo", "Ansia da separazione",
+  "Contaminando la sorgente", "Accecando l'elettromoltiplicatore", "Maledicendo la matrice", "Cuocendo sui quadrupoli"];
+// loading screen: one phrase every 5 s, in random order without repeats; the three dots appear one after the other
+let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
+function ldNext() {
+  if (!ldBag.length) {                                            // refill with a fresh shuffle, never starting with the phrase just shown
+    ldBag = PHRASES.map((_, i) => i).sort(() => Math.random() - 0.5);
+    if (ldBag[ldBag.length - 1] === ldLast) ldBag.unshift(ldBag.pop());
+  }
+  ldLast = ldBag.pop();
+  const el = Q("#ldmsg"); el.textContent = PHRASES[ldLast];
+  const dots = document.createElement("span");
+  for (let i = 0; i < 3; i++) { const d = document.createElement("span"); d.textContent = "."; d.style.visibility = "hidden"; dots.appendChild(d); }
+  el.appendChild(dots);
+  let n = 0; clearInterval(ldDotTimer);
+  ldDotTimer = setInterval(() => { n = (n + 1) % 4; [...dots.children].forEach((d, i) => { d.style.visibility = i < n ? "visible" : "hidden"; }); }, 450);
+}
 function loading(on, msg) {
   const L = Q("#loading");
   if (on) {
     ldSince = Date.now(); Q("#ldsub").textContent = msg || "";
-    const next = () => { Q("#ldmsg").textContent = PHRASES[Math.floor(Math.random() * PHRASES.length)]; };
-    next(); clearInterval(ldTimer); ldTimer = setInterval(next, 2600); L.hidden = false;
+    clearInterval(ldTimer); ldNext(); ldTimer = setInterval(ldNext, 5000); L.hidden = false;
   } else {
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
-    setTimeout(() => { L.hidden = true; clearInterval(ldTimer); }, wait);
+    setTimeout(() => { L.hidden = true; clearInterval(ldTimer); clearInterval(ldDotTimer); }, wait);
   }
 }
 
