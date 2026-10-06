@@ -20,6 +20,22 @@ ROOT = Path(__file__).resolve().parent.parent
 PYODIDE = "314.0.7"                                   # Python 3.14 + numpy 2.4 in WebAssembly
 CDN = f"https://cdn.jsdelivr.net/pyodide/v{PYODIDE}/full/"
 CORE = ["pyodide.mjs", "pyodide.asm.mjs", "pyodide.asm.wasm", "python_stdlib.zip", "pyodide-lock.json"]
+# SHA-256 of the files of this Pyodide version (computed from the jsDelivr release when the version was pinned). A different hash stops the build:
+# a tampered CDN file would otherwise run inside every student's browser. When PYODIDE is updated, recompute them. numpy is checked against
+# the sha256 written in pyodide-lock.json (which is itself pinned here).
+SHA256 = {
+    "pyodide.mjs": "6f1d60f7bf529beb300f0f47983c921d3982363640ba20af0e38efdddbc66109",
+    "pyodide.asm.mjs": "f7cdc8ece80678ceb712f8e65ebe6d3a83203a180c399865f49612a051693635",
+    "pyodide.asm.wasm": "cc36e3cab04fdfc9a63ff13eb52eae2b911bf46c025cc7b281f394bd3de1d5e6",
+    "python_stdlib.zip": "fa1957e5777068fc4f7437f96d860ae2fbe9c19732ba06c84e004ec16dd7dd7a",
+    "pyodide-lock.json": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010",
+}
+
+
+def check_sha256(path: Path, want: str) -> None:
+    got = hashlib.sha256(path.read_bytes()).hexdigest()
+    if got != want:
+        raise SystemExit(f"{path.name}: SHA-256 {got} is not the expected {want}: build stopped")
 
 
 # Web app manifest (PWA). Paths are relative to the manifest, which sits in the site root, so it works under /QqQ-lab/.
@@ -86,8 +102,10 @@ def main() -> None:
     py.mkdir()
     for n in CORE:
         fetch(n, py, a.pyodide_dir)
+        check_sha256(py / n, SHA256[n])
     lock = json.loads((py / "pyodide-lock.json").read_text(encoding="utf-8"))
     fetch(lock["packages"]["numpy"]["file_name"], py, a.pyodide_dir)
+    check_sha256(py / lock["packages"]["numpy"]["file_name"], lock["packages"]["numpy"]["sha256"])
     # service worker at the site root (scope = the whole site): offline use after the first visit
     sw = (static / "sw.js").read_text(encoding="utf-8")
     (static / "sw.js").unlink()

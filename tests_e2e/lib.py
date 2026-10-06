@@ -1,6 +1,21 @@
 import os, subprocess, time, sys, shutil
 from pathlib import Path
 from playwright.sync_api import sync_playwright
+# The page has a CSP without unsafe-eval: Playwright's wait_for_function evaluates strings with eval, so it is replaced by a polling version that
+# goes through page.evaluate (CDP, not blocked). Same signature for the cases used in the tests (expression string, timeout).
+def _wff(self, expression, arg=None, polling=None, timeout=30000):
+    import time
+    t0 = time.time()
+    while True:
+        try:
+            v = self.evaluate("(() => { return (" + expression + "); })()") if isinstance(expression, str) and not expression.strip().startswith(("()", "function")) else self.evaluate(expression, arg)
+            if v: return v
+        except Exception as e:
+            if "Execution context was destroyed" not in str(e) and "Target" not in str(e): last = e
+        if (time.time() - t0) * 1000 > timeout: raise TimeoutError("wait_for_function: " + str(expression)[:120])
+        self.wait_for_timeout(100)
+from playwright.sync_api import Page as _Page
+_Page.wait_for_function = _wff
 FILES = ["B_FullMass-t0", "B_FullMass-t15", "B_FullMass-t60", "B_MS2-t15", "B_MRM-t0"]
 # Paths are relative to this folder: code = parent of tests_e2e, mzML = ../esempio_conversione/mzml (or $QQQ_MZML)
 HERE = Path(__file__).resolve().parent

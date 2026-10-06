@@ -15,6 +15,7 @@ Apri https://freeesta.github.io/QqQ-lab/ in un browser recente (Chrome o Edge 90
 pagina parte subito. I file mzML non vengono caricati su nessun server: restano nella memoria della pagina e nello
 spazio del browser, così alla riapertura la sessione riprende da dove l'avevi lasciata (sullo stesso computer e
 browser). Dopo la prima visita funziona anche senza internet (copia nel browser). Non c'è la conversione dei `.wiff` (serve msconvert): converti prima in mzML.
+**I tuoi file non lasciano il tuo computer**: la pagina non li invia a nessun server (la pagina stessa limita per regola le connessioni a se stessa).
 Come si pubblica: vedi `AGENTS.md`, sezione "Versione nel browser".
 
 ## Avvio (offline)
@@ -23,6 +24,10 @@ Come si pubblica: vedi `AGENTS.md`, sezione "Versione nel browser".
   ambiente Python privato (`.venv-qqq-lab`) e installa numpy: serve internet e Python 3.11 o più recente
   (consigliato l'ultimo, da https://www.python.org/downloads/). Se in seguito installi un Python più nuovo,
   l'ambiente si aggiorna da solo al doppio clic successivo; quello vecchio non viene cancellato.
+  Nota: l'avvio non firmato può far comparire un avviso del sistema ("sviluppatore non identificato" su Mac, "Windows ha protetto il PC" su Windows):
+  è normale per programmi non firmati, usa **Apri comunque** (Mac: clic destro → Apri; Windows: Ulteriori informazioni → Esegui comunque). L'installazione scarica
+  solo pacchetti già compilati (numpy) dal sito ufficiale di Python, non aggiorna pip e non esegue script di compilazione; serve la rete la prima volta.
+  Anche in questa versione **i tuoi file non lasciano il tuo computer**: il programma risponde solo a questo computer (127.0.0.1).
 - **Da terminale**: `pip install -e .` una volta, poi `python -m qqq_lab app` (opzioni `--workdir CARTELLA`, `--port`).
 
 Si apre il browser: trascina i file `.mzML` (o "clicca per sceglierli"), controlla tempi e tipi, premi

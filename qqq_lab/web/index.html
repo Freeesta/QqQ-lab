@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><title>QqQ lab</title>
+<html lang="it"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' blob:"><title>QqQ lab</title>
 <link rel="icon" href="static/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="static/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png"><link rel="apple-touch-icon" href="static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
@@ -113,7 +114,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 </section>
 <section id="v-theory" hidden><iframe id="tframe" title="Teoria"></iframe></section>
 <section id="v-draw" hidden>
- <div><iframe id="kframe" title="Editor chimico" loading="lazy"></iframe></div>
+ <div><iframe id="kframe" title="Editor chimico" loading="lazy" sandbox="allow-scripts allow-same-origin allow-modals allow-downloads"></iframe></div>
  <aside>
   <div class="card"><div class="sm" style="margin-bottom:6px"><a href="#" id="ex-link">Vedi un esempio di disegno</a></div>
    <div style="font-weight:600;margin-bottom:2px">Sotto ogni struttura</div>

@@ -695,7 +695,7 @@ function ctl(p) {
     const xr = xt ? `${xsel}<label class="muted" title="Intervallo di m/z estratto (XIC). Scrivi i due estremi e premi Invio"><i>m/z</i> da <input data-o="xlo" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(xt.mz - xw1)}"> a <input data-o="xhi" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(xt.mz + xw1)}"></label>` : "";
     c.innerHTML = `${xr}<button data-o="addb" title="Aggiunge un altro XIC a questo pannello: scegli la finestra di m/z">+ XIC</button>${fsel}${chk("smooth", "smoothing")}${view}${corr}${p.traces.length > 1 ? '<button data-o="split" title="Un pannello per ogni ione">Separa</button>' : ""}`;
   }
-  if (p.type === "mrm") c.innerHTML = `<select data-o="tr" title="Transizione"><option value="">tutte le transizioni</option>${p._trs.map(t => `<option value="${t.key}" ${p.tr === t.key ? "selected" : ""}>${t.key} ${EH(t.name)}</option>`).join("")}</select>${fsel}${chk("smooth", "smoothing")}${view}${corr}<button data-o="cal" title="Tabella delle aree dei file MRM e retta di taratura (concentrazione contro area)">Retta di taratura</button>`;
+  if (p.type === "mrm") c.innerHTML = `<select data-o="tr" title="Transizione"><option value="">tutte le transizioni</option>${p._trs.map(t => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${fsel}${chk("smooth", "smoothing")}${view}${corr}<button data-o="cal" title="Tabella delle aree dei file MRM e retta di taratura (concentrazione contro area)">Retta di taratura</button>`;
   if (p.type === "map") {
     const sf = TF, opt = (v, cur, lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
     c.innerHTML = `<select data-o="k" title="File da mostrare">${sf.map(x => opt(x.k, p.k, x.label)).join("")}</select>` +
@@ -1296,7 +1296,7 @@ async function drawSpec(p) {
     } catch (e) { isoNote = `<span class="sm">profilo isotopico: ${EH(e.message)}</span>`; }
   }
   if (p.sim && window.QQQRef) drawSim(p, g, W, H, HF, x0, x1);
-  p.leg.innerHTML = `<span>${p.level === 2 ? "MS2" : "MS1"} · RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min · ${data.map(x => x.d.scans + " scan").join(", ")}${bgOf(files[0]) ? " · fondo sottratto" : ""}</span>` + (data.length > 1 ? data.map(x => `<span><i style="background:${x.f.color}"></i>${EH(x.f.label)}</span>`).join("") : "") + isoNote;
+  p.leg.innerHTML = `<span>${p.level === 2 ? "MS2" : "MS1"} · RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min · ${data.map(x => EH(String(x.d.scans)) + " scan").join(", ")}${bgOf(files[0]) ? " · fondo sottratto" : ""}</span>` + (data.length > 1 ? data.map(x => `<span><i style="background:${x.f.color}"></i>${EH(x.f.label)}</span>`).join("") : "") + isoNote;
 }
 
 // ------------------------------------------------------------------ mouse
@@ -1499,7 +1499,7 @@ function lcHtml(lc, row) {
 async function showMethod(sel) {
   const f = E.files[E.cur]; if (!f) return info("Apri prima almeno un file.");
   let m; try { m = await J("api/method?k=" + f.k); } catch (e) { return info("Errore: " + EH(e.message)); }
-  const row = (a, b) => b == null || b === "" ? "" : `<tr><td class="muted">${a}</td><td>${b}</td></tr>`;
+  const row = (a, b) => b == null || b === "" ? "" : `<tr><td class="muted">${EH(a)}</td><td>${EH(String(b))}</td></tr>`;   // values come from the file: always escaped here
   const pol = { positive: "positivo (ESI+)", negative: "negativo (ESI-)", mixed: "misto", unknown: "non indicata" }[m.polarity] || m.polarity;
   const labs = m.lab || [], li = labs.length ? Math.min(Math.max(sel ?? m.lab_pick ?? 0, 0), labs.length - 1) : -1, lab = labs[li];
   let h = labs.length ? "" : `<div style="background:#fff4e0;border-left:4px solid #e08a00;border-radius:6px;padding:8px 12px;margin-bottom:8px"><b>Manca il metodo di acquisizione.</b> Gli mzML non contengono i parametri della sorgente, le energie di collisione e il gradiente: li leggo dal file <b>.dam</b> del metodo (quello di Analyst).<div style="margin-top:6px"><button class="go" id="m-load">Carica il metodo (.dam)</button></div></div>`;
@@ -1512,7 +1512,7 @@ async function showMethod(sel) {
   };
   const scanLike = m.kind === "full" || m.kind === "ms2";
   const expTbl = `<table>${row("Polarità", pol)}${scanLike ? row("Intervallo di massa", m.scan_window ? `m/z ${m.scan_window[0]}-${m.scan_window[1]}` : "") : ""}${row("Durata", m.rt_max > 0 ? `${m.rt_min.toFixed(2)}-${m.rt_max.toFixed(2)} min` : "")}${scanLike ? row("Scan", m.scans || "") + row("Tempo di ciclo", m.cycle_s ? m.cycle_s.toFixed(2) + " s" : "") : ""}${m.kind === "ms2" ? row("Precursori (Q1)", m.precursors.join(", ")) + row("Energia di collisione", m.ce.length ? m.ce.join(", ") + " eV" : "") : ""}</table>`;
-  const trTbl = m.transitions.length ? `<table><tr><th>Nome</th><th class="num">Q1 (m/z)</th><th class="num">Q3 (m/z)</th><th class="num">CE (eV)</th><th class="num">Dwell (ms)</th></tr>${m.transitions.map(t => `<tr><td>${EH(t.name || "")}</td><td class="num">${t.q1}</td><td class="num">${t.q3}</td><td class="num">${t.ce ?? ""}</td><td class="num">${t.dwell != null ? Math.round(t.dwell * 1000) : ""}</td></tr>`).join("")}</table>` : "";
+  const trTbl = m.transitions.length ? `<table><tr><th>Nome</th><th class="num">Q1 (m/z)</th><th class="num">Q3 (m/z)</th><th class="num">CE (eV)</th><th class="num">Dwell (ms)</th></tr>${m.transitions.map(t => `<tr><td>${EH(t.name || "")}</td><td class="num">${EH(String(t.q1))}</td><td class="num">${EH(String(t.q3))}</td><td class="num">${EH(String(t.ce ?? ""))}</td><td class="num">${t.dwell != null ? Math.round(t.dwell * 1000) : ""}</td></tr>`).join("")}</table>` : "";
   h += `<div class="msub"><span class="tag">${kindOf(f)}</span> <b>${EH(f.label)}</b> <span class="muted">· ${EH(m.instrument)} (${EH(m.serial)})</span></div><div class="mgrid">`;
   h += sec("Esperimento", `<div class="sm hw">${HOW[m.kind === "full" ? (f.mode === "ems" ? "ems" : "q1") : m.kind] || ""}</div>${expTbl}${trTbl}`);
   if (lab && lab.check && lab.check.length) {

@@ -16,7 +16,7 @@ function start() {
   if (starting) return starting;
   const fr = Q("#kframe");
   starting = new Promise((resolve, reject) => {
-    const on = e => { if (e.data && e.data.type === "ketcher-ready") { removeEventListener("message", on); K = fr.contentWindow.ketcher; resolve(K); } };
+    const on = e => { if (e.source === fr.contentWindow && e.data && e.data.type === "ketcher-ready") { removeEventListener("message", on); K = fr.contentWindow.ketcher; resolve(K); } };
     addEventListener("message", on);
     fr.src = "static/vendor/ketcher/index.html";
     setTimeout(() => reject(new Error("Ketcher non si e' avviato")), 60000);

@@ -157,14 +157,12 @@ def build(ver: tuple, py: str, old: tuple | None) -> bool:
                 archive(aside, "venv-precedente")
             ENV.rename(aside)
         envpy = env_python()
-        sp.update("1/3")
+        sp.update("1/2")
         ok = run([py, "-m", "venv", ENV])
         if ok:
-            sp.update("2/3")
-            ok = run([envpy, "-m", "pip", "install", "--upgrade", "pip"])
-        if ok:
-            sp.update("3/3 numpy (serve internet)")
-            ok = run([envpy, "-m", "pip", "install", "-e", "."]) and env_version() == ver
+            sp.update("2/2 numpy (serve internet)")
+            # only ready-made wheels (no build scripts run from the internet); pip itself is not upgraded
+            ok = run([envpy, "-m", "pip", "install", "--only-binary", ":all:", "-e", "."]) and env_version() == ver
         if ok:
             sp.done(f"Ambiente pronto (Python {tag})")
         else:
@@ -187,30 +185,8 @@ def build(ver: tuple, py: str, old: tuple | None) -> bool:
     return False
 
 
-def set_icon() -> None:
-    """Mac: give 'Avvia QqQ lab.command' the app icon. macOS keeps a custom icon in the file's resource fork,
-    which zip files and cloud folders drop: so it is set again whenever it is missing. Silent if it fails."""
-    if sys.platform != "darwin":
-        return
-    target, icon = ROOT / "Avvia QqQ lab.command", ROOT / "qqq_lab" / "web" / "app-icon-512.png"
-    if not (target.exists() and icon.exists()):
-        return
-    try:
-        if subprocess.run(["xattr", "-p", "com.apple.ResourceFork", str(target)], capture_output=True, timeout=10).returncode == 0:
-            return  # the icon is already there
-        lines = ['use framework "AppKit"', "on run argv",
-                 "set img to current application's NSImage's alloc()'s initWithContentsOfFile:(item 1 of argv)",
-                 "current application's NSWorkspace's sharedWorkspace()'s setIcon:img forFile:(item 2 of argv) options:0",
-                 "end run"]
-        cmd = ["osascript"] + [x for line in lines for x in ("-e", line)] + [str(icon), str(target)]
-        subprocess.run(cmd, capture_output=True, timeout=20)
-    except (OSError, subprocess.SubprocessError):
-        pass
-
-
 def main() -> int:
     os.chdir(ROOT)
-    set_icon()
     C.header(__version__)
     current = env_version()
     for ver, py in pythons(use_skip=current is not None):

@@ -94,6 +94,7 @@ function tutStart(force) {
 // the tutorial starts by itself the first time a file is open (once per browser)
 let tutAuto = false;
 function tutMaybe() {
+  if (navigator.webdriver) return;                           // automated tests must not be covered by the overlay
   if (tutAuto || uipRead(TUT_KEY) === "1" || typeof E === "undefined" || !E.files.length || S.view !== "data") return;
   tutAuto = true; setTimeout(() => tutStart(false), 1200);
 }
