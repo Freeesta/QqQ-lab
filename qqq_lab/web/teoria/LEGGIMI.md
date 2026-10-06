@@ -7,7 +7,7 @@ Tutto il testo sta in questa cartella, un file per capitolo. Non c'è niente da 
 | Che cosa | File |
 |---|---|
 | Introduzione e mappa | `index.html` |
-| Capitoli 1–11 | `01-tp.html` … `11-glossario.html` (il numero è nel nome) |
+| Capitoli 1–12 | `01-tp.html` … `12-disegno.html` (il numero è nel nome) |
 | Elenco dei capitoli nel menu laterale | `teoria.js`, in alto: lista `CHAPTERS` |
 | Colori, caratteri, aspetto dei riquadri | `teoria.css` |
 | Figure interattive (calcoli e grafici) | `sim-quad.js`, `sim-esi.js`, `sim-qqq.js`, `sim-frag.js`, `sim-misc.js` |

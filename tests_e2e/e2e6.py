@@ -154,8 +154,8 @@ try:
         step("label follows the zoom", zoom)
         def off():
             n0 = len(pg.evaluate(LBL)); assert n0 >= 1
-            pg.uncheck("#lb-on"); pg.wait_for_timeout(300); assert pg.evaluate(LBL) == []
-            pg.check("#lb-on"); pg.wait_for_timeout(300); assert len(pg.evaluate(LBL)) == n0
+            pg.uncheck("#lb-f"); pg.uncheck("#lb-m"); pg.wait_for_timeout(300); assert pg.evaluate(LBL) == []
+            pg.check("#lb-f"); pg.check("#lb-m"); pg.wait_for_timeout(300); assert len(pg.evaluate(LBL)) == n0
         step("labels can be switched off", off)
         def export():
             ket = pg.evaluate("(async()=>{const k=%s;return k.getKet()})()" % KQ)

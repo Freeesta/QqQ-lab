@@ -23,7 +23,7 @@ function start() {
   }).then(async k => { await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); requestAnimationFrame(showSelection); });
     k.editor.subscribe("selectionChange", () => requestAnimationFrame(showSelection));
     hideMacro(fr); changed(); drawLabels(); return k; });
-  starting.catch(e => { Q("#dcomp").textContent = e.message; });
+  starting.catch(e => dnote(e.message));
   return starting;
 }
 // Ketcher's macromolecule mode (peptides, RNA, DNA) is not needed here and confuses: its switch is hidden
@@ -59,6 +59,7 @@ function describe(smi) {
     return { smiles: smi, formula: hill(counts), mass: f.absoluteWeight };
   } catch (_) { return null; }
 }
+const dnote = msg => { Q("#dcard").hidden = false; Q("#dcomp").textContent = msg; };   // message / table box, visible only when it has content
 function adductTable(d) {
   const main = ["[M+H]+", "[M+Na]+", "[M-H]-"], all = [...ADDUCTS.pos, ...ADDUCTS.neg];
   const row = ([n, dm]) => `<tr><td>${fmtAdduct(n)}</td><td class="num">${(d.mass + dm).toFixed(4)}</td><td>${typeof E !== "undefined" && E.files.length ? `<button class="sm" data-x="${(d.mass + dm).toFixed(2)}" data-l="${d.formula} ${n}">XIC</button>` : ""}</td></tr>`;
@@ -68,7 +69,8 @@ function list(smiles) {
   const box = Q("#dcomp");
   const parts = [...new Set(smiles.split(/[.>]+/).map(s => s.trim()).filter(Boolean))];
   PARTS = parts; capParts();
-  if (!parts.length) { box.innerHTML = '<div class="muted">Disegna una molecola, un frammento o un intero cammino (frecce e testo sono nella barra a sinistra).</div>'; return; }
+  if (!parts.length) { box.innerHTML = ""; Q("#dcard").hidden = true; return; }
+  Q("#dcard").hidden = false;
   box.innerHTML = parts.map((s, i) => {
     const d = describe(s);
     if (!d) return `<div class="muted sm">${EH(s)}: struttura non riconosciuta (frammento aperto?)</div>`;
@@ -83,7 +85,7 @@ function list(smiles) {
 }
 
 // ------------------------------------------------------------------ formula and mass written under each structure
-// Optional (checkbox "#lb-on"). Drawn in an overlay group of Ketcher's own SVG, so the label follows zoom and scroll
+// Optional (checkboxes "#lb-f" formula, "#lb-m" mass + "#lb-dec" decimals). Drawn in an overlay group of Ketcher's own SVG, so the label follows zoom and scroll
 // but is NOT part of the structure (undo, .ket and SMILES are untouched). Added as text to the exported images.
 const MONO = { H: 1.00782503, D: 2.01410178, C: 12, N: 14.00307401, O: 15.99491462, F: 18.99840322, Na: 22.98976928, Mg: 23.9850417, Al: 26.98153853,
   Si: 27.97692653, P: 30.97376163, S: 31.97207100, Cl: 34.96885268, K: 38.96370668, Ca: 39.96259098, Fe: 55.9349375, Cu: 62.9295975, Zn: 63.9291422,
@@ -148,14 +150,18 @@ function arrowDeltas() {
 }
 // text of a label as pieces: [text, "sub" | "sup" | ""]
 function labelParts(d) {
-  const parts = [];
-  for (const m of d.formula.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([m[1], ""]); if (m[2]) parts.push([m[2], "sub"]); }
-  if (d.q) parts.push([(Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "−"), "sup"]);
-  const v = d.q ? roundHalfUp((d.mass - d.q * ELECTRON) / Math.abs(d.q)) : roundHalfUp(d.mass);
-  parts.push([d.q ? `  m/z ${v}` : `  M = ${v}`, ""]);
+  const parts = [], f = Q("#lb-f").checked, m = Q("#lb-m").checked, dec = +Q("#lb-dec").value;
+  if (f) {
+    for (const x of d.formula.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([x[1], ""]); if (x[2]) parts.push([x[2], "sub"]); }
+    if (d.q) parts.push([(Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "−"), "sup"]);
+  }
+  if (m) {
+    const raw = d.q ? (d.mass - d.q * ELECTRON) / Math.abs(d.q) : d.mass;
+    parts.push([`${f ? "  " : ""}${d.q ? "m/z" : "M ="} ${dec ? raw.toFixed(dec) : roundHalfUp(raw)}`, ""]);
+  }
   return parts;
 }
-const labelsOn = () => Q("#lb-on").checked;
+const labelsOn = () => Q("#lb-f").checked || Q("#lb-m").checked;
 function drawLabels() {
   if (!K) return;
   const svg = K.editor.render.paper.canvas, doc = svg.ownerDocument, ns = "http://www.w3.org/2000/svg", sc = K.editor.render.options.microModeScale || 40;
@@ -194,8 +200,12 @@ function ketWithLabels(ket) {
   for (const a of arrowDeltas()) { const t = plain(a.parts); add(t, a.x - t.length * 0.09, -(a.y - 0.75), 14); }
   return JSON.stringify(j);
 }
-Q("#lb-on").addEventListener("change", () => { drawLabels(); NB.labels = labelsOn(); nbSave(); });
-document.addEventListener("nbloaded", () => { Q("#lb-on").checked = NB.labels !== false; drawLabels(); });
+["#lb-f", "#lb-m", "#lb-dec"].forEach(id => Q(id).addEventListener("change", () => { drawLabels(); NB.labF = Q("#lb-f").checked; NB.labM = Q("#lb-m").checked; NB.labDec = +Q("#lb-dec").value; nbSave(); }));
+document.addEventListener("nbloaded", () => {      // older notebooks only have NB.labels (both on)
+  Q("#lb-f").checked = NB.labF !== undefined ? NB.labF : NB.labels !== false; Q("#lb-m").checked = NB.labM !== undefined ? NB.labM : NB.labels !== false;
+  Q("#lb-dec").value = String(NB.labDec || 0); drawLabels();
+});
+Q("#ex-link").onclick = e => { e.preventDefault(); window.big("Esempio di disegno", '<img src="static/esempio-disegno.png" alt="Esempio: paracetamolo e il suo prodotto con +O, con formula e massa sotto ogni struttura e la differenza sopra la freccia" style="max-width:100%;height:auto">'); };
 
 // ------------------------------------------------------------------ selected atoms: a fragment without breaking bonds
 // The H are those the atoms carry in the molecule; every bond to an unselected atom is a cut. The ions are hypotheses
@@ -396,7 +406,7 @@ Q("#ex-png").onclick = async () => download(await image("png"), "struttura.png")
 Q("#ex-jpg").onclick = async () => download(await image("jpg"), "struttura.jpg");
 Q("#ex-svg").onclick = async () => download(await image("svg"), "struttura.svg");
 Q("#ex-ket").onclick = async () => { await start(); download(new Blob([await K.getKet()], { type: "application/json" }), "disegno.ket"); };
-Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); try { await K.setMolecule(v); } catch (e) { Q("#dcomp").textContent = "SMILES non valido: " + e.message; } };
+Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); try { await K.setMolecule(v); } catch (e) { dnote("SMILES non valido: " + e.message); } };
 
 window.TPDraw = { image, smiles: async () => { await start(); return K.getSmiles(); }, ready: () => !!K };
 document.addEventListener("tpview", e => { if (e.detail.view === "draw") start(); });
