@@ -298,6 +298,7 @@ function toolbar() {
   Q("#g-add").hidden = empty; Q("#g-tools").hidden = empty; Q("#g-file").hidden = empty; Q("#dpanels").hidden = empty; Q("#tools .sp").hidden = empty; Q("#np-method").hidden = empty;
   if (window.emptyTab) emptyTab();
   fitTools(); requestAnimationFrame(fitTools); setTimeout(fitTools, 400);
+  if (typeof tutMaybe === "function") tutMaybe();
 }
 // the least used buttons go into "Altro" only when the row would wrap
 function fitTools() {
