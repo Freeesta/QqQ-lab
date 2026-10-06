@@ -18,7 +18,6 @@ def main(argv=None) -> int:
     ap_.add_argument("--workdir", help="folder where the dropped files are kept (default: ~/QqQ_lab_lavoro/sessione_...)")
     ap_.add_argument("--port", type=int, default=8790)
     ap_.add_argument("--no-open", action="store_true")
-    ap_.add_argument("--exit-on-close", action="store_true", help="stop the program when the browser page is closed (used by the launchers)")
     a = ap.parse_args(argv)
 
     if a.cmd == "convert":
@@ -37,7 +36,7 @@ def main(argv=None) -> int:
     elif a.cmd == "app":
         from .server import default_workdir, serve
         wd = Path(a.workdir) if a.workdir else default_workdir()
-        serve(wd, a.port, not a.no_open, exit_on_close=a.exit_on_close)
+        serve(wd, a.port, not a.no_open)
     return 0
 
 

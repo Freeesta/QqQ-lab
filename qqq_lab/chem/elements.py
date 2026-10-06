@@ -14,8 +14,9 @@ PROTON = MASS["H"] - ELECTRON
 # ion m/z = neutral mass + ADDUCT_SHIFT[adduct]; the sign of the charge follows the adduct
 ADDUCT_SHIFT = {
     "[M+H]+": MASS["H"] - ELECTRON,
-    "[M+Na]+": MASS["Na"] - ELECTRON,
     "[M+NH4]+": MASS["N"] + 4 * MASS["H"] - ELECTRON,
+    "[M+Na]+": MASS["Na"] - ELECTRON,
+    "[M+K]+": MASS["K"] - ELECTRON,
     "[M-H]-": -MASS["H"] + ELECTRON,
     "[M+Cl]-": MASS["Cl"] + ELECTRON,
     "[M+HCOO]-": MASS["C"] + MASS["H"] + 2 * MASS["O"] + ELECTRON,

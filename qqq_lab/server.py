@@ -24,9 +24,6 @@ from .project import guess_conc, guess_sample
 
 
 UPLOAD_SUFFIXES = (".mzml", ".wiff", ".scan", ".dam")
-# "close the browser = close the program" (only with --exit-on-close): every open page pings the server; when no page is left
-# (after a short grace period that survives a reload) or none ever connected, the server stops
-EXIT_GRACE, EXIT_FIRST, EXIT_STALE = 2.5, 120.0, 150.0
 
 
 def _method_summary(m: dict | None) -> str:
@@ -70,44 +67,6 @@ class App:
             self.session = None
 
     # ------------------------------------------------------------------ app mode: files and start
-    # ------------------------------------------------------------------ browser presence (close the browser -> stop the program)
-    def _presence(self):
-        if not hasattr(self, "_tabs"):
-            self._tabs, self._live, self._plock, self._deadline = {}, set(), threading.Lock(), time.time() + EXIT_FIRST
-        return self._plock
-
-    def ping(self, tab: str):
-        with self._presence():
-            self._tabs[tab] = time.time()
-            self._deadline = None
-
-    def bye(self, tab: str):
-        with self._presence():
-            self._tabs.pop(tab, None)
-            self._live.discard(tab)
-            if not self._tabs:
-                self._deadline = time.time() + EXIT_GRACE
-
-    def live_open(self, tab: str):
-        """A page holds an open connection (/api/live): it is there as long as the connection lives, however long its timers are throttled."""
-        with self._presence():
-            self._live.add(tab)
-            self._tabs[tab] = time.time()
-            self._deadline = None
-
-    def live_close(self, tab: str):
-        """The connection dropped: the tab or the whole browser was closed (a reload opens a new one within the grace period)."""
-        self.bye(tab)
-
-    def should_exit(self) -> bool:
-        with self._presence():
-            now = time.time()
-            for t in [t for t, seen in self._tabs.items() if t not in self._live and now - seen > EXIT_STALE]:
-                del self._tabs[t]
-            if not self._tabs and self._deadline is None:
-                self._deadline = now + EXIT_GRACE
-            return not self._tabs and self._deadline is not None and now > self._deadline
-
     def files(self) -> list[dict]:
         if not self.workdir:
             return []
@@ -395,25 +354,6 @@ def make_handler(app: App):
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
             if u.path in ("/", "/index.html"):
                 return self._send(200, _page(), "text/html")
-            if u.path == "/api/live":                       # presence by an open connection: when the page goes, the connection drops
-                tab = q.get("tab", "")
-                self.send_response(200)
-                self.send_header("Content-Type", "text/event-stream")
-                self.send_header("Cache-Control", "no-cache")
-                self.send_header("Connection", "close")
-                self.end_headers()
-                self.close_connection = True
-                app.live_open(tab)
-                try:
-                    while True:
-                        self.wfile.write(b": alive\n\n")
-                        self.wfile.flush()
-                        time.sleep(0.5)
-                except OSError:                              # BrokenPipe / ConnectionReset: the page is gone
-                    pass
-                finally:
-                    app.live_close(tab)
-                return
             if u.path.startswith("/static/"):
                 got = _static(u.path[len("/static/"):])
                 if got is None:
@@ -434,10 +374,9 @@ def default_workdir(new: bool = False) -> Path:
     return root / datetime.now().strftime("sessione_%Y%m%d_%H%M%S")
 
 
-def serve(workdir, port: int = 8790, open_browser: bool = True, exit_on_close: bool = False):
-    from . import __version__, console as C
-    if not os.environ.get("QQQ_HEADER"):        # the launcher (scripts/avvia.py) has already printed the header
-        C.header(__version__)
+def serve(workdir, port: int = 8790, open_browser: bool = True):
+    """Local server, used only for development and the tests (the students use the site). Ctrl+C stops it."""
+    from . import __version__
     app = App(workdir)
     httpd = None
     for p in range(port, port + 20):
@@ -447,27 +386,16 @@ def serve(workdir, port: int = 8790, open_browser: bool = True, exit_on_close: b
         except OSError:
             continue
     if httpd is None:
-        C.fail("Nessuna porta libera", f"provate {port}-{port + 19}")
+        print(f"QqQ lab: no free port in {port}-{port + 19}")
         raise SystemExit(1)
     url = f"http://127.0.0.1:{httpd.server_address[1]}/"
-    C.link(url, "pronto" + (f" · sessione precedente riaperta ({len(app.session.items)} file)" if app.session and app.session.items else ""))
-    C.say("  " + C.dim("Per uscire chiudi la pagina del browser (o premi Ctrl+C)." if exit_on_close else "Per uscire chiudi questa finestra (o premi Ctrl+C)."))
-    if exit_on_close:
-        app._presence()            # starts the clock: if no page ever connects (EXIT_FIRST), the program stops by itself
-
-        def watch():
-            while not app.should_exit():
-                time.sleep(0.3)
-            httpd.shutdown()
-        threading.Thread(target=watch, daemon=True).start()
+    print(f"QqQ lab v{__version__}  {url}  ready" + (f" (previous session reopened, {len(app.session.items)} files)" if app.session and app.session.items else ""))
+    print("  Ctrl+C to stop.")
     if open_browser:
         webbrowser.open(url)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        C.say("  " + C.dim("QqQ lab chiuso. Il lavoro è salvato."))
-    else:
-        if exit_on_close:
-            C.say("  " + C.dim("Pagina chiusa: QqQ lab si ferma. Il lavoro è salvato."))
+        print("  QqQ lab closed. The work is saved.")
     finally:
         httpd.server_close()

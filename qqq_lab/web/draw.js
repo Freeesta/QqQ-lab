@@ -21,7 +21,7 @@ function start() {
     addEventListener("message", on);
     fr.src = "static/vendor/ketcher/index.html";
     setTimeout(() => reject(new Error("Ketcher non si e' avviato")), 60000);
-  }).then(async k => { await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); });
+  }).then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); });
     k.editor.subscribe("selectionChange", () => requestAnimationFrame(showInfo));
     hideMacro(fr); changed(); drawLabels(); return k; });
   starting.catch(e => dnote(e.message));
@@ -45,6 +45,7 @@ async function changed() {
   if (!K) return;
   let ket = "";
   try { ket = await K.getKet(); } catch (_) { return; }
+  try { if (!NB.ket && K.editor.struct().isBlank()) return; } catch (_) { /* no isBlank: save as before */ }       // nothing drawn and nothing saved: no empty notebook entry
   NB.ket = ket; nbSave();
   showInfo();
 }
@@ -64,30 +65,52 @@ function pieces(only) {
   const out = [...groups.values()].map(g => ({ ids: g, x: Math.min(...g.map(i => st.atoms.get(i).pp.x)), y: Math.min(...g.map(i => st.atoms.get(i).pp.y)) }));
   return out.sort((a, b) => a.x - b.x || a.y - b.y);
 }
-function pieceMolfile(ids) {
+function pieceMolfile(ids, noCharge) {
   const st = K.editor.struct(), set = new Set(ids), idx = new Map(ids.map((id, n) => [id, n + 1])), atoms = ids.map(i => st.atoms.get(i));
   if (atoms.some(a => !(a.label in MONO))) return null;                      // R groups, abbreviations...: no structure
   const bonds = []; st.bonds.forEach(b => { if (set.has(b.begin) && set.has(b.end)) bonds.push(b); });
   const f = (v, w) => v.toFixed(4).padStart(w), n3 = v => String(v).padStart(3), chg = [];
   const L = ["", "  qqq", "", `${n3(atoms.length)}${n3(bonds.length)}  0  0  0  0  0  0  0  0999 V2000`];
-  atoms.forEach((a, k) => { L.push(`${f(a.pp.x, 10)}${f(-a.pp.y, 10)}${f(0, 10)} ${a.label.padEnd(3)} 0  0  0  0  0  0  0  0  0  0  0  0`); if (a.charge) chg.push([k + 1, a.charge]); });
+  atoms.forEach((a, k) => { L.push(`${f(a.pp.x, 10)}${f(-a.pp.y, 10)}${f(0, 10)} ${a.label.padEnd(3)} 0  0  0  0  0  0  0  0  0  0  0  0`); if (a.charge && !(noCharge && noCharge.has(ids[k]))) chg.push([k + 1, a.charge]); });
   bonds.forEach(b => L.push(`${n3(idx.get(b.begin))}${n3(idx.get(b.end))}${n3(b.type >= 1 && b.type <= 4 ? b.type : 1)}  0  0  0  0`));
   for (let i = 0; i < chg.length; i += 8) L.push("M  CHG" + n3(Math.min(8, chg.length - i)) + chg.slice(i, i + 8).map(([a, c]) => " " + n3(a) + " " + n3(c)).join(""));
   L.push("M  END");
   return L.join("\n");
 }
-async function pieceSmiles(ids) {
-  const mf = pieceMolfile(ids); if (!mf) return null;
+async function pieceSmiles(ids, noCharge) {
+  const mf = pieceMolfile(ids, noCharge); if (!mf) return null;
   try {
-    const r = await K.structService.convert({ struct: mf, output_format: "chemical/x-daylight-smiles" }, {});
+    const r = await Promise.race([K.structService.convert({ struct: mf, output_format: "chemical/x-daylight-smiles" }, {}), new Promise((_, ko) => setTimeout(() => ko(new Error("timeout")), 20000))]);
     return String(r.struct || "").trim().split(/\s+/)[0] || null;
   } catch (_) { return null; }
+}
+// Neutral form of a charged piece: drop |net charge| charges of the same sign from atoms that can take the H back (COO- -> COOH, NH3+ -> NH2,
+// pyridinium NH+ -> pyridine). A charge that cannot be dropped (quaternary ammonium, O+ ...) is permanent: null. Nitro and N-oxide groups (+ and -
+// together, net 0) are never touched.
+const VMAX = { N: 3, O: 2, S: 2, P: 3 };
+function neutralPlan(ids, q) {
+  const st = K.editor.struct(), set = new Set(ids), bs = new Map(ids.map(i => [i, 0]));
+  st.bonds.forEach(b => { if (set.has(b.begin) && set.has(b.end)) { const o = b.type === 1 ? 1 : b.type === 2 ? 2 : b.type === 3 ? 3 : 1.5; bs.set(b.begin, bs.get(b.begin) + o); bs.set(b.end, bs.get(b.end) + o); } });
+  const ok = ids.filter(i => { const a = st.atoms.get(i); return a.charge && Math.sign(a.charge) === Math.sign(q) && Math.abs(a.charge) === 1 && VMAX[a.label] && bs.get(i) <= VMAX[a.label] + 0.01; });
+  return ok.length >= Math.abs(q) ? new Set(ok.slice(0, Math.abs(q))) : null;
 }
 // cut bonds of a piece selection: bonds between a selected and an unselected atom
 function cutBonds(set) { let n = 0; K.editor.struct().bonds.forEach(b => { if (set.has(b.begin) !== set.has(b.end)) n++; }); return n; }
 const copyBtn = (text, label) => `<button class="sm" data-cp="${EH(text)}" title="Copia negli appunti">${label || "Copia"}</button>`;
 let infoRun = 0;
+// One run at a time: Ketcher's structure service (Indigo) can hang when several conversions overlap, so a change that arrives while a run is going
+// only marks "again" and the run repeats once with the final selection.
+let infoBusy = false, infoAgain = false;
 async function showInfo() {
+  if (infoBusy) { infoAgain = true; return; }
+  infoBusy = true;
+  try { do { infoAgain = false; await showInfo1(); } while (infoAgain); }
+  catch (e) {                                                                  // never leave an empty or stale box: say what went wrong
+    console.error("QqQ Disegno: proprietà non calcolate", e);
+    const pc = Q("#prop-card"); if (pc) { pc.hidden = false; Q("#prop-body").innerHTML = '<div class="muted sm">Calcolo non riuscito (' + EH(e && e.message ? e.message : e) + '). Ricarica la pagina (Cmd+Maiusc+R); se resta, segnalalo.</div>'; }
+  } finally { infoBusy = false; }
+}
+async function showInfo1() {
   const sc = Q("#sel-card"), pc = Q("#prop-card"); if (!K || !sc || !pc) return;
   const run = ++infoRun, sel = K.editor.selection() || {}, st = K.editor.struct(), set = new Set(sel.atoms || []);
   (sel.bonds || []).forEach(id => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
@@ -95,6 +118,12 @@ async function showInfo() {
   for (const p of all) {                                                       // SMILES (Ketcher) and molecule (OpenChemLib) of each piece
     p.smi = await pieceSmiles(p.ids); p.mol = null;
     if (p.smi) { try { p.mol = OCL.Molecule.fromSmiles(p.smi); } catch (_) { /* no properties */ } }
+    p.counter = !!p.c && p.c.q !== 0 && p.ids.length === 1;                     // Cl-, Na+ ... counter-ion: not a molecule of its own
+    p.nmol = null;
+    if (neutOn && p.c && p.c.q !== 0 && !p.counter) {                          // neutral form (charge excluded)
+      const plan = neutralPlan(p.ids, p.c.q), nsmi = plan ? await pieceSmiles(p.ids, plan) : null;
+      if (nsmi) { try { p.nmol = OCL.Molecule.fromSmiles(nsmi); } catch (_) { /* permanent */ } }
+    }
   }
   if (run !== infoRun) return;                                                 // the selection changed meanwhile: a newer call wins
   // 1) SMILES of the selection (also a piece, not a whole molecule)
@@ -108,15 +137,27 @@ async function showInfo() {
     }).join("") + (cuts ? `<div class="muted sm">${cuts} legam${cuts > 1 ? "i tagliati" : "e tagliato"}: i posti liberi sono chiusi con H.</div>` : "");
   }
   // 2) property estimates: the selected pieces, or every structure of the drawing
-  const rows = all.filter(p => p.mol && p.c).map(p => {
-    const pr = new OCL.MoleculeProperties(p.mol), ion = p.c.q !== 0, v = (x, d) => ion ? "&ndash;" : x.toFixed(d);
-    const fo = ion ? formulaOf(p.c.n).formula : p.mol.getMolecularFormula().formula;     // a cut piece is closed with H: the formula is that of the SMILES shown
-    return `<tr><td>${fmtF(fo)}${p.c.q ? (p.c.q > 0 ? "<sup>+</sup>" : "<sup>&minus;</sup>") : ""}</td><td class="num"><b>${v(pr.logP, 2)}</b></td><td class="num">${v(pr.logS, 2)}</td><td class="num">${v(pr.polarSurfaceArea, 0)}</td><td class="num">${ion ? "&ndash;" : pr.donorCount + "/" + pr.acceptorCount}</td></tr>`;
-  });
-  pc.hidden = !rows.length;
-  if (rows.length) Q("#prop-body").innerHTML = `<table class="sm"><tr><th>${set.size ? "Selezione" : "Struttura"}</th><th class="num">logP</th><th class="num">logS</th><th class="num">TPSA</th><th class="num" title="donatori / accettori di legame H">D/A</th></tr>${rows.join("")}</table>
-    <div class="muted sm">Stime di OpenChemLib per la forma <b>neutra</b> (logS in log mol/L, TPSA in &Aring;<sup>2</sup>; gli ioni sono esclusi). L'errore tipico del logP &egrave; di circa 0.5 unit&agrave;, a volte 1. In LC (C18, acqua/ACN con HCOOH) la ritenzione dipende anche da pKa e carica (logD): usa il logP per confrontare composti simili, non come valore assoluto.</div>`;
+  const charged = all.some(p => p.c && p.c.q !== 0);
+  const rows = []; let usedNeutral = false, perm = false;
+  for (const p of all) {
+    if (!p.mol || !p.c) continue;
+    if (neutOn && p.counter) continue;                                          // counter-ions are dropped
+    const ion = p.c.q !== 0, m = ion ? (neutOn ? p.nmol : null) : p.mol;       // an ion: its neutral form, or nothing when the charge is kept
+    if (ion && neutOn && !m) perm = true;
+    const pr = m ? new OCL.MoleculeProperties(m) : null, v = (x, d) => m ? x.toFixed(d) : "&ndash;";
+    if (m && ion) usedNeutral = true;
+    const fo = m ? m.getMolecularFormula().formula : formulaOf(p.c.n).formula;       // a cut piece is closed with H: the formula is that of the SMILES shown
+    const sign = ion && !m ? (p.c.q > 0 ? "<sup>+</sup>" : "<sup>&minus;</sup>") : "";
+    rows.push(`<tr><td>${fmtF(fo)}${sign}</td><td class="num"><b>${v(m && pr.logP, 2)}</b></td><td class="num">${v(m && pr.logS, 2)}</td><td class="num">${v(m && pr.polarSurfaceArea, 0)}</td><td class="num">${m ? pr.donorCount + "/" + pr.acceptorCount : "&ndash;"}</td></tr>`);
+  }
+  pc.hidden = !rows.length && !charged;
+  if (!pc.hidden) Q("#prop-body").innerHTML = (rows.length ? `<table class="sm"><tr><th>${set.size ? "Selezione" : "Struttura"}</th><th class="num">logP</th><th class="num">logS</th><th class="num">TPSA</th><th class="num" title="donatori / accettori di legame H">D/A</th></tr>${rows.join("")}</table>` : "")
+    + (charged ? `<label class="sm" style="display:block;margin-top:4px" title="Con la spunta le proprietà sono calcolate sulla forma neutra (COO- diventa COOH, NH3+ diventa NH2); controioni come Cl- o Na+ sono scartati."><input type="checkbox" id="prop-neut"${neutOn ? " checked" : ""}> Escludi la carica</label>` : "")
+    + (usedNeutral ? '<div class="muted sm">calcolato sulla forma neutra</div>' : "")
+    + (perm ? '<div class="muted sm">carica permanente: non neutralizzabile</div>' : "");
 }
+let neutOn = true;                                                             // "Escludi la carica": on by default
+document.addEventListener("change", e => { if (e.target && e.target.id === "prop-neut") { neutOn = e.target.checked; showInfo(); } });
 const fmtF = f => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
 document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-cp]"); if (b) { try { navigator.clipboard.writeText(b.dataset.cp); b.textContent = "Copiato"; setTimeout(() => { b.textContent = "Copia"; }, 1200); } catch (_) { /* clipboard blocked */ } } });
 
@@ -247,7 +288,8 @@ function ketWithLabels(ket) {
 document.addEventListener("nbloaded", () => {      // older notebooks only have NB.labels (both on)
   Q("#lb-f").checked = NB.labF !== undefined ? NB.labF : NB.labels !== false; Q("#lb-m").checked = NB.labM !== undefined ? NB.labM : NB.labels !== false;
   Q("#lb-dec").value = String(NB.labDec || 0);
-  Q("#lb-ion").value = IONS[NB.labIon] ? NB.labIon : "";
+  Q("#lb-ion").value = IONS[NB.labIon] ? NB.labIon : "";          // default (new session, old notebooks): no ion
+  Q("#ex-name").value = NB.drawName || stamp();
   drawLabels();
 });
 // the two example drawings (made with this very tab: see tests_e2e/make_examples.py)
@@ -371,6 +413,7 @@ async function image(format) {
   svgText = padSvg(svgText, 16);
   const clear = Q("#ex-nobg").checked && format !== "jpg";       // transparent background: PNG and SVG only (JPEG has no transparency)
   if (clear) svgText = noBackground(svgText);
+  svgText = svgText.replace(/<svg\b([^>]*)>/, (m, at) => `<svg${at}><title>Disegno QqQ lab, ${stamp().slice(8, 18)}, sfondo ${clear ? "trasparente" : "bianco"}</title>`);
   const svg = new Blob([svgText], { type: "image/svg+xml" });
   if (format === "svg") return svg;
   // PNG / JPEG: rasterise the vector at high resolution (Ketcher's own PNG is small): at least 3x, about 3600 px wide, never more than 12000 px on a side
@@ -381,20 +424,59 @@ async function image(format) {
   const g = c.getContext("2d"); if (!clear) { g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); }
   g.drawImage(img, 0, 0, c.width, c.height);
   URL.revokeObjectURL(url);
-  return new Promise(r => c.toBlob(r, format === "jpg" ? "image/jpeg" : "image/png", 0.95));
+  const out = await new Promise(r => c.toBlob(r, format === "jpg" ? "image/jpeg" : "image/png", 0.95));
+  if (format === "png" && window.pngWithMeta) {                    // tEXt chunks, like the plots of the Dati tab (no personal data)
+    try { return await window.pngWithMeta(out, [["Title", "Disegno"], ["Description", `scala ${sc.toFixed(1)}x; sfondo ${clear ? "trasparente" : "bianco"}`], ["Software", "QqQ lab"], ["Creation Time", new Date().toISOString()]]); } catch (_) { /* saved without metadata */ }
+  }
+  return out;
 }
-Q("#ex-png").onclick = async () => download(await image("png"), "struttura.png");
-Q("#ex-jpg").onclick = async () => { if (!Q("#ex-nobg").checked) download(await image("jpg"), "struttura.jpg"); };
-Q("#ex-nobg").addEventListener("change", () => {      // JPEG cannot be transparent: its button is off while "senza sfondo" is on
+// ---- export file names: disegno_AAAA-MM-GG_HHMM.<ext>; one base name for PNG, JPEG, SVG and .ket of the same minute, "_trasparente" for a transparent
+// PNG/SVG, "-2", "-3" for a repeated name; ASCII lower case only (works on Mac, Windows and the web). The student can change the base name.
+const AUTO = /^disegno_\d{4}-\d\d-\d\d_\d{4}$/, usedNames = new Map();
+const stamp = () => { const d = new Date(), z = n => String(n).padStart(2, "0"); return `disegno_${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`; };
+const cleanName = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9_-]+/g, "_").replace(/_{2,}/g, "_").replace(/^[_-]+|[_-]+$/g, "").slice(0, 60);
+function freshName() { const f = Q("#ex-name"); if (!f.value.trim() || AUTO.test(f.value.trim())) f.value = stamp(); }
+function exportName(ext, clear) {
+  freshName();
+  const base = (cleanName(Q("#ex-name").value) || stamp()) + (clear ? "_trasparente" : ""), key = base + "." + ext, n = (usedNames.get(key) || 0) + 1;
+  usedNames.set(key, n);
+  return base + (n > 1 ? "-" + n : "") + "." + ext;
+}
+Q("#ex-name").addEventListener("change", () => { const c = cleanName(Q("#ex-name").value); Q("#ex-name").value = c || stamp(); NB.drawName = AUTO.test(Q("#ex-name").value) ? "" : Q("#ex-name").value; nbSave(); });
+const exwarn = msg => { const w = Q("#ex-warn"); w.textContent = msg || ""; w.hidden = !msg; };
+// every export goes through here: a failure is written in the page instead of being silent
+async function doExport(kind) {
+  exwarn("");
+  try {
+    await start();
+    if (kind === "ket") { download(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); return; }
+    if (kind === "jpg" && Q("#ex-nobg").checked) return;
+    const clear = Q("#ex-nobg").checked && kind !== "jpg", blob = await image(kind);
+    if (!blob || !blob.size) throw new Error("immagine vuota");
+    download(blob, exportName(kind, clear));
+  } catch (e) { exwarn("Esportazione non riuscita: " + (e && e.message ? e.message : e) + ". Ricarica la pagina (Cmd+Maiusc+R) e riprova; se resta, scrivi a chi tiene il corso."); }
+}
+Q("#ex-png").onclick = () => doExport("png");
+Q("#ex-jpg").onclick = () => doExport("jpg");
+Q("#ex-svg").onclick = () => doExport("svg");
+Q("#ex-ket").onclick = () => doExport("ket");
+function syncBg() {                                    // JPEG cannot be transparent: its button is off (grey) while "Sfondo trasparente" is on
   const on = Q("#ex-nobg").checked, j = Q("#ex-jpg");
-  j.disabled = on; j.title = on ? "Il JPEG non supporta la trasparenza: togli la spunta «senza sfondo» oppure usa PNG o SVG" : "";
-});
-Q("#ex-svg").onclick = async () => download(await image("svg"), "struttura.svg");
-Q("#ex-ket").onclick = async () => { await start(); download(new Blob([await K.getKet()], { type: "application/json" }), "disegno.ket"); };
+  j.disabled = on; j.title = on ? "Il JPEG non supporta la trasparenza: togli la spunta «Sfondo trasparente» oppure usa PNG o SVG" : "";
+}
+Q("#ex-nobg").addEventListener("change", syncBg); syncBg();
+freshName();
 Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote("");
-  try { const before = await K.getKet(); await K.setMolecule(v); if (await K.getKet() === before) dnote("SMILES non valido o già disegnato: la tela non è cambiata."); }   // Ketcher ignores some invalid SMILES without an error
+  try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote("SMILES non valido: non è stata aggiunta nessuna struttura."); }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e) { dnote("SMILES non valido: " + e.message); } };
 
-window.TPDraw = { image, smiles: async () => { await start(); return K.getSmiles(); }, ready: () => !!K };
+window.TPDraw = { ions: IONS, image, info: showInfo, smiles: async () => { await start(); return K.getSmiles(); }, ready: () => !!K };
 document.addEventListener("tpview", e => { if (e.detail.view === "draw") start(); });
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
+// "Nuova sessione": the drawing and its controls go back to the start (the notebook was already emptied)
+document.addEventListener("nbreset", () => {
+  clearTimeout(timer);
+  Q("#lb-f").checked = true; Q("#lb-m").checked = true; Q("#lb-dec").value = "0"; Q("#lb-ion").value = ""; Q("#ex-nobg").checked = false; syncBg();
+  Q("#ex-name").value = stamp(); Q("#ex-smi").value = ""; dnote(""); exwarn(""); usedNames.clear();
+  if (K) { try { K.editor.clear(); } catch (_) { /* nothing to clear */ } restored = true; requestAnimationFrame(() => { drawLabels(); showInfo(); }); }
+});

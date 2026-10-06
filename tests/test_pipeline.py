@@ -234,27 +234,6 @@ def test_lc_method_xml_is_decoded():
     assert lc["pda"]["start"] == 200.0 and lc["pda_channels"] == [{"wl": 254.0, "bw": 4.0}]
 
 
-def test_browser_presence_stops_the_program(tmp_path, monkeypatch):
-    """--exit-on-close: the program stops when no page is left (after a grace period), not before; a reload (bye then ping) is tolerated."""
-    from qqq_lab import server
-    app = server.App(tmp_path / "w")
-    monkeypatch.setattr(server, "EXIT_GRACE", 0.2)
-    monkeypatch.setattr(server, "EXIT_FIRST", 0.5)
-    import time
-    assert not app.should_exit()                    # nobody yet, but the first-connection time has not passed
-    app.ping("a")
-    time.sleep(0.3)
-    assert not app.should_exit()                    # a page is open
-    app.bye("a")                                    # reload: the page leaves...
-    app.ping("b")                                   # ...and the new one arrives within the grace period
-    time.sleep(0.3)
-    assert not app.should_exit()
-    app.bye("b")
-    assert not app.should_exit()                    # grace period not over
-    time.sleep(0.3)
-    assert app.should_exit()
-
-
 def test_method_dam_upload_is_listed_and_unknown_is_empty(tmp_path):
     """A .dam is accepted as an upload, listed as a method and never replaced by a built-in method; with none, the list is empty."""
     from qqq_lab import server

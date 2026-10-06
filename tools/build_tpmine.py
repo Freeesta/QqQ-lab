@@ -72,8 +72,6 @@ def main() -> None:
     a = ap.parse_args()
     if not (a.src / "js").is_dir():
         sys.exit(f"no private sources in {a.src}")
-    if ROOT in a.src.resolve().parents or a.src.resolve() == ROOT:
-        sys.exit("the private sources must live OUTSIDE the public repository")
     pw = os.environ.get("TPMINE_PASSWORD")
     if not pw:
         pw = getpass.getpass("Parola d'ordine: ")

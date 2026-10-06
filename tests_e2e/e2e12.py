@@ -43,7 +43,7 @@ with sync_playwright() as p:
         z = pg.evaluate("E.panels[0].zoom"); assert z and abs(z[0] - 13) < 0.1 and abs(z[1] - 16) < 0.1, z
         assert c.locator('[data-a=fit]').is_enabled(); c.locator('[data-a=fit]').click(); c.locator('[data-a=izoom]').click(); assert c.locator('[data-a=fit]').is_disabled()
         # XIC panel with a chosen window, then auto + manual integration on a chosen file
-        pg.click("#np-xic"); pg.fill("#xic-lo", "363.6"); pg.fill("#xic-hi", "364.6"); pg.click("#xic-go"); pg.wait_for_timeout(2500)
+        pg.click("#np-xic"); pg.fill("#xic-mz", "364"); pg.click("#xic-go"); pg.wait_for_timeout(2500)
         xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')"); xp = pg.locator('.pnl.xic').first
         assert pg.evaluate(f"E.panels[{xi}].traces[0].w") == 0.5
         xp.locator('[data-a=iauto]').click(); assert xp.locator('[data-a=intf]').is_visible()

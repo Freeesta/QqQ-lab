@@ -1,10 +1,9 @@
 """Make the logo and every icon from the picture of the quadrupole field (tools/logo_sorgente.jpg).
 
 Writes into qqq_lab/web/: logo.png (transparent), logo.svg / favicon.svg / app-icon.svg (the PNG embedded, so they work as
-<img> and as icons), favicon-32.png, favicon.ico, apple-touch-icon.png, app-icon-192/256/512/1024.png, and the macOS icon
-QqQ lab.app/Contents/Resources/AppIcon.icns. Only needs Pillow and numpy. From the project root:  python3 tools/genera_icone.py
+<img> and as icons), favicon-32.png, favicon.ico, apple-touch-icon.png, app-icon-192/512.png (site and PWA icons). Only needs Pillow and numpy. From the project root:  python3 tools/genera_icone.py
 The picture is the field of a quadrupole (equipotential contours of the four rods: blue negative, red positive)."""
-import base64, io, struct
+import base64, io
 from pathlib import Path
 
 import numpy as np
@@ -57,13 +56,6 @@ def app_icon(core: Image.Image, size: int, rounded: bool = True) -> Image.Image:
     return bg.resize((size, size), Image.LANCZOS)
 
 
-def icns(pngs: dict) -> bytes:
-    """Apple icon file with PNG entries (ic07 128, ic08 256, ic09 512, ic10 1024, ic11 32@2x, ic12 64@2x)."""
-    kinds = {128: b"ic07", 256: b"ic08", 512: b"ic09", 1024: b"ic10", 32: b"ic11", 64: b"ic12"}
-    body = b"".join(kinds[s] + struct.pack(">I", 8 + len(d)) + d for s, d in sorted(pngs.items()) if s in kinds)
-    return b"icns" + struct.pack(">I", 8 + len(body)) + body
-
-
 def main():
     core = cutout()
     (WEB / "logo.png").write_bytes(png(core.resize((256, 256), Image.LANCZOS)))
@@ -78,10 +70,7 @@ def main():
         big[s] = png(app_icon(core, s))
         if s in (192, 512):
             (WEB / f"app-icon-{s}.png").write_bytes(big[s])
-    res = ROOT / "QqQ lab.app" / "Contents" / "Resources"
-    res.mkdir(parents=True, exist_ok=True)
-    (res / "AppIcon.icns").write_bytes(icns(big))
-    print("icone scritte in", WEB, "e", res)
+    print("icone scritte in", WEB)
 
 
 if __name__ == "__main__":

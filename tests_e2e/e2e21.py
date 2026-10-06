@@ -30,8 +30,7 @@ try:
             assert nums == ["1", "2"], nums
             pg.evaluate("document.activeElement.blur()"); pg.keyboard.press("2"); pg.wait_for_timeout(300)
             assert pg.evaluate("E.active&&E.active.num") == 2
-            pg.evaluate("UIP.num=false;fitHost()"); assert pg.evaluate("[...document.querySelectorAll('.pnum')].every(n=>n.hidden)")
-            pg.evaluate("UIP.num=true;fitHost()")
+            assert pg.evaluate("[...document.querySelectorAll('.pnum')].every(n=>!n.hidden)"), "numbers are always shown"
         step("panels are numbered from the top; key 2 activates the second", numbering)
         def files():
             nm = pg.locator("#flst .fl:not(.ghost) .nm").first

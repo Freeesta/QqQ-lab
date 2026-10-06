@@ -60,20 +60,20 @@
   // ---------------------------------------------------------------- adducts
   // k: how many molecules M; add/sub: what is added or removed; z: charge
   const ADD = [
-    { n: "[M+H]+", k: 1, add: "H", z: 1, note: "lo ione più comune in ESI+ con acido formico in fase mobile (come in questo laboratorio)" },
-    { n: "[M+NH4]+", k: 1, add: "NH4", z: 1, note: "con sali di ammonio (formiato, acetato) in fase mobile; tipico di esteri, chetoni, zuccheri" },
-    { n: "[M+Na]+", k: 1, add: "Na", z: 1, note: "sodio da vetreria, acqua, campione: frequentissimo; frammenta poco in MS/MS" },
+    { n: "[M+H]+", k: 1, add: "H", z: 1, exp: 1, note: "lo ione più comune in ESI+ con acido formico in fase mobile (come in questo laboratorio)" },
+    { n: "[M+NH4]+", k: 1, add: "NH4", z: 1, exp: 1, note: "solo se la fase mobile contiene ammonio (formiato, acetato); tipico di esteri, chetoni, zuccheri" },
+    { n: "[M+Na]+", k: 1, add: "Na", z: 1, exp: 1, note: "sodio da vetreria, acqua, campione: frequentissimo; frammenta poco in MS/MS" },
     { n: "[M+K]+", k: 1, add: "K", z: 1, note: "come il sodio, meno intenso" },
     { n: "[M+H-H2O]+", k: 1, add: "H", sub: "H2O", z: 1, note: "perdita d'acqua in sorgente (alcoli, acidi carbossilici)" },
     { n: "[M+CH3OH+H]+", k: 1, add: "CH5O", z: 1, note: "con metanolo in fase mobile" },
-    { n: "[M+ACN+H]+", k: 1, add: "C2H4N", z: 1, note: "con acetonitrile in fase mobile" },
+    { n: "[M+H+ACN]+", k: 1, add: "C2H4N", z: 1, note: "con acetonitrile in fase mobile" },
     { n: "[M+2H]2+", k: 1, add: "H2", z: 2, note: "carica doppia: m/z circa dimezzato, isotopi distanti 0.5" },
     { n: "[2M+H]+", k: 2, add: "H", z: 1, note: "dimero: compare a concentrazioni alte" },
     { n: "[2M+Na]+", k: 2, add: "Na", z: 1, note: "dimero con sodio" },
-    { n: "[M]+", k: 1, add: "", z: 1, note: "molecola già carica (es. ammonio quaternario) o radicale catione M<sup>+&bull;</sup>" },
-    { n: "[M-H]-", k: 1, sub: "H", z: -1, note: "lo ione più comune in ESI&minus; (acidi, fenoli, sulfonati)" },
+    { n: "[M]+", k: 1, add: "", z: 1, note: "catione già formato (es. ammonio quaternario): si inserisce la formula del <b>catione</b>, perché la massa sottrae l'elettrone. Per il radicale catione M<sup>+&bull;</sup> si inserisce invece la formula della molecola <b>neutra</b>" },
+    { n: "[M-H]-", k: 1, sub: "H", z: -1, exp: 1, note: "lo ione più comune in ESI&minus; (acidi, fenoli, sulfonati)" },
     { n: "[M+Cl]-", k: 1, add: "Cl", z: -1, note: "con solventi clorurati o campioni salini (cerca la coppia 35/37 a 3:1)" },
-    { n: "[M+HCOO]-", k: 1, add: "CHO2", z: -1, note: "con acido formico in fase mobile" },
+    { n: "[M+HCOO]-", k: 1, add: "CHO2", z: -1, exp: 1, note: "con acido formico in fase mobile" },
     { n: "[M+CH3COO]-", k: 1, add: "C2H3O2", z: -1, note: "con acido acetico o acetato di ammonio" },
     { n: "[M-H-H2O]-", k: 1, sub: "H3O", z: -1, note: "perdita d'acqua in sorgente" },
     { n: "[M+Na-2H]-", k: 1, add: "Na", sub: "H2", z: -1, note: "sale sodico" },
@@ -81,25 +81,49 @@
     { n: "[2M-H]-", k: 2, sub: "H", z: -1, note: "dimero" },
   ];
   ADD.forEach(a => { a.shift = (a.add ? massOf(a.add) : 0) - (a.sub ? massOf(a.sub) : 0) - a.z * ELECTRON; });
+  window.QADD = ADD;                                      // for the tests: the shifts are compared with the Python lists
   const mzOf = (a, M) => (a.k * M + a.shift) / Math.abs(a.z);
   const fmtAd = n => H(n).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>").replace(/(\d?[+-])$/, "<sup>$1</sup>");
+  const sgn = x => (x >= 0 ? "+" : "&minus;");
   function adducts(M) {
     const ref = { 1: ADD[0], "-1": ADD.find(a => a.n === "[M-H]-") };
-    const rows = pol => ADD.filter(a => Math.sign(a.z) === pol).map(a => {
-      const expr = `${a.k > 1 ? a.k : ""}M ${a.shift >= 0 ? "+" : "&minus;"} ${Math.abs(a.shift).toFixed(4)}${Math.abs(a.z) > 1 ? `, diviso ${Math.abs(a.z)}` : ""}`;
-      const d = a === ref[pol] || Math.abs(a.z) > 1 || a.k > 1 ? "" : ((a.shift - ref[pol].shift) >= 0 ? "+" : "&minus;") + Math.abs(a.shift - ref[pol].shift).toFixed(4);
-      return `<tr><td><b>${fmtAd(a.n)}</b></td><td>${expr}</td><td class="num">${M != null ? mzOf(a, M).toFixed(4) : ""}</td><td class="num">${M != null ? mzOf(a, M).toFixed(1) : ""}</td><td class="num">${d}</td><td class="muted sm">${a.note}</td></tr>`;
-    }).join("");
-    const head = pol => `<tr><th>addotto</th><th>m/z =</th><th class="num">m/z esatto</th><th class="num">1 decimale</th><th class="num">&Delta; da ${pol > 0 ? "[M+H]<sup>+</sup>" : "[M&minus;H]<sup>&minus;</sup>"}</th><th>quando si vede</th></tr>`;
+    const row = (a, pol) => {
+      const expr = `${a.k > 1 ? a.k : ""}M ${sgn(a.shift)} ${Math.abs(a.shift).toFixed(4)}${Math.abs(a.z) > 1 ? `, diviso ${Math.abs(a.z)}` : ""}`;
+      const d = a === ref[pol] || Math.abs(a.z) > 1 || a.k > 1 ? "" : sgn(a.shift - ref[pol].shift) + Math.abs(a.shift - ref[pol].shift).toFixed(4);
+      return `<tr${a.exp ? ' class="exp"' : ""}><td><b>${fmtAd(a.n)}</b></td><td>${expr}</td><td class="num">${M != null ? mzOf(a, M).toFixed(4) : ""}</td><td class="num">${M != null ? rh(mzOf(a, M), 0) : ""}</td><td class="num">${d}</td><td class="muted sm">${a.note}</td></tr>`;
+    };
+    const rows = pol => { const l = ADD.filter(a => Math.sign(a.z) === pol);
+      return l.filter(a => a.exp).map(a => row(a, pol)).join("") + `<tr><td colspan="6" class="muted sm" style="padding-top:8px"><i>Meno frequenti nelle condizioni del laboratorio</i></td></tr>` + l.filter(a => !a.exp).map(a => row(a, pol)).join(""); };
+    const head = pol => `<tr><th>addotto</th><th>m/z =</th><th class="num">m/z esatto</th><th class="num"><i>m/z</i> nominale</th><th class="num">&Delta; da ${pol > 0 ? "[M+H]<sup>+</sup>" : "[M&minus;H]<sup>&minus;</sup>"}</th><th>quando si vede</th></tr>`;
     return `<h4>ESI positivo</h4><table>${head(1)}${rows(1)}</table><h4>ESI negativo</h4><table>${head(-1)}${rows(-1)}</table>`;
+  }
+  // two OBSERVED m/z: does their difference match a difference between two adducts of the list? (a hint, never a conclusion; calibration drift cancels in a difference)
+  function pairs(m1, m2) {
+    const d = m2 - m1, out = [];
+    [1, -1].forEach(pol => { const l = ADD.filter(a => Math.sign(a.z) === pol && a.k === 1 && Math.abs(a.z) === 1);
+      l.forEach(a => l.forEach(b => { if (a !== b && a.n !== "[M]+" && b.n !== "[M]+") { const e = b.shift - a.shift; if (Math.abs(e - d) <= 0.1 + 1e-9) out.push({ a, b, e, pol }); } })); });
+    return { d, out };
+  }
+  window.QPAIRS = pairs;
+  function pairsHtml(m1, m2) {
+    const { d, out } = pairs(m1, m2), dd = `${sgn(d)}${Math.abs(d).toFixed(2)}`;
+    if (!out.length) return `Differenza ${dd}: non coincide (entro 0.1) con nessuna differenza fra addotti monocarica della lista. Può non essere una coppia di addotti dello stesso composto.`;
+    return `Differenza ${dd}: coincide, entro 0.1, con ` + out.map(o => `${fmtAd(o.b.n)} &minus; ${fmtAd(o.a.n)} = ${sgn(o.e)}${Math.abs(o.e).toFixed(4)}`).join("; ") + `. È un suggerimento da verificare (stesso RT, stessa forma del picco), non una conclusione.`;
   }
   function adductTab() {
     return `<div class="bar"><label>M (massa neutra) o formula <input id="ad-in" placeholder="es. 363.0665 oppure C14H13F4N3O2S" style="width:260px"></label><span id="ad-msg" class="muted sm"></span></div>
-      <div class="muted sm">M = massa esatta monoisotopica della molecola neutra. La colonna &Delta; aiuta a riconoscere gli addotti nello spettro: per esempio un picco 21.98 sopra [M+H]<sup>+</sup> è quasi sempre [M+Na]<sup>+</sup>.</div>
-      <div id="ad-tbl">${adducts(null)}</div>`;
+      <div class="muted sm">M è la massa esatta <b>monoisotopica</b> della molecola neutra (Cl-35, Br-79, C-12): per composti con Cl o Br il picco più alto può essere M+2 (vedi la scheda Isotopi). La colonna &Delta; aiuta a riconoscere gli addotti nello spettro: per esempio un picco 21.98 sopra [M+H]<sup>+</sup> è quasi sempre [M+Na]<sup>+</sup>.</div>
+      <div class="muted sm" style="margin-top:4px">Con la risoluzione unitaria conta la massa <b>nominale</b> (intero). Sugli spettri del laboratorio il picco può apparire fino a circa 0.4 Da sopra il valore calcolato (calibrazione): non cercare il valore esatto al decimale.</div>
+      <div id="ad-tbl">${adducts(null)}</div>
+      <h4>Due picchi: sono addotti dello stesso composto?</h4>
+      <div class="bar"><label><i>m/z</i> osservati <input id="pr-a" class="mzf" inputmode="decimal" autocomplete="off" placeholder="es. 364.4"> e <input id="pr-b" class="mzf" inputmode="decimal" autocomplete="off" placeholder="es. 386.4"></label></div>
+      <div id="pr-out" class="sm"></div>`;
   }
   function bindAdducts(root) {
     const inp = root.querySelector("#ad-in"), msg = root.querySelector("#ad-msg"), tb = root.querySelector("#ad-tbl");
+    const pa = root.querySelector("#pr-a"), pb = root.querySelector("#pr-b"), po = root.querySelector("#pr-out");
+    const prr = () => { const x = parseFloat(pa.value.replace(",", ".")), y = parseFloat(pb.value.replace(",", ".")); po.innerHTML = isFinite(x) && isFinite(y) && x > 0 && y > 0 ? pairsHtml(x, y) : ""; };
+    pa.oninput = pb.oninput = prr;
     inp.oninput = async () => {
       const t = inp.value.trim().replace(",", ".");
       if (!t) { msg.textContent = ""; tb.innerHTML = adducts(null); return; }
@@ -229,5 +253,7 @@
   }
   Qs("#np-pt").onclick = () => open("pt");
   Qs("#np-ad").onclick = () => open("ad");
+  Qs("#np-iso").onclick = () => open("is");
+  Qs("#np-nl").onclick = () => open("ls");
   window.QQQRef = { open, massOf, mono, isoPattern, ionCounts, ADD };
 })();

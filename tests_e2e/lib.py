@@ -37,9 +37,8 @@ class Run:
         pg = s.b.new_page(viewport={"width": 1500, "height": 2200})
         pg.on("pageerror", lambda e: s.errs.append(("pageerror", str(e))))
         pg.on("console", lambda m: s.errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") else None)
-        pg.on("requestfailed", lambda r: s.errs.append(("reqfail", r.url, r.failure)) if "/api/ping" not in r.url and "/api/bye" not in r.url else None)   # presence pings are cut when the page closes
+        pg.on("requestfailed", lambda r: s.errs.append(("reqfail", r.url, r.failure)))
         pg.on("response", lambda r: s.errs.append(("http%d" % r.status, r.url)) if r.status >= 400 else None)
-        pg.add_init_script("try{if(!sessionStorage.getItem(\"tutdemo\"))localStorage.setItem(\"qqq.tutorial\",\"1\")}catch(e){}")
         pg.goto(f"http://127.0.0.1:{s.port}/")
         pg.wait_for_timeout(800)
         return pg

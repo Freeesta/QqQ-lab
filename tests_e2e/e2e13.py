@@ -37,7 +37,7 @@ try:
             assert pg.evaluate("E.panels[0]._a && E.panels[0]._a.sr.length") >= 3
         step("open: TIC drawn", openit)
         def xic():
-            pg.click("#np-xic"); pg.fill("#xic-lo", "363.9"); pg.click("#xic-go"); pg.wait_for_timeout(3000)
+            pg.click("#np-xic"); pg.fill("#xic-mz", "364"); pg.click("#xic-go"); pg.wait_for_timeout(3000)
             assert pg.evaluate("E.panels.some(p=>p.type==='xic' && p._a && p._a.sr.length>0)")
         step("XIC from the dialog", xic)
         def spec():

@@ -21,11 +21,6 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
     """(status, content type, body bytes, extra headers) for one request. stream/length: body of a POST."""
     if method == "POST":
         try:
-            if path in ("/api/ping", "/api/bye"):
-                if stream is not None:
-                    stream.read(length)
-                (app.ping if path == "/api/ping" else app.bye)(q.get("tab", ""))
-                return _json({"ok": True})
             if path == "/api/upload":
                 app.save_upload(q.get("name", ""), stream, length)
                 return _json({"files": app.files(), "methods": app.methods()})

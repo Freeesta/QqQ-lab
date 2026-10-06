@@ -18,18 +18,17 @@ try:
         dlg = lambda: pg.evaluate("document.querySelector('#xicdlg').open")
         def window_():
             pg.click("#dpanels .pnl.chrom [data-a=xic]"); assert dlg()
-            ys = pg.evaluate("['#xic-lo','.xor','#xic-q'].map(s=>document.querySelector(s).getBoundingClientRect().top)"); assert ys[0] < ys[1] < ys[2], ys
+            ys = pg.evaluate("['#xic-mz','.xor','#xic-q'].map(s=>document.querySelector(s).getBoundingClientRect().top)"); assert ys[0] < ys[1] < ys[2], ys
             t = pg.inner_text("#xicdlg"); assert "oppure" in t and "neutra" in t and "senza carica" in t and "cifra decimale" not in t and "m/z o formula" not in t, t
-            pg.fill("#xic-lo", "194"); assert pg.input_value("#xic-hi") == "194.5"
-            pg.fill("#xic-hi", "195"); pg.fill("#xic-lo", "193.8"); assert pg.input_value("#xic-hi") == "195", pg.input_value("#xic-hi")      # once written, "a" is left alone
+            pg.fill("#xic-mz", "194.04"); assert "193.8 - 194.8" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "194.04", pg.inner_text("#xic-sum")
             pg.fill("#xic-q", "C14H13F4N3O2S"); pg.press("#xic-q", "Enter"); pg.wait_for_timeout(600)
-            assert (pg.input_value("#xic-lo"), pg.input_value("#xic-hi")) == ("363.57", "364.57"), (pg.input_value("#xic-lo"), pg.input_value("#xic-hi"))
+            assert "363.8 - 364.8" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "", pg.inner_text("#xic-sum")
             pg.select_option("#xic-ad", "[M+Na]+"); pg.wait_for_timeout(600)
-            assert (pg.input_value("#xic-lo"), pg.input_value("#xic-hi")) == ("385.56", "386.56"), (pg.input_value("#xic-lo"), pg.input_value("#xic-hi"))
-            pg.fill("#xic-lo", "363.9"); pg.fill("#xic-hi", "364.9"); pg.click("#xic-go"); pg.wait_for_timeout(2500)
+            assert "385.8 - 386.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
+            pg.fill("#xic-mz", "364"); pg.click("#xic-go"); pg.wait_for_timeout(2500)
             assert not dlg() and pg.evaluate("E.panels.some(p=>p.type==='xic' && p.traces[0].w===0.5 && p._a && p._a.sr.length>0)")
             assert "cifra" not in pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').closest('label').title")
-        step("XIC window: window first, oppure, neutral formula, 'a' = da + 0.5 until written", window_)
+        step("XIC window: one m/z value, oppure, neutral formula, unit window around the nominal mass", window_)
         def chrom_menu():
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom')"); c = pt(pg, ci, 12.0)
             pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
@@ -56,7 +55,7 @@ try:
             si = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')"); a = pg.evaluate(f"""()=>{{const p=E.panels[{si}],r=p.cv.getBoundingClientRect(),d=p._a.data[0].d;let j=0;d.y.forEach((v,i)=>{{if(v>d.y[j])j=i}});return {{px:r.left+p._a.X(d.mz[j]),py:r.top+p._a.Y(d.y[j])+6}}}}""")
             pg.mouse.click(a["px"], a["py"], button="right"); pg.wait_for_timeout(300)
             pg.locator("#ctx div", has_text="Estrai l'XIC").first.click(); pg.wait_for_timeout(400)
-            lo, hi = float(pg.input_value("#xic-lo")), float(pg.input_value("#xic-hi")); assert abs((hi - lo) - 0.8) < 1e-6 and dlg(), (lo, hi)
+            assert dlg() and "m/z" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") != "", pg.inner_text("#xic-sum")
             pg.click("#xic-no")
         step("right click on a peak of the spectrum opens the window already filled in", spec_menu)
         def groups():

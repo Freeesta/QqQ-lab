@@ -1,12 +1,12 @@
 """Method (.dam) upload: warning + button when missing, loading from the Metodo window; isotope bar spectrum; texts removed;
-references for neutral losses; the program stops when the browser page is closed (--exit-on-close)."""
+references for neutral losses."""
 import sys, os, time; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:200]))
-r = Run(port=8820, wd="/tmp/wd10", extra=["--exit-on-close"])
+r = Run(port=8820, wd="/tmp/wd10")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
@@ -50,12 +50,6 @@ try:
             t = pg.inner_text("#refdlg"); assert "Passa sopra un elemento" not in t and "OpenChemLib" not in t and "CIAAW" not in t
             pg.screenshot(path=SH + "103_tables.png")
         step("removed texts; references listed", texts)
-        def exits():
-            assert r.srv.poll() is None
-            pg.close(); t0 = time.time()
-            while time.time() - t0 < 25 and r.srv.poll() is None: time.sleep(0.5)
-            print("server stopped after", round(time.time() - t0, 1), "s"); assert r.srv.poll() is not None, "server still running"
-        step("closing the page stops the program", exits)
 finally:
     r.close()
 r.report()

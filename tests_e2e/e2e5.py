@@ -11,13 +11,12 @@ try:
         pg.set_input_files("#pick", [mz(f) for f in FILES])
         pg.wait_for_timeout(1000); pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
         def addion(t, ok=True):                       # t: neutral formula (the adduct comes from the selector)
-            pg.locator('.pnl.xic [data-o="addb"]').click() if pg.locator('.pnl.xic').count() else pg.click("#np-xic")
+            pg.evaluate("openXic(E.panels.find(p=>p.type==='xic')||null)")
             pg.fill("#xic-q", t); pg.press("#xic-q", "Enter"); pg.wait_for_timeout(1000)
             if ok: pg.click("#xic-go"); pg.wait_for_timeout(1200)
-        def addwin(lo, hi=None):                      # write the window: "a" fills itself with da + 0.5 unless it is written
-            pg.locator('.pnl.xic [data-o="addb"]').click() if pg.locator('.pnl.xic').count() else pg.click("#np-xic")
-            pg.fill("#xic-lo", lo)
-            if hi: pg.fill("#xic-hi", hi)
+        def addwin(v):                                # write ONE m/z value: the unit window [n-0.2, n+0.8] is built around its nominal mass
+            pg.evaluate("openXic(E.panels.find(p=>p.type==='xic')||null)")
+            pg.fill("#xic-mz", v)
             pg.click("#xic-go"); pg.wait_for_timeout(1200)
         addion("C14H13F4N3O2S")
         xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')")
@@ -25,26 +24,27 @@ try:
         def formula_in_xic():
             t = pg.evaluate(f"E.panels[{xi}].traces.map(t=>[t.mz,t.w,t.label])"); print("traces:", t)
             # the neutral formula gives the calculated m/z of the adduct (364.0737 for [M+H]+) and a window of +-0.5 Da around it
-            assert t and abs(t[0][0] - 364.07) < 1e-6 and t[0][1] == 0.5 and "C14H13F4N3O2S" in t[0][2] and "363.57-364.57" in t[0][2], t
-            addwin("163.27")                                      # "a" fills itself: 163.77
-            tr = pg.evaluate(f"E.panels[{xi}].traces[1]"); assert abs(tr["mz"] - 163.52) < 1e-6 and abs(tr["w"] - 0.25) < 1e-6, tr
+            assert t and abs(t[0][0] - 364.3) < 1e-6 and t[0][1] == 0.5 and "C14H13F4N3O2S" in t[0][2] and "363.8-364.8" in t[0][2], t
+            addwin("163.3")                                       # nominal 163: window 162.8-163.8
+            tr = pg.evaluate(f"E.panels[{xi}].traces[1]"); assert abs(tr["mz"] - 163.3) < 1e-6 and abs(tr["w"] - 0.5) < 1e-6, tr
             addion("C2H6Qq", ok=False)
             assert "non valida" in pg.inner_text("#xic-err"); pg.click("#xic-no")
-            # "a" follows "da" + 0.5 until the student writes it; after that it is left alone; commas are accepted
-            pg.locator('.pnl.xic [data-o="addb"]').click(); pg.fill("#xic-lo", "100"); assert pg.input_value("#xic-hi") == "100.5"
-            pg.fill("#xic-lo", "100,2"); assert pg.input_value("#xic-hi") == "100.7"
-            pg.fill("#xic-hi", "100,9"); pg.fill("#xic-lo", "100.3"); assert pg.input_value("#xic-hi") == "100,9", pg.input_value("#xic-hi")      # written by the student: left as it is
+            # one decimal only: the value is rounded half up to 0.1, commas are accepted, and the window comes from the nominal mass (100.6 -> n = 101 -> 100.8-101.8)
+            pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))"); pg.fill("#xic-mz", "100,26"); assert "99.8 - 100.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
+            pg.fill("#xic-mz", "100.6"); assert "100.8 - 101.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
             pg.click("#xic-go"); pg.wait_for_timeout(1200)
-            tr = pg.evaluate(f"E.panels[{xi}].traces[2]"); assert abs(tr["mz"] - 100.6) < 1e-6 and abs(tr["w"] - 0.3) < 1e-6, tr
+            tr = pg.evaluate(f"E.panels[{xi}].traces[2]"); assert abs(tr["mz"] - 101.3) < 1e-6 and abs(tr["w"] - 0.5) < 1e-6, tr
             pg.evaluate(f"E.panels[{xi}].traces.pop()"); pg.evaluate(f"E.panels[{xi}].traces.pop()")
-        step("XIC window: formula (neutral) and da/a with automatic a", formula_in_xic)
+        step("XIC window: formula (neutral) and one m/z value (unit window around the nominal mass)", formula_in_xic)
         def xicdlg_layout():
-            pg.locator('.pnl.xic [data-o="addb"]').click()
-            ys = pg.evaluate("['#xic-lo','.xor','#xic-q'].map(s=>document.querySelector(s).getBoundingClientRect().top)"); assert ys[0] < ys[1] < ys[2], ys
-            t = pg.inner_text("#xicdlg"); assert "oppure" in t and "neutra" in t and "una cifra decimale" not in t and "m/z o formula" not in t, t
-            pg.click("#xic-go"); err = pg.inner_text("#xic-err"); assert "«da» deve essere minore di «a»" in err and "cifra" not in err, err      # empty window
+            pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))")
+            ys = pg.evaluate("['#xic-mz','.xor','#xic-q'].map(s=>document.querySelector(s).getBoundingClientRect().top)"); assert ys[0] < ys[1] < ys[2], ys
+            t = pg.inner_text("#xicdlg"); assert "oppure" in t and "neutra" in t and "Extracted Ion Chromatogram" in t and "risoluzione unitaria" in t and "intervallo scelto" in t, t
+            assert not pg.query_selector("#xic-lo") and not pg.query_selector("#xic-hi") and "compromesso" not in t and "0.7 Da" not in t, t
+            pg.click("#xic-go"); err = pg.inner_text("#xic-err"); assert "Scrivi un valore di m/z" in err, err      # nothing written
+            pg.fill("#xic-q", "C2H6O"); pg.fill("#xic-mz", "300"); assert pg.input_value("#xic-q") == ""          # the two ways exclude each other
             pg.click("#xic-no")
-        step("XIC window layout: window first, oppure, neutral formula; no 'una cifra decimale'", xicdlg_layout)
+        step("XIC window layout: new text, one m/z value, oppure, neutral formula; no from/to fields", xicdlg_layout)
         def blank():
             pg.evaluate(f"(()=>{{const p=E.panels[{xi}]; p.traces=p.traces.slice(0,1); p.fk=''}})()"); pg.wait_for_timeout(100)
             base = pg.evaluate(f"seriesOf(E.panels[{xi}]).then(a=>a.map(s=>[s.name,Math.max(...s.y)]))"); print("before:", base)
@@ -79,7 +79,7 @@ try:
             t = pg.inner_text("#calcout"); print(t.replace("\n", " | ")[:300]); assert "364.1" in t and "364" in t and "363.0665" in t
             pg.screenshot(path=SH + "53_calc.png")
             pg.locator("#calcout button[data-m]").first.click(); pg.wait_for_timeout(800)          # the XIC button opens THE XIC window, formula and window already filled in
-            assert pg.evaluate("document.querySelector('#xicdlg').open") and pg.input_value("#xic-q") == "C14H13F4N3O2S" and pg.input_value("#xic-lo") == "363.57", (pg.input_value("#xic-q"), pg.input_value("#xic-lo"))
+            assert pg.evaluate("document.querySelector('#xicdlg').open") and pg.input_value("#xic-q") == "C14H13F4N3O2S" and "363.8 - 364.8" in pg.inner_text("#xic-sum"), (pg.input_value("#xic-q"), pg.inner_text("#xic-sum"))
             n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)"); pg.click("#xic-go"); pg.wait_for_timeout(1200)
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)") == n0 + 1
         step("calculator", calc)

@@ -4,6 +4,7 @@ import os, secrets, shutil, subprocess, sys, time, tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
+sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
 SRC = Path(os.environ.get("TPMINE_SRC", ROOT / "QqQ_lab_privato" / "tpmine"))
 MZ = Path(os.environ.get("QQQ_MZML", ROOT.parent / "Data" / "mzML"))
 PORT = 8842
@@ -12,6 +13,8 @@ def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e)[:400]))
 pw = secrets.token_urlsafe(12); tmp = Path(tempfile.mkdtemp()); enc = ROOT / "qqq_lab" / "web" / "tpmine.enc"
+import atexit; _orig_enc = enc.read_bytes() if enc.exists() else None
+atexit.register(lambda: enc.write_bytes(_orig_enc) if _orig_enc is not None else enc.unlink(missing_ok=True))   # the real tpmine.enc is tracked: put it back
 subprocess.run([sys.executable, str(ROOT / "tools" / "build_tpmine.py"), "--src", str(SRC), "--out", str(enc), "--iterations", "310000"], check=True, env=dict(os.environ, TPMINE_PASSWORD=pw))
 cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(tmp / "site")]
 if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]

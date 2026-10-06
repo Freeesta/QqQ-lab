@@ -41,9 +41,11 @@ Il taccuino (pannelli, XIC, integrazioni, annotazioni, disegni) si salva da solo
 - **Teoria**: dodici capitoli sulla teoria dell'esperienza (prodotti di trasformazione, fotocatalisi TiO2, LC in fase inversa, elettrospray, vuoto, teoria del quadrupolo, triplo quadrupolo e CID, come si frammentano gli ioni, full scan/MS2/MRM, strategia per i TP, glossario e bibliografia), con figure interattive calcolate nel browser. Si apre anche **senza il programma**, con doppio clic su `Teoria QqQ lab.html` (o `qqq_lab/web/teoria/index.html`), in qualsiasi browser e offline.
 - **Disegno**: editor chimico (Ketcher) per molecole, frammenti e vie di trasformazione. Sotto ogni
   struttura compaiono da sole formula bruta e massa intera (m/z se c'è una carica), sopra ogni freccia la
-  differenza fra le due strutture (es. +O). Selezionando una parte della molecola si vedono la sua formula
-  e gli m/z possibili del frammento; con la gomma si rompe un legame. A destra: m/z degli addotti con
-  pulsante XIC, didascalia per la relazione, guida rapida. Esporta PNG, JPEG, SVG e .ket.
+  differenza fra le due strutture (es. +O). Selezionando una parte della molecola a destra compare il suo
+  SMILES (con Copia) e le proprietà previste (logP, logS, TPSA, donatori/accettori; per una struttura
+  carica il calcolo è sulla forma neutra); con la gomma si rompe un legame. «Disegna veloce» aggiunge uno
+  SMILES accanto a ciò che hai già disegnato, senza mai cancellarlo. Esporta PNG, JPEG, SVG e .ket (nome del
+  file modificabile, sfondo trasparente per PNG e SVG).
 
 I pulsanti **?** accanto alle funzioni spiegano a cosa servono. Ogni grafico ha i pulsanti **PNG** (immagine) ed **Excel** (dati); le esportazioni sono veri file .xlsx (numeri come numeri, intestazioni con le unità, un foglio per esportazione; la retta di taratura ha il foglio dei dati e il foglio «Retta» con pendenza, intercetta, R², LOD e LOQ): le tabelle e i grafici della relazione (cinetica, retta di taratura) si costruiscono lì.
 
