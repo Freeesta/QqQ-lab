@@ -121,7 +121,9 @@ async function bootSession() {
   if (E.panels.length && oldNames.length) {                // caricamento successivo: i pannelli restano
     E.panels.forEach(p => { if (p.k != null) p.k = idx(oldNames[p.k]); if (p.ref !== "" && p.ref != null) p.ref = idx(oldNames[+p.ref]); });
     E.cur = Math.min(E.cur, E.files.length - 1);
-    renderFileList(); toolbar(); E.panels.forEach(ctl); redrawAll(); return;
+    renderFileList(); toolbar(); E.panels.forEach(ctl); redrawAll();
+    const added = E.files.filter(f => !oldNames.includes(f.file)); if (added.length && window.setTab && added[0].kind !== E.tab) setTab(added[0].kind); else if (added.length) { ensureLayout(); }
+    return;
   }
   renderFileList();
   E.panels = []; Q("#dpanels").innerHTML = "";
@@ -181,23 +183,34 @@ function paintFiles() {
     else f.color = PAL[n++ % PAL.length];
   });
 }
+const modeIcon = (kind, px = 13) => { const k = typeof QMODI !== "undefined" && QMODI.tab2key[kind]; return k ? `<span class="qi" title="${EH(KIND[kind] || kind)}">${QICON.get(QMODI.M[k].ico, px)}</span>` : ""; };
+// go to the tab of a file that is not usable in the current one, with a one-line message
+function goToFileTab(f) {
+  setTab(f.kind); E.cur = f.k; renderFileList(); renderNav(); redrawAll(); uiSave();
+  const n = Q("#fnote"); if (n) { n.textContent = `«${f.label}» è un file ${kindOf(f)}: ho aperto la scheda ${TABS.find(x => x[0] === f.kind)[1]}.`; clearTimeout(n._t); n._t = setTimeout(() => { n.textContent = ""; }, 7000); }
+}
 function renderFileList() {
-  // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file
+  // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file. ALL the files are listed:
+  // those of the other tabs are greyed and a click takes you to their tab
   const groups = [];
   tabFiles().forEach(f => { const g = grpOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
   if (E.tab === "mrm") groups.sort((a, b) => ["Standard", "Campioni", "Bianchi"].indexOf(a.g) - ["Standard", "Campioni", "Bianchi"].indexOf(b.g));
+  const sub = f => f.type === "sample" ? (f.time != null ? f.time + " min" : "") : (f.type === "blank" ? "bianco" : "standard" + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
   const row = f => `<div class="fl ${f.k === E.cur ? "cur" : ""}"><input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="Mostra o nascondi">
     <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}" title="Clic per scegliere il file corrente, doppio clic per rinominare">${EH(f.label)}</b>
-    <small>${f.type === "sample" ? (f.time != null ? f.time + " min" : "") : (f.type === "blank" ? "bianco" : "standard" + (f.conc != null ? " " + f.conc + " " + (f.cunit || "") : ""))}</small>
+    <small>${sub(f)}</small>
 </div></div>`;
+  const ghost = f => `<div class="fl ghost" data-go="${f.k}" title="Questo file è ${EH(kindOf(f))}: non si usa in questa scheda. Clic per aprire la scheda ${EH(TABS.find(x => x[0] === f.kind)[1])}."><input type="checkbox" disabled><i style="background:${f.color}"></i><div class="fi"><b class="nm">${EH(f.label)}</b><small>${sub(f)}</small></div></div>`;
   const pre = E.tab === "ms2" && window.ms2Exps && ms2Exps().length ? `<div class="fgh"><input type="checkbox" id="pall" ${ms2Exps().every(x => ms2PairOf(x.prec)) ? "checked" : ""} title="Mostra o chiudi i grafici di tutti i precursori"><span>Precursori</span><em>${ms2Exps().length}</em></div>` + ms2Exps().map(x => `<div class="fl pr"><input type="checkbox" data-pr="${x.prec}" ${ms2PairOf(x.prec) ? "checked" : ""} title="Mostra o chiudi i due grafici di questo precursore (cromatogramma e spettro degli ioni prodotto)"><div class="fi"><b class="pn" data-pg="${x.prec}" title="Clic: vai ai grafici di questo precursore (li crea se non ci sono). Presente in ${x.files.size} file">${x.prec != null ? "<span style=\"font-style:italic\">m/z</span> " + EH(x.prec) : "?"}</b><small>${x.ce.size ? "CE " + [...x.ce].join(", ") + " V · " : ""}${x.n} scan</small></div></div>`).join("") : "";
-  Q("#flst").innerHTML = pre + groups.map(G => `<div class="fgh"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="Mostra o nascondi tutto il gruppo"><span>${EH(G.g)}</span><em>${G.fs.length}</em></div>` + G.fs.map(row).join("")).join("");
+  const others = TABS.filter(([t]) => t !== E.tab && tabFiles(t).length).map(([t, n]) => `<div class="fgh sep">${modeIcon(t, 14)}<span>${EH(n)}</span><em>${tabFiles(t).length}</em></div>` + tabFiles(t).map(ghost).join("")).join("");
+  Q("#flst").innerHTML = pre + groups.map(G => `<div class="fgh"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="Mostra o nascondi tutto il gruppo">${modeIcon(E.tab, 14)}<span>${EH(G.g)}</span><em>${G.fs.length}</em></div>` + G.fs.map(row).join("")).join("") + others;
   Q("#flst").querySelectorAll("input[data-pr]").forEach(x => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));
   Q("#flst").querySelectorAll("[data-pg]").forEach(x => x.onclick = () => ms2Goto(x.dataset.pg));
+  Q("#flst").querySelectorAll("[data-go]").forEach(x => x.onclick = () => goToFileTab(E.files[+x.dataset.go]));
   const pa = Q("#pall"); if (pa) pa.onchange = () => { ms2Exps().forEach(x => { if (!!ms2PairOf(x.prec) !== pa.checked) ms2Toggle(x.prec, pa.checked); }); };
   Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => { tabFiles().filter(f => grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked); renderFileList(); redrawAll(); uiSave(); });
   Q("#flst").querySelectorAll("input[data-k]").forEach(x => x.onchange = () => { E.files[+x.dataset.k].vis = x.checked; redrawAll(); uiSave(); });
-  Q("#flst").querySelectorAll(".nm").forEach(x => {
+  Q("#flst").querySelectorAll(".fl:not(.ghost) .nm").forEach(x => {
     x.onclick = () => { E.cur = +x.dataset.k; renderFileList(); renderNav(); if (E.browse) redrawAll(); };
     x.ondblclick = async () => { const f = E.files[+x.dataset.k], v = await ask("Nome del campione", f.label); if (v) { f.label = v; renderFileList(); renderNav(); redrawAll(); uiSave(); } };
   });
@@ -227,7 +240,7 @@ const scanFiles = l => l.filter(f => f.kind !== "mrm");
 function renderNav() {
   const s = Q("#fsel"); if (!s) return;
   s.innerHTML = tabFiles().map(f => `<option value="${f.k}" ${f.k === E.cur ? "selected" : ""}>${EH(f.label)}</option>`).join("");
-  Q("#fbrowse").checked = E.browse;
+  Q("#fmode").querySelectorAll("button").forEach(b => b.classList.toggle("on", (b.dataset.m === "sel") === !!E.browse));
 }
 function goFile(d) {
   const tf = tabFiles(); if (!tf.length) return;
@@ -236,7 +249,7 @@ function goFile(d) {
 }
 Q("#fprev").onclick = () => goFile(-1); Q("#fnext").onclick = () => goFile(1);
 Q("#fsel").onchange = e => { E.cur = +e.target.value; renderFileList(); if (E.browse) redrawAll(); uiSave(); };
-Q("#fbrowse").onchange = e => { E.browse = e.target.checked; redrawAll(); uiSave(); };
+Q("#fmode").querySelectorAll("button").forEach(b => b.onclick = () => { E.browse = b.dataset.m === "sel"; renderNav(); redrawAll(); uiSave(); });
 document.addEventListener("keydown", e => {
   if (S.view !== "data" || !E.files.length || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || Q("dialog[open]")) return;
   const dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (!dir) return;
@@ -247,10 +260,31 @@ document.addEventListener("keydown", e => {
 document.addEventListener("mousedown", e => { if (E.active && e.target.closest("#dpanels") && !e.target.closest(".pnl")) setActive(null); });
 function toolbar() {
   if (window.renderTabs) renderTabs();
-  const t = E.tab, scan = t !== "mrm", mrm = t === "mrm";
+  const t = E.tab, empty = !tabFiles().length, scan = t !== "mrm", mrm = t === "mrm";
   Q("#np-chrom").hidden = !scan; Q("#np-spec").hidden = !scan; Q("#np-map").hidden = t !== "full"; Q("#np-xic").hidden = !scan; Q("#np-calc").hidden = !scan; Q("#np-merge").hidden = !scan;
-  Q("#np-mrm").hidden = !mrm; Q("#np-cal").hidden = !mrm; Q("#calbar").hidden = !mrm; if (mrm && window.calbar) { Q("#calbar")._sig = null; calbar(); }
+  Q("#np-mrm").hidden = !mrm; Q("#np-cal").hidden = !mrm; Q("#calbar").hidden = !mrm || empty; if (mrm && !empty && window.calbar) { Q("#calbar")._sig = null; calbar(); }
+  Q("#g-add").hidden = empty; Q("#g-tools").hidden = empty; Q("#g-file").hidden = empty; Q("#dpanels").hidden = empty; Q("#tools .sp").hidden = empty; Q("#np-method").hidden = empty;
+  if (window.emptyTab) emptyTab();
+  fitTools(); requestAnimationFrame(fitTools); setTimeout(fitTools, 400);
 }
+// the least used buttons go into "Altro" only when the row would wrap
+function fitTools() {
+  const bar = Q("#tools"), more = Q("#np-more"); if (!bar || !more || !bar.offsetParent) return;
+  const cand = ["np-tile", "np-merge", "np-calc"].map(id => Q("#" + id));
+  cand.forEach(b => { b._mv = false; b.classList.remove("ov"); }); more.hidden = true;
+  const vis = () => [...bar.children].filter(c => c.offsetParent && c.id !== "np-more" || (c.id === "np-more" && !c.hidden));
+  const wrapped = () => { const ks = vis(); const t0 = ks[0] ? ks[0].offsetTop : 0; return ks.some(c => c.offsetTop > t0 + 8); };
+  for (const b of cand) { if (!wrapped()) break; if (b.hidden) continue; b._mv = true; b.classList.add("ov"); more.hidden = false; }
+  more._items = cand.filter(b => b._mv);
+}
+Q("#np-more").onclick = e => {
+  e.stopPropagation(); Q("#morepop")?.remove();
+  const d = document.createElement("div"); d.id = "morepop";
+  (Q("#np-more")._items || []).forEach(b => { const c = document.createElement("button"); c.textContent = b.textContent; c.title = b.title; c.onclick = () => { d.remove(); b.click(); }; d.appendChild(c); });
+  document.body.appendChild(d); const r = Q("#np-more").getBoundingClientRect(); d.style.left = Math.min(r.left, innerWidth - 200) + "px"; d.style.top = r.bottom + 4 + "px";
+  setTimeout(() => document.addEventListener("mousedown", function h(ev) { if (!d.contains(ev.target)) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
+};
+addEventListener("resize", () => fitTools());
 
 // ------------------------------------------------------------------ piccole finestre e menu
 function ask(title, def = "") {

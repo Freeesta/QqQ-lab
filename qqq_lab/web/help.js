@@ -13,7 +13,7 @@ const HELP = {
     <br><b>Spettro</b>: lo spettro di massa in un intervallo di tempo. <b>Mappa RT-m/z</b>: tutti gli ioni nel tempo, come un'immagine.
     <br><b>XIC</b>: cromatogramma di uno ione estratto: scrivi la finestra di m/z (da ... a ...) oppure la formula neutra del composto e scegli l'addotto. La finestra è sempre la stessa, da qualsiasi punto la apri (pulsante XIC, clic destro, calcolatrice, Disegno). <b>Transizioni MRM</b>: le tracce dei file MRM.
     <br><b>Calcolatrice m/z</b>: dalla formula agli m/z degli addotti. <b>Unisci gli XIC</b> porta tutti gli ioni in un pannello; <b>Ordina</b> mette i pannelli uno sotto l'altro.`],
-  "nav": ["Scorrere i file", `Le frecce (o i tasti ← →) cambiano file corrente; con <b>un file alla volta</b> i grafici mostrano solo quello: utile per guardare i campioni uno per uno senza perdere gli XIC che hai estratto.`],
+  "nav": ["Scorrere i file", `Le frecce (o i tasti ← →) cambiano il file selezionato; con <b>Solo il file selezionato</b> i grafici mostrano solo quello (con <b>Tutti i file sovrapposti</b> li vedi insieme): utile per guardare i campioni uno per uno senza perdere gli XIC che hai estratto.`],
   "tools": ["Metodo e immagini", `<b>Metodo</b>: tipo di esperimento (Q1, EMS, MS2, MRM), strumento, polarità, intervallo di massa, transizioni MRM e parametri del metodo di laboratorio (.dam), con il confronto con i dati.
     <br><b>Integrazione</b> (si integra <b>solo da un XIC</b>: TIC, BPC e PDA non lo permettono; usa il pulsante XIC per scegliere la finestra, es. da 100 a 100.5; scrivendo «da», «a» si compila da solo con da + 0.5 e puoi cambiarlo): nei grafici di cromatogrammi, XIC e MRM ci sono le icone dell'integrazione <b>automatica</b> (clic su un picco) e <b>manuale</b> (trascini l'intervallo); la tabella delle aree si apre dall'icona a tabella del grafico.
     <br>Nell'intestazione dei grafici i pulsanti sono in gruppi separati da una barra: <b>lente</b> (zoom: trascina sull'intervallo) con accanto il pulsante per <b>tornare alla vista intera</b> (grigio finché non ingrandisci; si può anche usare il clic destro, «Ripristina zoom») | integrazione <b>automatica</b> e <b>manuale</b> | <b>XIC</b> | <b>PNG</b> ed <b>Excel</b>.
@@ -45,7 +45,9 @@ const HELP = {
     if (!b) { if (!pop.contains(e.target)) close(); return; }
     e.preventDefault(); e.stopPropagation();
     if (cur === b) return close();
-    const h = HELP[b.dataset.help]; if (!h) return;
+    const key = b.dataset.help, mk = /^modo-(full|ms2|mrm)$/.exec(key);
+    const h = mk && typeof QMODI !== "undefined" ? [QMODI.M[QMODI.tab2key[mk[1]]].name, QMODI.html(QMODI.tab2key[mk[1]])] : HELP[key]; if (!h) return;
+    pop.classList.toggle("wide", !!mk);
     pop.innerHTML = `<div class="hp-t"><b>${h[0]}</b><button class="x" title="Chiudi">&times;</button></div><div>${h[1]}</div>`;
     pop.querySelector(".x").onclick = close;
     pop.hidden = false; cur = b;

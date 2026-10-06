@@ -75,7 +75,7 @@ try:
             pg.screenshot(path=SH + "52_specbg.png")
         step("spectrum background subtraction", spec_bg)
         def calc():
-            pg.click("#np-calc"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(800)
+            pg.evaluate("document.querySelector('#np-calc').click()"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(800)
             t = pg.inner_text("#calcout"); print(t.replace("\n", " | ")[:300]); assert "364.1" in t and "364" in t and "363.0665" in t
             pg.screenshot(path=SH + "53_calc.png")
             pg.locator("#calcout button[data-m]").first.click(); pg.wait_for_timeout(800)          # the XIC button opens THE XIC window, formula and window already filled in

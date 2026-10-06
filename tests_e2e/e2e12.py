@@ -1,6 +1,9 @@
 # e2e12: experiment type column, sidebar, no Esporta/Integrazioni buttons, integration icons, MS2 chromatogram, PNG without cursor, Metodo layout, italic m/z
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+def flst_own(pg):
+    """text of the file list without the greyed rows (and heading) of the other tabs"""
+    return pg.evaluate("[...document.querySelectorAll('#flst > *')].filter(e=>!e.classList.contains('ghost')&&!e.classList.contains('sep')&&!e.closest('.ghost')).map(e=>e.innerText).join('\\n')")
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -20,7 +23,7 @@ with sync_playwright() as p:
     pg.click("text=Carica dati"); pg.wait_for_timeout(5000)
     pg.screenshot(path=SH + "121_data.png")
     def side():
-        t = pg.inner_text("#flst"); assert "scan MS1" not in t and "RT 0.5" not in t and "Doppio clic" not in pg.inner_text("#dfiles"), t
+        t = flst_own(pg); assert "scan MS1" not in t and "RT 0.5" not in t and "Doppio clic" not in pg.inner_text("#dfiles"), t
         assert "FULL SCAN" in t.upper() and "MS\u00b2" not in t and "MRM" not in t and "EMS" not in t, t
         d = pg.inner_text("#dtabs"); assert "Full Scan" in d and "MS\u00b2 (Product Ion)" in d and "MRM" in d and "Tempi ed esperimenti" in d, d
         assert pg.locator("#flst .fgh").count() >= 1 and pg.locator("#flst .tag").count() == 0 and pg.locator('#dfiles .hq').count() == 0
@@ -73,7 +76,7 @@ with sync_playwright() as p:
         assert pg.locator("#expbar").count() == 0
         ch = pg.evaluate("tabPanels().filter(p=>p.type==='chrom').map(p=>[p.prec,p._a.sr[0].x.length])")
         assert len(ch) == 2 and ch[0][0] != ch[1][0] and all(n > 0 for _, n in ch), ch      # one chromatogram per precursor
-        assert pg.locator("#flst").inner_text().upper().count("MS\u00b2") == 1 and "MRM" not in pg.inner_text("#flst")
+        assert flst_own(pg).upper().count("MS\u00b2") == 1 and "MRM" not in flst_own(pg)
         sel = pg.locator('.pnl.chrom [data-o=prec]:visible').first; assert sel.count() == 1
         pg.screenshot(path=SH + "123_ms2.png")
     step("MS2 chromatogram: choose the precursor", ms2)

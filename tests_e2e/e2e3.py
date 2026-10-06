@@ -47,7 +47,7 @@ try:
         def split_merge():
             pg.locator('.pnl.xic [data-o="split"]').first.click(); pg.wait_for_timeout(2000)
             n = pg.evaluate("E.panels.filter(p=>p.type==='xic').length"); assert n == 2, n
-            pg.click("text=Unisci gli XIC"); pg.wait_for_timeout(1500)
+            pg.evaluate("document.querySelector('#np-merge').click()"); pg.wait_for_timeout(1500)
             n = pg.evaluate("E.panels.filter(p=>p.type==='xic').length"); assert n == 1, n
         step("split / merge XIC", split_merge)
         def integrate():

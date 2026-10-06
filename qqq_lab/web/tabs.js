@@ -5,27 +5,40 @@ const firstTab = () => (TABS.find(([t]) => tabFiles(t).length) || ["full"])[0];
 const pickTab = want => (want && tabFiles(want).length ? want : firstTab());
 E.curBy = {};
 
+const TABICON = { full: "full", ms2: "prod", mrm: "mrm" }, TABHELP = { full: "modo-full", ms2: "modo-ms2", mrm: "modo-mrm" };
 function renderTabs() {
   const el = Q("#dtabs"); if (!el) return;
-  if (!tabFiles().length && E.files.length) { E.tab = firstTab(); }
-  el.innerHTML = TABS.filter(([t]) => tabFiles(t).length).map(([t, n]) => `<button data-t="${t}" class="${t === E.tab ? "on" : ""}">${EH(n)}<i>${tabFiles(t).length}</i></button>`).join("") +
-    `<span class="sp"></span><button id="ovbtn" title="Quali file ci sono per ogni tempo e per ogni tipo di esperimento">Tempi ed esperimenti</button>`;
+  el.innerHTML = TABS.map(([t, n]) => {
+    const c = tabFiles(t).length, ic = typeof QICON !== "undefined" ? QICON.get(TABICON[t], 16) : "";
+    return `<span class="tw"><button data-t="${t}" class="${t === E.tab ? "on" : ""}${c ? "" : " off"}">${ic ? `<span class="qi">${ic}</span>` : ""}${EH(n)}<i>${c}</i></button><button class="hq" data-help="${TABHELP[t]}" title="Che cos'è questo modo">?</button></span>`;
+  }).join("") + `<span class="sp"></span><button id="ovbtn" title="Quali file ci sono per ogni tempo e per ogni tipo di esperimento">Tempi ed esperimenti</button>`;
   el.querySelectorAll("[data-t]").forEach(b => b.onclick = () => setTab(b.dataset.t));
   Q("#ovbtn").onclick = openOverview;
 }
 
+// an empty tab stays reachable: it says where the files are instead of showing blank graphs
+function emptyTab() {
+  const el = Q("#tabempty"); if (!el) return;
+  const t = E.tab, name = (TABS.find(x => x[0] === t) || [, t])[1];
+  if (tabFiles(t).length) { el.hidden = true; return; }
+  const other = TABS.filter(([k]) => k !== t && tabFiles(k).length);
+  el.hidden = false;
+  el.innerHTML = `<b>Qui non ci sono file ${EH(name)}.</b> ` + (other.length ? "I tuoi file sono nella scheda: " + other.map(([k, n]) => `<button class="go" data-go="${k}">${EH(n)} (${tabFiles(k).length})</button>`).join(" ") : "Carica un file con il pulsante Aggiungi file.");
+  el.querySelectorAll("[data-go]").forEach(b => b.onclick = () => setTab(b.dataset.go));
+}
+window.emptyTab = emptyTab;
+
 function setTab(t, quiet) {
-  if (!tabFiles(t).length) return;
   if (t === E.tab && !quiet) return;
   E.curBy[E.tab] = E.cur; E.tab = t;
   E.panels.forEach(p => { if (p.el) p.el.style.display = p.tab === t ? "" : "none"; });
-  const back = E.curBy[t]; E.cur = E.files[back]?.kind === t ? back : (tabFiles()[0] || { k: 0 }).k;
+  const back = E.curBy[t]; E.cur = E.files[back]?.kind === t ? back : (tabFiles()[0] || { k: E.cur }).k;
   setActive(null);
   const firstLayout = tabFiles().length && !tabPanels().length;
   if (firstLayout) loading(true);                       // same funny loading screen as everywhere else
   ensureLayout();
   if (firstLayout) Promise.all(tabPanels().map(p => p.ready).filter(Boolean)).catch(() => {}).then(() => loading(false));
-  fitWidth(); relayout(); fitHost(); renderFileList(); renderNav(); toolbar();
+  renderTabs(); fitWidth(); relayout(); fitHost(); renderFileList(); renderNav(); toolbar();
   requestAnimationFrame(() => redrawAll());
   uiSave();
 }

@@ -16,6 +16,10 @@
 </table>
 <p>In QqQ lab il programma riconosce da solo il tipo di file (full, ms2, mrm) e propone i pannelli adatti. Nei file mzML convertiti, full scan e MS2 sono serie di spettri; l'MRM è salvato come cromatogrammi (SRM).</p>
 
+<h2>I tre modi a confronto</h2>
+<p>Lo stesso testo compare nel punto interrogativo accanto a ciascuna scheda di QqQ lab. Legenda dello schema: scansiona, fisso, collisione, lascia passare.</p>
+<div id="modi-all"></div>
+
 <h2>Full scan: dal cubo di dati ai cromatogrammi</h2>
 <h3>TIC, BPC, XIC</h3>
 <ul>
@@ -99,5 +103,6 @@
 <li><span class="tag">banche dati</span><a href="https://massbank.eu/MassBank/" target="_blank" rel="noopener">MassBank Europe</a> (spettri MS/MS liberi, molti di contaminanti ambientali); <a href="https://pubchem.ncbi.nlm.nih.gov" target="_blank" rel="noopener">PubChem</a> (formule, masse, proprietà).</li>
 </ul>
 </main></div>
+<script src="../icons-modi.js"></script><script src="../modi.js"></script><script>document.getElementById("modi-all").innerHTML=QMODI.all();</script>
 <script src="teoria.js"></script><script src="sim-misc.js"></script>
 </body></html>
