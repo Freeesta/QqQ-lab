@@ -341,7 +341,19 @@ function restack(drag, final) {
 function relayout() {      // after a panel changes height: keep the order, close or open the gap
   let y = 0; E.panels.filter(q => q.full && q.el).sort((a, b) => a.y - b.y || a.id - b.id).forEach(q => { q.y = y; apply(q); y += q.h + 10; });
 }
-function fitHost() { Q("#dpanels").style.height = Math.max(520, ...E.panels.map(p => p.y + p.h + 16)) + "px"; }
+function fitHost() { Q("#dpanels").style.height = Math.max(520, ...E.panels.map(p => p.y + p.h + 16)) + "px"; arrows(); }
+// up / down buttons: swap a full-width panel with its neighbour (the panels slide); inactive for the first and the last
+function stackOrder() { return E.panels.filter(q => q.full && q.el).sort((a, b) => a.y - b.y || a.id - b.id); }
+function arrows() {
+  const st = stackOrder();
+  E.panels.forEach(q => { const u = q.el?.querySelector('[data-a="up"]'), d = q.el?.querySelector('[data-a="down"]'); if (!u) return; const i = st.indexOf(q); u.disabled = i <= 0; d.disabled = i < 0 || i >= st.length - 1; });
+}
+function movePanel(p, dir) {
+  const st = stackOrder(), i = st.indexOf(p), j = i + dir; if (i < 0 || j < 0 || j >= st.length) return;
+  [st[i], st[j]] = [st[j], st[i]];
+  let y = 0; st.forEach(q => { q.y = y; apply(q); y += q.h + 10; });
+  E.panels.sort((a, b) => a.y - b.y || a.id - b.id); front(p.el); arrows(); uiSave();
+}
 function tile() {
   const w = hostWidth(); let y = 0;
   E.panels.forEach(p => { Object.assign(p, { x: 0, y, w, h: p.h || 310, full: true }); y += p.h + 10; apply(p); draw(p); });
@@ -366,7 +378,7 @@ function addPanel(type, o, after) {
   Object.assign(p, g);
   const el = document.createElement("div");
   el.className = "card pnl " + type;
-  el.innerHTML = `<div class="hd"><b class="ttl" title="Doppio clic per rinominare"></b>${helpBtn("pnl-" + type)}<span class="ctl"></span><span class="rd"></span>${type === "chrom" || type === "xic" || type === "mrm" ? `<button class="bt" data-a="izoom" title="Zoom: attivalo e trascina sul grafico l'intervallo di tempo da ingrandire (il pulsante con i quattro angoli torna alla vista intera). Ctrl o Cmd + rotella ingrandisce anche senza attivarlo">${IC_ZOOM}</button><button class="bt" data-a="iauto" title="Integrazione automatica: clicca su un picco e il programma trova i bordi e ne mostra l'area (poi puoi trascinare le barre)">${IC_AUTO}</button><button class="bt" data-a="iman" title="Integrazione manuale: trascina sul grafico l'intervallo da integrare">${IC_MAN}</button><select class="bt" data-a="intf" hidden title="Quale traccia integrare: quella su cui clicchi, tutte le visibili oppure un file preciso"></select><button class="bt" data-a="iclr" hidden title="Cancella tutte le integrazioni di questo grafico">Pulisci integrazioni</button><button class="bt" data-a="itab" hidden title="Tabella delle aree integrate e cinetica">${IC_TAB}</button>` : ""}${type === "chrom" ? '<button class="bt" data-a="xic" title="Estrai uno ione (XIC): scegli la finestra di m/z. Si integra solo dagli XIC">XIC</button>' : ""}<button class="bt" data-a="fit" style="display:none" title="Torna a vedere tutto il grafico">${IC_FIT}</button><button class="bt" data-a="png" title="Salva il grafico come immagine PNG">${IC_DL}PNG</button>${type === "map" || type === "chrom" ? "" : '<button class="bt" data-a="csv" title="Salva i dati del grafico (le tracce visibili) in un file CSV da aprire con Excel">' + IC_DL + 'CSV</button>'}<button class="bt" data-a="max" title="Ingrandisci o riduci questo pannello">&#9633;</button><button class="x" title="Chiudi il pannello">&times;</button></div><canvas></canvas><div class="vl" hidden></div><div class="tip" hidden></div><div class="leg"></div>`;
+  el.innerHTML = `<div class="hd"><b class="ttl" title="Doppio clic per rinominare"></b>${type === "spec" ? '<span class="rtl"></span>' : ""}${helpBtn("pnl-" + type)}<span class="ctl"></span><span class="rd"></span>${type === "chrom" || type === "xic" || type === "mrm" ? `<button class="bt" data-a="izoom" title="Zoom: attivalo e trascina sul grafico l'intervallo di tempo da ingrandire (il pulsante con i quattro angoli torna alla vista intera). Ctrl o Cmd + rotella ingrandisce anche senza attivarlo">${IC_ZOOM}</button><button class="bt" data-a="iauto" title="Integrazione automatica: clicca su un picco e il programma trova i bordi e ne mostra l'area (poi puoi trascinare le barre)">${IC_AUTO}</button><button class="bt" data-a="iman" title="Integrazione manuale: trascina sul grafico l'intervallo da integrare">${IC_MAN}</button><select class="bt" data-a="intf" hidden title="Quale traccia integrare: quella su cui clicchi, tutte le visibili oppure un file preciso"></select><button class="bt" data-a="iclr" hidden title="Cancella tutte le integrazioni di questo grafico">Pulisci integrazioni</button><button class="bt" data-a="itab" hidden title="Tabella delle aree integrate e cinetica">${IC_TAB}</button>` : ""}${type === "chrom" ? '<button class="bt" data-a="xic" title="Estrai uno ione (XIC): scegli la finestra di m/z. Si integra solo dagli XIC">XIC</button>' : ""}<button class="bt" data-a="up" title="Sposta questo grafico in su">&#9650;</button><button class="bt" data-a="down" title="Sposta questo grafico in giù">&#9660;</button><button class="bt" data-a="fit" style="display:none" title="Torna a vedere tutto il grafico">${IC_FIT}</button><button class="bt" data-a="png" title="Salva il grafico come immagine PNG">${IC_DL}PNG</button>${type === "map" || type === "chrom" ? "" : '<button class="bt" data-a="csv" title="Salva i dati del grafico (le tracce visibili) in un file CSV da aprire con Excel">' + IC_DL + 'CSV</button>'}<button class="bt" data-a="max" title="Ingrandisci o riduci questo pannello">&#9633;</button><button class="x" title="Chiudi il pannello">&times;</button></div><canvas></canvas><div class="vl" hidden></div><div class="tip" hidden></div><div class="leg"></div>`;
   p.el = el; p.vl = el.querySelector(".vl"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg");
   Q("#dpanels").appendChild(el);
   E.panels.push(p); apply(p); fitHost();
@@ -391,6 +403,7 @@ function addPanel(type, o, after) {
     cancelAnimationFrame(p._raf); p._raf = requestAnimationFrame(() => draw(p));
   });
   p._ro.observe(el); p._ro.observe(p.cv);   // the canvas too: it shrinks when the legend or the controls wrap to more lines
+  el.querySelector('[data-a="up"]').onclick = () => movePanel(p, -1); el.querySelector('[data-a="down"]').onclick = () => movePanel(p, 1);
   el.querySelector('[data-a="max"]').onclick = () => { el.classList.toggle("max"); front(el); };
   const csvB = el.querySelector('[data-a="csv"]');
   if (csvB) csvB.onclick = () => { const t = plotCsv(p); if (t) dl(plotName(p) + ".csv", t); else info("Nessun dato da salvare in questo grafico."); };
@@ -452,6 +465,8 @@ function stepScan(p, d) {
 }
 // "zoom bar" in the top margin: where the visible window sits in the whole axis, plus the visible range in words; "Vista intera" button
 function afterDraw(p) {
+  const rl = p.el.querySelector(".rtl");           // retention time of the spectrum, next to the title
+  if (rl) { if (p.r0 == null) rl.textContent = ""; else { const m = (p.r0 + p.r1) / 2, wide = p.r1 - p.r0 > 1.6 * scanStep(); rl.textContent = wide ? `RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min` : `RT ${m.toFixed(2)} min`; } }
   const btn = p.el.querySelector('[data-a="fit"]'), z = !!(p._a && (p.zoom || p.zoomY));
   if (btn) btn.style.display = z ? "" : "none";
   const tb = p.el.querySelector('[data-a="itab"]'); if (tb) tb.hidden = !p.ints.length;
@@ -1162,7 +1177,7 @@ function attach(p) {
       if (!p._a || !f || f.kind === "mrm") return;
       const dt = scanStep(), r0 = x - dt / 2, r1 = x + dt / 2;
       p.sel = null; p.cur = x;
-      if (E.panels.some(s => s.type === "spec" && s.link === p.id)) pushLinked(p, r0, r1, k, false); else newSpec(p, r0, r1, k);
+      newSpec(p, r0, r1, k, null);          // every double click makes a new spectrum at that time (not linked: later clicks do not change it)
       draw(p); return;
     }
     p.zoom = null; p.zoomY = null; p.sel = null; draw(p);
@@ -1179,7 +1194,7 @@ function nearestFile(p, x) {
 function pushLinked(p, r0, r1, k, keepZoom) {
   E.panels.filter(s => s.type === "spec" && s.link === p.id).forEach(s => { s.r0 = r0; s.r1 = r1; s.k = k; if (!keepZoom) s.zoom = null; ctl(s); draw(s); });
 }
-function newSpec(from, r0, r1, k) { return addPanel("spec", { link: from.id, k, r0, r1, level: E.files[k]?.lv || 1 }, from); }
+function newSpec(from, r0, r1, k, link = from.id) { return addPanel("spec", { link, k, r0, r1, level: E.files[k]?.lv || 1 }, from); }
 
 function ctxFor(p, e, x, px, py) {
   if (!p._a) return e.preventDefault();

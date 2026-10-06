@@ -18,7 +18,7 @@
   const box = document.createElement("div");
   box.style.cssText = "position:fixed;inset:0;z-index:100000;background:var(--bg,#f7f8fa);display:flex;align-items:center;justify-content:center;font:15px system-ui;color:var(--ink,#25282c);text-align:center;padding:24px";
   const msg = document.createElement("div");
-  msg.innerHTML = "<b>QqQ lab</b><br><span id=\"qq-load\">Preparo il motore di calcolo...</span><br><small style=\"color:#687080\">La prima volta serve circa mezzo minuto (15 MB); le volte dopo è immediato. I tuoi file non lasciano il tuo computer.</small>";
+  msg.innerHTML = "<style>@keyframes qqbar{0%{left:-35%}100%{left:100%}}</style><img src=\"static/logo.svg\" alt=\"\" style=\"height:64px;display:block;margin:0 auto 10px\"><b style=\"font-size:18px\">QqQ lab</b><br><span id=\"qq-load\" style=\"color:#687080\">Preparo il motore di calcolo...</span><div style=\"position:relative;overflow:hidden;width:220px;height:4px;border-radius:2px;background:#dde3ea;margin:12px auto 0\"><i style=\"position:absolute;top:0;width:35%;height:4px;border-radius:2px;background:#2b5c8a;animation:qqbar 1.3s ease-in-out infinite\"></i></div>";
   box.appendChild(msg);
   const attach = () => document.body && !box.isConnected && document.body.appendChild(box);
   document.addEventListener("DOMContentLoaded", () => { if (!isReady) attach(); });

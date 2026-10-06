@@ -198,7 +198,7 @@ def test_mac_app_bundle_and_vector_logo():
     assert text.startswith("#!/bin/bash") and "lab.command" in text and "osascript" in text
     assert (app / "Resources" / (info["CFBundleIconFile"] + ".icns")).read_bytes()[:4] == b"icns"
     svg = (root / "qqq_lab" / "web" / "logo.svg").read_text(encoding="utf-8")
-    assert svg.lstrip().startswith("<svg") and "linearGradient" in svg
+    assert svg.lstrip().startswith("<svg") and "<image" in svg
 
 
 def test_pda_chromatogram_is_read_as_kind_pda(tmp_path):
