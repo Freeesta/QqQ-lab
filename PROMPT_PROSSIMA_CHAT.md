@@ -35,7 +35,6 @@ Se la cartella `QqQ_lab` non è collegata, chiedila con device_request_folder_ac
 
 ## Residui di E2 (origine degli ioni)
 - Pyodide: risolto (1.9 s a freddo, 1.3 s a caldo su 5 file; AGENTS sez. 15). Da rimisurare solo sul Mac vero.
-- TP Mine: collegare `isf.isf_classify` al flag `insource` di `engine.py` (privato, non fatto).
 - **Standard puro = t0** (deciso da Federico, 6 ott): il campione a tempo zero e' lo standard del solo flufenacet, quindi e' il riferimento ufficiale dell'ISF (non piu' un sostituto). Il flufenacet frammenta SEMPRE in sorgente: la domanda non e' se, ma quanto e quali ioni. Conseguenze da implementare in `ionfamily`/finestra origine: (a) ogni ione che ha un picco all'apice del progenitore in t0 e' per costruzione ISF/isotopo/addotto/impurezza del progenitore (evidenza forte, da mostrare come tale); (b) il rapporto r0 = F/P misurato in t0 e' l'atteso negli altri campioni: l'ECCESSO F_t - r0*P_t e' il contributo di un eventuale TP isobaro co-eluente (sostituisce in parte `ratio_constancy`); (c) il prior dell'ISF per ioni piu' leggeri co-eluenti e' alto. Sui negativi reali restano solo quelli facili (nessun TP formato co-eluisce nei dati attuali). Ancora da decidere: MS² del progenitore 364 e acquisizioni a piu' DP (la rampa DP resta solo sintetica).
 - Non verificato: Safari/Mac, file molto grandi. La cartella `QqQ_lab_privato` non e' un repo git: valutare un backup.
 - Git: commit 21594b7 su `main` (ramo `origine` ancora presente, da cancellare dopo il push). Premere Push origin.
