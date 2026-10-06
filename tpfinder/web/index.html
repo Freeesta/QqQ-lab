@@ -28,6 +28,10 @@ canvas{display:block;width:100%}
 #helppop{position:fixed;z-index:10001;max-width:min(420px,92vw);background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;box-shadow:0 8px 26px rgba(20,30,50,.22);padding:8px 12px;font-size:12.5px;line-height:1.5;color:var(--ink)}#helppop .hp-t{display:flex;align-items:center;margin-bottom:4px}#helppop .hp-t b{flex:1;font-size:13px}
 [hidden]{display:none!important}
 #start{max-width:920px;margin:16px auto;padding:0 14px}
+.card.req{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle;text-transform:uppercase;letter-spacing:.03em}
+.tag.must{background:var(--accent);color:#fff}.tag.opt{background:var(--sel);color:var(--muted)}
+.card.req #drop{border-color:var(--accent);background:var(--sel);color:var(--ink);padding:38px 14px}
 #drop,#dropdam{border:2px dashed var(--line);border-radius:10px;padding:26px 14px;text-align:center;color:var(--muted);cursor:pointer;background:var(--panel)}
 #drop.over,#dropdam.over{border-color:var(--accent);background:var(--sel);color:var(--ink)}#drop b,#dropdam b{color:var(--ink);font-size:15px}
 .frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:10px}.frm label{display:flex;flex-direction:column;gap:3px;color:var(--muted)}
@@ -143,7 +147,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 <dialog id="askdlg"><div id="asktxt"></div><input id="askin"><div class="row"><button id="askno">Annulla</button><button class="go" id="askok">OK</button></div></dialog>
 <div id="ctx" hidden></div>
 <section id="start" hidden>
- <div class="card"><h3>1. Carica i file <button class="hq" data-help="start" title="Che cos'è?">?</button></h3>
+ <div class="card req"><h3>1. Carica i file mzML <span class="tag must">obbligatorio</span> <button class="hq" data-help="start" title="Che cos'è?">?</button></h3>
   <div id="drop"><b>Trascina qui i file .mzML</b><br>oppure <u>clicca per sceglierli dal computer</u></div>
   <details id="wiffhelp" class="sm"><summary>Hai i file .wiff dello strumento? Convertili prima in .mzML</summary>
    <ol class="muted">
@@ -153,7 +157,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
     <li>Trascina qui i file <code>.mzML</code> ottenuti.</li></ol></details>
   <input type="file" id="pick" multiple accept=".mzML,.mzml,.wiff,.scan,.dam" hidden>
   <div id="up"></div><div id="flist"></div></div>
- <div class="card"><h3>2. Metodo di acquisizione (facoltativo)</h3>
+ <div class="card"><h3>2. Metodo di acquisizione <span class="tag opt">facoltativo</span></h3>
   <div id="dropdam"><b>Trascina qui il metodo .dam</b><br>oppure <u>clicca per sceglierlo dal computer</u></div>
   <input type="file" id="pickdam" multiple accept=".dam,.DAM" hidden>
   <div id="mlist"></div></div>
