@@ -12,6 +12,7 @@ const CHAPTERS = [
   ["04-lc.html", "4", "Cromatografia liquida (HPLC)", "II. Separare"],
   ["05-gc.html", "5", "Gascromatografia (GC)", "II. Separare"],
   ["06-esi.html", "6", "Elettrospray (ESI) e sorgenti a pressione atmosferica", "III. Ionizzare"],
+  ["07-ei-ci.html", "7", "Ionizzazione elettronica (EI) e chimica (CI)", "III. Ionizzare"],
   ["08-vuoto.html", "8", "Dalla sorgente al vuoto", "III. Ionizzare"],
   ["09-quadrupolo.html", "9", "Il quadrupolo: teoria", "IV. Analizzare gli ioni"],
   ["10-qqq.html", "10", "Il triplo quadrupolo e la CID", "IV. Analizzare gli ioni"],
