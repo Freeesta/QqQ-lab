@@ -13,8 +13,16 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati
 - **Dati di ricerca di Federico** (file Orbitrap in `~/QqQ_lab/Data/HRMS`, solo sul Mac): MAI in un repository, mai nomi dei campioni o composti trovati in codice, test, commit o `AGENTS.md`. Nel cloud non ci sono: si lavora con i sintetici (B0).
 - **Risparmio token**: un blocco alla volta; file letti una volta; prove mirate; screenshot in `tests_e2e/shots/`, al massimo uno per punto.
 - **Verifica**: `python3 tools/verifica.py --solo <test che tocchi>` durante il lavoro, completa alla fine di ogni blocco. **Non lanciare** nulla che usi Pyodide (e2e13, e2e_tpmine*, `tools/build_site.py`): le prove nel browser le fa Federico a mano.
-- Un commit per blocco (titolo in italiano, righe Co-Authored-By e Claude-Session del messaggio di sistema). Sul Mac: su `main`. **Nel cloud** (decisione di Federico, 7/10): ramo della sessione, push dopo ogni blocco; **alla fine, se la verifica completa è verde, unisci tu la pull request in `main`** (`gh pr create` se manca, poi `gh pr merge <n> --merge --delete-branch`) e cancella gli altri rami `claude/...` già uniti (`git branch -r --merged origin/main`). Se qualcosa è rosso, c'è un conflitto o una decisione da prendere: **non unire**, lascia la PR aperta e spiega a Federico. Se `gh` non può unire, scrivilo. Riporta questa regola in `AGENTS.md` sez. 2.
+- **Commit e push spesso** (i limiti di utilizzo possono interrompere la chat in qualsiasi momento): un commit con push **dopo ogni punto** finito (titolo in italiano, righe Co-Authored-By e Claude-Session del messaggio di sistema); se un punto è lungo, commit intermedi «[in corso] …» con push ogni ~30 minuti di lavoro. Sul Mac: su `main`. **Nel cloud** (decisione di Federico, 7/10): ramo della sessione; **alla fine di ogni blocco, se la verifica completa è verde, unisci la pull request in `main`** (`gh pr create` se manca, poi `gh pr merge <n> --merge --delete-branch`; per il blocco dopo crea un ramo nuovo da `main` aggiornato: `git fetch origin && git checkout -b claude/<nome>-<blocco> origin/main`) e cancella gli altri rami `claude/...` già uniti (`git branch -r --merged origin/main`). Così, se la chat si ferma, in `main` c'è tutto il lavoro finito. Se qualcosa è rosso, c'è un conflitto o una decisione da prendere: **non unire**, lascia la PR aperta e spiega a Federico. Se `gh` non può unire, scrivilo. Riporta questa regola in `AGENTS.md` sez. 2.
 - **Aggiorna Federico** alla fine di ogni blocco con 3-5 righe: fatto, non fatto, cosa provare a mano. Budget in esaurimento: fermati dopo un commit pulito e aggiorna questo file.
+
+## Stato e ripresa
+**Stato** (aggiornalo e fai push a ogni punto finito: è quello che legge la chat successiva):
+- Fatti: —
+- In corso: —
+- Ramo con lavoro non ancora in `main`: —
+
+**Se riprendi dopo un'interruzione** (nuova sessione, stesso prompt): 1) `git fetch origin`; 2) guarda «Stato» qui sopra e le PR aperte (`gh pr list`) o i rami `claude/...` non uniti con commit «[in corso]» (`git branch -r --no-merged origin/main`); 3) se c'è lavoro non unito, portalo nel tuo ramo (`git merge origin/<quel ramo>`), lancia `python3 tools/verifica.py --solo <test del punto>` e **riparti dal punto in corso**, senza rifare ciò che è già fatto; 4) chiudi la vecchia PR dopo aver unito la tua. Non rileggere i blocchi già fatti.
 
 ## Ordine di lavoro
 **Parte A** (ritocchi, veloci): A1 barra dei file · A2 perdite neutre · A3 header fisso e niente scorrimento su «Dati» · A4 spettri e pannelli.
