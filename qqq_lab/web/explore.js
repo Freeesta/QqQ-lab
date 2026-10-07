@@ -581,7 +581,7 @@ function addPanel(type, o, after) {
     const lens = type === "chrom" || type === "xic" || type === "mrm";
     const fit = `<button class="bt" data-a="fit" disabled title="Torna a vedere tutto il grafico (attivo solo quando è ingrandito). Da tastiera: Backspace = vista intera, Ctrl/Cmd+Z = zoom precedente">${IC_FIT}</button>`;
     const gv = `<span class="tbg">${lens ? `<button class="bt" data-a="izoom" title="Zoom: attivalo e trascina sul grafico l'intervallo di tempo da ingrandire; il pulsante accanto torna alla vista intera. Ctrl o Cmd + rotella ingrandisce anche senza attivarlo">${IC_ZOOM}</button>` : ""}${fit}</span>`;
-    const gs = type === "spec" ? `<span class="tbg"><button class="bt" data-a="rul" title="Righello: clic su un picco (riferimento) e poi su un altro: mostra la differenza di m/z. Si può anche usare il clic destro su un picco, «Misura da questo picco». Esc toglie le misure">${IC_RULER}</button><button class="bt" data-a="par" title="Parametri dello spettro: asse in % o in cps, quante etichette m/z, decimali">${IC_PARAM}</button><button class="bt" data-a="ptab" title="Tabella dei picchi di questa scansione, pronta da copiare in Excel">${IC_TAB}</button></span>` : "";
+    const gs = type === "spec" ? `<span class="tbg"><button class="bt" data-a="rul" title="Righello: clic su un picco (riferimento) e poi su un altro: mostra la differenza di m/z. Si può anche usare il clic destro su un picco, «Misura da questo picco». Esc toglie le misure">${IC_RULER}</button><button class="bt" data-a="par" title="Parametri dello spettro: asse in % o in cps, quante etichette m/z, decimali">${IC_PARAM}</button></span>` : "";
     const gl = lens ? `<span class="tbg"><button class="bt${o.tl ? " on" : ""}" data-a="tlink" title="Collega l'asse del tempo: ingrandendo un grafico collegato, gli altri collegati mostrano lo stesso intervallo di tempo">${IC_LINK}</button></span>` : "";
     const gi = lens ? `<span class="tbg"><button class="bt" data-a="iauto" title="Integrazione automatica: clicca su un picco e il programma trova i bordi e ne mostra l'area (poi puoi trascinare le barre)">${IC_AUTO}</button><button class="bt" data-a="iman" title="Integrazione manuale: trascina sul grafico l'intervallo da integrare">${IC_MAN}</button><select class="bt" data-a="intf" hidden title="Quale traccia integrare: quella su cui clicchi, tutte le visibili oppure un file preciso"></select><button class="bt" data-a="iclr" hidden title="Cancella tutte le integrazioni di questo grafico">Pulisci integrazioni</button><button class="bt" data-a="itab" hidden title="Tabella delle aree integrate e cinetica">${IC_TAB}</button></span>` : "";
     const gx = type === "chrom" ? '<span class="tbg"><button class="bt" data-a="xic" title="Estrai uno ione (XIC): scegli la finestra di m/z. Si integra solo dagli XIC">XIC</button></span>' : "";
@@ -632,7 +632,6 @@ function addPanel(type, o, after) {
   const lkB = el.querySelector('[data-a="lock"]'); if (lkB) lkB.onclick = () => toggleLock(p);
   const rulB = el.querySelector('[data-a="rul"]'); if (rulB) rulB.onclick = () => { p.rul = !p.rul; rulB.classList.toggle("on", p.rul); if (!p.rul && p.meas && p.meas.ref != null && !p.meas.list.length) { p.meas = null; draw(p); } };
   const parB = el.querySelector('[data-a="par"]'); if (parB) parB.onclick = () => specParams(p, parB);
-  const ptB = el.querySelector('[data-a="ptab"]'); if (ptB) ptB.onclick = () => peakTable(p);
   const tlB = el.querySelector('[data-a="tlink"]'); if (tlB) tlB.onclick = () => toggleTl(p);
   el.querySelector('[data-a="png"]').onclick = async () => {
     let cvs; p._exp = true; EXPORTING = true;                             // the picture has no cursor line, no selection and no zoom bar; the spectrum says where it comes from
@@ -651,7 +650,7 @@ function addPanel(type, o, after) {
     el.querySelector('[data-a="iclr"]').onclick = () => { if (p.ints.length) delInts(p, [...p.ints]); };
     el.querySelector('[data-a="intf"]').onchange = e => { p.intf = e.target.value; };
   }
-  if (bX) bX.onclick = () => openXic(null);
+  if (bX) bX.onclick = () => openXic(null, { after: p });      // the new XIC sits right under this chromatogram
   el.querySelector(".x").onclick = () => { fsInert(null, p); p._ro.disconnect(); if (p._up) removeEventListener("mouseup", p._up); el.remove(); E.panels = E.panels.filter(x => x !== p); relayout(); fitHost(); uiSave(); if (E.tab === "ms2") renderFileList(); };
   el.querySelector(".ttl").ondblclick = async () => { const v = await ask("Nome del pannello", p.title); if (v) { p.title = v; ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
@@ -1039,7 +1038,9 @@ function openXic(panel, pre = {}) {
 }
 function splitPanel(p) {
   const rest = p.traces.slice(1); p.traces = p.traces.slice(0, 1); ctl(p); draw(p);
-  rest.forEach(t => reveal(addPanel("xic", { traces: [t], tol: p.tol, smooth: p.smooth, mode: p.mode, log: p.log })));
+  let prev = p;                                                 // the new panels go right under this one, in the order of the traces
+  rest.forEach(t => { const q = addPanel("xic", { traces: [t], tol: p.tol, smooth: p.smooth, mode: p.mode, log: p.log }); stackAfter(q, prev); prev = q; });
+  relayout(); fitHost(); reveal(prev);
 }
 
 // ------------------------------------------------------------------ disegno dei grafici
@@ -2098,7 +2099,7 @@ function ctxFor(p, e, x, px, py) {
       if (p.sel) items.push({ label: "Spettro medio dell'intervallo selezionato", fn: () => newSpec(p, p.sel[0], p.sel[1], k) });
       items.push({ label: "Spettro a questo RT", fn: () => { const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, x, 0) : null; if (sn) { p.cur = sn.rt; newSpec(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); } else newSpec(p, x - dt / 2, x + dt / 2, k); } });
     }
-    if (p.type === "chrom") items.push({ label: "Estrai uno ione (XIC)…", fn: () => openXic(null) });
+    if (p.type === "chrom") items.push({ label: "Estrai uno ione (XIC)…", fn: () => openXic(null, { after: p }) });
     if (p.type === "xic") {
       items.push({ label: "Aggiungi un altro ione…", fn: () => openXic(p) });
     }

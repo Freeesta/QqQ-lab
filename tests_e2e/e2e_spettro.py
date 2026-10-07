@@ -75,25 +75,6 @@ try:
             assert pg.evaluate(f"{SPEC}.thr") == 5 and pg.evaluate(f"{SPEC}.rel") is None
             pg.keyboard.press("Escape"); pg.mouse.click(5, 300) if False else None
         step("G2: parameters: Full Scan absolute, threshold changes the labels, % axis, reset", params)
-        def table():
-            pg.evaluate("document.querySelectorAll('.pnl.spec .sp-pop').forEach(x=>x.remove())")
-            pg.click(".pnl.spec [data-a=ptab]"); pg.wait_for_timeout(500)
-            assert pg.evaluate("document.querySelector('#bigdlg').open") and "Picchi dello spettro" in pg.inner_text("#bigtt")
-            rows = pg.locator("#pk-tb tr").count(); assert rows >= 2, rows
-            pg.fill("#pk-thr", "90"); pg.press("#pk-thr", "Tab"); pg.wait_for_timeout(300); r2 = pg.locator("#pk-tb tr").count(); assert r2 <= rows, (rows, r2)
-            pg.fill("#pk-thr", "0"); pg.press("#pk-thr", "Tab"); pg.fill("#pk-n", "5"); pg.press("#pk-n", "Tab"); pg.wait_for_timeout(300); assert pg.locator("#pk-tb tr").count() == 6
-            pg.select_option("#pk-sep", ","); pg.click("#pk-copy"); pg.wait_for_timeout(500)
-            try:
-                clip = pg.evaluate("navigator.clipboard.readText()")
-                ls = clip.strip().split("\n"); assert ls[0].split("\t")[0] == "m/z" and len(ls) == 6 and all(len(l.split("\t")) == 3 for l in ls), ls
-                assert "," in ls[1].split("\t")[0] and "." not in ls[1].split("\t")[0], ls[1]          # decimal comma, no thousands separator
-            except Exception as e:
-                if "Read permission denied" not in str(e) and "NotAllowed" not in str(e): raise
-                print("   (clipboard read not allowed here)")
-            with pg.expect_download() as d: pg.click("#pk-xlsx")
-            rr = xlsx_rows(d.value.path()); assert [c[1] for c in rr[0] if c][0] == "m/z" and all(c[0] == "n" for c in rr[1][:3] if c), rr[:2]
-            pg.click("#bigx")
-        step("G3: peak table: filters, copy (TAB, decimal comma), xlsx with real numbers", table)
         def history():
             c = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();return {{x:q.left,y:q.top,w:q.width,h:q.height}}}})()")
             pg.evaluate(f"{CH}.el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300); pg.evaluate("setActive(%s)" % CH)
@@ -117,9 +98,9 @@ try:
             c = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();return {{x:q.left+p._a.X(14.3),y:q.top+q.height/2}}}})()"); pg.mouse.click(c["x"], c["y"]); pg.wait_for_timeout(900)
             pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(600)
             t = pg.inner_text(".pnl.spec .leg"); print(t)
-            for w in ["scansione", "RT", "TIC", "picco base"]: assert w in t, (w, t)
-            import re; assert re.search(r"scansione \d+/\d+ · RT \d+\.\d{2} min", t), t
-        step("G6: one line: scansione i/N · RT · TIC · picco base", caption)
+            import re; assert re.fullmatch(r"scansione \d+/\d+", t.strip()), t
+            for w in ["TIC", "picco base", "RT"]: assert w not in t, (w, t)         # A4.3: the time is already next to the title
+        step("G6: caption = only scansione i/N", caption)
         def ms2():
             pg.evaluate("setTab('ms2',true)"); pg.wait_for_timeout(2500)
             s = pg.evaluate("(()=>{const p=E.panels.find(q=>q.tab==='ms2'&&q.type==='spec');return {rel:specRel(p),ymax:p._a&&p._a.ymax,lock:!!p.lock,t:p.cv.parentElement.querySelector('.leg').textContent}})()"); print(s)

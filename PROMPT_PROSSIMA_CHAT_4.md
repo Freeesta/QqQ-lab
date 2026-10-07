@@ -31,7 +31,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati
 **Stato** (aggiornalo e fai push a ogni punto finito: è quello che legge la chat successiva). Ogni sessione cambia **solo la riga sotto il suo titolo** (le righe vuote fra una sessione e l'altra evitano i conflitti di git: non toglierle). Formato: punti fatti · punto in corso · ramo non ancora in `main`.
 
 **S1**
-- A0-A3 fatti e uniti in main (A0: CI Windows da ricontrollare) · in corso: A4 · ramo claude/upbeat-johnson-xted9o
+- A0-A3 fatti e uniti in main (A0: CI Windows da ricontrollare) · in corso: A5 · ramo claude/upbeat-johnson-xted9o
 
 **S3**
 - —
@@ -65,16 +65,6 @@ Regole per lavorare in parallelo:
 
 ## A0: test su Windows (sessione S1, per primo)
 Da quando è entrato `tests/test_perdite.py` (PR #5, 7/10) la CI fallisce **solo su Windows** (`pytest (windows-latest, 3.11 e 3.14)`); Linux e macOS sono verdi. Causa probabile (i log non li ha visti nessuno): `subprocess.run([...node...], capture_output=True, text=True)` su Windows decodifica l'output di node con cp1252 e i caratteri Δ • − si rompono. Prima leggi il log (`gh run list -R Freeesta/QqQ-lab`, `gh run view <id> --log-failed`; serve `add_repo` in lettura). Se è questo: in `tests/test_perdite.py`, `test_calcola.py`, `test_cromato.py` (e ogni altro test che legge l'output di node) sostituisci `text=True` con `encoding="utf-8"`. Push e controlla che la CI sia verde anche su Windows (`gh run watch`). Se la causa è un'altra, correggi quella e scrivila in `AGENTS.md` (sez. 2, accanto alla nota sui file mmap su Windows).
-
-## A4: spettri e pannelli
-
-**A4.1 L'XIC estratto da un cromatogramma va subito sotto quel cromatogramma.** Con il pulsante «XIC» del cromatogramma (`explore.js` ~r.590) o il clic destro «Estrai uno ione (XIC)…» (~r.2010) il pannello nuovo deve nascere **subito sotto il cromatogramma da cui viene**; i pannelli che stavano sotto scorrono più in basso. Oggi finisce altrove. Usa lo stesso meccanismo dell'XIC estratto da uno spettro (`stackAfter(nuovo, origine)` + `relayout` + `fitHost`), poi porta il pannello nuovo in vista (scorrimento solo se è fuori schermo, tenendo conto dell'header fisso del blocco A3). Con più m/z nella finestra XIC: i pannelli nuovi tutti sotto il cromatogramma, nell'ordine scelto. e2e: TIC + 2 pannelli sotto → XIC dal TIC → il nuovo pannello è il secondo dall'alto.
-
-**A4.2 Via la «Tabella dei picchi» dagli spettri.** Togli il pulsante `data-a="ptab"` dall'intestazione dello spettro (`explore.js` ~r.587, ~r.636), la funzione `peakTable` se non la usa nessun altro, la sua voce nei menu, i test e le righe in `AGENTS.md`. Restano righello e parametri. (La tabella dei picchi del **cromatogramma**, se esiste, resta.)
-
-**A4.3 Didascalia in basso a destra dello spettro: solo l'essenziale.** In `spettro.js` `scanLine` (~r.160-172) togli **TIC / TIC medio**, **«picco base m/z … (…)»** e **RT** (il tempo è già scritto grande accanto al titolo, `.rtl`). Resta: «scansione i/n» o «media di N scansioni» e, per le MS2, «precursore … · CE … eV». Se rimane vuota, nessuna riga. Aggiorna i test che cercano «TIC» o «picco base» nella didascalia.
-
-**A4.4 Il tempo grande accanto al titolo non deve far ballare i pulsanti.** Muovendo il cursore sul cromatogramma il testo «RT 8.04 min» (`.rtl`, `index.html` ~r.63, `explore.js` ~r.754) cambia larghezza e sposta i pulsanti dell'intestazione. Dagli una **larghezza fissa**: `display:inline-block; font-variant-numeric: tabular-nums; min-width` pari a «RT 88.88 min» (misurala, non indovinarla) e testo allineato a sinistra; per un intervallo («RT 8.04-8.21 min») va bene che sia più largo. e2e: larghezza di `.rtl` e posizione del primo pulsante identiche con RT 1.05 e RT 14.30.
 
 ## A5: grafici nitidi anche ingranditi, scritta dell'area leggibile
 **A5.1 Nitidezza.** Ingrandendo (zoom del browser con Cmd/Ctrl + oppure pizzico sul trackpad, che su Mac è uno zoom «visivo») i grafici diventano sfocati e sgranati. `setup()` (`index.html`) usa già `devicePixelRatio`, ma: (a) con lo zoom del browser verifica che ogni canvas venga ridisegnato quando cambia `devicePixelRatio` (`matchMedia("(resolution: …dppx)")` che si riarma a ogni cambio, oppure `resize` → ridisegno di tutti i pannelli una volta per frame); (b) con il pizzico usa `d = devicePixelRatio × (visualViewport.scale || 1)`, al massimo 4, e ridisegna su `visualViewport` `resize` (con un ritardo di ~150 ms, per non ridisegnare a ogni passo del pizzico). Vale per tutti i canvas (pannelli, Teoria, Disegno escluso perché è Ketcher). e2e: pagina a `deviceScaleFactor` 2 → `canvas.width === Math.round(clientWidth × 2)`.
