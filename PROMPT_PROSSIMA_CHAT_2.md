@@ -15,20 +15,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 - Se il budget sta finendo: fermati dopo un commit pulito e aggiorna questo file.
 
 ## Ordine di lavoro (i blocchi sono raggruppati per file, così leggi ogni file una volta)
-3. **Finestra XIC e calcolatrice** (`openXic`, `#xicdlg`, `#calcdlg`)
 4. **Perdite neutre** (`web/tables.js`, Teoria cap. 8)
-
----
-
-## BLOCCO 3: finestra «Estrai uno ione (XIC)» (`openXic`, `#xicdlg`)
-
-**3.1 Più ioni in una volta.** La finestra diventa una lista di righe: **2 righe di default** («Ione 1», «Ione 2 (facoltativo)»), **«+»** per aggiungerne fino a **10**, × per toglierle; riga 2 vuota → si estrae solo lo ione 1. Ogni riga accetta **un m/z o una formula neutra** (numero = m/z; altrimenti formula, con accanto il menu dell'addotto e la lettura in minuscolo già esistente). Sotto ogni riga, in piccolo, la finestra che verrà estratta («m/z 363.8–364.8»). Tutti gli ioni nello **stesso pannello** (una traccia per ione, legenda per ione); con più ioni e più file: colore per ione e tratteggio per file (o viceversa: scegli e motiva); con più di 3 ioni il pannello parte in «Solo il selezionato». Invio nell'ultima riga = «Estrai».
-
-**3.2 Scegliere il file.** Nella stessa finestra un menu **«File»**: «i file mostrati» (predefinito, segue «Solo il selezionato»/«Tutti sovrapposti» della barra) oppure un file preciso della scheda. È solo il valore iniziale: dopo si cambia dal selettore «File n/N» del pannello.
-
-**3.3 e2e**: due ioni → un pannello con due tracce; riga 2 vuota → una traccia; limite 10; formula + m/z; scelta di un file → il pannello mostra solo quello; XIC dal clic destro (1.3) senza finestra.
-
-**3.4 Calcolatrice m/z: solo gli addotti della polarità dei file.** Oggi la calcolatrice (tendina dell'header, `#calcdlg`/`#calcin`) elenca sempre addotti positivi e negativi insieme. Deve mostrare **solo quelli della polarità dei file mostrati** nella scheda attiva (segni +/− del Blocco S9, `info().polarity`): file positivi → solo [M+H]+, [M+NH4]+, [M+Na]+, [M+K]+…; negativi → solo [M-H]-, [M+Cl]-, [M+HCOO]-…; nessun file caricato, polarità mista o sconosciuta → entrambi, separati da una riga «ESI+» / «ESI−». Sotto la tabella un collegamento piccolo «mostra anche ESI−» (o ESI+) per chi vuole l'altra polarità. Stessa regola per l'ordine degli addotti nella scheda Addotti (già prevista: prima quelli della polarità dei file). e2e: con i file della serie B (ESI+) la calcolatrice non mostra [M-H]-; con un file negativo sintetico mostra solo i negativi.
 
 ---
 

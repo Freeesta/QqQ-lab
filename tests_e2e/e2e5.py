@@ -13,7 +13,7 @@ try:
         pg.wait_for_timeout(1000); pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
         def addion(t, ok=True):                       # t: neutral formula (the adduct comes from the selector)
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic')||null)")
-            pg.fill("#xic-q", t); pg.press("#xic-q", "Enter"); pg.wait_for_timeout(1000)
+            pg.fill("#xic-mz", t); pg.wait_for_timeout(1300)
             if ok: pg.click("#xic-go"); pg.wait_for_timeout(1200)
         def addwin(v):                                # write ONE m/z value: the unit window [n-0.2, n+0.8] is built around its nominal mass
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic')||null)")
@@ -29,7 +29,7 @@ try:
             addwin("163.3")                                       # nominal 163: window 162.8-163.8
             tr = pg.evaluate(f"E.panels[{xi}].traces[1]"); assert abs(tr["mz"] - 163.3) < 1e-6 and abs(tr["w"] - 0.5) < 1e-6, tr
             addion("C2H6Qq", ok=False)
-            assert "non valida" in pg.inner_text("#xic-err"); pg.click("#xic-no")
+            assert "non valida" in pg.inner_text("#xic-sum"); pg.click("#xic-no")
             # one decimal only: the value is rounded half up to 0.1, commas are accepted, and the window comes from the nominal mass (100.6 -> n = 101 -> 100.8-101.8)
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))"); pg.fill("#xic-mz", "100,26"); assert "99.8 - 100.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
             pg.fill("#xic-mz", "100.6"); assert "100.8 - 101.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
@@ -39,13 +39,11 @@ try:
         step("XIC window: formula (neutral) and one m/z value (unit window around the nominal mass)", formula_in_xic)
         def xicdlg_layout():
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))")
-            ys = pg.evaluate("['#xic-mz','.xor','#xic-q'].map(s=>document.querySelector(s).getBoundingClientRect().top)"); assert ys[0] < ys[1] < ys[2], ys
             t = pg.inner_text("#xicdlg"); assert "oppure" in t and "neutra" in t and "Extracted Ion Chromatogram" in t and "1 Da" in t, t
             assert not pg.query_selector("#xic-lo") and not pg.query_selector("#xic-hi") and "compromesso" not in t and "0.7 Da" not in t, t
-            assert pg.input_value("#xic-q") == "C2H6O" or True      # (the window opens with the last ion: clear it, then nothing is written)
-            pg.fill("#xic-q", ""); pg.fill("#xic-mz", ""); pg.wait_for_timeout(700)
+            pg.fill("#xic-mz", ""); pg.wait_for_timeout(700)      # (the window opens with the last ion: clear it, then nothing is written)
             pg.click("#xic-go"); err = pg.inner_text("#xic-err"); assert "Scrivi un valore di m/z" in err, err      # nothing written
-            pg.fill("#xic-q", "C2H6O"); pg.fill("#xic-mz", "300"); assert pg.input_value("#xic-q") == ""          # the two ways exclude each other
+            pg.fill("#xic-mz", "C2H6O"); pg.wait_for_timeout(1300); assert "46.8 - 47.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")      # one box: an m/z or a formula
             pg.click("#xic-no")
         step("XIC window layout: new text, one m/z value, oppure, neutral formula; no from/to fields", xicdlg_layout)
         def blank():
@@ -82,8 +80,8 @@ try:
             pg.evaluate("document.querySelector('#np-calc2').click()"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(800)
             t = pg.inner_text("#calcout"); print(t.replace("\n", " | ")[:300]); assert "364.07" in t and "363.0665" in t and "1 decimale" not in t
             pg.screenshot(path=SH + "53_calc.png")
-            pg.locator("#calcout button[data-m]").first.click(); pg.wait_for_timeout(800)          # the XIC button opens THE XIC window, formula and window already filled in
-            assert pg.evaluate("document.querySelector('#xicdlg').open") and pg.input_value("#xic-q") == "C14H13F4N3O2S" and "363.8 - 364.8" in pg.inner_text("#xic-sum"), (pg.input_value("#xic-q"), pg.inner_text("#xic-sum"))
+            pg.locator("#calcout button[data-m]").first.click(); pg.wait_for_timeout(1500)          # the XIC button opens THE XIC window, formula and window already filled in
+            assert pg.evaluate("document.querySelector('#xicdlg').open") and pg.input_value("#xic-mz") == "C14H13F4N3O2S" and "363.8 - 364.8" in pg.inner_text("#xic-sum"), (pg.input_value("#xic-mz"), pg.inner_text("#xic-sum"))
             n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)"); pg.click("#xic-go"); pg.wait_for_timeout(1200)
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)") == n0 + 1
         step("calculator", calc)

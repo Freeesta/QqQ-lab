@@ -39,7 +39,7 @@ try:
             pg.keyboard.press("Escape")
         step("Isotopi tab: same function (lower case), no '1 decimale' column; Esc closes the calculator", isotopes)
         def xic_dlg():
-            pg.evaluate("openXic(null,{})"); pg.wait_for_timeout(300); pg.fill("#xic-q", "c14h13f4n3o2s"); pg.wait_for_timeout(1200)
+            pg.evaluate("openXic(null,{})"); pg.wait_for_timeout(300); pg.fill("#xic-mz", "c14h13f4n3o2s"); pg.wait_for_timeout(1200)
             assert "interpretata come" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum"); pg.click("#xic-no")
         step("XIC window too", xic_dlg)
     r.close()

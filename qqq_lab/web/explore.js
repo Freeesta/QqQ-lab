@@ -943,44 +943,77 @@ function xicDirect(mz, after, panel) {
   reveal(np); return np;
 }
 const xicName = q => { const t = q.traces[0]; return t ? "m/z " + (t.w != null ? Math.round(t.mz - (0.5 - XIC_BELOW)) : fmz(t.mz)) + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : "vuoto"; };
+// Estrai ioni (XIC): a list of rows (2 at the start, up to 10), each one an m/z or a neutral formula (+ adduct); all the ions go into the SAME panel, one trace per ion.
+const XIC_MAXROWS = 10, XIC_ADDUCTS = ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+", "[M-H]-", "[M+Cl]-", "[M+HCOO]-"];
 function openXic(panel, pre = {}) {
   if (!pre.formula && pre.mz == null && XIC_LAST) pre = { ...XIC_LAST, ...pre };
-  const d = Q("#xicdlg"), q = Q("#xic-q"), mzi = Q("#xic-mz"), sum = Q("#xic-sum"), err = Q("#xic-err"), ad = Q("#xic-ad");
-  ad.innerHTML = ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+", "[M-H]-", "[M+Cl]-", "[M+HCOO]-"].map(a => `<option ${a === (pre.adduct || defAdduct(panel && E.panels.includes(panel) ? scanFiles(shown()) : undefined)) ? "selected" : ""}>${a}</option>`).join("");
-  let interp = "", label = pre.label || "", pending = Promise.resolve(), tq = 0, edits = 0, win = null, obs = false;
-  const upd = () => { sum.innerHTML = (interp ? `Formula interpretata come <b>${fmtFormula(interp)}</b>. ` : "") + (win ? `Si estrae l'intervallo <i>m/z</i> ${fmz(win[0])} - ${fmz(win[1])}.` : ""); };
-  const fromV = () => { const v = numMz1(mzi.value); win = v != null ? xicWin(v, obs) : null; label = ""; upd(); };
-  const fromQ = (quiet) => pending = (async () => {
-    const t = q.value.trim(), ed = edits; if (!quiet) err.textContent = ""; if (!t) { if (!mzi.value.trim()) { win = null; label = ""; interp = ""; upd(); } return; }
-    try {
-      const r = await getFormula(t, ad.value); err.textContent = "";
-      if (ed === edits) { label = `${r.formula} ${r.adduct}`; interp = t.replace(/\s+/g, "") !== r.formula ? r.formula : ""; win = xicWin(r.mz, false); upd(); }
-    } catch (e) { if (!quiet) err.textContent = "Formula non valida: " + e.message; }
-  })();
-  q.value = pre.formula || ""; mzi.value = ""; err.textContent = ""; win = null; upd();
-  const typedFormula = () => { edits++; if (q.value.trim() !== "") { mzi.value = ""; } };    // the two ways exclude each other: writing in one empties the other
-  q.onchange = ad.onchange = () => { if (q.value.trim() === "") return; mzi.value = ""; fromQ(false); };
-  q.oninput = () => { typedFormula(); clearTimeout(tq); tq = setTimeout(() => fromQ(true), 500); };
-  q.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); mzi.value = ""; fromQ(false); } };
-  mzi.oninput = () => { edits++; obs = false; if (mzi.value.trim() !== "") q.value = ""; fromV(); };
-  mzi.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); Q("#xic-go").click(); } };
+  const d = Q("#xicdlg"), host = Q("#xic-rows"), err = Q("#xic-err"), fsel = Q("#xic-file"), addB = Q("#xic-add");
+  const dAd = pre.adduct || defAdduct(panel && E.panels.includes(panel) ? scanFiles(shown()) : undefined);
+  const rows = [];
+  const isNum = t => /^[\d.,\s]+$/.test(t);
+  const renumber = () => {
+    rows.forEach((r, i) => { r.lab.textContent = i === 0 ? "Ione 1" : `Ione ${i + 1} (facoltativo)`; r.x.hidden = rows.length < 2; r.inp.placeholder = i === 0 ? "m/z (es. 364.1) o formula (es. C9H10Cl2N2O)" : "facoltativo"; r.inp.id = i === 0 ? "xic-mz" : ""; r.ad.id = i === 0 ? "xic-ad" : ""; r.sum.id = i === 0 ? "xic-sum" : ""; });
+    addB.disabled = rows.length >= XIC_MAXROWS;
+  };
+  const evalRow = r => {
+    const t = r.inp.value.trim(), ed = ++r.edits; err.textContent = "";
+    r.ad.hidden = !t || isNum(t);
+    if (!t) { r.win = null; r.label = ""; r.sum.textContent = ""; r.pending = Promise.resolve(); return; }
+    if (isNum(t)) { const v = numMz1(t); r.win = v != null ? xicWin(v, r.obs) : null; r.label = ""; r.sum.innerHTML = r.win ? `<i>m/z</i> ${fmz(r.win[0])} - ${fmz(r.win[1])}` : ""; r.pending = Promise.resolve(); return; }
+    r.win = null; r.sum.textContent = "";
+    r.pending = (async () => {
+      try {
+        const f = await getFormula(t, r.ad.value);
+        if (ed !== r.edits) return;
+        r.label = `${f.formula} ${f.adduct}`; r.win = xicWin(f.mz, false);
+        r.sum.innerHTML = (t.replace(/\s+/g, "") !== f.formula ? `interpretata come <b>${fmtFormula(f.formula)}</b>: ` : "") + `<i>m/z</i> ${fmz(r.win[0])} - ${fmz(r.win[1])}`;
+      } catch (e) { if (ed === r.edits) r.sum.innerHTML = `<span class="fail">formula non valida</span>`; }
+    })();
+  };
+  const addRow = (init = {}) => {
+    const el = document.createElement("div"); el.className = "xrw";
+    el.innerHTML = `<label></label><div class="xin"><input class="mzf" autocomplete="off" inputmode="decimal" style="width:auto"><select hidden title="L'addotto trasforma la formula neutra nell'm/z dello ione: [M+H]+ aggiunge un protone">${XIC_ADDUCTS.map(a => `<option ${a === (init.adduct || dAd) ? "selected" : ""}>${a}</option>`).join("")}</select><button class="xr-x" type="button" title="Togli questo ione">&times;</button></div><div class="xr-sum"></div>`;
+    const r = { el, lab: el.querySelector("label"), inp: el.querySelector("input"), ad: el.querySelector("select"), x: el.querySelector(".xr-x"), sum: el.querySelector(".xr-sum"), win: null, label: "", obs: !!init.obs, edits: 0, pending: Promise.resolve(), tq: 0 };
+    r.inp.value = init.text || "";
+    r.inp.oninput = () => { r.obs = false; clearTimeout(r.tq); const t = r.inp.value.trim(); if (!t || isNum(t)) evalRow(r); else { r.ad.hidden = false; r.tq = setTimeout(() => evalRow(r), 500); } };
+    r.ad.onchange = () => evalRow(r);
+    r.inp.onkeydown = e => { if (e.key !== "Enter") return; e.preventDefault(); const i = rows.indexOf(r); if (i < rows.length - 1) rows[i + 1].inp.focus(); else Q("#xic-go").click(); };
+    r.x.onclick = () => { if (rows.length < 2) return; rows.splice(rows.indexOf(r), 1); el.remove(); renumber(); };
+    rows.push(r); host.appendChild(el); renumber(); evalRow(r);
+    return r;
+  };
+  host.innerHTML = ""; err.textContent = "";
+  const first = pre.formula ? { text: pre.formula, adduct: pre.adduct } : pre.mz != null ? { text: fmz(pre.mz), obs: !!pre.obs } : {};
+  addRow(first); addRow();
+  addB.onclick = () => { if (rows.length < XIC_MAXROWS) addRow().inp.focus(); };
+  const ff = scanFiles(tabFiles(panel && E.panels.includes(panel) ? panel.tab || E.tab : E.tab));
+  fsel.innerHTML = `<option value="">i file mostrati</option>` + ff.map(f => `<option value="${f.k}">${EH(f.label)}</option>`).join("");
   Q("#xic-no").onclick = () => d.close();
   Q("#xic-go").onclick = async () => {
-    await pending;
-    if (!win) { err.textContent = "Scrivi un valore di m/z oppure la formula neutra."; return; }
-    const [a, b] = win, mz = rh((a + b) / 2, 2), w = rh((b - a) / 2, 2), lab = (label ? label + " · " : "") + `m/z ${fmz(a)}-${fmz(b)}`;
+    await Promise.all(rows.map(r => r.pending));
+    const used = rows.filter(r => r.inp.value.trim());
+    if (!used.length) { err.textContent = "Scrivi un valore di m/z oppure la formula neutra."; return; }
+    const bad = used.find(r => !r.win); if (bad) { err.textContent = "Una riga non è valida: scrivi un m/z oppure una formula neutra."; bad.inp.focus(); return; }
+    const seen = new Set(), traces = [];
+    used.forEach(r => {
+      const [a, b] = r.win, mz = rh((a + b) / 2, 2), w = rh((b - a) / 2, 2), key = mz + "|" + w; if (seen.has(key)) return; seen.add(key);
+      traces.push({ id: E.seq++, mz, w, label: (r.label ? r.label + " · " : "") + `m/z ${fmz(a)}-${fmz(b)}` });
+    });
     d.close();
-    XIC_LAST = q.value.trim() ? { formula: q.value.trim(), adduct: ad.value } : { mz: numMz1(mzi.value) ?? (a + b) / 2 };
-    if (panel && E.panels.includes(panel)) addTrace(panel, mz, lab, w);
+    const r0 = used[0]; XIC_LAST = isNum(r0.inp.value.trim()) ? { mz: numMz1(r0.inp.value) ?? (r0.win[0] + r0.win[1]) / 2 } : { formula: r0.inp.value.trim(), adduct: r0.ad.value };
+    let np;
+    if (panel && E.panels.includes(panel)) { traces.forEach(t => panel.traces.push(t)); np = panel; ctl(np); }
     else {
-      const np = addPanel("xic", { traces: [{ id: E.seq++, mz, w, label: lab }] });
+      np = addPanel("xic", { traces });
       if (pre.after && E.panels.includes(pre.after)) { stackAfter(np, pre.after); relayout(); fitHost(); }   // from a spectrum: the new XIC sits right under it
-      reveal(np);
     }
+    // the file: the one chosen in the window; with more than 3 ions and several files the panel starts on the selected file only (otherwise it is a tangle of lines)
+    const keep = fsel.value !== "" ? E.files[+fsel.value] : traces.length > 3 && ff.length > 1 && ff.includes(E.files[E.cur]) ? E.files[E.cur] : null;
+    if (keep) ff.forEach(f => { if (f !== keep) traces.forEach(t => { np.hid["x|" + f.k + "|" + t.mz] = true; }); });
+    if (np === panel) draw(np); else reveal(np);
   };
   d.showModal();
-  if (pre.formula) fromQ(false); else if (pre.mz != null) { obs = !!pre.obs; mzi.value = fmz(pre.mz); fromV(); }
-  (pre.formula || pre.mz != null ? Q("#xic-go") : mzi).focus();
+  rows[0].inp.focus();
 }
 function splitPanel(p) {
   const rest = p.traces.slice(1); p.traces = p.traces.slice(0, 1); ctl(p); draw(p);
@@ -2100,6 +2133,7 @@ Q("#np-calc2").onclick = () => { if (!calcBox.hidden) return calcBox.close(); ca
 Q("#calcx").onclick = () => calcBox.close();
 addEventListener("resize", () => { if (!calcBox.hidden) calcPlace(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !calcBox.hidden) calcBox.close(); });
+let CALC_MORE = false;       // the calculator shows the adducts of the other polarity too
 async function calcRun() {
   const t = Q("#calcin").value.trim(), out = Q("#calcout"), sum = Q("#calcsum");
   if (!t) { out.innerHTML = ""; sum.innerHTML = ""; return; }
@@ -2107,9 +2141,18 @@ async function calcRun() {
     const r = await getFormula(t, "");
     const want = defAdduct();
     sum.innerHTML = t.replace(/\s+/g, "") !== r.formula ? `interpretata come <b>${fmtFormula(r.formula)}</b>` : "";      // what was calculated, when the capitals were fixed
+    // only the adducts of the polarity of the files shown (positive files: [M+H]+, [M+Na]+...; negative: [M-H]-...); no files or mixed: both, under ESI+ / ESI-; a small link shows the other polarity
+    const fl = shown().length ? shown() : E.files.filter(f => f.vis), pos = fl.some(f => f.polarity === "positive"), neg = fl.some(f => f.polarity === "negative");
+    const mine = pos && !neg ? "+" : neg && !pos ? "-" : "", both = !mine || CALC_MORE;
+    const ent = Object.entries(r.adducts), isPos = a => a.endsWith("+");
+    const rowOf = ([a, v]) => `<tr${a === want ? ' style="font-weight:600"' : ""}><td>${fmtAdduct(a)}</td><td>${v.mz.toFixed(4)}</td><td>${v.nominal}</td><td><button data-a="${EH(a)}" data-m="${v.mz1}" title="Apre la finestra per estrarre questo ione (XIC)">XIC</button></td></tr>`;
+    const grp = (lab, rows) => rows.length ? `<tr class="pg"><td colspan="4"><b>${lab}</b></td></tr>` + rows.map(rowOf).join("") : "";
+    const P = ent.filter(([a]) => isPos(a)), N = ent.filter(([a]) => !isPos(a));
+    const body = !both ? (mine === "+" ? P : N).map(rowOf).join("") : !mine ? grp("ESI+", P) + grp("ESI\u2212", N) : mine === "+" ? grp("ESI+", P) + grp("ESI\u2212", N) : grp("ESI\u2212", N) + grp("ESI+", P);
+    const more = mine ? `<p class="sm"><a href="#" id="calcmore">${CALC_MORE ? "mostra solo " + (mine === "+" ? "ESI+" : "ESI\u2212") : "mostra anche " + (mine === "+" ? "ESI\u2212" : "ESI+")}</a></p>` : "";
     out.innerHTML = `<p><b>${fmtFormula(r.formula)}</b> · massa esatta neutra <b>${r.neutral.toFixed(4)}</b> · intera <b>${r.nominal_neutral}</b></p>
-      <table><tr><th>addotto</th><th>m/z esatto</th><th>all'unità</th><th></th></tr>${Object.entries(r.adducts).map(([a, v]) =>
-      `<tr${a === want ? ' style="font-weight:600"' : ""}><td>${fmtAdduct(a)}</td><td>${v.mz.toFixed(4)}</td><td>${v.nominal}</td><td><button data-a="${EH(a)}" data-m="${v.mz1}" title="Apre la finestra per estrarre questo ione (XIC)">XIC</button></td></tr>`).join("")}</table>`;
+      <table><tr><th>addotto</th><th>m/z esatto</th><th>all'unità</th><th></th></tr>${body}</table>${more}`;
+    const mo = out.querySelector("#calcmore"); if (mo) mo.onclick = e => { e.preventDefault(); CALC_MORE = !CALC_MORE; calcRun(); };
     out.querySelectorAll("button[data-m]").forEach(b => b.onclick = () => {
       Q("#calcdlg").close();
       openXic([...tabPanels()].reverse().find(q => q.type === "xic") || null, { formula: r.formula, adduct: b.dataset.a });

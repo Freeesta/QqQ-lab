@@ -18,11 +18,11 @@ try:
         dlg = lambda: pg.evaluate("document.querySelector('#xicdlg').open")
         def window_():
             pg.click("#dpanels .pnl.chrom [data-a=xic]"); assert dlg()
-            ys = pg.evaluate("['#xic-mz','.xor','#xic-q'].map(s=>document.querySelector(s).getBoundingClientRect().top)"); assert ys[0] < ys[1] < ys[2], ys
-            t = pg.inner_text("#xicdlg"); assert "oppure" in t and "neutra" in t and "senza carica" in t and "cifra decimale" not in t and "m/z o formula" not in t, t
+            assert pg.locator("#xic-rows .xrw").count() == 2 and pg.locator("#xic-add").is_enabled(), "two rows to start with"
+            t = pg.inner_text("#xicdlg"); assert "oppure" in t and "neutra" in t  and "cifra decimale" not in t and "m/z o formula" not in t, t
             pg.fill("#xic-mz", "194.04"); assert "193.8 - 194.8" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "194.04", pg.inner_text("#xic-sum")
-            pg.fill("#xic-q", "C14H13F4N3O2S"); pg.press("#xic-q", "Enter"); pg.wait_for_timeout(600)
-            assert "363.8 - 364.8" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "", pg.inner_text("#xic-sum")
+            pg.fill("#xic-mz", "C14H13F4N3O2S"); pg.wait_for_timeout(1300)
+            assert "363.8 - 364.8" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "C14H13F4N3O2S", pg.inner_text("#xic-sum")
             pg.select_option("#xic-ad", "[M+Na]+"); pg.wait_for_timeout(600)
             assert "385.8 - 386.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
             pg.fill("#xic-mz", "364"); pg.click("#xic-go"); pg.wait_for_timeout(2500)
