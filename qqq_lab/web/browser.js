@@ -18,7 +18,9 @@
   // the step text goes under the phrase (#ldsub). window.qqStep is also read by loading() in explore.js.
   window.qqStep = "Preparo il motore di calcolo...";
   // technical steps go to the console only (the screen shows just the funny phrases); an ERROR replaces the phrase, clearly, in Italian
-  const step = t => { window.qqStep = t; console.debug("[QqQ lab]", t); };
+  // for the ?perf meter (perf.js loads later: what happens before it is kept here and picked up by it)
+  const perfMark = t => { if (window.PERF) PERF.mark(t); else if (/[?&]perf\b/.test(location.search)) (window.PERF_EARLY = window.PERF_EARLY || []).push([performance.now(), t]); };
+  const step = t => { window.qqStep = t; console.debug("[QqQ lab]", t); perfMark(t); };
   const fail = t => { window.qqFailed = t; const show = () => { const m = document.getElementById("ldmsg"), s = document.getElementById("ldsub"); if (m) m.textContent = t; if (s) s.textContent = ""; }; show(); document.addEventListener("DOMContentLoaded", show); };
   document.addEventListener("DOMContentLoaded", () => step(window.qqStep));
 
@@ -27,7 +29,7 @@
     worker.onmessage = ev => {
       const m = ev.data;
       if (m.type === "step") return step(m.text);
-      if (m.type === "ready") { isReady = true; window.qqStep = ""; return res(); }
+      if (m.type === "ready") { isReady = true; window.qqStep = ""; perfMark("motore pronto"); return res(); }
       if (m.type === "fatal") { failed = m.text; fail("Non riesco ad avviare il motore di calcolo: " + m.text); return rej(new Error(m.text)); }
       const p = pending.get(m.id); if (!p) return; pending.delete(m.id); p(m);
     };
@@ -43,11 +45,13 @@
     if (/^(\.\/)?api\/(ping|bye)/.test(url)) return json({ ok: true });      // presence: not needed without a server
     await ready;
     const method = (init.method || "GET").toUpperCase();
-    let body = null;
-    if (init.body != null) body = typeof init.body === "string" ? new TextEncoder().encode(init.body) : new Uint8Array(await new Response(init.body).arrayBuffer());
+    let body = null, blob = null;
+    const BIG = 50 << 20;      // a big file goes to the worker as a Blob (no copy: it is mounted there, see browser-worker.js)
+    if (method === "POST" && /^(\.\/)?api\/upload/.test(url) && typeof Blob !== "undefined" && init.body instanceof Blob && init.body.size > BIG) blob = init.body;
+    else if (init.body != null) body = typeof init.body === "string" ? new TextEncoder().encode(init.body) : new Uint8Array(await new Response(init.body).arrayBuffer());
     const id = ++seq;
-    const r = await new Promise(res => { pending.set(id, res); worker.postMessage({ id, method, url, body }, body ? [body.buffer] : []); });
-    return new Response(r.text, { status: r.status, headers: { "Content-Type": "application/json" } });
+    const r = await new Promise(res => { pending.set(id, res); worker.postMessage({ id, method, url, body, blob }, body ? [body.buffer] : []); });
+    return new Response(r.text, { status: r.status, headers: { "Content-Type": "application/json", "X-Py-Ms": String(r.ms || 0) } });   // X-Py-Ms: time in Python, for the ?perf meter
   };
   window.EventSource = class { constructor() {} close() {} };                  // "the tab is open" signal: only for the local program
   navigator.sendBeacon = () => true;

@@ -62,20 +62,25 @@ def has(mod: str) -> bool:
     return subprocess.run([sys.executable, "-c", f"import {mod}"], capture_output=True).returncode == 0
 
 
+def browser_name() -> str:
+    """chromium (default), firefox or webkit (the engine of Safari): --browser or QQQ_BROWSER; tests_e2e/lib.py reads the same variable."""
+    return os.environ.get("QQQ_BROWSER", "chromium")
+
+
 def setup() -> None:
     pip = [sys.executable, "-m", "pip", "install", "-q"]
     for extra in ([], ["--break-system-packages"]):
         if subprocess.run(pip + extra + ["pytest", "playwright", "numpy"], capture_output=True).returncode == 0:
             break
     if has("playwright"):
-        subprocess.run([sys.executable, "-m", "playwright", "install", "--with-deps", "chromium"], capture_output=True)
-        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], capture_output=True)
+        subprocess.run([sys.executable, "-m", "playwright", "install", "--with-deps", browser_name()], capture_output=True)
+        subprocess.run([sys.executable, "-m", "playwright", "install", browser_name()], capture_output=True)
 
 
 def browser_ok() -> bool:
     if not has("playwright"):
         return False
-    code = "from playwright.sync_api import sync_playwright\nwith sync_playwright() as p: p.chromium.launch().close()"
+    code = "from playwright.sync_api import sync_playwright\nwith sync_playwright() as p: p.%s.launch().close()" % browser_name()
     return subprocess.run([sys.executable, "-c", code], capture_output=True, timeout=120).returncode == 0
 
 
@@ -204,21 +209,26 @@ def main() -> None:
     ap.add_argument("--rapida", action="store_true", help="sintassi + pytest + e2e3")
     ap.add_argument("--solo", default="", help="solo questi e2e, separati da virgola (es. e2e6,e2e18)")
     ap.add_argument("--senza-e2e", action="store_true")
+    ap.add_argument("--browser", choices=("chromium", "firefox", "webkit"), help="browser dei test e2e (predefinito chromium; webkit = il motore di Safari)")
+    ap.add_argument("--fumo", action="store_true", help="solo gli e2e di fumo (SMOKE), senza sintassi JS e pytest: è il giro del job «browser» della CI")
     ap.add_argument("--setup", action="store_true", help="installa pytest, playwright e chromium se mancano")
     ap.add_argument("--timeout", type=int, default=600, help="secondi per ogni e2e (predefinito 600)")
     a = ap.parse_args()
+    if a.browser:
+        os.environ["QQQ_BROWSER"] = a.browser
     LOG.mkdir(parents=True, exist_ok=True)
     if a.setup:
         setup()
     results: list = []
     t0 = time.time()
-    js_syntax(results)
-    pytest(results, 1200)
+    if not a.fumo:
+        js_syntax(results)
+        pytest(results, 1200)
     if not a.senza_e2e:
-        only = {s.strip().removesuffix(".py") for s in a.solo.split(",") if s.strip()} or (set(SMOKE) if a.rapida else set())
+        only = {s.strip().removesuffix(".py") for s in a.solo.split(",") if s.strip()} or (set(SMOKE) if a.rapida or a.fumo else set())
         e2e(results, only, a.timeout, "")
     fails = [r for r in results if r[1] == "FAIL"]
-    lines = [f"# Verifica QqQ lab ({time.strftime('%Y-%m-%d %H:%M')}, {time.time() - t0:.0f} s): "
+    lines = [f"# Verifica QqQ lab ({time.strftime('%Y-%m-%d %H:%M')}, {time.time() - t0:.0f} s, browser {browser_name()}): "
              + ("TUTTO OK" if not fails else f"{len(fails)} FAIL"), ""]
     for name, st, dt, notes in results:
         lines.append(f"- {st:4} {name}" + (f" ({dt:.0f} s)" if dt else "") + (": " + " | ".join(notes) if notes and st != "OK" else ""))

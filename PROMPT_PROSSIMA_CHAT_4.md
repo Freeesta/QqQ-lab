@@ -37,7 +37,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati
 - —
 
 **S4**
-- —
+- B7 fatto e unito in `main` · C1 (`perf.js`, `/api/perf`) fatto · C2 job CI e `--browser`/`--fumo` scritti, da provare su Firefox e WebKit (installati nel container) · in corso: C2 poi C3/C4
 
 **Se riprendi dopo un'interruzione** (nuova sessione, stesso prompt): 1) `git fetch origin`; 2) guarda «Stato» qui sopra e le PR aperte (`gh pr list`) o i rami `claude/...` non uniti con commit «[in corso]» (`git branch -r --no-merged origin/main`); 3) se c'è lavoro non unito, portalo nel tuo ramo (`git merge origin/<quel ramo>`), lancia `python3 tools/verifica.py --solo <test del punto>` e **riparti dal punto in corso**, senza rifare ciò che è già fatto; 4) chiudi la vecchia PR dopo aver unito la tua. Non rileggere i blocchi già fatti.
 
