@@ -64,7 +64,7 @@ try:
                 assert zlib.crc32(t + body) & 0xffffffff == crc, t
                 if t == b"tEXt": k, v = body.split(b"\0", 1); txt[k.decode()] = v.decode("latin1")
                 i += 12 + n
-            print(txt); assert txt.get("Software") == "QqQ lab" and txt.get("Title") and txt.get("Source")
+            print(txt); assert txt.get("Software") == "mzLab" and txt.get("Title") and txt.get("Source")
             assert dd.suggested_filename.endswith(".png") and "TIC" in dd.suggested_filename
         step("PNG name + valid tEXt metadata", png)
         def xlsn():

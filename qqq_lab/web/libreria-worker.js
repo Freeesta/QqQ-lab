@@ -1,0 +1,304 @@
+"use strict";
+// Spectral libraries (MSP and MGF) read in a Web Worker, kept in the browser's private file system (OPFS) and searched with a MS2 spectrum.
+// Plain JavaScript, no Pyodide. The pure functions at the top (parser, scores, search over an index) are also run by node in tests/test_libreria.py.
+//
+// Archive of a library (OPFS, or IndexedDB where OPFS is not available): per library `id`
+//   <id>.idx        header (magic, n, total peaks) + precursor m/z SORTED (Float64) + their position in the file (Uint32) + polarity (Int8) + peak offsets (Uint32, in file order)
+//   <id>.peaks      the packed peaks, in file order: Float32 pairs (m/z, intensity), at most 100 per spectrum, intensity normalised to 1
+//   <id>.meta.json  name, type (adduct), CE, instrument, formula, InChIKey of every spectrum (file order)
+//   <id>.info.json  the summary shown in the list (name, spectra, polarities, discarded, date)
+// A spectrum is: { prec, pol (+1 / -1 / 0), mz: Float32Array, it: Float32Array, meta: [name, type, ce, inst, formula, inchikey] }.
+
+const TOP_PEAKS = 100;
+const MAGIC = 0x4d5a4c31;                       // "MZL1"
+const NUM = /[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/g;
+
+// ---------------------------------------------------------------- parsing
+const keyOf = k => k.toLowerCase().replace(/[\s_\-]+/g, "");
+function polFrom(mode, type, charge) {
+  const m = String(mode || "").trim();
+  if (/^p/i.test(m)) return 1;
+  if (/^n/i.test(m)) return -1;
+  const t = String(type || "").match(/\][\d]*([+-])\s*$/); if (t) return t[1] === "+" ? 1 : -1;
+  const c = String(charge || "").match(/([+-])/); if (c) return c[1] === "+" ? 1 : -1;
+  return 0;
+}
+function topPeaks(mz, it) {                     // the TOP_PEAKS most intense, by m/z, intensity divided by the highest
+  let idx = Array.from(mz.keys());
+  if (idx.length > TOP_PEAKS) idx = idx.sort((a, b) => it[b] - it[a]).slice(0, TOP_PEAKS);
+  idx.sort((a, b) => mz[a] - mz[b]);
+  const mx = Math.max(...idx.map(i => it[i]));
+  return { mz: Float32Array.from(idx, i => mz[i]), it: Float32Array.from(idx, i => it[i] / mx) };
+}
+class LibParser {
+  // format "msp" | "mgf"; onSpectrum(spectrum) is called for every good one; push(text) as the file is read, end() at the end.
+  constructor(format, onSpectrum) {
+    this.fmt = format; this.cb = onSpectrum; this.rest = ""; this.cur = null; this.inPeaks = false;
+    this.stats = { read: 0, dropped: 0, noPrec: 0, noPeaks: 0, broken: 0 };
+  }
+  push(text) { const lines = (this.rest + text).split(/\r?\n/); this.rest = lines.pop(); for (const l of lines) this.line(l); }
+  end() { if (this.rest) { this.line(this.rest); this.rest = ""; } if (this.cur) { if (this.fmt === "mgf") this.drop("broken"); else this.emit(); } }
+  fresh() { this.cur = { f: {}, mz: [], it: [] }; this.inPeaks = false; }
+  drop(why) { this.stats.dropped++; if (why) this.stats[why]++; this.cur = null; this.inPeaks = false; }
+  field(k, v) { const c = this.cur; if (!(k in c.f)) c.f[k] = v; }
+  peak(t) {
+    for (const seg of t.split(";")) { const n = seg.match(NUM); if (n && n.length >= 2) { const m = +n[0], i = +n[1]; if (Number.isFinite(m) && Number.isFinite(i) && i > 0 && m > 0) { this.cur.mz.push(m); this.cur.it.push(i); } } }
+  }
+  line(l) { return this.fmt === "mgf" ? this.mgf(l) : this.msp(l); }
+  msp(l) {
+    const t = l.trim();
+    if (!t) { if (this.cur) this.emit(); return; }
+    const m = /^([A-Za-z][A-Za-z0-9 _\-]*?)\s*:\s*(.*)$/.exec(t);
+    if (m && (!this.inPeaks || keyOf(m[1]) === "name")) {                    // a «Name:» line always starts a new record, even without the blank line
+      const k = keyOf(m[1]);
+      if (this.cur && k === "name" && (this.inPeaks || "name" in this.cur.f)) this.emit();
+      if (!this.cur) this.fresh();
+      if (k === "numpeaks") { this.inPeaks = true; return; }
+      this.field(k, m[2].trim()); return;
+    }
+    if (!this.cur) { if (!/^[-+.\d]/.test(t)) return; this.fresh(); }          // numbers without any header: a record with no precursor (it will be counted)
+    this.inPeaks = true; this.peak(t);
+  }
+  mgf(l) {
+    const t = l.trim();
+    if (!t) return;
+    if (/^BEGIN IONS/i.test(t)) { if (this.cur) this.drop("broken"); this.fresh(); return; }
+    if (/^END IONS/i.test(t)) { if (this.cur) this.emit(); return; }
+    if (!this.cur) return;
+    const m = /^([A-Za-z_][A-Za-z0-9_ \-]*)=(.*)$/.exec(t);
+    if (m && !/^[-+.\d]/.test(t)) {
+      const k = keyOf(m[1]); let v = m[2].trim();
+      if (k === "pepmass") { const n = v.match(NUM); if (n) v = n[0]; this.field("precursormz", v); } else this.field(k, v);
+      return;
+    }
+    this.inPeaks = true; this.peak(t);
+  }
+  emit() {
+    const c = this.cur, f = c.f; this.cur = null; this.inPeaks = false;
+    const prec = parseFloat(String(f.precursormz ?? f.precursor ?? "").replace(",", "."));
+    if (!(prec > 0)) { this.stats.dropped++; this.stats.noPrec++; return; }
+    if (!c.mz.length) { this.stats.dropped++; this.stats.noPeaks++; return; }
+    const p = topPeaks(c.mz, c.it), type = f.precursortype ?? f.adduct ?? "";
+    this.stats.read++;
+    this.cb({ prec, pol: polFrom(f.ionmode ?? f.polarity, type, f.charge), mz: p.mz, it: p.it,
+      meta: [f.name ?? f.title ?? "", type, f.collisionenergy ?? f.ce ?? "", f.instrumenttype ?? f.instrument ?? "", f.formula ?? "", f.inchikey ?? ""] });
+  }
+}
+function formatOf(name, head) {                 // by extension, otherwise by the first lines
+  const n = String(name || "").toLowerCase();
+  if (/\.msp$/.test(n)) return "msp";
+  if (/\.mgf$/.test(n)) return "mgf";
+  if (/\.(lib|mzvault|sqlite|db|nist)$/.test(n)) return "unsupported";
+  const h = String(head || "");
+  if (/BEGIN IONS/i.test(h)) return "mgf";
+  if (/^\s*name\s*:/im.test(h)) return "msp";
+  return "unknown";
+}
+
+// ---------------------------------------------------------------- scores
+const lowerBound = (a, x) => { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] < x) lo = m + 1; else hi = m; } return lo; };
+function matchPeaks(aMz, aIt, bMz, bIt, tol) {  // one-to-one pairs within tol (Da), the most intense pairs first
+  const c = [];
+  for (let i = 0; i < aMz.length; i++) for (let j = lowerBound(bMz, aMz[i] - tol); j < bMz.length && bMz[j] <= aMz[i] + tol; j++) c.push([i, j, aIt[i] * bIt[j]]);
+  c.sort((x, y) => y[2] - x[2]);
+  const ua = new Uint8Array(aMz.length), ub = new Uint8Array(bMz.length), out = [];
+  for (const [i, j] of c) if (!ua[i] && !ub[j]) { ua[i] = ub[j] = 1; out.push([i, j]); }
+  return out;
+}
+function cosine(a, b, pairs) {                  // intensities as square roots
+  let na = 0, nb = 0, dot = 0;
+  for (const v of a.it) na += v; for (const v of b.it) nb += v;                // sqrt(I)^2 = I
+  for (const [i, j] of pairs) dot += Math.sqrt(a.it[i] * b.it[j]);
+  return na > 0 && nb > 0 ? dot / Math.sqrt(na * nb) : 0;
+}
+function entropyWeighted(it) {                  // Li et al., Nat. Methods 2021: sum 1; if the entropy is below 3 the intensities are raised to 0.25 + 0.25 S
+  const s = it.reduce((x, y) => x + y, 0); let p = Array.from(it, v => v / s);
+  const S = -p.reduce((x, v) => x + (v > 0 ? v * Math.log(v) : 0), 0);
+  if (S < 3) { const w = 0.25 + 0.25 * S; p = p.map(v => Math.pow(v, w)); const t = p.reduce((x, y) => x + y, 0); p = p.map(v => v / t); }
+  return p;
+}
+function entropySimilarity(a, b, pairs) {       // 1 - (2 S_AB - S_A - S_B) / ln 4
+  const pa = entropyWeighted(a.it), pb = entropyWeighted(b.it), H = p => -p.reduce((x, v) => x + (v > 0 ? v * Math.log(v) : 0), 0);
+  const m = [], ia = new Set(), ib = new Set();
+  for (const [i, j] of pairs) { m.push((pa[i] + pb[j]) / 2); ia.add(i); ib.add(j); }
+  pa.forEach((v, i) => { if (!ia.has(i)) m.push(v / 2); }); pb.forEach((v, j) => { if (!ib.has(j)) m.push(v / 2); });
+  const s = 1 - (2 * H(m) - H(pa) - H(pb)) / Math.log(4);
+  return Math.max(0, Math.min(1, s));
+}
+function score(q, lib, tolFrag) {
+  const pairs = matchPeaks(q.mz, q.it, lib.mz, lib.it, tolFrag);
+  return { cos: cosine(q, lib, pairs), ent: entropySimilarity(q, lib, pairs), shared: pairs.length, pairs };
+}
+
+// ---------------------------------------------------------------- search over an index
+// idx = { n, prec (sorted Float64Array), ord (Uint32Array: position in the file), pol (Int8Array, file order) }; getSpec(position) -> { mz, it }
+// opts = { ppm (precursor tolerance in ppm) or da, frag (Da), pol (+1 / -1 / 0 = any) }
+function searchIndex(idx, q, opts, getSpec, meta) {
+  const tol = opts.ppm != null ? q.prec * opts.ppm * 1e-6 : opts.da, lo = lowerBound(idx.prec, q.prec - tol), out = [];
+  for (let k = lo; k < idx.n && idx.prec[k] <= q.prec + tol; k++) {
+    const pos = idx.ord[k], lp = idx.pol[pos];
+    if (opts.pol && lp && lp !== opts.pol) continue;                           // same polarity (a library entry without polarity is kept)
+    const s = getSpec(pos), sc = score(q, s, opts.frag), m = meta ? meta[pos] : null;
+    out.push({ pos, name: m ? m[0] : "", type: m ? m[1] : "", ce: m ? m[2] : "", inst: m ? m[3] : "", formula: m ? m[4] : "", ik: m ? m[5] : "",
+      cos: sc.cos, ent: sc.ent, shared: sc.shared, dprec: opts.ppm != null ? (idx.prec[k] - q.prec) / q.prec * 1e6 : idx.prec[k] - q.prec, prec: idx.prec[k], pairs: sc.pairs, mz: Array.from(s.mz), it: Array.from(s.it) });
+  }
+  return out;
+}
+function queryOf(peaks, prec, pol) {            // peaks: [[mz, intensity], ...] -> the query, with the same normalisation as the library
+  const mz = peaks.map(p => p[0]), it = peaks.map(p => p[1]).map(Number);
+  if (!mz.length || !(Math.max(...it) > 0)) return null;
+  const t = topPeaks(mz.filter((_, i) => it[i] > 0), it.filter(v => v > 0));
+  return { prec, pol, mz: t.mz, it: t.it };
+}
+
+if (typeof module !== "undefined") module.exports = { LibParser, formatOf, topPeaks, matchPeaks, cosine, entropySimilarity, score, searchIndex, queryOf, lowerBound, buildIndex: (...a) => buildIndex(...a), packIndex: (...a) => packIndex(...a), unpackIndex: (...a) => unpackIndex(...a), polFrom };
+
+// ---------------------------------------------------------------- index (built after reading a library)
+function buildIndex(prec, pol, offsets) {       // prec/pol/offsets in file order -> the sorted arrays
+  const n = prec.length, ord = Uint32Array.from({ length: n }, (_, i) => i).sort((a, b) => prec[a] - prec[b] || a - b);
+  return { n, prec: Float64Array.from(ord, i => prec[i]), ord, pol: Int8Array.from(pol), off: Uint32Array.from(offsets) };
+}
+const pad8 = n => (n + 7) & ~7;
+function packIndex(idx, totalPeaks) {
+  const n = idx.n, o1 = 16, o2 = o1 + n * 8, o3 = o2 + pad8(n * 4), o4 = o3 + pad8(n), size = o4 + (n + 1) * 4, buf = new ArrayBuffer(pad8(size));
+  new Uint32Array(buf, 0, 4).set([MAGIC, n, totalPeaks, 0]);
+  new Float64Array(buf, o1, n).set(idx.prec); new Uint32Array(buf, o2, n).set(idx.ord); new Int8Array(buf, o3, n).set(idx.pol); new Uint32Array(buf, o4, n + 1).set(idx.off);
+  return buf;
+}
+function unpackIndex(buf) {
+  const h = new Uint32Array(buf, 0, 4); if (h[0] !== MAGIC) throw new Error("archivio non valido");
+  const n = h[1], o1 = 16, o2 = o1 + n * 8, o3 = o2 + pad8(n * 4), o4 = o3 + pad8(n);
+  return { n, totalPeaks: h[2], prec: new Float64Array(buf, o1, n), ord: new Uint32Array(buf, o2, n), pol: new Int8Array(buf, o3, n), off: new Uint32Array(buf, o4, n + 1) };
+}
+
+// ---------------------------------------------------------------- storage: OPFS, or IndexedDB where it is not there
+if (typeof self !== "undefined" && typeof self.postMessage === "function" && typeof importScripts === "function") {
+  const hasOpfs = () => !!(self.navigator && navigator.storage && navigator.storage.getDirectory);
+  let opfsOk = null;
+  const root = () => navigator.storage.getDirectory();
+  async function probeOpfs() {                  // Safari / old browsers: no synchronous handles in a worker -> IndexedDB
+    if (opfsOk !== null) return opfsOk;
+    try { const h = await (await root()).getFileHandle("probe.tmp", { create: true }); const a = await h.createSyncAccessHandle(); a.close(); opfsOk = true; } catch (e) { opfsOk = false; }
+    return opfsOk;
+  }
+  const idb = () => new Promise((ok, no) => { const r = indexedDB.open("mzlab-libs", 1); r.onupgradeneeded = () => r.result.createObjectStore("lib"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+  const idbDo = async (mode, fn) => { const db = await idb(); return new Promise((ok, no) => { const t = db.transaction("lib", mode), s = t.objectStore("lib"), r = fn(s); t.oncomplete = () => { db.close(); ok(r && r.result); }; t.onerror = () => no(t.error); }); };
+
+  class Sink {                                  // the packed peaks are written while the file is read (little memory)
+    constructor(id) { this.id = id; this.chunks = []; this.buf = []; this.size = 0; this.h = null; this.at = 0; }
+    async open() { if (await probeOpfs()) { const f = await (await root()).getFileHandle(this.id + ".peaks", { create: true }); this.h = await f.createSyncAccessHandle(); this.h.truncate(0); } }
+    flush(force) {
+      if (!this.buf.length) return;
+      if (!force && this.size < 8e6) return;
+      const all = new Float32Array(this.size); let o = 0; for (const b of this.buf) { all.set(b, o); o += b.length; }
+      if (this.h) { this.h.write(new Uint8Array(all.buffer), { at: this.at }); this.at += all.byteLength; } else this.chunks.push(all);
+      this.buf = []; this.size = 0;
+    }
+    add(mz, it) { const a = new Float32Array(mz.length * 2); for (let i = 0; i < mz.length; i++) { a[2 * i] = mz[i]; a[2 * i + 1] = it[i]; } this.buf.push(a); this.size += a.length; this.flush(false); }
+    async close() { this.flush(true); if (this.h) { this.h.flush(); this.h.close(); this.h = null; return null; } const all = new Float32Array(this.chunks.reduce((s, c) => s + c.length, 0)); let o = 0; for (const c of this.chunks) { all.set(c, o); o += c.length; } return all.buffer; }
+  }
+  const writeSmall = async (name, data) => { const f = await (await root()).getFileHandle(name, { create: true }); const a = await f.createSyncAccessHandle(); a.truncate(0); const u = typeof data === "string" ? new TextEncoder().encode(data) : new Uint8Array(data); a.write(u, { at: 0 }); a.flush(); a.close(); };
+  const readFile = async name => (await (await root()).getFileHandle(name)).getFile();
+
+  async function saveLibrary(id, info, idxBuf, meta, peaksBuf) {
+    if (opfsOk) { await writeSmall(id + ".idx", idxBuf); await writeSmall(id + ".meta.json", JSON.stringify(meta)); await writeSmall(id + ".info.json", JSON.stringify(info)); }
+    else await idbDo("readwrite", s => s.put({ info, idx: idxBuf, meta, peaks: peaksBuf }, id));
+  }
+  async function listLibraries() {
+    const out = [];
+    if (await probeOpfs()) { const d = await root(); for await (const [name] of d.entries()) if (name.endsWith(".info.json")) { try { out.push(JSON.parse(await (await (await d.getFileHandle(name)).getFile()).text())); } catch (e) { /* damaged: ignored */ } } }
+    else { const db = await idb(); await new Promise(ok => { const r = db.transaction("lib").objectStore("lib").openCursor(); r.onsuccess = () => { const c = r.result; if (c) { out.push(c.value.info); c.continue(); } else ok(); }; r.onerror = ok; }); db.close(); }
+    return out.sort((a, b) => a.date - b.date);
+  }
+  async function removeLibrary(id) {
+    if (await probeOpfs()) { const d = await root(); for (const s of [".idx", ".peaks", ".meta.json", ".info.json"]) { try { await d.removeEntry(id + s); } catch (e) { /* not there */ } } }
+    else await idbDo("readwrite", s => s.delete(id));
+    LOADED.delete(id);
+  }
+  const LOADED = new Map();                     // id -> { info, idx, meta, peaks (ArrayBuffer) | file (File) }
+  async function loadLibrary(id) {
+    if (LOADED.has(id)) return LOADED.get(id);
+    let o;
+    if (await probeOpfs()) {
+      const idx = unpackIndex(await (await readFile(id + ".idx")).arrayBuffer()), meta = JSON.parse(await (await readFile(id + ".meta.json")).text()), info = JSON.parse(await (await readFile(id + ".info.json")).text()), pf = await readFile(id + ".peaks");
+      o = { info, idx, meta, file: pf.size > 200e6 ? pf : null, peaks: pf.size > 200e6 ? null : await pf.arrayBuffer() };
+    } else {
+      const r = await idbDo("readonly", s => s.get(id)); if (!r) throw new Error("libreria non trovata");
+      o = { info: r.info, idx: unpackIndex(r.idx), meta: r.meta, peaks: r.peaks, file: null };
+    }
+    LOADED.set(id, o); return o;
+  }
+  async function peaksOf(lib, pos) {            // the peaks of the spectrum at `pos` (file order)
+    const a = lib.idx.off[pos], b = lib.idx.off[pos + 1]; let buf;
+    if (lib.peaks) buf = lib.peaks.slice(a * 8, b * 8); else buf = await lib.file.slice(a * 8, b * 8).arrayBuffer();
+    const f = new Float32Array(buf), mz = new Float32Array(b - a), it = new Float32Array(b - a);
+    for (let i = 0; i < b - a; i++) { mz[i] = f[2 * i]; it[i] = f[2 * i + 1]; }
+    return { mz, it };
+  }
+
+  async function addLibrary(file, reqId) {
+    const head = await file.slice(0, 4096).text(), fmt = formatOf(file.name, head);
+    if (fmt === "unsupported") throw new Error("Questo formato non si legge: esporta la libreria in MSP (in NIST MS Search: Library Export, formato MSP).");
+    if (fmt === "unknown") throw new Error("Formato non riconosciuto: servono file MSP o MGF.");
+    const id = "lib" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), sink = new Sink(id); await sink.open();
+    const prec = [], pol = [], off = [0], meta = []; let total = 0, last = 0;
+    const parser = new LibParser(fmt, s => { prec.push(s.prec); pol.push(s.pol); meta.push(s.meta); sink.add(s.mz, s.it); total += s.mz.length; off.push(total); });
+    const rd = file.stream().getReader(), dec = new TextDecoder("utf-8"); let read = 0;
+    for (;;) {
+      const { done, value } = await rd.read(); if (done) break;
+      read += value.length; parser.push(dec.decode(value, { stream: true }));
+      if (Date.now() - last > 150) { last = Date.now(); postMessage({ type: "progress", reqId, read, total: file.size, n: prec.length }); }
+    }
+    parser.push(dec.decode()); parser.end();
+    const peaksBuf = await sink.close();
+    if (!prec.length) { if (hasOpfs() && opfsOk) { try { await (await root()).removeEntry(id + ".peaks"); } catch (e) { /* none */ } } throw new Error(`Nessuno spettro utilizzabile (scartati: ${parser.stats.dropped}).`); }
+    const idx = buildIndex(prec, pol, off), info = { id, name: file.name.replace(/\.(msp|mgf)$/i, ""), file: file.name, size: file.size, n: prec.length, pos: pol.filter(p => p > 0).length, neg: pol.filter(p => p < 0).length,
+      dropped: parser.stats.dropped, noPrec: parser.stats.noPrec, noPeaks: parser.stats.noPeaks, broken: parser.stats.broken, peaks: total, date: Date.now(), fmt };
+    await saveLibrary(id, info, packIndex(idx, total), meta, peaksBuf);
+    return info;
+  }
+
+  async function runSearch(m) {
+    const ids = m.ids && m.ids.length ? m.ids : (await listLibraries()).map(i => i.id), q = queryOf(m.peaks, m.prec, m.pol), out = [];
+    if (!q) return { results: [], libs: ids.length };
+    for (const id of ids) {
+      const lib = await loadLibrary(id), cache = new Map();
+      // the peaks are read before the (synchronous) search: only the candidates of the precursor window
+      const tol = m.tol.unit === "ppm" ? q.prec * m.tol.v * 1e-6 : m.tol.v, lo = lowerBound(lib.idx.prec, q.prec - tol);
+      for (let k = lo; k < lib.idx.n && lib.idx.prec[k] <= q.prec + tol; k++) { const pos = lib.idx.ord[k]; cache.set(pos, await peaksOf(lib, pos)); }
+      const rs = searchIndex(lib.idx, q, { ppm: m.tol.unit === "ppm" ? m.tol.v : null, da: m.tol.unit === "ppm" ? null : m.tol.v, frag: m.frag, pol: m.pol }, pos => cache.get(pos), lib.meta);
+      rs.forEach(r => { r.lib = lib.info.name; out.push(r); });
+    }
+    out.sort((a, b) => b.ent - a.ent || b.cos - a.cos);
+    return { results: out.slice(0, 50), libs: ids.length, query: { mz: Array.from(q.mz), it: Array.from(q.it) } };
+  }
+  async function runAll(m, reqId) {             // every MS2 of a file: the best result of each (the query list comes from the page)
+    const ids = m.ids && m.ids.length ? m.ids : (await listLibraries()).map(i => i.id), libs = []; for (const id of ids) libs.push(await loadLibrary(id));
+    const rows = []; let last = 0;
+    for (let n = 0; n < m.queries.length; n++) {
+      const Q = m.queries[n], q = queryOf(Q.peaks, Q.prec, Q.pol); let best = null;
+      if (q) for (const lib of libs) {
+        const tol = m.tol.unit === "ppm" ? q.prec * m.tol.v * 1e-6 : m.tol.v, lo = lowerBound(lib.idx.prec, q.prec - tol), cache = new Map();
+        for (let k = lo; k < lib.idx.n && lib.idx.prec[k] <= q.prec + tol; k++) { const pos = lib.idx.ord[k]; cache.set(pos, await peaksOf(lib, pos)); }
+        for (const r of searchIndex(lib.idx, q, { ppm: m.tol.unit === "ppm" ? m.tol.v : null, da: m.tol.unit === "ppm" ? null : m.tol.v, frag: m.frag, pol: Q.pol }, pos => cache.get(pos), lib.meta)) if (!best || r.ent > best.ent) best = { ...r, lib: lib.info.name };
+      }
+      rows.push({ key: Q.key, rt: Q.rt, prec: Q.prec, name: best ? best.name : "", lib: best ? best.lib : "", ent: best ? best.ent : null, cos: best ? best.cos : null, shared: best ? best.shared : null });
+      if (Date.now() - last > 200) { last = Date.now(); postMessage({ type: "progress", reqId, read: n + 1, total: m.queries.length }); }
+    }
+    return { rows };
+  }
+
+  onmessage = async e => {
+    const m = e.data, reqId = m.reqId;
+    try {
+      let r;
+      if (m.cmd === "list") r = { libs: await listLibraries(), opfs: await probeOpfs() };
+      else if (m.cmd === "add") r = { info: await addLibrary(m.file, reqId) };
+      else if (m.cmd === "remove") { await removeLibrary(m.id); r = {}; }
+      else if (m.cmd === "search") r = await runSearch(m);
+      else if (m.cmd === "searchAll") r = await runAll(m, reqId);
+      else throw new Error("comando sconosciuto: " + m.cmd);
+      postMessage({ type: "done", reqId, ...r });
+    } catch (err) { postMessage({ type: "error", reqId, error: String(err && err.message || err) }); }
+  };
+}

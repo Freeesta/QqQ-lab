@@ -16,8 +16,8 @@ try:
         pg.set_input_files("#pick", synth.make_series("/tmp/s26", [0, 15, 60])); pg.wait_for_timeout(1000)
         pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
         def header():
-            assert "QqQ lab" not in pg.inner_text("header").replace("\n", " ").split("Dati")[0]
-            assert pg.get_attribute("header .logo", "alt") == "QqQ lab"
+            assert "mzLab" not in pg.inner_text("header").replace("\n", " ").split("Dati")[0]
+            assert pg.get_attribute("header .logo", "alt") == "mzLab"
             for w in (360, 768, 1500):
                 pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(200)
                 for b, t in (("#np-nl", "ls"),):

@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import shutil
 import urllib.request
 import zipfile
@@ -38,9 +39,12 @@ def check_sha256(path: Path, want: str) -> None:
         raise SystemExit(f"{path.name}: SHA-256 {got} is not the expected {want}: build stopped")
 
 
+# The visible name of the program lives only in qqq_lab/web/appname.js
+APP_NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (ROOT / "qqq_lab" / "web" / "appname.js").read_text(encoding="utf-8")).group(1)
+
 # Web app manifest (PWA). Paths are relative to the manifest, which sits in the site root, so it works under /QqQ-lab/.
 MANIFEST = {
-    "name": "QqQ lab", "short_name": "QqQ lab", "lang": "it", "dir": "ltr",
+    "name": APP_NAME, "short_name": APP_NAME, "lang": "it", "dir": "ltr",
     "description": "Esplora i dati LC-MS/MS del triplo quadrupolo (Full Scan, Product ion, MRM) direttamente nel browser.",
     "start_url": "./", "scope": "./", "id": "./", "display": "standalone",
     "background_color": "#ffffff", "theme_color": "#ffffff", "categories": ["education", "science"],

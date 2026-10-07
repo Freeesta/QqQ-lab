@@ -28,7 +28,7 @@ function drawMeas(p, g, X, Y, W) {
   const m = p.meas; if (!m || p._exp && false) return;
   const ac = css("--accent"), x0 = M.l, x1 = W - M.r;
   g.save(); g.beginPath(); g.rect(x0, M.t - 1, x1 - x0, 400); g.clip();
-  g.strokeStyle = g.fillStyle = ac; g.lineWidth = 1; g.font = fpx(11); g.textAlign = "center";
+  g.strokeStyle = g.fillStyle = ac; g.lineWidth = 1; g.font = fpx(12); g.textAlign = "center";
   if (m.ref != null && X(m.ref) >= x0 && X(m.ref) <= x1) {
     g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(m.ref), Y(0)); g.lineTo(X(m.ref), M.t + 2); g.stroke(); g.setLineDash([]);
     g.textAlign = "left"; g.fillText("rif.", X(m.ref) + 3, M.t + 10);
@@ -81,52 +81,6 @@ function specParams(p, btn) {
   setTimeout(() => document.addEventListener("mousedown", away, true), 0);
 }
 
-// ---------------------------------------------------------------- table of the peaks (for Excel)
-function peakTable(p) {
-  const a = p._a; if (!a || !a.data || !a.data[0]) return info("Scegli prima una scansione o un intervallo di tempo nel cromatogramma.");
-  const dd = a.data[0], d = dd.d, cps = d.y0 || d.y, top = Math.max(...cps, 1e-9);
-  const all = d.mz.map((m, i) => ({ mz: m, cps: cps[i], pct: cps[i] / top * 100 })).filter(r => r.cps > 0);
-  const f = dd.f, ce = p.level === 2 && p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null;
-  const ctx = [f.label, p.r0 != null ? (p.r1 - p.r0 > 1.6 * scanStep() ? `RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min` : `RT ${((p.r0 + p.r1) / 2).toFixed(2)} min`) : "", d.scans === 1 && d.i0 != null ? `scansione ${d.i0 + 1}` : `media di ${d.scans} scansioni`,
-    p.level === 2 ? `MS2${p.prec != null ? ", precursore " + p.prec : ""}${ce != null ? ", CE " + ce + " eV" : ""}` : "MS1"].filter(Boolean);
-  const it = /^it/i.test(navigator.language || "");
-  const st = { col: "pct", dir: -1 }, lo0 = +a.x0.toFixed(1), hi0 = +a.x1.toFixed(1);
-  big("Picchi dello spettro", `<div class="sm muted" style="margin-bottom:6px">${ctx.map(EH).join(" · ")}</div>
-    <div class="bar" id="pk-bar"><label>soglia <input id="pk-thr" type="number" min="0" max="100" step="1" value="${p.thr ?? SPEC_DEF.thr}" style="width:56px"> %</label>
-    <label><i>m/z</i> da <input id="pk-lo" type="number" step="1" value="${lo0}" style="width:70px"> a <input id="pk-hi" type="number" step="1" value="${hi0}" style="width:70px"></label>
-    <label>righe al massimo <input id="pk-n" type="number" min="1" step="1" value="50" style="width:60px"></label>
-    <label>decimali <select id="pk-sep"><option value="," ${it ? "selected" : ""}>virgola</option><option value="." ${it ? "" : "selected"}>punto</option></select></label>
-    <button id="pk-copy" title="Copia la tabella: incollata in Excel riempie righe e colonne con numeri veri">Copia</button><button id="pk-xlsx">${IC_DL}Excel</button><span id="pk-msg" class="muted sm"></span></div>
-    <table id="pk-tb"></table>`, () => {
-    const val = id => +Q("#" + id).value;
-    const rows = () => {
-      const lo = val("pk-lo"), hi = val("pk-hi"), thr = val("pk-thr"), n = Math.max(1, val("pk-n") || 50);
-      const r = all.filter(x => x.mz >= lo && x.mz <= hi && x.pct >= thr).sort((u, v) => st.dir * (u[st.col] - v[st.col]));
-      return r.slice(0, n);
-    };
-    const render = () => {
-      const r = rows(), ar = c => st.col === c ? (st.dir > 0 ? " ▲" : " ▼") : "";
-      Q("#pk-tb").innerHTML = `<tr><th data-c="mz" style="cursor:pointer"><i>m/z</i>${ar("mz")}</th><th class="num" data-c="cps" style="cursor:pointer">Intensità (cps)${ar("cps")}</th><th class="num" data-c="pct" style="cursor:pointer">% del picco più alto${ar("pct")}</th></tr>` +
-        r.map(x => `<tr><td>${x.mz.toFixed(2)}</td><td class="num">${fmtFull(x.cps)}</td><td class="num">${x.pct.toFixed(1)}</td></tr>`).join("");
-      Q("#pk-tb").querySelectorAll("th[data-c]").forEach(h => h.onclick = () => { st.dir = st.col === h.dataset.c ? -st.dir : (h.dataset.c === "mz" ? 1 : -1); st.col = h.dataset.c; render(); });
-    };
-    Q("#pk-bar").querySelectorAll("input").forEach(x => x.onchange = render); render();
-    const num = (v, dec) => String(+v.toFixed(dec)).replace(".", Q("#pk-sep").value);          // no thousands separators: Excel wants plain numbers
-    const head = ["m/z", "Intensità (cps)", "% del picco più alto"];
-    Q("#pk-copy").onclick = async () => {
-      const r = rows(), line = x => [num(x.mz, 2), num(x.cps, 1), num(x.pct, 1)];
-      const tsv = head.join("\t") + "\n" + r.map(x => line(x).join("\t")).join("\n");
-      const html = `<table><tr>${head.map(h => `<th>${EH(h)}</th>`).join("")}</tr>${r.map(x => `<tr>${line(x).map(c => `<td>${EH(c)}</td>`).join("")}</tr>`).join("")}</table>`;
-      try {
-        if (window.ClipboardItem && navigator.clipboard.write) await navigator.clipboard.write([new ClipboardItem({ "text/plain": new Blob([tsv], { type: "text/plain" }), "text/html": new Blob([html], { type: "text/html" }) })]);
-        else await navigator.clipboard.writeText(tsv);
-        Q("#pk-msg").textContent = `copiate ${r.length} righe: incolla in Excel`;
-      } catch (e) { try { await navigator.clipboard.writeText(tsv); Q("#pk-msg").textContent = `copiate ${r.length} righe: incolla in Excel`; } catch (e2) { Q("#pk-msg").textContent = "copia non permessa dal browser: usa Excel"; } }
-    };
-    Q("#pk-xlsx").onclick = () => { const r = rows(); dlx(plotName(p) + "_picchi.xlsx", [{ name: "Picchi", head, rows: r.map(x => [x.mz, x.cps, x.pct]), widths: [12, 18, 24] }, { name: "Origine", rows: ctx.map(c => [c]), widths: [70] }]); };
-  });
-}
-
 // ---------------------------------------------------------------- zoom history, whole view (keys)
 function pushZh(p) {
   const s = { zoom: p.zoom ? [...p.zoom] : null, zoomY: p.zoomY ? [...p.zoomY] : null }, h = p.zh = p.zh || [], l = h[h.length - 1];
@@ -167,15 +121,8 @@ function toggleTl(p) {
 
 // ---------------------------------------------------------------- one line under the spectrum: which scan it is
 function scanLine(p, data, d0) {
-  const raw = d0.y0 || d0.y, tic = raw.reduce((s, v) => s + v, 0);
-  let bi = 0; raw.forEach((v, i) => { if (v > raw[bi]) bi = i; });
-  const e = v => Number(v).toExponential(1).replace("e+", "e");
-  const f = data[0].f, parts = [];
-  const i = p.si != null ? p.si : d0.i0, n = d0.n;
+  const f = data[0].f, parts = [], i = p.si != null ? p.si : d0.i0, n = d0.n;       // only what the title does not say: which scan(s), and for MS2 the precursor and the energy
   parts.push(d0.scans === 1 && i != null ? `scansione ${i + 1}${n ? "/" + n : ""}` : `media di ${d0.scans} scansioni`);
-  parts.push(d0.scans === 1 || p.r1 - p.r0 <= 1.6 * scanStep() ? `RT ${((p.r0 + p.r1) / 2).toFixed(2)} min` : `RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min`);
-  if (p.level === 2) { const ce = p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null; parts.push("MS2" + (p.prec != null ? ` · precursore ${p.prec}` : "") + (ce != null ? ` · CE ${ce} eV` : "")); }
-  parts.push(`${d0.scans === 1 ? "TIC" : "TIC medio"} ${e(tic)}`);
-  if (raw.length) parts.push(`picco base <i>m/z</i> ${d0.mz[bi].toFixed(1)} (${e(raw[bi])})`);
+  if (p.level === 2) { const ce = p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null; parts.push(`precursore ${p.prec != null ? p.prec : "?"}` + (ce != null ? ` · CE ${ce} eV` : "")); }
   return parts.join(" · ");
 }

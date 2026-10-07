@@ -1,4 +1,4 @@
-File di esempio di QqQ lab
+File di esempio di mzLab (già QqQ lab)
 ==========================
 Cinque file Full Scan (ESI positivo, risoluzione unitaria, SCIEX 3200 QTRAP) di una soluzione degradata per fotocatalisi
 con TiO2, campionata a 0, 5, 10, 15 e 30 minuti di trattamento.
@@ -9,7 +9,7 @@ con TiO2, campionata a 0, 5, 10, 15 e 30 minuti di trattamento.
   Esempio_FullScan_t15.mzML   tempo 15 min
   Esempio_FullScan_t30.mzML   tempo 30 min
 
-Il numero dopo «t» nel nome è il tempo di trattamento in minuti: QqQ lab lo legge da solo.
+Il numero dopo «t» nel nome è il tempo di trattamento in minuti: mzLab lo legge da solo.
 Si aprono con il pulsante «Prova con i file di esempio» della pagina iniziale, oppure scaricandoli e
 trascinandoli nella pagina (https://freeesta.github.io/QqQ-lab/). Sono dati reali del laboratorio, pubblicati
 come esempio didattico (formato mzML convertito con ProteoWizard MSConvert).
