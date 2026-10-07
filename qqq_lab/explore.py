@@ -25,6 +25,7 @@ class Item:
         ms1 = [s for s in r.scans if s.level == 1]
         ms2 = [s for s in r.scans if s.level >= 2]
         t1 = r.table(1) if ms1 else None
+        t2 = r.table(2) if ms2 else None
         pol = sorted({s.polarity for s in r.scans if s.polarity})
         out = {"file": self.file, "label": self.label, "time": self.time, "type": self.type, "conc": self.conc, "cunit": self.cunit,
                 "scans": len(r.scans), "ms1": len(ms1), "ms2": len(ms2),
@@ -32,6 +33,8 @@ class Item:
                 "rt_max": float(max((s.rt for s in r.scans), default=0.0)),
                 "mz_min": float(t1.mz[0]) if t1 is not None and len(t1.mz) else None,
                 "mz_max": float(t1.mz[-1]) if t1 is not None and len(t1.mz) else None,
+                "mz2_min": float(t2.mz[0]) if t2 is not None and len(t2.mz) else None,
+                "mz2_max": float(t2.mz[-1]) if t2 is not None and len(t2.mz) else None,
                 "polarity": "positive" if pol == [1] else "negative" if pol == [-1] else "mixed" if pol else "unknown",
                 "precursors": sorted({round(s.precursor, 1) for s in ms2 if s.precursor}),
                 "ms2_exps": self._ms2_exps(ms2), "chromatograms": r.n_chromatograms, "kind": self.kind(),

@@ -17,7 +17,9 @@ try:
         for sel in ["#np-chrom", "#np-spec", "#np-map"]: pg.click(sel); pg.wait_for_timeout(1200)
         dis = lambda s: pg.evaluate("s=>[...document.querySelectorAll(s)].map(x=>x.disabled)", s)
         def toolbar():
-            assert all(dis("#fprev,#fnext,#fsel,#fmode button")) and len(dis("#fmode button")) == 2
+            assert all(dis("#fprev,#fnext,#fsel")) and dis("#fmode button") == [False, True], dis("#fmode button")        # "Solo il selezionato" on, "Tutti sovrapposti" off
+            assert pg.evaluate("[...document.querySelectorAll('#fmode button')].map(b=>b.classList.contains('on'))") == [True, False]
+            assert pg.evaluate("document.querySelector('#fmode [data-m=all]').title") == "C'è un solo file"
         step("toolbar: arrows, selector, solo/tutti disabled", toolbar)
         def panels():
             assert all(dis("[data-o=mode]")) and dis("[data-o=mode]"), dis("[data-o=mode]")
@@ -28,7 +30,9 @@ try:
             pg.click("#addf"); pg.wait_for_timeout(500)
             pg.set_input_files("#pick", [mz("B_FullMass-t60")]); pg.wait_for_timeout(800)
             pg.click("#opbtn"); pg.wait_for_function("tabFiles('full').length===2", timeout=60000); pg.wait_for_timeout(1500)
-            assert not any(dis("#fprev,#fnext,#fsel,#fmode button")) and not any(dis("[data-o=mode],[data-o=ref]"))
+            assert not any(dis("#fmode button")) and not any(dis("[data-o=mode],[data-o=ref]"))      # the arrows and the selector need "Solo il selezionato"
+            assert pg.evaluate("[...document.querySelectorAll('#fmode button')].map(b=>b.classList.contains('on'))") == [False, True], "the earlier choice (all overlaid) comes back"
+            pg.click("#fmode [data-m=sel]"); pg.wait_for_timeout(300); assert not any(dis("#fprev,#fnext,#fsel"))
         step("two files: everything enabled again", two)
     r.close()
 except Exception as e:

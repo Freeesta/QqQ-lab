@@ -16,48 +16,15 @@ Lavori in `~/QqQ_lab/QqQ_lab` (sul Mac) oppure nel clone GitHub (cloud). Leggi `
 - **Aggiorna Federico**: alla fine di OGNI blocco scrivigli un messaggio breve (3-5 righe): cosa hai fatto, cosa non hai potuto fare, cosa provare a mano. Se un punto richiede una scelta che cambia l'interfaccia in modo non descritto qui, fai la versione più semplice e segnalalo nel messaggio.
 
 ## Ordine di lavoro (per importanza)
-1. **Blocco A** grafici (`explore.js` + CSS in `index.html`)
-2. **Blocco S** semplificare: menu del clic destro, bianchi, scheda MS², via la retta di taratura, lista MRM, polarità visibile
-3. **Blocco G** strumenti per lo spettro (misura Δm/z, %, parametri, tabella dei picchi, zoom e assi collegati)
-4. **Blocco B** aiuti e testi
-5. **Blocco C** calcolatrice + **Blocco F** Disegno (piccoli, insieme)
-6. **Blocco H** strumenti per la cromatografia (più avanzati: S/N, parametri del picco, vista a cascata)
-7. **Blocco I** file misti (DDA, Full Scan + MS2, MRM + EPI, polarità alternate): non urgente, solo dopo gli altri
-8. **Blocco D** licenze
-9. **Blocco E** residui
-Un commit per blocco e un messaggio a Federico per blocco. Se il tempo o i token finiscono, fermati dopo un commit pulito: è meglio finire bene i blocchi 1-4 che iniziare tutto.
-
----
-
-## BLOCCO A: grafici (spettro, cromatogramma, XIC, MRM)
-
-### A1. Spettro: asse x fisso di default, lucchetto solo per l'asse y
-**Oggi**: scorrendo le scansioni l'asse x dello spettro cambia (fa «stacchetti») a meno di bloccarlo; il lucchetto (`p.lock`, cerca `lock` in `explore.js`: salvataggio ~r.136, creazione ~r.548, reset ~r.602, `scFetch` ~r.1535, ~r.1685, ~r.1702) blocca x e y insieme.
-**Da fare**:
-1. **Asse x sempre fisso** sull'intervallo m/z MASSIMO di tutte le scansioni del file (o dei file mostrati): usa la finestra di scansione del metodo se nota (`info().scan_window`), altrimenti min/max degli m/z su tutte le scansioni del livello/precursore (calcolalo una volta e tienilo in cache). Cambia solo se lo studente fa zoom o cambia file/precursore. Nessun lucchetto per x.
-2. **Il lucchetto blocca solo l'asse y** (il massimo dell'intensità), per vedere le variazioni fra scansioni. Spostalo **vicino all'asse y** (in alto a sinistra del grafico, accanto all'etichetta dell'asse, piccolo), non nella barra dei pulsanti; `title`: «Blocca l'asse delle intensità: così vedi crescere e calare i picchi fra una scansione e l'altra». Con le frecce si chiude da solo come oggi (mantieni la logica di crescita di `ymax` se un picco supera il massimo).
-3. Aggiorna `HELP`/tooltip, `AGENTS.md` (sez. 12 o 16) e gli e2e che controllano il lucchetto (cerca `lock` in `tests_e2e/`).
-
-### A2. Zoom: riquadro nel grafico, linea fuori dagli assi
-**Regola unica per cromatogramma, XIC, MRM e spettro** (la mappa RT-m/z ha già il suo zoom 2D: non toccarla):
-1. **Trascinando DENTRO l'area del grafico** (con lo strumento lente attivo, come oggi): **riquadro** che ingrandisce **x e y insieme** (oggi nel cromatogramma il riquadro agisce solo sul tempo: cerca `izoom`, `p.zoom`, `p.zoomY`).
-2. **Trascinando nella zona dei numeri a SINISTRA dell'asse y** (margine sinistro `M.l`): compare una **linea verticale** (non un riquadro) e si ingrandisce **solo y** (`p.zoomY`). Funziona sempre, anche senza la lente.
-3. **Trascinando nella zona dei numeri SOTTO l'asse x** (margine inferiore `M.b`): **linea orizzontale**, si ingrandisce **solo x** (`p.zoom`).
-4. Cursore del mouse coerente (`ns-resize` a sinistra, `ew-resize` sotto, `crosshair` dentro con la lente). Reset zoom e doppio clic come oggi; Ctrl/Cmd+rotella resta.
-5. **Togli il pulsante «y ×10»** (`data-a="yz"`, ~r.603, e `p.yz`: ~r.136, ~r.602, ~r.714, ~r.1113): lo sostituisce il punto 2. Ripulisci salvataggio/ripristino del taccuino (un vecchio `yz` nel taccuino va ignorato senza errori).
-6. Aggiorna il tooltip della lente e la Teoria/aiuto dove citano «y ×10». e2e: riquadro xy, linea solo y, linea solo x, assenza di «y ×10».
-
-### A3. Excel anche sul cromatogramma totale
-Oggi il pulsante Excel manca su TIC/BPC/PDA (decisione vecchia in `AGENTS.md`: «niente pulsante Excel sui cromatogrammi totali»): **aggiungilo** come negli altri pannelli (`plotSheets`, ~r.441, ~r.562, ~r.600). Colonne: «RT (min)» + una colonna per file visibile (unità: «Intensità (cps)» o «Segnale PDA (unità del file)»). Aggiorna la riga di `AGENTS.md` (sez. 3 e 12) e un e2e (download con `xlsx_rows` di `tests_e2e/lib.py`).
-
-### A4. XIC dal clic destro sullo spettro: il pannello nasce SOTTO quello spettro
-Clic destro su un picco dello spettro → «Estrai l'XIC…» (~r.1745, ~r.1761, `openXic(null, {mz, obs:true})`): il nuovo pannello XIC va **subito sotto lo spettro da cui è partito**, e gli altri scorrono in giù (usa `stackAfter(nuovo, spettro)` + `relayout()` + `fitHost()` come fa `newSpec`, ~r.1710-1731; passa a `openXic` il pannello di origine). Poi scorri la vista sul pannello nuovo (come già fa per i pannelli nuovi). e2e: l'XIC ha `y` = y dello spettro + altezza + margine.
-
-### A5. Un solo file nella scheda: «Solo il selezionato»
-Con un solo file nella scheda, oggi la modalità resta «Tutti sovrapposti» (solo disattivata visivamente: `renderNav`, `#fmode` ~r.340-354, `E.browse`). Deve essere **«Solo il selezionato» attivo** e **«Tutti sovrapposti» disattivato** (grigio, `title` «C'è un solo file»). Quando i file diventano 2 o più, ripristina la scelta precedente dello studente (non forzarla). e2e: `tests_e2e/e2e_unfile.py` (estendilo).
-
-### A6. Pulsante attivo: icona sempre visibile
-Quando uno strumento è attivo (lente, integrazione automatica/manuale, lucchetto, ecc.) il pulsante diventa blu e l'icona sparisce (stesso colore). Regola CSS unica in `index.html` (gruppi `.tbg`, `.bt.on`/`aria-pressed`): con lo sfondo pieno dell'accento, icona e testo **in bianco** (`color:#fff`; negli SVG usa `currentColor` per `stroke`/`fill`: correggi le icone che hanno colori fissi). Vale in tema chiaro e scuro e con le palette di accessibilità. Controlla con uno screenshot di ogni pulsante attivo.
+1. **Blocco S** semplificare: menu del clic destro, bianchi, scheda MS², via la retta di taratura, lista MRM, polarità visibile
+2. **Blocco G** strumenti per lo spettro (misura Δm/z, %, parametri, tabella dei picchi, zoom e assi collegati)
+3. **Blocco B** aiuti e testi
+4. **Blocco C** calcolatrice + **Blocco F** Disegno (piccoli, insieme)
+5. **Blocco H** strumenti per la cromatografia (più avanzati: S/N, parametri del picco, vista a cascata)
+6. **Blocco I** file misti (DDA, Full Scan + MS2, MRM + EPI, polarità alternate): non urgente, solo dopo gli altri
+7. **Blocco D** licenze
+8. **Blocco E** residui
+Un commit per blocco e un messaggio a Federico per blocco. Se il tempo o i token finiscono, fermati dopo un commit pulito: è meglio finire bene i blocchi 1-3 che iniziare tutto.
 
 ---
 
@@ -122,7 +89,7 @@ Serve per perdite neutre e differenze fra ioni: il programma fa solo la sottrazi
 
 ### G2. Icona «Parametri dello spettro» (soglia, %, decimali, etichette)
 Un'icona (ingranaggio piccolo o «sliders») nell'intestazione di ogni spettro apre un riquadro a tendina sotto l'icona (stile della calcolatrice nuova del Blocco C: niente sfondo scuro), con pochi controlli:
-- **Asse y: assoluto (cps) / % del picco più alto** (negli MS2 il lucchetto parte aperto: vedi S6). Predefinito: **% negli spettri MS2** (prodotto: si confrontano le intensità relative dei frammenti), **assoluto negli spettri Full Scan**. Lo studente può cambiarlo in ogni pannello; la scelta resta nel pannello (`p.rel`, taccuino). In % l'etichetta dell'asse è «Intensità relativa (%)»; il cursore e la tabella dei picchi mostrano sia % sia cps. Con il lucchetto (Blocco A1) in %, si blocca la scala % (100 = massimo della scansione del blocco).
+- **Asse y: assoluto (cps) / % del picco più alto** (negli MS2 il lucchetto parte aperto: vedi S6). Predefinito: **% negli spettri MS2** (prodotto: si confrontano le intensità relative dei frammenti), **assoluto negli spettri Full Scan**. Lo studente può cambiarlo in ogni pannello; la scelta resta nel pannello (`p.rel`, taccuino). In % l'etichetta dell'asse è «Intensità relativa (%)»; il cursore e la tabella dei picchi mostrano sia % sia cps. Con il lucchetto (lucchetto solo y: già fatto) in %, si blocca la scala % (100 = massimo della scansione del blocco).
 - **Soglia per le etichette dei picchi**: etichetta solo i picchi sopra X% del picco più alto (predefinito 5%) e al massimo N etichette (predefinito 10); i picchi sotto soglia restano disegnati.
 - **Decimali delle etichette m/z**: 0, 1 (predefinito), 2.
 - Ripristina predefiniti. Tutti i valori nel pannello e nel taccuino. e2e: MS2 parte in %, Full Scan in assoluto, soglia cambia il numero di etichette.
