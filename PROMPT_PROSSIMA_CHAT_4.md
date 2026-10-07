@@ -18,15 +18,27 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati
 
 ## Stato e ripresa
 **Stato** (aggiornalo e fai push a ogni punto finito: è quello che legge la chat successiva):
-- Fatti: —
-- In corso: —
-- Ramo con lavoro non ancora in `main`: —
+- S1: —
+- S2: —
+- S3: —
+- S4: —
+- S5: —
+(per ogni sessione: punti fatti · punto in corso · ramo non ancora in `main`)
 
 **Se riprendi dopo un'interruzione** (nuova sessione, stesso prompt): 1) `git fetch origin`; 2) guarda «Stato» qui sopra e le PR aperte (`gh pr list`) o i rami `claude/...` non uniti con commit «[in corso]» (`git branch -r --no-merged origin/main`); 3) se c'è lavoro non unito, portalo nel tuo ramo (`git merge origin/<quel ramo>`), lancia `python3 tools/verifica.py --solo <test del punto>` e **riparti dal punto in corso**, senza rifare ciò che è già fatto; 4) chiudi la vecchia PR dopo aver unito la tua. Non rileggere i blocchi già fatti.
 
-## Ordine di lavoro
-**Parte A** (ritocchi, veloci): A1 barra dei file · A2 perdite neutre · A3 header fisso e niente scorrimento su «Dati» · A4 spettri e pannelli.
+## Ordine di lavoro e sessioni
+**Parte A** (ritocchi): A1 barra dei file · A2 perdite neutre · A3 header fisso e niente scorrimento su «Dati» · A4 spettri e pannelli.
 **Parte B** (alta risoluzione e DDA): nell'ordine della **scaletta di priorità** più sotto (B0 → B9).
+**Sessioni** (Federico può lanciarne più d'una insieme; ognuna fa SOLO i suoi blocchi, scritti nel primo messaggio, es. «Fai la sessione 1»):
+| Onda | Sessione | Blocchi | File principali | Insieme a |
+|---|---|---|---|---|
+| 1 | S1 | Parte A | `index.html`, `explore.js`, `tables.js`, `spettro.js` | S2 |
+| 1 | S2 | B0, B1, B2 | `dati_sintetici.py`, `reader/`, `explore.py`, `app.py`, `api.py`, `web/hr.js` (nuovo) | S1 |
+| 2 | S3 | B3, B4, B5, B6 | `explore.js`, `spettro.js`, `web/hr.js`, `web/dda.js` (nuovo) | da sola, dopo l'onda 1 |
+| 3 | S4 | B7 | `reader/mzml.py`, `browser-worker.js` | S5 |
+| 3 | S5 | B8, B9 | calcolatrice, `tables.js`, `perdite.js`, Teoria, `AGENTS.md` | S4 |
+Regole per le sessioni parallele: tocca solo i file del tuo blocco (se serve altro, il minimo indispensabile); prima di unire in `main` fai `git fetch origin && git merge origin/main`, risolvi i conflitti solo se ovvi e rilancia la verifica; conflitto non ovvio → non unire e scrivi a Federico. In «Stato» ogni sessione aggiorna solo la sua riga. `AGENTS.md`: solo la tua sezione (la sez. 2 la aggiorna S1).
 
 ---
 
