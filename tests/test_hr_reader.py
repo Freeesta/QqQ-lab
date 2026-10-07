@@ -158,3 +158,18 @@ def test_sid_in_spectrum_and_spectra(app):
     assert [x["sid"] for x in many["scans"]] == j["ms1"]["sid"][2:5]
     code, s = get(app, "/api/spectrum", k=k, rt0=rt - 0.5, rt1=rt + 0.5, level=1)
     assert "sid" not in s
+
+
+def test_method_has_the_scan_parameters_only_for_high_resolution(app):
+    ke = [i for i, it in enumerate(app.session.items) if it.file == "e.mzML#MS1"][0]
+    kq = [i for i, it in enumerate(app.session.items) if it.file == "q.mzML"][0]
+    m = get(app, "/api/method", k=ke)[1]["scan_params"]
+    assert m["ms1"]["res"] == 45000 and m["ms1"]["window"] == [50.0, 900.0] and m["ms1"]["an"] == "FTMS" and m["ms1"]["inject"] is None
+    assert m["ms2"]["act"] == ["HCD"] and m["ms2"]["nce"] is True and m["ms2"]["ce"] == [30.0] and m["ms2"]["iso"] == [0.75] and m["ms2"]["res"] == 15000
+    assert m["instrument"] == "Orbitrap Exploris 120" and 0.1 < m["ms2"]["per_cycle"] < 1
+    assert "scan_params" not in get(app, "/api/method", k=kq)[1]
+
+
+def test_formula_has_five_decimals(app):
+    code, j = get(app, "/api/formula", f="C14H13F4N3O2S", adduct="[M+H]+")
+    assert code == 200 and j["mz"] == round(j["mz5"], 4) and len(str(j["mz5"]).split(".")[1]) == 5

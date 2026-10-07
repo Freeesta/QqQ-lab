@@ -116,7 +116,7 @@ function defaultLayoutTab(t) {
       if (!dp.offsetParent) { if (++tries < 60) requestAnimationFrame(fix); return; }
       const av = innerHeight - (dp.getBoundingClientRect().top + scrollY) - 14;
       if (c.h + sp.h + 10 <= av) return;
-      c.h = Math.max(190, Math.round((av - 10) * 0.5)); sp.h = Math.max(190, Math.round(av - 10 - c.h)); sp.y = c.y + c.h + 10; apply(c); apply(sp); fitHost(); draw(c); draw(sp);
+      c.h = Math.max(190, Math.round((av - 10) * 0.5)); sp.h = Math.max(190, Math.round(av - 10 - c.h)); sp.y = c.y + c.h + gapAfter(c, sp); apply(c); apply(sp); relayout(); fitHost(); draw(c); draw(sp);
     };
     requestAnimationFrame(fix);
   } else if (t === "ms2") {
