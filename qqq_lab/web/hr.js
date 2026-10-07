@@ -45,6 +45,56 @@ const HR = (() => {
     d.textContent = "Alta risoluzione non disponibile per " + bad.map(f => f.label || f.file).join(", ") + ": aperto come bassa risoluzione."; d.hidden = false;
     clearTimeout(d._t); d._t = setTimeout(() => { d.hidden = true; }, 7000);
   }
-  return { LOW, on, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, notice };
+  // ---------------------------------------------------------------- isotope pattern with the fine structure (high resolution)
+  // isoPattern() of tables.js groups isotopologues by nominal mass (right for unit resolution). Here every different exact mass stays a peak
+  // (13C and 34S at M+2 are 2.7 mDa apart); masses closer than 0.5 mDa are one peak. n = element counts of the ion, z = charge.
+  const ELECTRON = 0.00054858, FINE_TOL = 0.0005;
+  let ELMAP = null;
+  const elIso = s => {
+    if (!ELMAP) ELMAP = Object.fromEntries(ELEMENTS.map(e => [e.s, e]));
+    const e = ELMAP[s]; if (!e || !e.iso.length) throw new Error(`abbondanze isotopiche non disponibili per ${s}`);
+    return e.iso.filter(i => i[1] != null && i[2] > 0).map(i => [i[1], i[2] / 100]);
+  };
+  const joinMasses = list => {                             // list of [mass, probability]: sort, and merge masses within FINE_TOL
+    list.sort((a, b) => a[0] - b[0]);
+    const out = []; let cur = null;
+    for (const [m, p] of list) {
+      if (cur && m - cur.m0 <= FINE_TOL) { cur.s += m * p; cur.p += p; } else { cur = { m0: m, s: m * p, p }; out.push(cur); }
+    }
+    return out.map(c => [c.s / c.p, c.p]);
+  };
+  const convMass = (a, b) => { const r = []; for (const [ma, pa] of a) for (const [mb, pb] of b) { const p = pa * pb; if (p > 1e-10) r.push([ma + mb, p]); } return joinMasses(r); };
+  function isoFine(n, z = 1, minRel = 0.1) {
+    let dist = [[0, 1]];
+    for (const [s, k] of Object.entries(n)) {
+      if (!(k > 0)) continue;
+      let base = elIso(s), res = [[0, 1]], c = k;
+      while (c > 0) { if (c & 1) res = convMass(res, base); c >>= 1; if (c) base = convMass(base, base); }
+      dist = convMass(dist, res);
+    }
+    const top = Math.max(...dist.map(d => d[1]));
+    return dist.map(([m, p]) => ({ mz: (m - z * ELECTRON) / Math.abs(z), rel: 100 * p / top })).filter(r => r.rel >= minRel).sort((a, b) => a.mz - b.mz);
+  }
+  // the theoretical pattern on a spectrum (red circles): each circle sits on the observed centroid within the tolerance of the profile (and says the
+  // error in ppm), otherwise on the calculated m/z with "non trovato". Returns the note for the legend.
+  function drawIso(p, g, X, Y, d0, ymax, W, f) {
+    const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), pat = isoFine(ion.n, ion.z), tol = prof(f, p.level).tol;
+    const top = pat.reduce((a, b) => (b.rel > a.rel ? b : a));
+    const find = mz => { let best = null; d0.mz.forEach((m, j) => { if (d0.y[j] <= 0) return; const e = ppm(m, mz); if (Math.abs(e) <= tol && (!best || d0.y[j] > best.y)) best = { m, y: d0.y[j], e }; }); return best; };
+    const obsTop = find(top.mz), h = obsTop ? obsTop.y : ymax / 1.12 * 0.9, m0 = pat[0].mz;
+    g.save(); g.strokeStyle = g.fillStyle = "#d62728"; g.lineWidth = 1.5;
+    for (const r of pat) {
+      const ob = find(r.mz), px = X(ob ? ob.m : r.mz), py = Y(h * r.rel / 100); if (px < M.l || px > W - M.r) continue;
+      g.setLineDash([3, 2]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, py); g.stroke(); g.setLineDash([]);
+      g.beginPath(); g.arc(px, py, 3.5, 0, 7); g.stroke();
+      if (r.rel >= 1) {
+        const off = Math.round(r.mz - m0), t = (off ? "M+" + off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%" + (ob ? ` · ${ob.e >= 0 ? "+" : "−"}${Math.abs(ob.e).toFixed(1)} ppm` : " · non trovato");
+        g.font = fpx(10); g.textAlign = "left"; g.fillText(t, px + 5, py - 4);
+      }
+    }
+    g.restore(); g.font = fpx(11);
+    return `<span><i style="background:#d62728"></i>profilo teorico ${fmtFormula(p.iso.formula)} ${fmtAdduct(p.iso.ad)}${obsTop ? ` (M: ${obsTop.e >= 0 ? "+" : "−"}${Math.abs(obsTop.e).toFixed(1)} ppm)` : ` (nessun picco osservato entro ${+tol.toFixed(1)} ppm da m/z ${top.mz.toFixed(HR.prof(f, p.level).dec)})`}</span>`;
+  }
+  return { LOW, on, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, notice, isoFine, drawIso };
 })();
 window.HR = HR;

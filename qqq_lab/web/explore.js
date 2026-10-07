@@ -157,7 +157,7 @@ const memo = (key, fn) => { if (!CACHE.has(key)) CACHE.set(key, fn().catch(e => 
 const J = u => fetch(u).then(async r => { const j = await r.json(); if (j.error) throw new Error(j.error); return j; });
 const getChrom = (k, kind, lv, mz0, mz1, prec) => memo(`c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}`, () => J(`api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "")));
 const getXic = (k, mz, tol, lv) => memo(`x${k}|${mz}|${tol}|${lv}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0]));
-const MERGE = () => UIP.merge ? "&merge=1" : "";
+const MERGE = () => (UIP.merge ? "&merge=1" : "") + (window.HR ? HR.q() : "");     // + "&hr=0" when high resolution is switched off (hr.js)
 const getSpec = (k, a, b, lv, pr, bg) => memo(`s${k}|${a}|${b}|${lv}|${pr}|${bg ? bg.join(",") : ""}|${UIP.merge ? 1 : 0}`, () => J(`api/spectrum?k=${k}&rt0=${a}&rt1=${b}&level=${lv}&precursor=${pr ?? ""}` + (bg ? `&bgk=${bg[0]}&bgrt0=${bg[1]}&bgrt1=${bg[2]}` : "") + MERGE()));
 const getFormula = (f, ad) => J(`api/formula?f=${encodeURIComponent(f)}&adduct=${encodeURIComponent(ad || "")}`);
 // default adduct from the polarity of the visible files
@@ -586,7 +586,7 @@ function addPanel(type, o, after) {
   if (type === "chrom") p.ms2tri = !!o.ms2tri;                          // triangles of the MS2 scans on the survey chromatogram
   if (type === "xic") p.adduct = o.adduct || defAdduct();
   if (type === "spec") Object.assign(p, { bg: o.bg ?? "", bw0: o.bw0 ?? null, bw1: o.bw1 ?? null, lock: o.lock ? { pending: true } : null, si: null,
-    rel: typeof o.rel === "boolean" ? o.rel : null, sticks: !!o.sticks, thr: o.thr ?? 5, nlab: o.nlab ?? 10, dec: o.dec ?? 1, meas: o.meas && Array.isArray(o.meas.list) ? o.meas : null, rul: false });   // lock: only open/closed is saved, the values are measured again
+    rel: typeof o.rel === "boolean" ? o.rel : null, sticks: !!o.sticks, thr: o.thr ?? 5, nlab: o.nlab ?? 10, dec: o.dec ?? null, meas: o.meas && Array.isArray(o.meas.list) ? o.meas : null, rul: false });   // lock: only open/closed is saved, the values are measured again
   if (type !== "xic") p.traces = p.traces || [];
   const g = (p.w && p.h) ? { x: p.x ?? 0, y: p.y ?? 0, w: p.w, h: p.h } : place();
   Object.assign(p, g);
@@ -1765,6 +1765,7 @@ async function drawSpec(p) {
   const one = files.length === 1 && p.si != null && !bgOf(files[0]) && !p._exp;
   if (one && p.lock && p.lock.fresh) await scFetch(files[0].k, p.level, p.prec, p.si - SC_AHEAD, p.si + SC_AHEAD).catch(() => {});   // the axes of the walk look at +-20 scans
   const rel = specRel(p);                                // y axis in % of the highest peak of each scan (default for MS2) or in cps
+  const hrp = !!window.HR && HR.anyHr(files, p.level), DECP = p.dec ?? (window.HR ? HR.dec(files, p.level) : 1);       // high resolution: the m/z are the centroids of the file, written with the decimals of the profile
   const relScale = d => { let mx = 1e-9; for (const v of d.y) if (v > mx) mx = v; const k = 100 / mx; return { ...d, y0: d.y, y: d.y.map(v => v * k), py: d.py ? d.py.map(v => v * k) : d.py }; };
   const data = await Promise.all(files.map(f => (one ? scData(p, f.k) : getSpec(f.k, p.r0, p.r1, p.level, p.prec, bgOf(f))).then(d => ({ f, d: rel ? relScale(d) : d }))));
   if (tok !== p._tok) return false;                      // a newer request is on its way: this one is dropped
@@ -1788,7 +1789,13 @@ async function drawSpec(p) {
   const { X, Y } = axes(g, W, H, x0, x1, ymax, fmt, { xt: "m/z", yt: rel ? "Intensità relativa (%)" : YT_I, xn: Math.max(10, Math.round((W - M.l - M.r) / (48 * fz()))), ymin });
   const ph = H - M.t - M.b;
   p._a = { x0, x1, X, Y, W, H, data, ymax, ymin, yfull: [0, yfull], yinv: py => ymin + (H - M.b - py) / ph * (ymax - ymin), full };
+  p._a.hrp = hrp; p._a.dec = DECP;
   p._a.snap = px => {                                      // the peak nearest to a pixel: the top bin around it and the centroid (intensity weighted) of that peak
+    if (hrp) {                                             // high resolution: the nearest centroid itself (never an average of neighbours); on a tie the taller one
+      let b = null;
+      data.forEach(x => x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] <= 0) return; const dd = Math.abs(X(m) - px); if (dd < 14 && (!b || dd < b.dd - 0.5 || (Math.abs(dd - b.dd) <= 0.5 && x.d.y[j] > b.y))) b = { dd, m, y: x.d.y[j], y0: (x.d.y0 || x.d.y)[j], f: x.f }; }));
+      return b && { m: b.m, y: b.y, y0: b.y0, f: b.f };
+    }
     let best = null;
     data.forEach(x => x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] <= 0) return; const dd = Math.abs(X(m) - px); if (dd < 14 && (!best || dd < best.dd)) best = { dd, m, j, x }; }));
     if (!best) return null;
@@ -1799,8 +1806,8 @@ async function drawSpec(p) {
   };
   p._a.hov = px => {                                       // peak nearest to the mouse
     const b = p._a.snap(px); if (!b) return null;
-    const rf = p.meas && p.meas.ref != null ? `<div>Δ<i>m/z</i> <b>${Math.abs(b.m - p.meas.ref).toFixed(1)}</b> <span class="sm">da ${p.meas.ref.toFixed(1)}</span></div>` : "";
-    return { px: X(b.m), html: `<b>m/z ${b.m.toFixed(2)}</b><div>intensità <b>${rel ? b.y.toFixed(1) + " %" : fmt(b.y)}</b>${rel ? ` <span class="sm">(${fmt(b.y0)} cps)</span>` : ""}</div>${data.length > 1 ? `<div class="sm">${EH(b.f.label)}</div>` : ""}${rf}` };
+    const rf = p.meas && p.meas.ref != null ? `<div>Δ<i>m/z</i> <b>${Math.abs(b.m - p.meas.ref).toFixed(hrp ? DECP : 1)}</b> <span class="sm">da ${p.meas.ref.toFixed(hrp ? DECP : 1)}</span>${hrp ? ` <span class="sm">(${((b.m - p.meas.ref) * 1000).toFixed(1)} mDa)</span>` : ""}</div>` : "";
+    return { px: X(b.m), html: `<b>m/z ${b.m.toFixed(hrp ? DECP : 2)}</b><div>intensità <b>${rel ? b.y.toFixed(1) + " %" : fmt(b.y)}</b>${rel ? ` <span class="sm">(${fmt(b.y0)} cps)</span>` : ""}</div>${data.length > 1 ? `<div class="sm">${EH(b.f.label)}</div>` : ""}${rf}` };
   };
   g.save(); g.beginPath(); g.rect(M.l, M.t - 1, W - M.l - M.r, H - M.t - M.b + 1); g.clip();     // bars taller than the (magnified) graph end at the top edge
   data.forEach(x => {
@@ -1816,12 +1823,12 @@ async function drawSpec(p) {
   });
   g.restore();
   const d0 = data[0].d, pk = [];
-  const top0 = Math.max(...d0.y, 1e-9), thr = (p.thr ?? 5) / 100 * top0, NL = p.nlab ?? 10, DEC = p.dec ?? 1;       // labels: only the peaks above the threshold, at most NL
+  const top0 = Math.max(...d0.y, 1e-9), thr = (p.thr ?? 5) / 100 * top0, NL = p.nlab ?? 10, DEC = DECP;       // labels: only the peaks above the threshold, at most NL
   d0.mz.forEach((m, j) => { if (m >= x0 && m <= x1 && d0.y[j] >= thr && d0.y[j] <= ymax) pk.push([m, d0.y[j]]); });
   pk.sort((a, b) => b[1] - a[1]); const used = [];
   g.fillStyle = css("--ink"); g.textAlign = "center"; g.font = fpx(10.5);
   const lbls = []; p._a.lbls = lbls;                      // clickable labels: hover draws a small box, right click opens the menu
-  for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= NL) continue; used.push(px); const t = m.toFixed(DEC), w = g.measureText(t).width; g.fillText(t, px, Y(y) - 4); lbls.push({ m, x: px - w / 2 - 3, y: Y(y) - 4 - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: `<b>m/z ${m.toFixed(2)}</b><div class="sm">Tasto destro: azioni</div>` }); }
+  for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= NL) continue; used.push(px); const t = m.toFixed(DEC), w = g.measureText(t).width; g.fillText(t, px, Y(y) - 4); lbls.push({ m, x: px - w / 2 - 3, y: Y(y) - 4 - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: `<b>m/z ${m.toFixed(hrp ? DECP : 2)}</b><div class="sm">Tasto destro: azioni</div>` }); }
   g.font = fpx(11);
   for (const a of p.anns) {                                        // the point is the top of the nearest observed peak
     let ay = 0, bd = 0.7; d0.mz.forEach((m, j) => { const dd = Math.abs(m - a.x); if (dd < bd) { bd = dd; ay = d0.y[j]; } });
@@ -1833,6 +1840,8 @@ async function drawSpec(p) {
   let isoNote = "";
   if (p.iso && window.QQQRef) {
     try {
+      if (hrp) isoNote = HR.drawIso(p, g, X, Y, d0, ymax, W, files[0]);          // high resolution: fine structure, error in ppm (hr.js)
+      else {
       const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), pat = QQQRef.isoPattern(ion.n, ion.z), top = pat.reduce((a, b) => (b.rel > a.rel ? b : a));
       let obs = null; d0.mz.forEach((m, j) => { if (Math.abs(m - top.mz) <= 1.5 && d0.y[j] > 0 && (!obs || d0.y[j] > obs.y)) obs = { m, y: d0.y[j] }; });
       if (obs) {                                         // profile data: several points per peak -> use the centroid of the peak (+-0.5 Da)
@@ -1849,6 +1858,7 @@ async function drawSpec(p) {
       }
       g.restore(); g.font = fpx(11);
       isoNote = `<span><i style="background:#d62728"></i>profilo teorico ${fmtFormula(p.iso.formula)} ${fmtAdduct(p.iso.ad)}${obs ? ` (allineato al picco a m/z ${(obs.c ?? obs.m).toFixed(1)}${Math.abs(shift) >= 0.05 ? `, spostato di ${shift > 0 ? "+" : ""}${shift.toFixed(1)}` : ""})` : ` (nessun picco osservato vicino a m/z ${top.mz.toFixed(1)})`}</span>`;
+      }
     } catch (e) { isoNote = `<span class="sm">profilo isotopico: ${EH(e.message)}</span>`; }
   }
   p.leg.innerHTML = `<span style="font-variant-numeric:tabular-nums">${scanLine(p, data, d0)}${bgOf(files[0]) ? " · fondo sottratto" : ""}</span>`;       // on the row of the x axis title, to the right
@@ -1918,7 +1928,7 @@ function attach(p) {
     if (!drag) cv.style.cursor = e.shiftKey ? "grab" : yAxisZone(px, py) ? "ns-resize" : xAxisZone(px, py) ? "ew-resize" : edgeAt(px) ? "col-resize" : onCur(px) ? "ew-resize" : p.imode === "zoom" ? "zoom-in" : p.imode ? "cell" : "crosshair";
     const lh = !drag && (a.lbls || []).find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
     if (lh) { cv.style.cursor = "pointer"; lb.hidden = false; lb.style.left = cv.offsetLeft + lh.x + "px"; lb.style.top = cv.offsetTop + lh.y + "px"; lb.style.width = lh.w + "px"; lb.style.height = lh.h + "px"; } else lb.hidden = true;
-    p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(1) : "RT " + x.toFixed(2) + " min" + (a.map && !a.is3d ? " · m/z " + a.mzAt(py).toFixed(1) : "");   // pass-over text: it goes away when the mouse leaves (see onmouseleave)
+    p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(a.hrp ? a.dec : 1) : "RT " + x.toFixed(2) + " min" + (a.map && !a.is3d ? " · m/z " + a.mzAt(py).toFixed(1) : "");   // pass-over text: it goes away when the mouse leaves (see onmouseleave)
     showHover(p, px, py); if (drag) p.tip.hidden = true;
     if (lh) { p.tip.hidden = false; p.tip.innerHTML = lh.tip; p.vl.hidden = true; const tw = p.tip.offsetWidth; let l = cv.offsetLeft + px + 14; if (l + tw > p.el.clientWidth - 4) l = cv.offsetLeft + px - tw - 14; p.tip.style.left = Math.max(2, l) + "px"; p.tip.style.top = cv.offsetTop + py + 14 + "px"; }
   };

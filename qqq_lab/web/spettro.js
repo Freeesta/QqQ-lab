@@ -19,7 +19,7 @@ const sgn1 = (v, d = 1) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(d);
 function measClick(p, m) {
   p.meas = p.meas || { ref: null, list: [] };
   if (p.meas.ref == null) p.meas.ref = m;
-  else if (Math.abs(m - p.meas.ref) > 0.04) p.meas.list.push({ a: p.meas.ref, b: m });          // one more measure from the same reference
+  else if (Math.abs(m - p.meas.ref) > (p._a && p._a.hrp ? 0.001 : 0.04)) p.meas.list.push({ a: p.meas.ref, b: m });          // one more measure from the same reference
   draw(p); uiSave();
 }
 function measSet(p, m) { p.meas = p.meas || { ref: null, list: [] }; p.meas.ref = m; draw(p); uiSave(); }
@@ -37,7 +37,7 @@ function drawMeas(p, g, X, Y, W) {
     const xa = X(q.a), xb = X(q.b), y = M.t + 26 + (i % 6) * 17;
     g.setLineDash([2, 3]); g.globalAlpha = .55; g.beginPath(); g.moveTo(xa, y); g.lineTo(xa, Y(0)); g.moveTo(xb, y); g.lineTo(xb, Y(0)); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
     g.lineWidth = 1.4; g.beginPath(); g.moveTo(xa, y - 4); g.lineTo(xa, y + 4); g.moveTo(xa, y); g.lineTo(xb, y); g.moveTo(xb, y - 4); g.lineTo(xb, y + 4); g.stroke(); g.lineWidth = 1;
-    const t = "Δm/z " + Math.abs(q.b - q.a).toFixed(1), cx = Math.max(x0 + 40, Math.min(x1 - 40, (xa + xb) / 2));
+    const dd = Math.abs(q.b - q.a), t = "Δm/z " + dd.toFixed(p._a && p._a.hrp ? p._a.dec : 1) + (p._a && p._a.hrp ? ` (${(dd * 1000).toFixed(1)} mDa)` : ""), cx = Math.max(x0 + 40, Math.min(x1 - 40, (xa + xb) / 2));
     g.textAlign = "center"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.strokeText(t, cx, y - 5); g.fillStyle = ac; g.fillText(t, cx, y - 5); g.strokeStyle = ac; g.lineWidth = 1;
   });
   g.restore();
@@ -48,7 +48,7 @@ function specClick(p, px) {                       // a click on the spectrum (no
 }
 function measMenu(p, m) {                          // entries of the right-click menu of the spectrum
   const out = [{ label: "Misura da questo picco", fn: () => measSet(p, m) }];
-  if (p.meas && p.meas.list.length) p.meas.list.slice(-3).forEach(q => { const d = Math.abs(q.b - q.a).toFixed(1); out.push({ label: `Cerca ${d} nelle perdite neutre`, tip: "Apre la tabella delle perdite neutre con questa differenza già scritta nel campo di ricerca", fn: () => QQQRef.open("ls", { q: d }) }); });      // the ruler only shows the number; the table is opened on student's request
+  if (p.meas && p.meas.list.length) p.meas.list.slice(-3).forEach(q => { const d = Math.abs(q.b - q.a).toFixed(p._a && p._a.hrp ? Math.min(4, p._a.dec) : 1); out.push({ label: `Cerca ${d} nelle perdite neutre`, tip: "Apre la tabella delle perdite neutre con questa differenza già scritta nel campo di ricerca", fn: () => QQQRef.open("ls", { q: d }) }); });      // the ruler only shows the number; the table is opened on student's request
   if (p.meas) out.push({ label: "Togli le misure", fn: () => measClear(p) });
   return out;
 }
@@ -57,11 +57,11 @@ function measMenu(p, m) {                          // entries of the right-click
 function specParams(p, btn) {
   const old = p.el.querySelector(".sp-pop"); if (old) { old.remove(); return; }
   const pop = document.createElement("div"); pop.className = "sp-pop";
-  const cur = { rel: specRel(p), thr: p.thr ?? SPEC_DEF.thr, nlab: p.nlab ?? SPEC_DEF.nlab, dec: p.dec ?? SPEC_DEF.dec };
+  const cur = { rel: specRel(p), thr: p.thr ?? SPEC_DEF.thr, nlab: p.nlab ?? SPEC_DEF.nlab, dec: p.dec ?? (p._a ? p._a.dec : SPEC_DEF.dec) };
   pop.innerHTML = `<label>Asse y <select data-s="rel"><option value="0" ${cur.rel ? "" : "selected"}>assoluto (cps)</option><option value="1" ${cur.rel ? "selected" : ""}>% del picco più alto</option></select></label>
     <label title="Si etichettano solo i picchi sopra questa percentuale del picco più alto; gli altri restano disegnati">Etichette: oltre <input data-s="thr" type="number" min="0" max="100" step="1" value="${cur.thr}"> %</label>
     <label title="Numero massimo di etichette m/z">al massimo <input data-s="nlab" type="number" min="1" max="60" step="1" value="${cur.nlab}"></label>
-    <label>Decimali di <i>m/z</i> <select data-s="dec">${[0, 1, 2].map(n => `<option ${cur.dec === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+    <label>Decimali di <i>m/z</i> <select data-s="dec">${(p._a && p._a.hrp ? [0, 1, 2, 3, 4, 5] : [0, 1, 2]).map(n => `<option ${cur.dec === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>
     ${(p._a && p._a.data || []).some(x => x.d.pmz) ? `<label title="File in profilo: la linea è lo spettro com'è registrato; i bastoncini sono le cime, una per massa nominale (grafico pulito per la relazione). Le etichette e la tabella usano sempre le cime.">Spettro <select data-s="sticks"><option value="0" ${p.sticks ? "" : "selected"}>Profilo (linea)</option><option value="1" ${p.sticks ? "selected" : ""}>Bastoncini (un picco per massa nominale)</option></select></label>` : ""}
     <button data-s="reset" title="Torna ai valori di partenza">Ripristina predefiniti</button>`;
   const pr = p.el.getBoundingClientRect(), br = btn.getBoundingClientRect();
@@ -69,11 +69,11 @@ function specParams(p, btn) {
   const apply = () => { draw(p); uiSave(); };
   pop.querySelectorAll("[data-s]").forEach(x => {
     const k = x.dataset.s;
-    if (k === "reset") x.onclick = () => { p.rel = null; p.sticks = false; p.thr = SPEC_DEF.thr; p.nlab = SPEC_DEF.nlab; p.dec = SPEC_DEF.dec; pop.remove(); specParams(p, btn); apply(); };
+    if (k === "reset") x.onclick = () => { p.rel = null; p.sticks = false; p.thr = SPEC_DEF.thr; p.nlab = SPEC_DEF.nlab; p.dec = null; pop.remove(); specParams(p, btn); apply(); };
     else x.onchange = () => {
       if (k === "rel") p.rel = x.value === "1";
       else if (k === "sticks") p.sticks = x.value === "1";
-      else p[k] = Math.max(k === "nlab" ? 1 : 0, Math.min(k === "thr" ? 100 : k === "nlab" ? 60 : 2, Math.round(+x.value || 0)));
+      else p[k] = Math.max(k === "nlab" ? 1 : 0, Math.min(k === "thr" ? 100 : k === "nlab" ? 60 : 5, Math.round(+x.value || 0)));
       apply();
     };
   });

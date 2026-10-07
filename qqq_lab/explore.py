@@ -13,6 +13,8 @@ from .project import guess_sample
 from .reader.mzml import Run
 from .reader.profile import LOW, mass_profile
 
+HR_CELL = float(np.log1p(3e-6))        # high resolution: centroids closer than 3 ppm are the same peak when scans are averaged
+
 
 class Item:
     def __init__(self, file: str, label: str | None, time, typ: str, path: Path, conc: float | None = None, cunit: str | None = None,
@@ -63,10 +65,14 @@ class Item:
             cache[level] = step if step and step > 0 else None
         return cache[level]
 
-    def _cells(self, mz, bin_da: float, level: int):
-        """Cell of each point: bins of bin_da Da for centroids, the point grid itself for profile spectra."""
+    def _cells(self, mz, bin_da: float, level: int, hr: bool = False):
+        """Cell of each point: bins of bin_da Da for centroids (cells of 3 ppm in high resolution), the point grid itself for profile spectra."""
         st = self._step(level)
-        return np.rint(mz / st).astype(np.int64) if st else np.floor(mz / bin_da).astype(np.int64)
+        if st:
+            return np.rint(mz / st).astype(np.int64)
+        if hr:
+            return np.floor(np.log(np.maximum(mz, 1e-9)) / HR_CELL).astype(np.int64)
+        return np.floor(mz / bin_da).astype(np.int64)
 
     def info(self) -> dict:
         r = self.run
@@ -119,12 +125,25 @@ class Item:
             return {"prof1": dict(LOW), "prof2": dict(LOW), "instrument": "", "res1": None, "res2": None, "nce": False, "dda": False,
                     "hr_err": f"{type(e).__name__}: {e}"[:160]}
 
-    def profile(self, level: int) -> dict:
-        """Mass profile (decimals, tolerance) of the scans of this level of the physical file; today's profile if anything fails."""
+    def profile(self, level: int, hr: bool = True) -> dict:
+        """Mass profile (decimals, tolerance) of the scans of this level of the physical file; today's profile if anything fails or if the
+        page switched high resolution off (hr=False)."""
+        if not hr:
+            return dict(LOW)
         try:
             return mass_profile([s for s in self.run.scans if (s.level == 1) == (level == 1)])
         except Exception:  # noqa: BLE001
             return dict(LOW)
+
+    def hr_on(self, level: int, hr: bool = True) -> bool:
+        """True when the centroids of this level are read as high resolution: nothing is merged into bins of 0.1 Da (profile-mode spectra keep their own grid)."""
+        return bool(hr) and self._step(level) is None and self.profile(level)["hr"]
+
+    def ptol(self, level: int, precursor, hr: bool = True) -> float:
+        """Half width (Da) used to say that a scan has THIS precursor: 0.6 for unit resolution, the profile tolerance in ppm (at least 1 mDa) for high resolution."""
+        if level > 1 and precursor and self.hr_on(level, hr):
+            return max(float(precursor) * self.profile(level)["tol"] * 1e-6, 1e-3)
+        return 0.6
 
     @staticmethod
     def _ms2_exps(ms2) -> list[dict]:
@@ -300,8 +319,10 @@ class Item:
         return out
 
     # ------------------------------------------------------------------ spectra
-    def _binned(self, rt0, rt1, level=1, precursor=None, prec_tol=0.6, bin_da=0.1):
-        """Mean spectrum in [rt0, rt1] on a fixed bin grid: (bin ids, centroid m/z, mean intensity, n scans)."""
+    def _binned(self, rt0, rt1, level=1, precursor=None, prec_tol=0.6, bin_da=0.1, hr=False, raw1=False):
+        """Mean spectrum in [rt0, rt1] on a fixed bin grid: (bin ids, centroid m/z, mean intensity, n scans).
+        hr: high-resolution centroids, cells of 3 ppm (and with raw1 a window holding ONE scan gives that scan's own centroids)."""
+        hr = self.hr_on(level, hr)
         e = (np.zeros(0, dtype=np.int64), np.zeros(0), np.zeros(0))
         t = self._tbl(level)
         if len(t.rt) == 0:
@@ -317,20 +338,22 @@ class Item:
         mz, y = t.mz[m], t.inten[m]
         if len(mz) == 0:
             return (*e, n)
-        b = self._cells(mz, bin_da, level)
+        if hr and raw1 and n == 1:                                  # one scan = its own centroids, exactly
+            return np.arange(len(mz)), mz, y, 1
+        b = self._cells(mz, bin_da, level, hr)
         u, inv = np.unique(b, return_inverse=True)
         sy = np.bincount(inv, weights=y)
         smz = np.bincount(inv, weights=y * mz) / np.maximum(sy, 1e-12)
         return u, smz, sy / n, n
 
     # ------------------------------------------------------------------ DDA and single scans as they are in the file
-    def dda(self) -> dict:
+    def dda(self, hr: bool = True) -> dict:
         """Every MS2 of the physical file with its parent, isolation window and activation, in columns, plus the survey scans (sid = index in the file).
 
         `prec` is the selected ion of the MS2 (decimals of the MS2 profile + 1); `tgt` the centre of the isolation window = where the ion sits in the survey scan."""
         r = self.run
         ms2 = [s for s in r.scans if s.level > 1]
-        d = self.profile(2)["dec"] + 1
+        d = self.profile(2, hr)["dec"] + 1
         ms1 = [s for s in r.scans if s.level == 1]
         by = {s.index: s for s in r.scans}
         rt = lambda s: round(float(s.rt), 4)
@@ -342,27 +365,27 @@ class Item:
                 "act": [s.act for s in ms2], "ce": [s.collision_energy for s in ms2], "pint": [s.pint for s in ms2],
                 "ms1": {"sid": [s.index for s in ms1], "rt": [rt(s) for s in ms1]}, "nce": bool(r.nce)}
 
-    def scan(self, sid: int) -> dict:
+    def scan(self, sid: int, hr: bool = True) -> dict:
         """One scan exactly as the file has it: its own centroids, no merging (what the DDA panels show)."""
         r = self.run
         if not 0 <= sid < len(r.scans):
             raise ValueError("scansione fuori dal file")
         s = r.scans[sid]
         mz, y = r.read(sid)
-        d = self.profile(s.level)["dec"] + 1
+        d = self.profile(s.level, hr)["dec"] + 1
         return {"sid": sid, "rt": round(float(s.rt), 4), "level": s.level, "mz": [round(float(v), d) for v in mz], "y": [round(float(v), 1) for v in y],
                 "prec": round(float(s.precursor), d) if s.precursor else None, "lo": round(float(s.iso[0]), d) if s.iso else None, "hi": round(float(s.iso[1]), d) if s.iso else None,
                 "act": s.act, "ce": s.collision_energy, "nce": bool(r.nce), "res": s.res, "an": s.an, "parent": s.parent, "filter": s.filter,
                 "profile": bool(s.profile)}
 
-    def scan_avg(self, sids: list[int]) -> dict:
+    def scan_avg(self, sids: list[int], hr: bool = True) -> dict:
         """Mean of some scans of the same level: cells of 3 ppm for a high-resolution profile, 0.1 Da otherwise; intensity = mean per scan, m/z weighted."""
         r = self.run
         sids = [i for i in sids if 0 <= i < len(r.scans)]
         if not sids:
             raise ValueError("nessuna scansione valida")
         level = r.scans[sids[0]].level
-        prof = self.profile(level)
+        prof = self.profile(level, hr)
         parts = [r.read(i) for i in sids]
         mz = np.concatenate([p[0] for p in parts]) if parts else np.zeros(0)
         y = np.concatenate([p[1] for p in parts]) if parts else np.zeros(0)
@@ -397,17 +420,17 @@ class Item:
             out["sid"] = int(ids[ok[0]])
         return out
 
-    def scans(self, i0: int, i1: int, level: int = 1, precursor: float | None = None, prec_tol: float = 0.6, bin_da: float = 0.1) -> list[dict]:
+    def scans(self, i0: int, i1: int, level: int = 1, precursor: float | None = None, prec_tol: float = 0.6, bin_da: float = 0.1, hr: bool = False) -> list[dict]:
         """Binned spectra of scans i0..i1 (inclusive; position in the chromatogram of the same level/precursor), one by one.
 
         Reads the arrays of those scans straight from the file (no filtering of the whole peak table) and bins them exactly as `spectrum`
         does for a window holding that single scan: same bins of bin_da Da, same intensity-weighted m/z.
         """
         ids, rt = self._scan_ids(level, precursor, prec_tol)
-        out = []
+        out, hr = [], self.hr_on(level, hr)
         for i in range(max(i0, 0), min(i1, len(ids) - 1) + 1):
             mz, y = self.run.read(int(ids[i]))
-            if len(mz):
+            if len(mz) and not hr:                                  # high resolution: the scan is shown with its own centroids
                 b = self._cells(mz, bin_da, level)
                 u, inv = np.unique(b, return_inverse=True)
                 sy = np.bincount(inv, weights=y)
@@ -416,16 +439,16 @@ class Item:
         return out
 
     def spectrum(self, rt0: float, rt1: float, level: int = 1, precursor: float | None = None,
-                 prec_tol: float = 0.6, bin_da: float = 0.1, min_rel: float = 0.0, bg: dict | None = None):
+                 prec_tol: float = 0.6, bin_da: float = 0.1, min_rel: float = 0.0, bg: dict | None = None, hr: bool = False):
         """Mean spectrum of the scans in [rt0, rt1], peaks merged within bin_da.
 
         bg = {"item": Item, "rt0": .., "rt1": .., "factor": 1.0} subtracts a background spectrum
         (another time window, or the blank file) bin by bin and clips at zero, like Xcalibur's
         "subtract spectrum". Both spectra are mean intensity per scan, so windows of different length are comparable.
         """
-        u, smz, sy, n = self._binned(rt0, rt1, level, precursor, prec_tol, bin_da)
+        u, smz, sy, n = self._binned(rt0, rt1, level, precursor, prec_tol, bin_da, hr, raw1=bg is None)
         if bg is not None and len(u):
-            bu, _, by, bn = bg["item"]._binned(bg["rt0"], bg["rt1"], level, precursor, prec_tol, bin_da)
+            bu, _, by, bn = bg["item"]._binned(bg["rt0"], bg["rt1"], level, precursor, prec_tol, bin_da, hr)
             if bn and len(bu):
                 idx = np.searchsorted(bu, u)
                 idx[idx >= len(bu)] = len(bu) - 1
