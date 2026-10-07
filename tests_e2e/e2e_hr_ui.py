@@ -1,0 +1,62 @@
+"""B8/B9: HR and DDA pills in the list of the files, calculator with the observed m/z (ppm), window «Metodo» with the parameters of the scans."""
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib import *
+from lib_hr import synth, load
+steps = []
+def step(name, fn):
+    try: fn(); steps.append((name, "ok"))
+    except Exception as e:
+        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_hr_ui.py")][-1]
+        steps.append((name, f"FAIL line {ln}: " + str(e).split("\\n")[0][:240]))
+D = synth("hrui")
+r = Run(port=8900, wd="/tmp/wdhr10")
+try:
+    with sync_playwright() as p:
+        pg = r.page(p)
+        load(pg, [D / "B_FullMass-t0.mzML"], 4000, 1)
+        def calc_qqq():
+            pg.click("#np-calc2"); pg.wait_for_timeout(400)
+            pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
+            t = pg.inner_text("#calcdlg"); assert "364.0737" in t and not pg.locator("#calcobsw").count(), t       # QqQ: 4 decimals as before, no field for the observed value
+            assert "errore (ppm)" not in t
+            pg.click("#calcx"); pg.wait_for_timeout(200)
+        step("calculator with a QqQ file only: as before", calc_qqq)
+        pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500)
+        load(pg, [D / "HR_DDA-Exploris-t30.mzML", D / "B_FullMass-t0.mzML"], 4000, 3)
+        def pills():
+            t = pg.inner_html("#flst"); print(t.count("hrb"))
+            rows = pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.ghost)')].map(r=>[r.querySelector('.nm').textContent,[...r.querySelectorAll('.hrb')].map(x=>x.textContent)])"); print(rows)
+            d = dict((a, b) for a, b in rows)
+            assert d, rows
+            full = [a for a in d if "Exploris" in a]; assert full and d[full[0]] == ["HR", "DDA"], d
+            q = [a for a in d if a.startswith("B_Full") or "B_FullMass" in a]; assert not q or d[q[0]] == [], d
+            title = pg.evaluate("document.querySelector('#flst .hrb').title"); assert "Orbitrap Exploris 120" in title and "R 45" in title, title
+        step("pills «HR» and «DDA» on the Orbitrap file, none on the QqQ file", pills)
+        def calc_hr():
+            pg.click("#np-calc2"); pg.wait_for_timeout(400)
+            pg.fill("#calcin", ""); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
+            assert pg.is_visible("#calcobs"), "no field for the observed m/z"
+            t = pg.inner_text("#calcdlg"); assert "364.0737" in t and "errore (ppm)" not in t, t
+            pg.fill("#calcobs", "364.0740"); pg.wait_for_timeout(1500)
+            t = pg.inner_text("#calcdlg"); print(t[:400])
+            assert "errore (ppm)" in t, t
+            e = pg.evaluate("[...document.querySelectorAll('#calcout tr')].map(r=>[...r.children].map(c=>c.textContent))[1]"); print(e)
+            assert abs(float(e[2]) - 0.8) < 0.15, e                                         # (364.0740 - 364.07374) / 364.07374 = 0.7 ppm
+            pg.click("#calcx"); pg.wait_for_timeout(200)
+        step("calculator with an Orbitrap file: 4 decimals and the error in ppm of the observed m/z", calc_hr)
+        def method():
+            pg.evaluate("(()=>{const f=E.files.find(f=>f.file.includes('Exploris')&&f.kind==='full');E.cur=f.k;showMethod()})()"); pg.wait_for_timeout(2500)
+            t = pg.inner_text("#bigdlg"); print(t[:600].replace("\n", " | "))
+            assert "Il metodo completo non è nel file mzML" in t and "Parametri delle scansioni" in t and "NCE" in t and "HCD" in t and "45 000" in t and "±0.75" in t, t
+            assert "Manca il metodo di acquisizione" not in t
+            pg.evaluate("document.querySelector('#bigdlg').close()")
+            pg.evaluate("(()=>{const f=E.files.find(f=>f.file.startsWith('B_Full'));E.cur=f.k;showMethod()})()"); pg.wait_for_timeout(1500)
+            t = pg.inner_text("#bigdlg"); assert "Manca il metodo di acquisizione" in t and "Parametri delle scansioni" not in t, t       # the QqQ file: as before
+        step("window «Metodo» of an Orbitrap file without .dam: the parameters of the scans; QqQ as before", method)
+    r.close()
+except Exception as e:
+    steps.append(("run", "FAIL " + str(e)[:300]))
+    try: r.close()
+    except Exception: pass
+for n, s in steps: print(s.split(" ")[0].upper(), n, s if s != "ok" else "")
+r.report()

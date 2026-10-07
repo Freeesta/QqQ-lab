@@ -127,6 +127,45 @@ class Item:
             return {"prof1": dict(LOW), "prof2": dict(LOW), "instrument": "", "res1": None, "res2": None, "nce": False, "dda": False,
                     "hr_err": f"{type(e).__name__}: {e}"[:160]}
 
+    def scan_params(self) -> dict | None:
+        """What the scans say about how they were acquired (the method itself is not in the mzML): for the window «Metodo» of a high-resolution / DDA
+        file that has no .dam. Survey: scan window, resolving power, injection time; product ions: activation, collision energy (relative NCE for Thermo),
+        isolation width, resolving power, number and number per cycle. None for a file that is not high resolution."""
+        try:
+            r = self.run
+            sc1 = [x for x in r.scans if x.level == 1]
+            sc2 = [x for x in r.scans if x.level > 1]
+            if not (sc1 and (self.profile(1)["hr"] or self.profile(2)["hr"])):
+                return None
+            med = lambda v: float(np.median(v)) if len(v) else None
+            def sample(sc):
+                return sc[:: max(1, len(sc) // 300)]
+            def heads(sc):
+                for x in sample(sc):
+                    h = r._mm[x.start:x.end].decode("utf-8", "replace")
+                    yield h[:h.find("<binaryDataArrayList")]
+            def vals(sc, acc):
+                out = []
+                for h in heads(sc):
+                    m = re.search(r'accession="%s"[^>]*?value="([^"]*)"' % acc, h)
+                    if m:
+                        try:
+                            out.append(float(m.group(1)))
+                        except ValueError:
+                            pass
+                return out
+            lo, hi = vals(sc1, "MS:1000501"), vals(sc1, "MS:1000500")
+            ms1 = {"n": len(sc1), "window": [min(lo), max(hi)] if lo and hi else None, "res": med([x.res for x in sc1 if x.res]), "inject": med(vals(sc1, "MS:1000927")), "an": self.profile(1)["an"]}
+            ms2 = None
+            if sc2:
+                ms2 = {"n": len(sc2), "per_cycle": round(len(sc2) / len(sc1), 2), "act": sorted({x.act for x in sc2 if x.act}), "nce": bool(r.nce),
+                       "ce": sorted({x.collision_energy for x in sc2 if x.collision_energy is not None}),
+                       "iso": sorted({round((x.iso[1] - x.iso[0]) / 2, 3) for x in sc2 if x.iso})[:4], "res": med([x.res for x in sc2 if x.res]),
+                       "inject": med(vals(sc2, "MS:1000927")), "an": self.profile(2)["an"]}
+            return {"ms1": ms1, "ms2": ms2, "instrument": self.hr_info().get("instrument", "")}
+        except Exception as e:  # noqa: BLE001 -- the window «Metodo» works without it
+            return {"error": f"{type(e).__name__}: {e}"[:120]}
+
     def profile(self, level: int, hr: bool = True) -> dict:
         """Mass profile (decimals, tolerance) of the scans of this level of the physical file; today's profile if anything fails or if the
         page switched high resolution off (hr=False)."""
@@ -228,6 +267,9 @@ class Item:
                "ce": sorted({s.collision_energy for s in ms2 if s.collision_energy is not None}),
                "transitions": [{"q1": c.get("q1"), "q3": c.get("q3"), "ce": c.get("ce"), "name": c.get("name", ""), "dwell": c.get("dwell")}
                                for c in r.chromatograms() if c["kind"] == "srm"]}
+        sp = self.scan_params()
+        if sp:
+            res["scan_params"] = sp
         return res
 
     # ------------------------------------------------------------------ chromatograms

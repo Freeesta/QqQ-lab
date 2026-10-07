@@ -34,14 +34,23 @@ const HR = (() => {
     const r = [f.res1, f.res2].filter(Boolean).map(rtxt); const rr = r.length === 2 && r[0] === r[1] ? [r[0]] : r;
     return [f.instrument, rr.length ? "R " + rr.join(" / ") : "", f.dda ? "DDA" : ""].filter(Boolean).join(" · ");
   }
+  // little pills in the list of the files: «HR» for an Orbitrap / Q-TOF file, «DDA» for a data-dependent acquisition (QqQ files: nothing)
+  const hrbox = document.createElement("style");
+  hrbox.textContent = ".hrb{display:inline-block;margin-left:5px;padding:0 5px;border:1px solid var(--line);border-radius:9px;font-size:10.5px;line-height:15px;color:var(--muted);vertical-align:1px;white-space:nowrap}";
+  document.head.appendChild(hrbox);
+  const badge = f => {
+    if (!f) return "";
+    const hr = !!((f.prof1 && f.prof1.hr) || (f.prof2 && f.prof2.hr)) && on(), t = EH(label(f) || f.instrument || "");
+    return (hr ? `<span class="hrb" title="${t}">HR</span>` : "") + (f.dda && f.kind !== "mrm" ? `<span class="hrb" title="${t || "Acquisizione dipendente dai dati: lo strumento sceglie da solo gli ioni da frammentare"}">DDA</span>` : "");
+  };
   // a file whose high-resolution reading failed on the server opens as low resolution: say it once
   const told = new Set();
   function notice(files) {
     const bad = (files || []).filter(f => f && f.hr_err && !told.has(f.file));
     if (!bad.length) return;
     bad.forEach(f => { told.add(f.file); console.info("HR", f.file, f.hr_err); });
-    let d = document.querySelector("#hrnote");
-    if (!d) { d = document.createElement("div"); d.id = "hrnote"; d.style.cssText = "position:fixed;z-index:20000;left:50%;bottom:18px;transform:translateX(-50%);max-width:520px;padding:8px 14px;border-radius:6px;background:#333;color:#fff;font:13px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.35)"; document.body.appendChild(d); }
+    let d = document.querySelector("#hrerr");
+    if (!d) { d = document.createElement("div"); d.id = "hrerr"; d.style.cssText = "position:fixed;z-index:20000;left:50%;bottom:18px;transform:translateX(-50%);max-width:520px;padding:8px 14px;border-radius:6px;background:#333;color:#fff;font:13px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.35)"; document.body.appendChild(d); }
     d.textContent = "Alta risoluzione non disponibile per " + bad.map(f => f.label || f.file).join(", ") + ": aperto come bassa risoluzione."; d.hidden = false;
     clearTimeout(d._t); d._t = setTimeout(() => { d.hidden = true; }, 7000);
   }
@@ -120,6 +129,6 @@ const HR = (() => {
     if (!t.ion || !q) return null;
     const d = q.dec, w = t.mz * q.tol * 1e-6; return [+(t.mz - w).toFixed(d + 1), +(t.mz + w).toFixed(d + 1)];
   }
-  return { LOW, on, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
+  return { LOW, on, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, badge, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
 })();
 window.HR = HR;
