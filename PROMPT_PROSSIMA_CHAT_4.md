@@ -31,7 +31,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati
 **Stato** (aggiornalo e fai push a ogni punto finito: è quello che legge la chat successiva). Ogni sessione cambia **solo la riga sotto il suo titolo** (le righe vuote fra una sessione e l'altra evitano i conflitti di git: non toglierle). Formato: punti fatti · punto in corso · ramo non ancora in `main`.
 
 **S1**
-- A0 e A1 fatti (A0: CI Windows da ricontrollare) · in corso: A2 · ramo claude/upbeat-johnson-xted9o
+- A0, A1, A2 fatti (A0: CI Windows da ricontrollare) · in corso: A3 · ramo claude/upbeat-johnson-xted9o
 
 **S3**
 - —
@@ -65,24 +65,6 @@ Regole per lavorare in parallelo:
 
 ## A0: test su Windows (sessione S1, per primo)
 Da quando è entrato `tests/test_perdite.py` (PR #5, 7/10) la CI fallisce **solo su Windows** (`pytest (windows-latest, 3.11 e 3.14)`); Linux e macOS sono verdi. Causa probabile (i log non li ha visti nessuno): `subprocess.run([...node...], capture_output=True, text=True)` su Windows decodifica l'output di node con cp1252 e i caratteri Δ • − si rompono. Prima leggi il log (`gh run list -R Freeesta/QqQ-lab`, `gh run view <id> --log-failed`; serve `add_repo` in lettura). Se è questo: in `tests/test_perdite.py`, `test_calcola.py`, `test_cromato.py` (e ogni altro test che legge l'output di node) sostituisci `text=True` con `encoding="utf-8"`. Push e controlla che la CI sia verde anche su Windows (`gh run watch`). Se la causa è un'altra, correggi quella e scrivila in `AGENTS.md` (sez. 2, accanto alla nota sui file mmap su Windows).
-
-## A2: scheda «Perdite neutre» (`web/tables.js`)
-
-**A2.1 Breve spiegazione in cima.** Sopra la tabella un testo breve, **esattamente questo** (scritto da Claude con Federico, non riscriverlo; apici e pedici con `<sup>`/`<sub>`):
-> «Nella cella di collisione (q2) lo ione selezionato urta le molecole del gas: parte della sua energia di movimento diventa energia interna (vibrazioni). Lo ione la scarica **rompendo un legame**, spesso dopo un **riarrangiamento** in cui un atomo di idrogeno si sposta: si stacca una piccola molecola stabile e **neutra** (H<sub>2</sub>O, CO, NH<sub>3</sub>, CO<sub>2</sub>…), che il rivelatore non vede, mentre la carica resta sul frammento. Per questo nello spettro MS<sup>2</sup> si legge la perdita come differenza: **Δm = m/z del precursore − m/z del frammento**.»
-Sotto, una riga **«▸ Più dettagli»** che si espande (chiusa di default) con:
-> «Gli ioni dell'electrospray hanno quasi sempre un numero pari di elettroni ([M+H]<sup>+</sup>, [M−H]<sup>−</sup>) e tendono a perdere molecole intere a guscio chiuso, non radicali (regola degli elettroni pari): le perdite di radicali come •CH<sub>3</sub>, •NO<sub>2</sub> o •Cl sono eccezioni, possibili quando il frammento è stabilizzato da un anello aromatico (gruppi metossilici, nitro o atomi di cloro legati all'anello). Le perdite più comuni passano per stati di transizione ciclici a quattro o sei atomi, che costano poca energia; aumentando l'energia di collisione (CE) compaiono rotture più difficili e **perdite in cascata** (per esempio −18 e poi −44, cioè −62 in totale). A risoluzione unitaria alcune perdite hanno la stessa massa nominale (28 = CO oppure C<sub>2</sub>H<sub>4</sub>): servono altri indizi, come il profilo isotopico o le altre perdite dello stesso ione.»
-Nessun altro testo introduttivo; il paragrafo su perdite isobare/cascate già in Teoria cap. 8 resta lì.
-
-**A2.2 «ESI+» e «ESI−» invece di «+» e «−».** Nella colonna della polarità tipica e nei pulsanti del filtro scrivi **«ESI+»**, **«ESI−»**, **«entrambe»** (filtro: «ESI+ / ESI− / tutte»), non i segni da soli. Stesso stile dei badge di polarità della lista dei file (prompt 3, punto 7.1), se già esistono.
-
-**A2.3 «Cerca Δm» resta** (Federico ha cambiato idea, 7/10): non toccare il campo «Cerca Δm», il riquadro delle possibili perdite e la voce del righello «Cerca … nelle perdite neutre». Se una chat precedente li ha già tolti, rimettili com'erano.
-
-**A2.4 Aggiungi la perdita del radicale •Cl.** Nuova riga nella tabella (con il pallino dei radicali, come •CH<sub>3</sub> e •NO<sub>2</sub>): **•Cl**, Δm **35** (e **37** per il precursore che contiene <sup>37</sup>Cl: scrivilo nei «Dettagli»), «si vede in»: «composti con cloro legato a un anello aromatico (es. pesticidi clorurati)», polarità tipica come da fonti (verifica; se incerta, «entrambe»). Nei «Dettagli» una riga che la distingue da **HCl (36)**, già in tabella: «•Cl (35): perdita del solo atomo, rara (radicale); HCl (36): perdita della molecola, più comune». Massa esatta calcolata da `elements.py`. Solo il cloro: niente •Br o •I (decisione di Federico).
-
-e2e del blocco: riga •Cl presente con il pallino; testo introduttivo presente, «Più dettagli» chiuso e apribile, «ESI+»/«ESI−» nella tabella e nel filtro; «Cerca Δm» ancora funzionante (`62 → H2O + CO2`).
-
----
 
 ## A3: header sempre visibile, niente scorrimento cliccando «Dati»
 

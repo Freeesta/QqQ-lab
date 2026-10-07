@@ -53,6 +53,21 @@ try:
             ids = pg.evaluate("[...document.querySelectorAll('#nl-list .nlr')].map(r=>r.dataset.f)"); assert "NH3" in ids and "SO3" not in ids and "H2O" in ids, ids
             pg.click("#refx")
         step("4.6: +/-/tutte filter", polarity)
+        def a2():
+            pg.click("#np-nl"); pg.wait_for_timeout(300); pg.click("#nl-pol [data-p='']"); pg.wait_for_timeout(200)
+            t = pg.inner_text("#nl-intro, .nlintro") if pg.locator(".nlintro").count() else ""
+            assert "Nella cella di collisione (q2)" in t and "Δm = m/z del precursore − m/z del frammento" in t, t
+            assert not pg.is_visible("#nl-more"), "«Più dettagli» closed by default"
+            pg.click("#nl-more-t"); pg.wait_for_timeout(150); assert pg.is_visible("#nl-more") and "perdite in cascata" in pg.inner_text("#nl-more")
+            assert pg.evaluate("Q('.nlintro sup') && Q('.nlintro sub')")
+            pg.click("#nl-more-t"); assert not pg.is_visible("#nl-more")
+            assert [b.strip() for b in pg.locator("#nl-pol button").all_inner_texts()] == ["ESI+", "ESI−", "tutte"], pg.locator("#nl-pol button").all_inner_texts()
+            chips = set(pg.locator("#nl-list .nlpp").all_inner_texts()); assert chips <= {"ESI+", "ESI−", "entrambe"} and len(chips) == 3, chips
+            row = pg.locator('#nl-list [data-f="Cl"]'); assert row.count() == 1
+            assert row.locator(".nlm").inner_text() == "35" and "•Cl" in row.inner_text() and "radicale" in row.inner_text() and "aromatico" in row.inner_text()
+            pg.locator('#nl-list [data-d="Cl"]').click(); d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" in d and "HCl (36)" in d and "37Cl" in d, d
+            pg.fill("#nl-q", "62"); pg.wait_for_timeout(300); assert "H2O" in pg.inner_text("#nl-res").replace("H₂O", "H2O"); pg.fill("#nl-q", ""); pg.click("#refx")
+        step("A2: intro, Più dettagli, ESI+/ESI-, •Cl", a2)
         def ruler():
             pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
             pg.evaluate(f"(()=>{{const p={SPEC};p.meas={{ref:364.4,list:[{{a:364.4,b:194.2}}]}};draw(p)}})()"); pg.wait_for_timeout(500)
