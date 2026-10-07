@@ -31,7 +31,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati
 **Stato** (aggiornalo e fai push a ogni punto finito: è quello che legge la chat successiva). Ogni sessione cambia **solo la riga sotto il suo titolo** (le righe vuote fra una sessione e l'altra evitano i conflitti di git: non toglierle). Formato: punti fatti · punto in corso · ramo non ancora in `main`.
 
 **S1**
-- —
+- A0-A3 fatti e uniti in main (A0: CI Windows da ricontrollare) · in corso: A4 · ramo claude/upbeat-johnson-xted9o
 
 **S3**
 - B0 fatto (dati sintetici HR `hr_dda`, `tools/prova_hr.py`, `tests/test_hr_synth.py`) · in corso: B1 · ramo `claude/intelligent-bell-omu954` non ancora in `main`
@@ -65,47 +65,6 @@ Regole per lavorare in parallelo:
 
 ## A0: test su Windows (sessione S1, per primo)
 Da quando è entrato `tests/test_perdite.py` (PR #5, 7/10) la CI fallisce **solo su Windows** (`pytest (windows-latest, 3.11 e 3.14)`); Linux e macOS sono verdi. Causa probabile (i log non li ha visti nessuno): `subprocess.run([...node...], capture_output=True, text=True)` su Windows decodifica l'output di node con cp1252 e i caratteri Δ • − si rompono. Prima leggi il log (`gh run list -R Freeesta/QqQ-lab`, `gh run view <id> --log-failed`; serve `add_repo` in lettura). Se è questo: in `tests/test_perdite.py`, `test_calcola.py`, `test_cromato.py` (e ogni altro test che legge l'output di node) sostituisci `text=True` con `encoding="utf-8"`. Push e controlla che la CI sia verde anche su Windows (`gh run watch`). Se la causa è un'altra, correggi quella e scrivila in `AGENTS.md` (sez. 2, accanto alla nota sui file mmap su Windows).
-
-## A1: barra sopra i pannelli (`#tools`)
-
-**A1.1 Il nome del file selezionato si deve leggere.** Nella barra (`#g-file`: ◀ `#fsel` ▶, poi «Solo il selezionato / Tutti sovrapposti») il menu `#fsel` è troppo stretto: si vede solo «Flufenacet_Fu…». Deve mostrare il **nome intero** del file visualizzato: larghezza automatica sul nome più lungo dei file della scheda, minimo ~220 px, massimo ~40% della barra; se il nome è ancora più lungo si accorcia **al centro** («B_FullMa…t30 (2)», così il tempo finale resta visibile) con il nome intero nell'etichetta al passaggio del mouse. A schermo stretto la barra va a capo invece di schiacciare il menu. e2e: a 1280 px il testo visibile di `#fsel` contiene il nome intero di «B_FullMass-t30 (2)».
-
-**A1.2 Via «Altro ▾» e «Unisci gli XIC».** Il menu «Altro» (`#np-more`, che raccoglie `#np-tile` «Ordina» e `#np-merge` «Unisci gli XIC» quando la barra è stretta: `explore.js` ~r.381-400) non serve:
-- **togli «Unisci gli XIC»** (pulsante, codice e test: con la finestra XIC a più ioni e «Sovrapponi all'XIC…» non serve più);
-- **togli «Ordina»** se i pannelli sono già sempre impilati a tutta larghezza (controlla `defaultLayout`/`relayout`/`fitHost`: se «Ordina» non cambia più niente, toglilo; se serve ancora, diventa un'icona piccola con etichetta, non una voce di menu);
-- **togli il menu «Altro»** e la logica che sposta i pulsanti dentro (`np-more`).
-Aggiorna `AGENTS.md` sez. 3 e gli e2e che usano `#np-merge`, `#np-tile`, `#np-more`.
-
-**A1.3 Icona diversa per «Nascondi l'elenco dei file».** Il pulsante `#ffold` (◀ nella testata della lista dei file, `index.html` ~r.117) è identico alle frecce ◀ ▶ che passano da un file all'altro (`#g-file`): si confondono. Usa un'**icona da pannello laterale** (rettangolo con la colonna di sinistra e una freccetta «chiudi», SVG piccolo nello stile delle altre icone; quando la lista è nascosta, l'icona per riaprirla è la stessa con la freccetta verso destra). Etichetta: «Nascondi l'elenco dei file» / «Mostra l'elenco dei file». Nessuna freccia ◀ ▶ da sola fuori da `#g-file`.
-
----
-
-## A2: scheda «Perdite neutre» (`web/tables.js`)
-
-**A2.1 Breve spiegazione in cima.** Sopra la tabella un testo breve, **esattamente questo** (scritto da Claude con Federico, non riscriverlo; apici e pedici con `<sup>`/`<sub>`):
-> «Nella cella di collisione (q2) lo ione selezionato urta le molecole del gas: parte della sua energia di movimento diventa energia interna (vibrazioni). Lo ione la scarica **rompendo un legame**, spesso dopo un **riarrangiamento** in cui un atomo di idrogeno si sposta: si stacca una piccola molecola stabile e **neutra** (H<sub>2</sub>O, CO, NH<sub>3</sub>, CO<sub>2</sub>…), che il rivelatore non vede, mentre la carica resta sul frammento. Per questo nello spettro MS<sup>2</sup> si legge la perdita come differenza: **Δm = m/z del precursore − m/z del frammento**.»
-Sotto, una riga **«▸ Più dettagli»** che si espande (chiusa di default) con:
-> «Gli ioni dell'electrospray hanno quasi sempre un numero pari di elettroni ([M+H]<sup>+</sup>, [M−H]<sup>−</sup>) e tendono a perdere molecole intere a guscio chiuso, non radicali (regola degli elettroni pari): le perdite di radicali come •CH<sub>3</sub>, •NO<sub>2</sub> o •Cl sono eccezioni, possibili quando il frammento è stabilizzato da un anello aromatico (gruppi metossilici, nitro o atomi di cloro legati all'anello). Le perdite più comuni passano per stati di transizione ciclici a quattro o sei atomi, che costano poca energia; aumentando l'energia di collisione (CE) compaiono rotture più difficili e **perdite in cascata** (per esempio −18 e poi −44, cioè −62 in totale). A risoluzione unitaria alcune perdite hanno la stessa massa nominale (28 = CO oppure C<sub>2</sub>H<sub>4</sub>): servono altri indizi, come il profilo isotopico o le altre perdite dello stesso ione.»
-Nessun altro testo introduttivo; il paragrafo su perdite isobare/cascate già in Teoria cap. 8 resta lì.
-
-**A2.2 «ESI+» e «ESI−» invece di «+» e «−».** Nella colonna della polarità tipica e nei pulsanti del filtro scrivi **«ESI+»**, **«ESI−»**, **«entrambe»** (filtro: «ESI+ / ESI− / tutte»), non i segni da soli. Stesso stile dei badge di polarità della lista dei file (prompt 3, punto 7.1), se già esistono.
-
-**A2.3 «Cerca Δm» resta** (Federico ha cambiato idea, 7/10): non toccare il campo «Cerca Δm», il riquadro delle possibili perdite e la voce del righello «Cerca … nelle perdite neutre». Se una chat precedente li ha già tolti, rimettili com'erano.
-
-**A2.4 Aggiungi la perdita del radicale •Cl.** Nuova riga nella tabella (con il pallino dei radicali, come •CH<sub>3</sub> e •NO<sub>2</sub>): **•Cl**, Δm **35** (e **37** per il precursore che contiene <sup>37</sup>Cl: scrivilo nei «Dettagli»), «si vede in»: «composti con cloro legato a un anello aromatico (es. pesticidi clorurati)», polarità tipica come da fonti (verifica; se incerta, «entrambe»). Nei «Dettagli» una riga che la distingue da **HCl (36)**, già in tabella: «•Cl (35): perdita del solo atomo, rara (radicale); HCl (36): perdita della molecola, più comune». Massa esatta calcolata da `elements.py`. Solo il cloro: niente •Br o •I (decisione di Federico).
-
-e2e del blocco: riga •Cl presente con il pallino; testo introduttivo presente, «Più dettagli» chiuso e apribile, «ESI+»/«ESI−» nella tabella e nel filtro; «Cerca Δm» ancora funzionante (`62 → H2O + CO2`).
-
----
-
-## A3: header sempre visibile, niente scorrimento cliccando «Dati»
-
-**A3.1 Header fisso in alto.** L'header (logo, Dati / Disegno / Teoria, ingranaggio, pulsanti a destra) deve restare **sempre visibile** mentre si scorre la pagina: `position: sticky; top: 0`, sfondo pieno (stesso colore di oggi), una leggera ombra solo quando la pagina è scorsa, `z-index` sopra pannelli e lista dei file ma **sotto** menu, tendine, finestre e tooltip (che stanno sopra 10000: controlla che non finiscano dietro l'header). Correggi gli elementi che calcolano posizioni rispetto alla cima della pagina e ora devono tenere conto dell'altezza dell'header: la lista dei file a sinistra (`#dfiles{position:sticky;top:8px}` → sotto l'header), gli scorrimenti verso un pannello (`window.scrollTo(... - 70)` in `explore.js` ~r.514 e `tabs.js` ~r.175, `scrollIntoView` ~r.555: usa `scroll-margin-top` o l'altezza reale dell'header), i menu del clic destro vicino al bordo alto. A schermo intero (pannello ⤢) l'header non deve coprire il pannello.
-
-**A3.2 Cliccando «Dati» la pagina non deve scorrere.** Oggi tornando a «Dati» da Disegno o Teoria la pagina salta al punto dove si lavorava (spesso il primo cromatogramma) e l'header sparisce: lo fa `setView` in `index.html` (~r.232-233: `S.dataWork`/`S.dataScroll` e `scrollTo(0, S.dataScroll)`), introdotto per «tornare a Dati dove si era». Decisione di Federico: **nessuno scorrimento automatico** cambiando vista. Togli il ripristino dello scorrimento in `setView` (i pannelli, lo zoom, il cursore e il pannello attivo restano: sono stato del programma, non scorrimento). Fai lo stesso per il cambio di scheda Full Scan / MS² / MRM (`tabs.js` ~r.43-58: `E.workY`, `E.scrollBy`, `scrollTo(0, E.scrollBy[t])`) se produce lo stesso salto. Lo scorrimento automatico resta solo quando lo studente crea un pannello nuovo (per mostrarglielo) o usa un comando che porta a un pannello.
-e2e: da Disegno clic su «Dati» → `scrollY` invariato (0 se la pagina era in cima) e header visibile; pagina scorsa in basso → header ancora visibile (`getBoundingClientRect().top == 0`); un menu del clic destro aperto vicino al bordo alto sta sopra l'header.
-
----
 
 ## A4: spettri e pannelli
 

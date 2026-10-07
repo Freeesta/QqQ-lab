@@ -40,12 +40,11 @@ function emptyTab() {
 }
 window.emptyTab = emptyTab;
 
-addEventListener("scroll", () => { if (S.view === "data" && scrollY > 100 && E.tab) (E.workY = E.workY || {})[E.tab] = scrollY; }, { passive: true });
 function setTab(t, quiet) {
   if (t === E.tab && !quiet) return;
   E.curBy[E.tab] = E.cur;
-  E.scrollBy = E.scrollBy || {}; E.activeBy = E.activeBy || {};      // coming back to a tab: same scroll position and same active graph as when the student left it
-  E.scrollBy[E.tab] = scrollY > 100 ? scrollY : (E.workY && E.workY[E.tab]) || 0; E.activeBy[E.tab] = E.active; E.tab = t;   // the tabs are at the top of the page: the student scrolls up to click them, so the last position where they were working is the one remembered
+  E.activeBy = E.activeBy || {};      // coming back to a tab: same active graph as when the student left it (no automatic scroll)
+  E.activeBy[E.tab] = E.active; E.tab = t;
   E.panels.forEach(p => { if (p.el) p.el.style.display = p.tab === t ? "" : "none"; });
   const back = E.curBy[t]; E.cur = E.files[back]?.kind === t ? back : (tabFiles()[0] || { k: E.cur }).k;
   setActive(E.activeBy[t] && E.panels.includes(E.activeBy[t]) ? E.activeBy[t] : null); playStop();
@@ -55,7 +54,7 @@ function setTab(t, quiet) {
   ensureLayout();
   if (firstLayout) Promise.all(tabPanels().map(p => p.ready).filter(Boolean)).catch(() => {}).then(() => loading(false));
   renderTabs(); fitWidth(); relayout(); fitHost(); renderFileList(); renderNav(); toolbar();
-  requestAnimationFrame(() => { redrawAll(); requestAnimationFrame(() => scrollTo(0, E.scrollBy[t] || 0)); });
+  requestAnimationFrame(() => redrawAll());
   uiSave();
 }
 
@@ -173,7 +172,7 @@ function ms2Toggle(prec, on) {
 // click on a precursor in the list: if it already has its graphs, go there; otherwise the main pair (the top one) switches to it: no new panels
 function ms2Goto(prec) {
   const c = ms2PairOf(prec); if (!c) return ms2Switch(prec);
-  setActive(c); front(c.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + c.y - 70, behavior: "smooth" });
+  setActive(c); front(c.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + c.y - hdrH() - 12, behavior: "smooth" });
 }
 function ms2Switch(prec) {
   const c = tabPanels("ms2").filter(q => q.type === "chrom").sort((a, b) => a.y - b.y)[0];

@@ -18,7 +18,6 @@ function uipApply() {
   const r = document.documentElement;
   r.style.setProperty("--z", UIP.font / 100);
   if (UIP.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", UIP.theme);
-  if (typeof fitTools === "function") requestAnimationFrame(fitTools);
   if (typeof redrawAll === "function") redrawAll();           // canvases read the colours from the CSS variables
 }
 
