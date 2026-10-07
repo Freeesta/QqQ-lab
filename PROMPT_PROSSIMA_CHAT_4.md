@@ -81,4 +81,4 @@ e2e: da Disegno clic su «Dati» → `scrollY` invariato (0 se la pagina era in 
 
 ## Lavori in coda (NON fare: idee da valutare con Federico)
 
-**Q1. Modalità «alta risoluzione» (Orbitrap, Q-TOF).** Piano completo, con le prove sui file di Federico, in `PIANO_ALTA_RISOLUZIONE.md`: non eseguirlo da qui.
+**Q1. Modalità «alta risoluzione» (Orbitrap, Q-TOF).** È diventato `PROMPT_PROSSIMA_CHAT_5.md`: non eseguirlo da qui.
