@@ -451,7 +451,7 @@ function menu(ev, items) {
   m.style.top = Math.max(4, Math.min(ev.clientY, innerHeight - m.offsetHeight - 8)) + "px";
 }
 document.addEventListener("click", () => { Q("#ctx").hidden = true; });
-document.addEventListener("keydown", e => { if (e.key === "Escape") Q("#ctx").hidden = true; });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { e._ctxWas = !Q("#ctx").hidden; Q("#ctx").hidden = true; } });      // _ctxWas: this Esc only closed the menu (the full-screen handler below leaves the panel alone)
 function dl(name, text, type = "application/octet-stream") {
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
@@ -511,6 +511,7 @@ function numberPanels() {
 }
 document.addEventListener("keydown", e => {
   if (S.view !== "data" || e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key) || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || Q("dialog[open]")) return;
+  if (fsPanel()) return;
   const q = tabPanels().filter(x => x.el).sort((a, b) => a.y - b.y || a.id - b.id)[+e.key - 1]; if (!q) return;
   setActive(q); front(q.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + q.y - 70, behavior: "smooth" });
 });
@@ -623,6 +624,8 @@ function addPanel(type, o, after) {
   const fsB = el.querySelector('[data-a="max"]');
   p._setMax = on => {
     el.classList.toggle("max", on); fsB.innerHTML = on ? IC_FSX : IC_FS;
+    fsInert(on ? p : null);
+    if (on) setActive(p);
     fsB.title = on ? "Esci dallo schermo intero (Esc)" : "Schermo intero: ingrandisce questo pannello (Esc per uscire)";
     if (on) front(el);
     cancelAnimationFrame(p._raf); p._raf = requestAnimationFrame(() => { draw(p); setTimeout(() => draw(p), 120); });
@@ -654,7 +657,7 @@ function addPanel(type, o, after) {
     el.querySelector('[data-a="intf"]').onchange = e => { p.intf = e.target.value; };
   }
   if (bX) bX.onclick = () => openXic(null);
-  el.querySelector(".x").onclick = () => { p._ro.disconnect(); if (p._up) removeEventListener("mouseup", p._up); el.remove(); E.panels = E.panels.filter(x => x !== p); relayout(); fitHost(); uiSave(); if (E.tab === "ms2") renderFileList(); };
+  el.querySelector(".x").onclick = () => { fsInert(null, p); p._ro.disconnect(); if (p._up) removeEventListener("mouseup", p._up); el.remove(); E.panels = E.panels.filter(x => x !== p); relayout(); fitHost(); uiSave(); if (E.tab === "ms2") renderFileList(); };
   el.querySelector(".ttl").ondblclick = async () => { const v = await ask("Nome del pannello", p.title); if (v) { p.title = v; ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
   return p;
@@ -662,9 +665,17 @@ function addPanel(type, o, after) {
 const redrawAll = () => tabPanels().forEach(draw);
 // Esc leaves the full screen of a panel (not when a dialog, a menu or a help box is open: they use Esc themselves)
 document.addEventListener("keydown", e => {
-  if (e.key !== "Escape" || Q("dialog[open]") || Q("#helppop:not([hidden])") || (Q("#ctx") && !Q("#ctx").hidden) || Q("#uipset")) return;
+  if (e.key !== "Escape" || e._ctxWas || Q("dialog[open]") || Q("#helppop:not([hidden])") || (Q("#ctx") && !Q("#ctx").hidden) || Q("#uipset")) return;
   const m = E.panels.find(q => q.el && q.el.classList.contains("max")); if (m && m._setMax) m._setMax(false);
 });
+// full screen: ONLY that panel exists. Everything else (header, file list, tabs, toolbar, the other panels) is inert: no click, wheel or key reaches it
+const fsPanel = () => E.panels.find(q => q.el && q.el.classList.contains("max"));
+function fsInert(on, closing) {
+  document.querySelectorAll("header,#dfiles,#dtabs,#tools,#dpanels>.pnl").forEach(e => {
+    if (on && e !== on.el) e.setAttribute("inert", ""); else if (!on) e.removeAttribute("inert");
+  });
+  if (!on && !closing) document.documentElement.classList.remove("fs-on"); else if (on) document.documentElement.classList.add("fs-on");
+}
 // copy of a plot on a white background (for PNG files and the report: a transparent PNG looks black in some viewers)
 function whiteCanvas(cv, caption = "") {
   const sc = cv.width / Math.max(cv.clientWidth, 1), top = caption ? Math.round(24 * sc) : 0;
@@ -1967,6 +1978,7 @@ function attach(p) {
     const hit = (p._a?.lbls || []).find(b => b.ann && rect(e) >= b.x && rect(e) <= b.x + b.w && recty(e) >= b.y && recty(e) <= b.y + b.h);
     if (hit) { const v = await ask("Annotazione", hit.ann.text); if (v) { hit.ann.text = v; draw(p); } return; }      // double click on a label: edit it
     if (p.type === "chrom" || p.type === "xic" || p.type === "mrm") {      // double click = mass spectrum at that retention time (also on the PDA trace)
+      if (p.el.classList.contains("max")) { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); return; }      // full screen: double click = whole view (a new spectrum would appear in a panel nobody sees)
       const x = xd(rect(e)), k = nearestFile(p, x), f = E.files[k];
       if (!p._a || !f || f.kind === "mrm") return;
       let dt = scanStep(), r0 = x - dt / 2, r1 = x + dt / 2, kk = k;
@@ -1988,6 +2000,7 @@ function nearestFile(p, x) {
   return best ? best.k : (scanFiles(tabFiles())[0]?.k ?? 0);
 }
 function pushLinked(p, r0, r1, k, keepZoom, o = {}) {
+  if (fsPanel()) return;                                      // full screen: the panels underneath stay exactly as they were
   if (!o.step) { p._msg = null; p._sk = null; }              // a click or a drag starts a new walk: the axes of the spectrum are free again
   E.panels.filter(s => s.type === "spec" && s.link === p.id).forEach(s => {
     s.r0 = r0; s.r1 = r1; s.k = k; s.si = o.i ?? null; if (o.dir) s._dir = o.dir;

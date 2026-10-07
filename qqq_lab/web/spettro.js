@@ -155,6 +155,7 @@ document.addEventListener("keydown", e => {
 // ---------------------------------------------------------------- linked time axes: the panels with the chain on share the interval of time
 function syncT(p) {
   const key = JSON.stringify(p.zoom || null); if (p._zs === key) return; p._zs = key;
+  if (fsPanel()) return;                                         // full screen: the other panels keep their zoom
   tabPanels().filter(q => q !== p && q.tl && q.type !== "spec" && q.type !== "map" && JSON.stringify(q.zoom || null) !== key)
     .forEach(q => { q.zoom = p.zoom ? [...p.zoom] : null; q._zs = key; draw(q); });
 }

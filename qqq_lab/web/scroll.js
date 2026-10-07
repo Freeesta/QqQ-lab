@@ -92,8 +92,9 @@ const KEY = { dir: 0, n: 1, t0: 0, t: 0, raf: 0, p: null };
 const PLAY = { p: null, dir: 1, sel: null, t: 0, raf: 0 };
 // the chromatogram that walks: the active one, or the one a linked spectrum follows (after zooming in the spectrum the arrows still walk)
 const walkTarget = (play) => {
-  let ap = E.active;
-  if (ap && ap.type === "spec" && ap.link != null) ap = E.panels.find(q => q.id === ap.link) || ap;
+  const fp = fsPanel();
+  let ap = fp || E.active;                                          // full screen: only that panel can walk
+  if (!fp && ap && ap.type === "spec" && ap.link != null) ap = E.panels.find(q => q.id === ap.link) || ap;
   return ap && E.panels.includes(ap) && ap._a && ap._a.sr && (ap.cur != null || (play && ap.sel)) ? ap : null;
 };
 function playStop() { if (PLAY.raf) cancelAnimationFrame(PLAY.raf); PLAY.raf = 0; PLAY.p = null; }
@@ -137,7 +138,7 @@ document.addEventListener("keydown", e => {
   const dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (!dir) return;
   e.preventDefault();
   const ap = walkTarget(false);                                      // active panel with a cursor: arrows = previous/next scan; otherwise arrows change file
-  if (!ap) { goFile(dir); return; }
+  if (!ap) { if (!fsPanel()) goFile(dir); return; }
   if (e.repeat) return;                                              // the automatic repeat of the system is ignored: the loop below paces a held key
   playStop();
   KEY.dir = dir; KEY.n = e.shiftKey ? 5 : 1; KEY.p = ap; KEY.t0 = KEY.t = performance.now();

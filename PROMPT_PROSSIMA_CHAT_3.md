@@ -15,23 +15,13 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 
 ## Ordine di lavoro (per importanza)
 1. ~~Integrazione dei picchi e file in profilo~~ (fatto il 7/10, vedi `AGENTS.md` sez. 19)
-2. **Schermo intero**
+2. ~~Schermo intero~~ (fatto il 7/10, `AGENTS.md` sez. 19)
 3. **Dimensione del testo anche dentro i grafici**
 4. **Strumenti dell'header e schermata di caricamento**: via Isotopi, calcolatrice vera, Addotti più semplici, pulsante dei file di esempio, «Informazioni» al posto del «?»
 5. **Rifiniture** (menu «Correzione» con icone, documenti per gli agenti)
 6. **Disegno** (campo SMILES che si svuota, via il menu «Ione»)
 7. **Simboli** (segno di polarità leggibile e senza sbordare, «MS2» con un vero apice)
 8. **Ordine di cartelle e file** (inventario, cartelle vuote, cestino fuori da git, test obsoleti): per ultimo
-
----
-
-## BLOCCO 2: schermo intero (pulsante ⤢ dei pannelli)
-
-**Problema**: a schermo intero alcune cose non funzionano (es. il doppio clic non riporta lo zoom alla vista intera) e intanto **cambiano cose nei pannelli sotto**. A schermo intero deve esistere solo quel pannello.
-- Quando un pannello è a schermo intero, **tutto il resto è inerte**: niente eventi (clic, doppio clic, rotella, tasti) arrivano agli altri pannelli, alla lista dei file o alla barra; le frecce ← → e le scorciatoie agiscono **solo** sul pannello a schermo intero. Usa `inert` sugli altri elementi (o un velo che intercetta gli eventi) e controlla i gestori globali (`document.addEventListener("keydown"…)`, `E.active`).
-- **Tutti gli strumenti funzionano** dentro: doppio clic = vista intera, zoom (riquadro e assi), lucchetto, menu del clic destro e tendine (posizionati dentro il pannello, sopra di esso), tooltip, integrazione, righello, annotazioni, esportazioni.
-- Il grafico si ridisegna alla nuova dimensione entrando e uscendo; uscita con il pulsante e con Esc; all'uscita i pannelli sotto sono esattamente come prima (stesso zoom, stesso cursore).
-- e2e: a schermo intero il doppio clic resetta lo zoom; un tasto freccia cambia la scansione solo nel pannello a schermo intero; dopo l'uscita lo stato degli altri pannelli è invariato.
 
 ---
 
