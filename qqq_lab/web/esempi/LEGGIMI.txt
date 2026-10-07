@@ -1,0 +1,14 @@
+File di esempio di QqQ lab
+==========================
+Quattro file Full Scan (ESI positivo, risoluzione unitaria, SCIEX 3200 QTRAP) di una soluzione di flufenacet
+degradata per fotocatalisi con TiO2, campionata a 0, 15, 30 e 60 minuti di trattamento.
+
+  Flufenacet_FullScan_t0.mzML    tempo 0 min  (prima dell'irraggiamento)
+  Flufenacet_FullScan_t15.mzML   tempo 15 min
+  Flufenacet_FullScan_t30.mzML   tempo 30 min
+  Flufenacet_FullScan_t60.mzML   tempo 60 min
+
+Il numero dopo «t» nel nome è il tempo di trattamento in minuti: QqQ lab lo legge da solo.
+Si aprono con il pulsante «Prova con i file di esempio» della pagina iniziale, oppure scaricandoli e
+trascinandoli nella pagina (https://freeesta.github.io/QqQ-lab/). Sono dati reali del laboratorio, pubblicati
+come esempio didattico (formato mzML convertito con ProteoWizard MSConvert).
