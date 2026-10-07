@@ -21,6 +21,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 5. **Rifiniture** (menu «Correzione» con icone, documenti per gli agenti)
 6. **Disegno** (campo SMILES che si svuota, via il menu «Ione»)
 7. **Simboli** (segno di polarità leggibile e senza sbordare, «MS2» con un vero apice)
+8. **Ordine di cartelle e file** (inventario, cartelle vuote, cestino fuori da git, test obsoleti): per ultimo
 
 ---
 
@@ -129,6 +130,24 @@ e2e: con i file della serie B (tutti ESI+) nessun segno per file e «ESI+» nell
 - nei **canvas** (titoli e legende dei grafici) una piccola funzione che disegna la parte in apice/pedice più piccola e spostata (es. `drawRich(g, "MS^2", x, y)`), invece del carattere Unicode;
 - dove non si può formattare (nomi dei file scaricati, intestazioni Excel, `title`/etichette semplici, nomi dei fogli) si scrive **«MS2»**, «R2», «NH4+».
 Cerca i caratteri `²³⁺⁻₀-₉½` in `explore.js`, `help.js`, `modi.js`, `origine.js`, `tabs.js`, `index.html` (e negli altri file di `web/`, esclusa la Teoria se già usa `<sup>`) e sostituiscili. Non toccare le formule che Ketcher disegna da sé. e2e: nessun carattere `²⁺⁻₀-₉` nel testo visibile della scheda Dati; la scheda «MS<sup>2</sup>» ha un elemento `sup`.
+
+---
+
+## BLOCCO 8: ordine di cartelle e file (fallo per ultimo)
+Federico vede cartelle vuote o che non hanno più senso. Fai un **inventario completo** e lascia una struttura pulita. Regole: nessuna cancellazione definitiva (sposta in `_cestino/<data>_pulizia/`), niente dati di laboratorio nel repository (salvo i 4 file di esempio, se Federico li conferma), un file che è ancora usato da codice, test, CI o sito NON si sposta.
+
+**8.1 Cosa ho già visto (7/10, da verificare e sistemare):**
+- `QqQ_lab_privato/` nella radice: è **vuota** (solo `.DS_Store`), resto del vecchio nome di `TP_Mine/`. Toglila (e la riga in `.gitignore` se non serve più).
+- `_cestino/` è **tracciato da git** (nel repository pubblico ci sono `PROMPT_CHAT_SCORRIMENTO.md`, `PROMPT_PROSSIMA_CHAT_1.md`, `Teoria QqQ lab.html`, `calib.js`), e sul Mac quei file sono già stati tolti a mano. Il cestino è locale, non deve andare su GitHub: aggiungi `_cestino/` a `.gitignore` e `git rm -r --cached _cestino` (i file restano dove sono sul disco). Aggiorna la regola in `AGENTS.md` sez. 2 («il cestino è locale e non è nel repository»).
+- Cartelle e file solo locali e già ignorati, da non toccare nel repository ma da segnalare a Federico se occupano spazio: `qqq_lab.egg-info/`, `.pytest_cache/`, `__pycache__/`, `.vscode/`, `.DS_Store`.
+
+**8.2 Inventario da fare** (una tabella nel messaggio a Federico: file o cartella → a cosa serve → chi lo usa → tenere / spostare / unire). Cerca gli usi con `grep -rn` (codice, test, `.github/workflows`, `tools/build_site.py`, `index.html`):
+- `qqq_lab/` (moduli Python: c'è ancora qualcosa che nessuno importa? es. resti della versione da computer accanto a `app.py`);
+- `qqq_lab/web/` (script, immagini, icone: ognuno è caricato da `index.html`, dal worker o dal sito? `origine.js` è senza ingressi dal 7/10 ma serve a TP Mine? icone `app-icon*`/`apple-touch-icon` servono ancora senza installazione come app?), `web/esempi/` (nomi neutri, vedi 4.4), `web/teoria/` (capitoli tutti nel menu? il cap. 13 resta);
+- `tools/` (ogni script è ancora usato o documentato? es. `validate_ionfamily.py`, `genera_glossario.py`, `dev_server.py`);
+- `tests/` e `tests_e2e/` (46 file): test di funzioni tolte (retta di taratura, «Da dove viene?», menu Ione, Isotopi nell'header…) da adattare o spostare; aiuti che non sono test (`lib.py`, `synth.py`, `make_examples.py`, `lat_arrows.py`) messi in chiaro (es. sottocartella `tests_e2e/tools/` o almeno elencati in `verifica.py` `NOT_TESTS`); e2e con lo stesso scopo da unire. Ogni e2e rimasto deve passare con `tools/verifica.py`;
+- radice: solo ciò che serve (`AGENTS.md`, `README.md`, `LICENSE`, `LICENZE-TERZI.md`, `pyproject.toml`, i prompt aperti, cartelle del codice). `pyproject.toml`: dipendenze e voci ancora coerenti con un programma che vive solo nel browser e con il server di sviluppo dei test.
+**8.3** Aggiorna `AGENTS.md` sez. 3 (mappa del codice) in modo che corrisponda esattamente a ciò che resta, e `README.md` se cita file spostati. e2e/pytest completi alla fine.
 
 ---
 
