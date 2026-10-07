@@ -669,7 +669,7 @@ function whiteCanvas(cv, caption = "") {
 }
 // line written on the saved image of a mass spectrum: file, MS level, retention time and number of scans
 function specCaption(p) {
-  const parts = [...p.leg.children].map(x => x.textContent.trim()).filter(Boolean), f = E.files[p.k];
+  const parts = [...p.leg.children, ...(p.leg2 ? p.leg2.children : [])].map(x => x.textContent.trim()).filter(Boolean), f = E.files[p.k];
   return (p.all || !f ? "" : f.label + " · ") + parts.slice(0, 1).join("") + (parts.length > 1 ? " · " + parts.slice(1).join(", ") : "");
 }
 
@@ -734,7 +734,16 @@ function stepScan(p, d, o = {}) {
   stepMsg(p, `scansione ${i + 1}/${tot} · RT ${rt.toFixed(2)} min`, true);
   return true;
 }
-function stepMsg(p, t, keep) { p.rd.textContent = t; if (keep) p._msg = t; }
+function stepMsg(p, t, keep) { p.rd.textContent = t; p.rd.classList.toggle("show", /più vicina/.test(t)); if (keep) p._msg = t; }   // the line under the graph is gone: only the "nearest scan with data" notice of MS2 still shows
+// the legend lives INSIDE the graph (top right) for chromatograms, XIC and MRM; for the spectrum the scan line sits on the row of the x axis title and the file legend inside the graph
+function placeLeg(p) {
+  if (!p.cv || p.type === "map") return;
+  const right = p.el.clientWidth - p.cv.offsetLeft - p.cv.offsetWidth + M.r + 6;
+  if (p.type === "spec") {
+    p.leg.style.right = right + "px"; p.leg.style.top = p.cv.offsetTop + p.cv.offsetHeight - 17 + "px";
+    if (p.leg2) { p.leg2.style.right = right + "px"; p.leg2.style.top = p.cv.offsetTop + M.t + 5 + "px"; }
+  } else { p.leg.style.right = right + "px"; p.leg.style.top = p.cv.offsetTop + M.t + 5 + "px"; }
+}
 // "zoom bar" in the top margin: where the visible window sits in the whole axis, plus the visible range in words; "Vista intera" button
 function afterDraw(p) {
   const rl = p.el.querySelector(".rtl");           // retention time of the spectrum, next to the title
@@ -742,6 +751,7 @@ function afterDraw(p) {
   const btn = p.el.querySelector('[data-a="fit"]'), z = !!(p._a && (p.zoom || p.zoomY));
   if (btn) btn.disabled = !z;                      // always there (the layout does not jump), active only when zoomed
   lockButton(p); cursorLine(p);
+  placeLeg(p);
   const tb = p.el.querySelector('[data-a="itab"]'); if (tb) tb.hidden = !p.ints.length;
   const cb = p.el.querySelector('[data-a="iclr"]'); if (cb) cb.hidden = !p.ints.length;
   refreshIntf(p);
@@ -805,6 +815,7 @@ async function pngWithMeta(blob, fields) {
 function ctl(p) {
   const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl");
   t.textContent = p.type === "xic" && p.traces.length === 1 && p.title === "Ione estratto (XIC)" ? "XIC · " + p.traces[0].label : p.title;      // a single trace is named in the title
+  t.style.display = p.type === "chrom" && p.title === "Cromatogramma" ? "none" : "";          // the menu of the kind (TIC / BPC / PDA) is the title
   if (p.type === "spec" && p.link && (!E.panels.some(q => q.id === p.link) || E.panels.some(q => q !== p && q.type === "spec" && q.link === p.link && q.id > p.id))) { p.src = p.src || p.link; p.link = null; }   // only the newest spectrum of a chromatogram is live; a link to a closed chromatogram is dropped
   if (p.type === "spec" && p.link) t.insertAdjacentHTML("beforeend", ` <span class="lk" title="Questo spettro segue il cromatogramma: un clic, il cursore, le frecce o una selezione lo aggiornano. Gli altri spettri aperti da quel cromatogramma restano fermi al loro tempo.">&#128279; segue il cursore</span>`);
   const T0 = p.tab || E.tab, ms2c = p.type === "chrom" && T0 === "ms2", mrmP = p.type === "mrm";
@@ -815,7 +826,8 @@ function ctl(p) {
   const off = (on, why) => on ? ` disabled title="${why}"` : "";
   const chk = (k, lab, dis, why, tip) => `<label class="muted${dis ? " dis" : ""}"${dis ? ` title="${why}"` : tip ? ` title="${tip}"` : ""}><input type="checkbox" data-o="${k}" ${p[k] ? "checked" : ""}${dis ? " disabled" : ""}> ${lab}</label>`;
   const ONEF = tabFiles(p.tab || E.tab).length <= 1, ONEWHY = "Con un solo file non c'è nulla da sovrapporre o impilare.";
-  const view = `<select data-o="mode"${p.type === "chrom" || (p.type === "xic" && p.traces.length <= 1) ? off(ONEF, ONEWHY) : ""} title="Come disegnare più tracce: una sopra l'altra; una per riga (come in FreeStyle); a cascata, in ordine di tempo, la prima davanti (solo per guardare: senza integrazione né lettura dei valori)"><option value="ovl" ${p.mode !== "stk" && p.mode !== "cas" ? "selected" : ""}>sovrapposti</option><option value="stk" ${p.mode === "stk" ? "selected" : ""}>impilati</option><option value="cas" ${p.mode === "cas" ? "selected" : ""}>a cascata</option></select>${chk("log", "scala log", ms2c, NOMS2)}`;
+  const view = `<select data-o="mode"${p.type === "chrom" || (p.type === "xic" && p.traces.length <= 1) ? off(ONEF, ONEWHY) : ""} title="Come disegnare più tracce: una sopra l'altra; una per riga (come in FreeStyle); a cascata, in ordine di tempo, la prima davanti (solo per guardare: senza integrazione né lettura dei valori)"><option value="ovl" ${p.mode !== "stk" && p.mode !== "cas" ? "selected" : ""}>sovrapposti</option><option value="stk" ${p.mode === "stk" ? "selected" : ""}>impilati</option><option value="cas" ${p.mode === "cas" ? "selected" : ""}>a cascata</option></select>`;
+  const logChk = chk("log", "scala log", ms2c, NOMS2);
   const T = p.tab || E.tab, TF = tabFiles(T), sfl = scanFiles(TF), mlo = Math.min(...sfl.map(x => x.mz_min ?? Infinity)), mhi = Math.max(...sfl.map(x => x.mz_max ?? -Infinity));
   const mzbar = `<label class="muted" title="Mostra il cromatogramma costruito solo con gli ioni in questo intervallo di m/z. Vuoto = tutti gli ioni. Serve per togliere dal TIC gli m/z che non ti interessano (solvente, fondo)"><i>m/z</i> da <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz0 != null ? fmz(p.mz0) : ""}" placeholder="${isFinite(mlo) ? mlo.toFixed(1) : ""}"> a <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz1 != null ? fmz(p.mz1) : ""}" placeholder="${isFinite(mhi) ? mhi.toFixed(1) : ""}"></label>`;
   const hasScan = sfl.length > 0, ms2s = TF.filter(x => x.kind === "ms2"), hasPda = TF.some(x => x.pda);
@@ -827,16 +839,23 @@ function ctl(p) {
   const cval = bkOn ? "f" + p.bk : p.ibk || p._pickIbk ? "tract" : p.snip ? "snip" : "";
   const corr = `<select data-o="corr"${off(ms2c || mrmP, ms2c ? NOMS2 : NOMRM)} title="Correzione del fondo (una sola alla volta). Nessuna: i dati come sono. File bianco: toglie il segnale del file bianco (utile se il fondo cambia nel tempo come nel campione). Fondo di un tratto: trascini un tratto senza picchi e se ne toglie la media (fondo piatto). Linea di base automatica: toglie la base che sale sotto i picchi (algoritmo SNIP)."><option value="" ${cval === "" ? "selected" : ""}>Correzione: nessuna</option><optgroup label="Sottrai un file bianco">${bkList.length ? bkList.map(x => `<option value="f${x.k}" ${cval === "f" + x.k ? "selected" : ""}>${EH(x.label)}</option>`).join("") : '<option disabled>nessun file indicato come bianco</option>'}</optgroup><option value="tract" ${cval === "tract" ? "selected" : ""}>Sottrai il fondo di un tratto</option><option value="snip" ${cval === "snip" ? "selected" : ""}>Linea di base automatica</option></select>${p.snip && !bkOn ? `<label class="muted" title="Larghezza della finestra: deve essere più larga dei picchi">&le;<input data-o="snipw" type="number" step="0.5" min="0.2" value="${p.snipw}" style="width:50px"> min</label>` : ""}`;
   const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, "Hai caricato un solo file in questa scheda.")} title="Scegli al volo quali file mostrare (vale per tutti i grafici, come la lista a sinistra)">File ${TF.filter(f => f.vis).length}/${TF.length} &#9662;</button>`;
+  // "Parametri": the controls used less often live in a small popover (same look as the one of the spectrum); a chip next to the icon says what is not at its default value
+  const chips = [];
+  if (p.type !== "mrm" && !(p.type === "chrom" && p.kind === "pda") && (p.mz0 != null || p.mz1 != null)) chips.push(`m/z ${p.mz0 != null ? fmz(p.mz0) : "…"}–${p.mz1 != null ? fmz(p.mz1) : "…"}`);
+  if (p.type === "chrom" && p.prec != null && p.prec !== "" && !ms2c) chips.push("prec. " + p.prec);
+  if (p.log) chips.push("log");
+  if (bkOn) chips.push("bianco: " + E.files[+p.bk].label); else if (p.ibk || p._pickIbk) chips.push("fondo di un tratto"); else if (p.snip) chips.push("linea di base");
+  const parBox = inner => `<span class="cpar"><button class="bt" type="button" data-a="cpar" title="Parametri: intervallo di m/z, scala log, correzione del fondo${p.type === "chrom" ? ", precursore" : ""}">${IC_PARAM}</button>${chips.map(t => `<button class="chip" type="button" data-a="cparchip" title="Cambia questo parametro">${EH(t)}</button>`).join("")}<span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span></span>`;
   const kindSel = ms2c ? `<select disabled title="${NOMS2}"><option>scan MS² dei precursori</option></select>` : null;
-  if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>TIC (somma)</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="Picco base: lo ione più intenso di ogni scan. Non esiste nei file MRM (si registrano solo le transizioni scelte)">BPC (picco base)</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="Segnale del rivelatore a serie di diodi (PDA/UV): non dipende dallo spettrometro di massa">PDA (UV, totale)</option></select>`}${p.kind === "pda" ? "" : precSel + (hasScan ? mzbar : "")}${chk("smooth", "smoothing")}${view}${corr}${p.type === "chrom" && p.tab === "full" && E.files.some(x => x.ms2_events) ? chk("ms2tri", "mostra le MS2", false, "", "Un triangolino in alto ogni volta che è partita una scansione MS2 (file con survey e MS2 insieme). Clic su un triangolino: apre quello spettro MS2 nella scheda MS²") : ""}`;
+  if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind" class="ttlsel" title="Tipo di cromatogramma"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>TIC (somma)</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="Picco base: lo ione più intenso di ogni scan. Non esiste nei file MRM (si registrano solo le transizioni scelte)">BPC (picco base)</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="Segnale del rivelatore a serie di diodi (PDA/UV): non dipende dallo spettrometro di massa">PDA (UV, totale)</option></select>`}${chk("smooth", "smoothing")}${view}${parBox(`${p.kind === "pda" ? "" : precSel + (hasScan ? mzbar : "")}${logChk}${corr}${p.type === "chrom" && p.tab === "full" && E.files.some(x => x.ms2_events) ? chk("ms2tri", "mostra le MS2", false, "", "Un triangolino in alto ogni volta che è partita una scansione MS2 (file con survey e MS2 insieme). Clic su un triangolino: apre quello spettro MS2 nella scheda MS²") : ""}`)}`;
   if (p.type === "xic") {
     p._xt = Math.min(p._xt || 0, Math.max(0, p.traces.length - 1));
     const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0;
     const xsel = p.traces.length > 1 ? `<select data-o="xt" title="Quale XIC modificare">${p.traces.map((t, i) => `<option value="${i}" ${i === p._xt ? "selected" : ""}>XIC ${i + 1}</option>`).join("")}</select>` : "";
     const xr = xt ? `${xsel}<label class="muted" title="Intervallo di m/z estratto (XIC). Scrivi i due estremi e premi Invio"><i>m/z</i> da <input data-o="xlo" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(xt.mz - xw1)}"> a <input data-o="xhi" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(xt.mz + xw1)}"></label>` : "";
-    c.innerHTML = `${xr}${fsel}${chk("smooth", "smoothing")}${view}${corr}${p.traces.length > 1 ? '<button data-o="split" title="Un pannello per ogni ione">Separa</button>' : ""}`;
+    c.innerHTML = `${xr}${fsel}${chk("smooth", "smoothing")}${view}${parBox(logChk + corr)}${p.traces.length > 1 ? '<button data-o="split" title="Un pannello per ogni ione">Separa</button>' : ""}`;
   }
-  if (p.type === "mrm") c.innerHTML = `<select data-o="tr" title="Transizione"><option value="">tutte le transizioni</option>${p._trs.map(t => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${fsel}${chk("smooth", "smoothing", false, "", "Spento: le aree si calcolano sul segnale grezzo. Lo smoothing cambia solo il disegno, mai le aree integrate (nell'MRM si integra, per questo parte spento)")}${view}${corr}`;
+  if (p.type === "mrm") c.innerHTML = `<select data-o="tr" title="Transizione"><option value="">tutte le transizioni</option>${p._trs.map(t => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${fsel}${chk("smooth", "smoothing", false, "", "Spento: le aree si calcolano sul segnale grezzo. Lo smoothing cambia solo il disegno, mai le aree integrate (nell'MRM si integra, per questo parte spento)")}${view}${parBox(logChk + corr)}`;
   if (p.type === "map") {
     const rf0 = p.ref !== "" && p.ref != null, sf = TF, opt = (v, cur, lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
     c.innerHTML = `<span class="tbg" role="group" title="Vista della mappa: 2D = colori sul piano RT-m/z; 3D = superficie con l'intensità in altezza (trascina per ruotarla)"><button data-o="view" data-v="2d" class="${p.view !== "3d" ? "on" : ""}">2D</button><button data-o="view" data-v="3d" class="${p.view === "3d" ? "on" : ""}">3D</button></span>` +
@@ -855,6 +874,11 @@ function ctl(p) {
       (p.bg === "w" ? `<label class="muted">da <input data-o="bw0" type="number" step="0.1" value="${p.bw0 ?? ""}" style="width:56px"> a <input data-o="bw1" type="number" step="0.1" value="${p.bw1 ?? ""}" style="width:56px"> min</label>` : "") +
       (p.level === 2 ? `<select data-o="prec" style="min-width:11em"><option value="">tutti i prec.</option>${[...new Set(f.flatMap(x => x.precursors))].sort((a, b) => a - b).map(v => `<option value="${v}" ${String(p.prec) === String(v) ? "selected" : ""}>prec. ${v}</option>`).join("")}</select>` : "");
   }
+  const cpB = c.querySelector('[data-a="cpar"]'), cpP = c.querySelector(".cpop");
+  const parPlace = () => { if (!cpB || !cpP || cpP.hidden) return; const pr = p.el.getBoundingClientRect(), br = cpB.getBoundingClientRect(); cpP.style.left = Math.max(4, Math.min(br.left - pr.left, p.el.clientWidth - cpP.offsetWidth - 6)) + "px"; cpP.style.top = br.bottom - pr.top + 4 + "px"; };
+  const parToggle = on => { p._parOpen = on; if (cpP) { cpP.hidden = !on; parPlace(); } };
+  if (cpB) { cpB.onclick = () => parToggle(!p._parOpen); c.querySelectorAll('[data-a="cparchip"]').forEach(b => { b.onclick = () => parToggle(true); }); parPlace();
+    if (!p._parAway) { p._parAway = e => { if (p._parOpen && p.el.isConnected && !e.target.closest(".cpop") && !e.target.closest('[data-a="cpar"],[data-a="cparchip"]')) { p._parOpen = false; const q = p.el.querySelector(".cpop"); if (q) q.hidden = true; } }; document.addEventListener("mousedown", p._parAway, true); } }
   c.querySelectorAll("[data-o]").forEach(x => {
     const k = x.dataset.o;
     if (k === "fpop") x.onclick = e => { e.stopPropagation(); fileMenu(x); };
@@ -1150,6 +1174,7 @@ function legend(p, all, note = "") {
     p.leg.innerHTML = trs + (one ? fl : `<span class="lvl sm">file:</span>${fl}`);
     p.leg.querySelectorAll("[data-hf]").forEach(b => b.onclick = () => { const k = b.dataset.hf, on = p.traces.every(t => p.hid["x|" + k + "|" + t.mz]); p.traces.forEach(t => { if (on) delete p.hid["x|" + k + "|" + t.mz]; else p.hid["x|" + k + "|" + t.mz] = true; }); draw(p); });
   } else p.leg.innerHTML = all.map(s => `<span class="tg${off(isHid(p, s))}" data-h="${s.key}" title="Clic: mostra o nascondi">${sw(s.color)}${EH(s.name)}${legPol(E.files[s.k])}</span>`).join("");
+  if (!note && (p.type === "xic" ? p.traces.length <= 1 && scanFiles(shown()).length <= 1 : all.length <= 1)) p.leg.innerHTML = "";      // one file / one trace: the name is already in the header and in the mouse box
   if (note) p.leg.insertAdjacentHTML("beforeend", `<span class="sm">${EH(note)}</span>`);
   p.leg.querySelectorAll("[data-t]").forEach(b => b.ondblclick = async () => { const t = p.traces.find(x => x.id == b.dataset.t), v = await ask("Nome dell'ione", t.label); if (v) { t.label = v; draw(p); } });
   p.leg.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { p.traces = p.traces.filter(x => x.id != b.dataset.r); ctl(p); draw(p); });
@@ -1597,7 +1622,7 @@ function showInts() {
 // ------------------------------------------------------------------ spettri
 async function drawSpec(p) {
   const tok = p._tok = (p._tok || 0) + 1;                // "last one wins": a slower, older request never paints over a newer one
-  const say = t => { const { g, W, H: HF } = setup(p.cv); g.clearRect(0, 0, W, HF); g.fillStyle = css("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; p._a = null; };
+  const say = t => { const { g, W, H: HF } = setup(p.cv); g.clearRect(0, 0, W, HF); g.fillStyle = css("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; };
   const base = p.all ? shown() : [E.files[E.browse ? E.cur : p.k]];
   const files = scanFiles(base.filter(Boolean));
   if (!files.length) return say("Questo file è MRM: contiene solo cromatogrammi di transizioni, non spettri.");
@@ -1688,7 +1713,9 @@ async function drawSpec(p) {
       isoNote = `<span><i style="background:#d62728"></i>profilo teorico ${fmtFormula(p.iso.formula)} ${fmtAdduct(p.iso.ad)}${obs ? ` (allineato al picco a m/z ${(obs.c ?? obs.m).toFixed(1)}${Math.abs(shift) >= 0.05 ? `, spostato di ${shift > 0 ? "+" : ""}${shift.toFixed(1)}` : ""})` : ` (nessun picco osservato vicino a m/z ${top.mz.toFixed(1)})`}</span>`;
     } catch (e) { isoNote = `<span class="sm">profilo isotopico: ${EH(e.message)}</span>`; }
   }
-  p.leg.innerHTML = `<span style="font-variant-numeric:tabular-nums">${scanLine(p, data, d0)}${bgOf(files[0]) ? " · fondo sottratto" : ""}</span>` + (data.length > 1 ? data.map(x => `<span><i style="background:${x.f.color}"></i>${EH(x.f.label)}${legPol(x.f)}</span>`).join("") : "") + isoNote;
+  p.leg.innerHTML = `<span style="font-variant-numeric:tabular-nums">${scanLine(p, data, d0)}${bgOf(files[0]) ? " · fondo sottratto" : ""}</span>`;       // on the row of the x axis title, to the right
+  p.leg.title = p.leg.textContent;
+  if (p.leg2) p.leg2.innerHTML = (data.length > 1 ? data.map(x => `<span><i style="background:${x.f.color}"></i>${EH(x.f.label)}${legPol(x.f)}</span>`).join("") : "") + isoNote;   // inside the graph, top right; one file = no legend
 }
 
 // ------------------------------------------------------------------ mouse
