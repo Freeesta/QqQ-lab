@@ -68,6 +68,9 @@ La finestra «Estrai uno ione (XIC)» (`openXic`, `#xicdlg` in `explore.js`/`ind
 ### R9. Finestra XIC: scegliere da quale file
 Nella stessa finestra un menu **«File»**: «i file mostrati» (predefinito: segue la modalità della barra, «Solo il selezionato» / «Tutti sovrapposti») oppure un file preciso della scheda. È solo il valore iniziale del pannello: dopo si cambia dal selettore «File n/N» dell'intestazione del pannello XIC, come oggi. Il clic destro sullo spettro (R2, XIC diretto senza finestra) usa il file dello spettro da cui parte. e2e: scelta di un file → il pannello mostra solo quello.
 
+### R10. Il sito deve mostrare subito la versione nuova
+Dopo un aggiornamento Federico non vedeva le modifiche: GitHub Pages manda i file con `cache-control: max-age=600` e il service worker (`web/sw.js`) per i file dell'app fa `fetch(req)`, che passa dalla cache HTTP del browser (fino a 10 minuti di file vecchi). Nel `fetch` dei file dell'app (non di Pyodide/Ketcher) usa `fetch(req, { cache: "no-cache" })`: il browser chiede sempre al server se il file è cambiato (risposta 304 leggera se non lo è), quindi la versione nuova arriva subito, e offline resta il ripiego sulla cache. Controlla anche `index.html` e `qqq_lab.zip` (il pacchetto Python caricato dal worker): devono seguire la stessa regola. Nessun test Pyodide: verifica la logica leggendo `sw.js` e con un test unitario leggero se possibile.
+
 ---
 
 ## BLOCCO N: perdite neutre (scheda «Perdite neutre» della finestra Tavola/Addotti/Isotopi, `web/tables.js`)
