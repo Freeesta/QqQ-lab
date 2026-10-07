@@ -17,7 +17,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (sul Mac) oppure nel clone GitHub (cloud). Leggi `
 
 ## Ordine di lavoro (per importanza)
 1. **Blocco A** grafici (`explore.js` + CSS in `index.html`)
-2. **Blocco S** semplificare: menu del clic destro, bianchi, scheda MS², via la retta di taratura, lista MRM
+2. **Blocco S** semplificare: menu del clic destro, bianchi, scheda MS², via la retta di taratura, lista MRM, polarità visibile
 3. **Blocco G** strumenti per lo spettro (misura Δm/z, %, parametri, tabella dei picchi, zoom e assi collegati)
 4. **Blocco B** aiuti e testi
 5. **Blocco C** calcolatrice + **Blocco F** Disegno (piccoli, insieme)
@@ -100,6 +100,14 @@ Decisione di Federico (7/10): **la retta la fanno gli studenti in Excel**, il pr
 ### S8. Lista dei file nella scheda MRM: dire che sono MRM
 Nella scheda MRM la lista mostra i gruppi «STANDARD» / «CAMPIONI» senza dire che sono file MRM (`grpOf` ~r.59 e ordinamento ~r.267), mentre nelle altre schede l'intestazione è il tipo di esperimento. Usa la stessa struttura delle altre schede: intestazione **«MRM»** (con l'icona e il numero di file) e, sotto, sottogruppi più piccoli «standard», «campioni», «bianchi» solo se servono (se tutti i file sono campioni, niente sottogruppo). Le righe grigie delle altre schede restano raggruppate per tipo di esperimento come oggi. e2e: intestazione «MRM» presente.
 
+### S9. Polarità visibile (oggi è solo nella finestra Metodo)
+**Stato verificato il 7/10**: la polarità viene LETTA dal file (per scansione `MS:1000130`/`MS:1000129` in `reader/mzml.py`; per gli MRM dall'intestazione, `_header_polarity` in `explore.py`; `info()["polarity"]` = positive/negative/mixed/unknown) ed è usata solo per (a) la finestra Metodo e (b) l'addotto predefinito della finestra XIC (`defAdduct` ~r.156: [M-H]- solo se TUTTI i file visibili sono negativi). Tutti i dati del laboratorio sono ESI+, quindi finora nessuno se n'è accorto. Da fare (piccolo, niente avvisi lunghi):
+1. Nella lista dei file e nella schermata di caricamento un piccolo segno **«+» o «−»** accanto al nome (etichetta: «ESI positivo» / «ESI negativo»; «±» se misto, «?» se non indicata).
+2. Addotto predefinito **per pannello**, dal file del pannello (XIC, Calcolatrice, Disegno «Ione» resta «nessuno»): negativo → [M-H]-, positivo → [M+H]+. Nella tabella Addotti metti per primi quelli della polarità dei file caricati.
+3. Se nello stesso grafico si sovrappongono file positivi e negativi, la legenda mostra il segno accanto a ogni file (nessun blocco, nessun avviso).
+4. Un file con polarità alternate va diviso (Blocco I, punto 4); finché non è fatto, nella schermata di caricamento la colonna Esperimento dice «polarità mista».
+5. Test: aggiungi a `tools/dati_sintetici.py` un Full Scan **negativo** (es. `B_FullMass-neg-t0`) e prova segno e addotto predefinito (pytest + e2e).
+
 ---
 
 ## BLOCCO G: strumenti per lo spettro di massa (Full Scan e MS2)
@@ -158,6 +166,9 @@ Le icone nelle schede (`tabs.js` ~r.12: `QICON.get(TABICON[t], 16)`) e nelle int
 
 ### B4. Schermata di caricamento: solo le frasi divertenti
 Durante il caricamento ci sono due scritte: la frase divertente grande (`explore.js` ~r.77, «Contaminando la sorgente»…) e sotto il passo tecnico in grigio (`#ldsub`: «Carico Python...», «Carico numpy...», «Carico il programma...», «Riapro i file della volta scorsa...»; scritti da `browser-worker.js` ~r.23-32 con `say()`, mostrati da `browser.js` ~r.18-20 e da `loading()` in `explore.js` ~r.93-96). Federico vuole **solo le frasi divertenti**: togli la riga `#ldsub` e i passi tecnici dall'interfaccia (lasciali, se servono, solo in `console.debug`). Eccezioni: se il caricamento **fallisce** mostra il messaggio d'errore (chiaro, in italiano) al posto della frase; se dura più di ~20 s puoi aggiungere sotto UNA riga neutra («La prima apertura scarica circa 15 MB: può volerci un minuto.») e nient'altro. e2e13 (sito) e gli e2e che leggono `#ldsub`/`qqStep` vanno adattati.
+
+### B5. Nome della palette «Daltonici»
+Nell'ingranaggio, menu «Colori dei grafici» (`settings.js` ~r.28, nomi in `explore.js` ~r.20: `cb: { name: "Daltonici" … }`), «Daltonici» suona come un'etichetta sulle persone. Rinomina le voci in modo neutro e descrittivo: **«Per tempo (predefinito)», «Accessibili», «Alto contrasto», «Arcobaleno»**; l'etichetta di «Accessibili» dice: «Colori distinguibili anche con le forme comuni di daltonismo, più linee tratteggiate». Aggiorna Teoria/aiuto/AGENTS.md (sez. 16) ed e2e che cercano il testo vecchio. La chiave interna (`cb`) e la preferenza salvata restano uguali.
 
 ---
 
