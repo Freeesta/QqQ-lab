@@ -55,7 +55,7 @@ try:
         def teoria():
             pg.evaluate("document.getElementById('ogdlg').close()")
             pg.evaluate("setView('teoria')") if False else None
-            h = pg.evaluate("fetch('static/teoria/13-origine.html').then(r=>r.text())"); assert "atrazina" in h and "flufenacet" not in h.lower()
+            h = pg.evaluate("fetch('static/teoria/17-origine.html').then(r=>r.text())"); assert "atrazina" in h and "flufenacet" not in h.lower()
             assert "Capitolo 13" in h
         step("Teoria chapter 13 exists and does not discuss the lab compound", teoria)
     r.close()

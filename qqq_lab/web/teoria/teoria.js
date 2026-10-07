@@ -1,23 +1,25 @@
 /* QqQ lab - Teoria: shared layout (header, chapter list, on-page TOC, prev/next) and tiny plotting helpers.
    Classic script, no modules, no network: the pages work from file:// and from the local server. */
 "use strict";
+// [file, number shown in the menu, title, part]. The order is the study path: each chapter uses only what comes before it.
+// The "Pratica" pages (pratica*.html) are the exercises and games; they use the same layout.
 const CHAPTERS = [
-  ["00-uso.html", "A", "Come si usa {APP}"],
-  ["index.html", "0", "Introduzione e mappa del percorso"],
-  ["01-tp.html", "1", "Prodotti di trasformazione"],
-  ["02-fotocatalisi.html", "2", "Fotocatalisi con TiO₂"],
-  ["03-lc.html", "3", "Cromatografia in fase inversa"],
-  ["04-esi.html", "4", "Elettrospray (ESI)"],
-  ["05-vuoto.html", "5", "Dalla sorgente al vuoto"],
-  ["06-quadrupolo.html", "6", "Il quadrupolo: teoria"],
-  ["07-qqq.html", "7", "Il triplo quadrupolo e la CID"],
-  ["08-frammentazione.html", "8", "Come si frammentano gli ioni"],
-  ["09-dati.html", "9", "Full scan, MS2 e MRM: leggere i dati"],
-  ["10-strategia.html", "10", "Strategia per trovare i TP"],
-  ["11-glossario.html", "11", "Glossario e bibliografia"],
-  ["12-disegno.html", "12", "Disegnare le molecole"],
-  ["13-origine.html", "13", "Da dove viene questo ione?"],
-  ["14-alta-risoluzione.html", "14", "Alta risoluzione e DDA"],
+  ["00-uso.html", "A", "Come si usa {APP}", "Guida"],
+  ["index.html", "0", "Introduzione e mappa del percorso", "Guida"],
+  ["01-tp.html", "1", "Prodotti di trasformazione", "I. Il problema"],
+  ["02-fotocatalisi.html", "2", "Fotocatalisi con TiO₂", "I. Il problema"],
+  ["04-lc.html", "4", "Cromatografia liquida (HPLC)", "II. Separare"],
+  ["06-esi.html", "6", "Elettrospray (ESI) e sorgenti a pressione atmosferica", "III. Ionizzare"],
+  ["08-vuoto.html", "8", "Dalla sorgente al vuoto", "III. Ionizzare"],
+  ["09-quadrupolo.html", "9", "Il quadrupolo: teoria", "IV. Analizzare gli ioni"],
+  ["10-qqq.html", "10", "Il triplo quadrupolo e la CID", "IV. Analizzare gli ioni"],
+  ["12-dati.html", "12", "Full scan, MS2 e MRM: leggere i dati", "V. Leggere gli spettri"],
+  ["14-frammentazione-esi.html", "14", "Frammentazione in CID (ioni a elettroni pari)", "V. Leggere gli spettri"],
+  ["17-origine.html", "17", "Da dove viene questo ione?", "V. Leggere gli spettri"],
+  ["18-strategia.html", "18", "Strategia per trovare i TP", "VI. Dal dato al risultato"],
+  ["19-hr-dda.html", "19", "Alta risoluzione e DDA nel programma", "VI. Dal dato al risultato"],
+  ["20-disegno.html", "20", "Disegnare le molecole", "VI. Dal dato al risultato"],
+  ["21-glossario.html", "21", "Glossario e bibliografia", "Appendice"],
 ];
 const APP = typeof APP_NAME === "string" ? APP_NAME : "mzLab";        // appname.js is loaded first by every page
 CHAPTERS.forEach(c => { c[2] = c[2].split("{APP}").join(APP); });
@@ -50,7 +52,9 @@ const TP = (() => {
       <span class="t">${APP} <small>· Teoria</small></span><span class="sp"></span>`);
     document.body.prepend(top);
     const side = $("#side");
-    const list = CHAPTERS.map((c, i) => `<li><a href="${c[0]}" class="${i === idx ? "on" : ""}"><b>${c[1]}</b><span>${c[2]}</span></a></li>`).join("");
+    // chapters grouped by part: a small heading each time the part changes
+    const list = CHAPTERS.map((c, i) => (c[3] && c[3] !== (CHAPTERS[i - 1] || [])[3] ? `<li class="part">${c[3]}</li>` : "") +
+      `<li><a href="${c[0]}" class="${i === idx ? "on" : ""}"><b>${c[1]}</b><span>${c[2]}</span></a></li>`).join("");
     // on-page table of contents from h2/h3
     const hs = [...document.querySelectorAll("main h2, main h3")];
     hs.forEach(h => { if (!h.id) h.id = slug(h.textContent); });
@@ -71,7 +75,7 @@ const TP = (() => {
       }, { rootMargin: "-70px 0px -70% 0px" });
       hs.forEach(h => io.observe(h));
     }
-    document.title = `${CHAPTERS[idx][1] === "0" ? "" : CHAPTERS[idx][1] + ". "}${CHAPTERS[idx][2]} · Teoria ${APP}`;
+    document.title = `${/^[0-9]+$/.test(CHAPTERS[idx][1]) && CHAPTERS[idx][1] !== "0" ? CHAPTERS[idx][1] + ". " : ""}${CHAPTERS[idx][2]} · ${/^pratica/.test(here) ? "Pratica" : "Teoria"} ${APP}`;
     renameApp();
   }
 
@@ -203,10 +207,10 @@ const TP = (() => {
 
 
   // ---------------------------------------------------------------- glossary hints
-  // Every glossary term (glossario-dati.js, generated from 11-glossario.html by tools/genera_glossario.py) found in the text gets a dotted
+  // Every glossary term (glossario-dati.js, generated from 21-glossario.html by tools/genera_glossario.py) found in the text gets a dotted
   // underline; the mouse over it (or focus / tap) shows the short definition and a link to its chapter.
   function glossary() {
-    if (here === "11-glossario.html") return;
+    if (here === "21-glossario.html") return;
     const s = document.createElement("script"); s.src = "glossario-dati.js"; s.onload = () => { try { markTerms(GLOSSARIO); } catch (_) { /* hints are optional */ } };
     document.head.appendChild(s);
   }

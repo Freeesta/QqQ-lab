@@ -2,13 +2,14 @@
 and the interactive figures draw something. Also opens index.html directly from disk (file://)."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+import re
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:200]))
-PAGES = ["index.html", "01-tp.html", "02-fotocatalisi.html", "03-lc.html", "04-esi.html", "05-vuoto.html",
-         "06-quadrupolo.html", "07-qqq.html", "08-frammentazione.html", "09-dati.html", "10-strategia.html",
-         "11-glossario.html", "12-disegno.html", "00-uso.html"]
+# every page of the menu (chapters and Pratica), read from the CHAPTERS list of teoria.js: a new chapter is tested by itself
+PAGES = re.findall(r'^\s*\["([\w.-]+\.html)"', (ROOT / "qqq_lab" / "web" / "teoria" / "teoria.js").read_text(encoding="utf-8"), re.M)
+assert len(PAGES) >= 14, PAGES
 r = Run(port=8817, wd="/tmp/wd7")
 try:
     with sync_playwright() as p:
@@ -39,7 +40,7 @@ try:
             pg.screenshot(path=SH + "71_" + name.replace(".html", "") + ".png", full_page=True)
         def filemode():
             n0 = len(r.errs)
-            pg.goto("file://" + str(ROOT / "qqq_lab" / "web" / "teoria" / "06-quadrupolo.html")); pg.wait_for_timeout(1500)
+            pg.goto("file://" + str(ROOT / "qqq_lab" / "web" / "teoria" / "09-quadrupolo.html")); pg.wait_for_timeout(1500)
             assert pg.locator("#sim-stab canvas").count() == 2
             bad = [e for e in r.errs[n0:] if e[0] in ("pageerror", "console.error")]
             assert not bad, bad
