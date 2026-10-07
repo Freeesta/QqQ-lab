@@ -133,7 +133,7 @@ function uiSave(now = false) {
       tab: E.tab, cur: E.cur, browse: E._forced ? E._prev : E.browse, fold: E.fold, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined })),
       panels: E.panels.map(p => ({
         type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, kind: p.kind, smooth: p.smooth, tol: p.tol,
-        traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label })),
+        traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label, ion: t.ion || undefined, obs: t.obs || undefined })),
         k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
         link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1, imode: p.imode || null, intf: p.intf || "",
         lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, ibk: p.ibk || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, view: p.view, norm: p.norm, az: p.az, elv: p.elv, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
@@ -890,9 +890,9 @@ function ctl(p) {
   if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind" class="ttlsel" title="Tipo di cromatogramma"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>TIC (somma)</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="Picco base: lo ione più intenso di ogni scan. Non esiste nei file MRM (si registrano solo le transizioni scelte)">BPC (picco base)</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="Segnale del rivelatore a serie di diodi (PDA/UV): non dipende dallo spettrometro di massa">PDA (UV, totale)</option></select>`}${chk("smooth", "smoothing")}${view}${parBox(`${p.kind === "pda" ? "" : precSel + (hasScan ? mzbar : "")}${logChk}${corr}${p.type === "chrom" && p.tab === "full" && E.files.some(x => x.ms2_events) ? chk("ms2tri", "mostra le MS2", false, "", "Un triangolino in alto ogni volta che è partita una scansione MS2 (file con survey e MS2 insieme). Clic su un triangolino: apre quello spettro MS2 nella scheda MS2") : ""}`)}`;
   if (p.type === "xic") {
     p._xt = Math.min(p._xt || 0, Math.max(0, p.traces.length - 1));
-    const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0;
+    const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0, xed = xt && window.HR ? HR.xicEdges(xt, p) : null;      // xed: lower / upper m/z of an ion read in high resolution (ppm window)
     const xsel = p.traces.length > 1 ? `<select data-o="xt" title="Quale XIC modificare">${p.traces.map((t, i) => `<option value="${i}" ${i === p._xt ? "selected" : ""}>XIC ${i + 1}</option>`).join("")}</select>` : "";
-    const xr = xt ? `${xsel}<label class="muted" title="Intervallo di m/z estratto (XIC). Scrivi i due estremi e premi Invio"><i>m/z</i> da <input data-o="xlo" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(xt.mz - xw1)}"> a <input data-o="xhi" class="mzf" inputmode="decimal" autocomplete="off" value="${fmz(xt.mz + xw1)}"></label>` : "";
+    const xr = xt ? `${xsel}<label class="muted" title="Intervallo di m/z estratto (XIC). Scrivi i due estremi e premi Invio"><i>m/z</i> da <input data-o="xlo" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[0] : fmz(xt.mz - xw1)}"> a <input data-o="xhi" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[1] : fmz(xt.mz + xw1)}"></label>` : "";
     c.innerHTML = `${xr}${fsel}${chk("smooth", "smoothing")}${view}${parBox(logChk + corr)}${p.traces.length > 1 ? '<button data-o="split" title="Un pannello per ogni ione">Separa</button>' : ""}`;
   }
   if (p.type === "mrm") c.innerHTML = `<select data-o="tr" title="Transizione"><option value="">tutte le transizioni</option>${p._trs.map(t => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${fsel}${chk("smooth", "smoothing", false, "", "Spento: le aree si calcolano sul segnale grezzo. Lo smoothing cambia solo il disegno, mai le aree integrate (nell'MRM si integra, per questo parte spento)")}${view}${parBox(logChk + corr)}`;
@@ -924,8 +924,12 @@ function ctl(p) {
     if (k === "fpop") x.onclick = e => { e.stopPropagation(); fileMenu(x); };
     else if (k === "xt") x.onchange = () => { p._xt = +x.value; ctl(p); };
     else if (k === "xlo" || k === "xhi") x.onchange = () => {
-      const t = p.traces[p._xt], lo = numMz1(c.querySelector('[data-o="xlo"]').value), hi = numMz1(c.querySelector('[data-o="xhi"]').value);
-      if (t && lo != null && hi != null && hi > lo) { t.mz = rh((lo + hi) / 2, 2); t.w = rh((hi - lo) / 2, 2); t.label = `m/z ${fmz(lo)}-${fmz(hi)}`; }
+      const t = p.traces[p._xt], hrE = t && t.ion && window.HR && HR.xicEdges(t, p), nm = v => hrE ? (isFinite(parseFloat(v)) && parseFloat(v) > 0 ? rh(parseFloat(String(v).replace(",", ".")), 5) : null) : numMz1(v);
+      const lo = nm(c.querySelector('[data-o="xlo"]').value), hi = nm(c.querySelector('[data-o="xhi"]').value);
+      if (t && lo != null && hi != null && hi > lo) {                       // the student writes the edges: from now on it is an explicit window in Da, the same for every file
+        const d = hrE ? HR.dec(HR.xicFiles(p.tab), 1) : 1;
+        t.mz = rh((lo + hi) / 2, hrE ? 5 : 2); t.w = rh((hi - lo) / 2, hrE ? 5 : 2); t.label = `m/z ${hrE ? lo.toFixed(d) + "-" + hi.toFixed(d) : fmz(lo) + "-" + fmz(hi)}`; delete t.ion; delete t.obs;
+      }
       ctl(p); draw(p);
     };
     else if (k === "view") x.onclick = () => { setMapView(p, x.dataset.v); };
@@ -975,12 +979,13 @@ let XIC_LAST = null;       // the last ion the student asked for ({mz} or {formu
 function xicDirect(mz, after, panel) {
   const [a, b] = xicWin(mz, true), c = rh((a + b) / 2, 2), w = rh((b - a) / 2, 2), lab = `m/z ${fmz(a)}-${fmz(b)}`;
   XIC_LAST = { mz };
-  if (panel && E.panels.includes(panel)) { addTrace(panel, c, lab, w); reveal(panel); return panel; }
-  const np = addPanel("xic", { traces: [{ id: E.seq++, mz: c, w, label: lab }] });
+  const ht = window.HR && HR.ionTrace(mz, { obs: true, tab: panel && panel.tab });          // a high-resolution file among the files: the ion with its ppm window
+  if (panel && E.panels.includes(panel)) { if (ht) { panel.traces.push(ht); ctl(panel); draw(panel); } else addTrace(panel, c, lab, w); reveal(panel); return panel; }
+  const np = addPanel("xic", { traces: [ht || { id: E.seq++, mz: c, w, label: lab }] });
   if (after && E.panels.includes(after)) { stackAfter(np, after); relayout(); fitHost(); }
   reveal(np); return np;
 }
-const xicName = q => { const t = q.traces[0]; return t ? "m/z " + (t.w != null ? Math.round(t.mz - (0.5 - XIC_BELOW)) : fmz(t.mz)) + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : "vuoto"; };
+const xicName = q => { const t = q.traces[0]; return t && t.ion ? t.label + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : t ? "m/z " + (t.w != null ? Math.round(t.mz - (0.5 - XIC_BELOW)) : fmz(t.mz)) + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : "vuoto"; };
 // Estrai ioni (XIC): a list of rows (2 at the start, up to 10), each one an m/z or a neutral formula (+ adduct); all the ions go into the SAME panel, one trace per ion.
 const XIC_MAXROWS = 10, XIC_ADDUCTS = ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+", "[M-H]-", "[M+Cl]-", "[M+HCOO]-"];
 function openXic(panel, pre = {}) {
@@ -993,18 +998,29 @@ function openXic(panel, pre = {}) {
     rows.forEach((r, i) => { r.lab.textContent = i === 0 ? "Ione 1" : `Ione ${i + 1} (facoltativo)`; r.x.hidden = rows.length < 2; r.inp.placeholder = i === 0 ? "m/z (es. 364.1) o formula (es. C9H10Cl2N2O)" : "facoltativo"; r.inp.id = i === 0 ? "xic-mz" : ""; r.ad.id = i === 0 ? "xic-ad" : ""; r.sum.id = i === 0 ? "xic-sum" : ""; });
     addB.disabled = rows.length >= XIC_MAXROWS;
   };
+  const xtab = () => panel && E.panels.includes(panel) ? panel.tab || E.tab : E.tab;
+  const hrFile = () => window.HR ? HR.xicFiles(xtab()).find(f => HR.isHr(f, f.lv)) : null;       // high resolution: the ion is a number with the decimals of the profile, ppm window
+  const lowFiles = () => window.HR ? HR.xicFiles(xtab()).some(f => !HR.isHr(f, f.lv)) : true;
+  const sumText = r => {                                                    // one line under the row: the window(s) that will be used
+    const hf = hrFile(), unit = r.win ? `<i>m/z</i> ${fmz(r.win[0])} - ${fmz(r.win[1])}` : "";
+    return hf && r.ex != null ? HR.ionText(r.ex, hf).replace("m/z", "<i>m/z</i>") + (lowFiles() ? ` <span class="muted">(bassa risoluzione: ${unit})</span>` : "") : unit;
+  };
   const evalRow = r => {
-    const t = r.inp.value.trim(), ed = ++r.edits; err.textContent = "";
+    const t = r.inp.value.trim(), ed = ++r.edits; err.textContent = ""; r.ex = null;
     r.ad.hidden = !t || isNum(t);
     if (!t) { r.win = null; r.label = ""; r.sum.textContent = ""; r.pending = Promise.resolve(); return; }
-    if (isNum(t)) { const v = numMz1(t); r.win = v != null ? xicWin(v, r.obs) : null; r.label = ""; r.sum.innerHTML = r.win ? `<i>m/z</i> ${fmz(r.win[0])} - ${fmz(r.win[1])}` : ""; r.pending = Promise.resolve(); return; }
+    if (isNum(t)) {
+      const v = numMz1(t), x = parseFloat(t.replace(",", "."));
+      if (hrFile() && isFinite(x) && x > 0) r.ex = rh(x, 5);
+      r.win = v != null ? xicWin(v, r.obs) : null; r.label = ""; r.sum.innerHTML = r.win ? sumText(r) : ""; r.pending = Promise.resolve(); return;
+    }
     r.win = null; r.sum.textContent = "";
     r.pending = (async () => {
       try {
         const f = await getFormula(t, r.ad.value);
         if (ed !== r.edits) return;
-        r.label = `${f.formula} ${f.adduct}`; r.win = xicWin(f.mz, false);
-        r.sum.innerHTML = (t.replace(/\s+/g, "") !== f.formula ? `interpretata come <b>${fmtFormula(f.formula)}</b>: ` : "") + `<i>m/z</i> ${fmz(r.win[0])} - ${fmz(r.win[1])}`;
+        r.label = `${f.formula} ${f.adduct}`; r.win = xicWin(f.mz, false); if (hrFile()) r.ex = f.mz;
+        r.sum.innerHTML = (t.replace(/\s+/g, "") !== f.formula ? `interpretata come <b>${fmtFormula(f.formula)}</b>: ` : "") + sumText(r);
       } catch (e) { if (ed === r.edits) r.sum.innerHTML = `<span class="fail">formula non valida</span>`; }
     })();
   };
@@ -1034,11 +1050,14 @@ function openXic(panel, pre = {}) {
     const bad = used.find(r => !r.win); if (bad) { err.textContent = "Una riga non è valida: scrivi un m/z oppure una formula neutra."; bad.inp.focus(); return; }
     const seen = new Set(), traces = [];
     used.forEach(r => {
+      if (r.ex != null && hrFile()) {                                       // high resolution: the ion (exact m/z), each file reads it with its own tolerance
+        const ht = HR.ionTrace(r.ex, { obs: r.obs, prefix: r.label, tab: xtab() }), key = "ion|" + ht.mz; if (seen.has(key)) return; seen.add(key); traces.push(ht); return;
+      }
       const [a, b] = r.win, mz = rh((a + b) / 2, 2), w = rh((b - a) / 2, 2), key = mz + "|" + w; if (seen.has(key)) return; seen.add(key);
       traces.push({ id: E.seq++, mz, w, label: (r.label ? r.label + " · " : "") + `m/z ${fmz(a)}-${fmz(b)}` });
     });
     d.close();
-    const r0 = used[0]; XIC_LAST = isNum(r0.inp.value.trim()) ? { mz: numMz1(r0.inp.value) ?? (r0.win[0] + r0.win[1]) / 2 } : { formula: r0.inp.value.trim(), adduct: r0.ad.value };
+    const r0 = used[0]; XIC_LAST = isNum(r0.inp.value.trim()) ? { mz: r0.ex ?? numMz1(r0.inp.value) ?? (r0.win[0] + r0.win[1]) / 2 } : { formula: r0.inp.value.trim(), adduct: r0.ad.value };
     let np;
     if (panel && E.panels.includes(panel)) { traces.forEach(t => panel.traces.push(t)); np = panel; ctl(np); }
     else {
@@ -1082,7 +1101,7 @@ function snipBaseline(y, w) {
 }
 async function blankTrace(p, s) {
   const b = E.files[+p.bk]; if (!b) return null;
-  if (p.type === "xic") { const d = await getXic(b.k, s.mz, (p.traces.find(t => t.id === s.tid) || {}).w ?? p.tol, b.lv); return d && { x: d.rt, y: d.y }; }
+  if (p.type === "xic") { const tr = p.traces.find(t => t.id === s.tid) || {}, d = await getXic(b.k, ...(tr.ion && window.HR ? HR.xicArgs(b, tr, p) : [s.mz, tr.w ?? p.tol]), b.lv); return d && { x: d.rt, y: d.y }; }
   if (p.type === "chrom") { const d = await getChrom(b.k, p.kind, b.lv); return { x: d.rt, y: d.y }; }
   const tr = (await getMrm(b.k)).find(t => `${t.q1}>${t.q3}` === s.ion); return tr && { x: tr.rt, y: tr.y };
 }
@@ -1128,7 +1147,7 @@ async function rawSeries(p) {
   const files = shown();
   if (p.type === "xic") {
     const ts = p.traces, out = [];
-    scanFiles(files).forEach((f, fi) => ts.forEach((t, ti) => out.push(getXic(f.k, t.mz, t.w ?? p.tol, f.lv).then(d => ({
+    scanFiles(files).forEach((f, fi) => ts.forEach((t, ti) => out.push(getXic(f.k, ...(t.ion && window.HR ? HR.xicArgs(f, t, p) : [t.mz, t.w ?? p.tol]), f.lv).then(d => ({
       x: d.rt, y: d.y, k: f.k, mz: t.mz, tid: t.id, key: `x|${f.k}|${t.mz}`, ion: t.label, time: f.time,
       color: ts.length === 1 ? f.color : PAL[ti % PAL.length], dash: f.type === "blank" ? [4, 3] : ts.length > 1 ? (fi > 0 ? DASHES[fi % 4] : []) : fdash(f),
       name: ts.length === 1 ? f.label : `${t.label} · ${f.label}`, tid_label: t.label })))));

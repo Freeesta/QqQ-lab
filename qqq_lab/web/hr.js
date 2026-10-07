@@ -95,6 +95,31 @@ const HR = (() => {
     g.restore(); g.font = fpx(11);
     return `<span><i style="background:#d62728"></i>profilo teorico ${fmtFormula(p.iso.formula)} ${fmtAdduct(p.iso.ad)}${obsTop ? ` (M: ${obsTop.e >= 0 ? "+" : "−"}${Math.abs(obsTop.e).toFixed(1)} ppm)` : ` (nessun picco osservato entro ${+tol.toFixed(1)} ppm da m/z ${top.mz.toFixed(HR.prof(f, p.level).dec)})`}</span>`;
   }
-  return { LOW, on, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, notice, isoFine, drawIso };
+  // ---------------------------------------------------------------- XIC of an ion
+  // A trace {mz, ion: true} is an ion: its exact m/z. Each file reads it with ITS tolerance: ppm of the profile for a high-resolution file,
+  // the unit window of today (xicWin, explore.js) for the others. A classic trace {mz, w} is an explicit window in Da (all files alike).
+  const xicFiles = tab => scanFiles(tabFiles(tab || E.tab));
+  const ionText = (mz, f) => { const q = prof(f, f.lv); return `m/z ${(+mz).toFixed(q.dec)} \u00b1 ${+q.tol.toFixed(1)} ppm`; };
+  // the trace for an ion if a high-resolution file is among the files the XIC is for; otherwise null (the caller makes the classic unit-window trace)
+  function ionTrace(mz, o = {}) {
+    const fs = xicFiles(o.tab), hf = fs.find(f => isHr(f, f.lv));
+    if (!on() || !hf) return null;
+    return { id: E.seq++, mz: +(+mz).toFixed(5), ion: true, obs: !!o.obs && !fs.every(f => isHr(f, f.lv)), label: (o.prefix ? o.prefix + " \u00b7 " : "") + ionText(mz, hf) };
+  }
+  // [centre, half width] in Da of trace t for file f
+  function xicArgs(f, t, p) {
+    if (!t.ion) return [t.mz, t.w ?? p.tol];
+    const q = prof(f, f.lv);
+    if (q.hr) return [t.mz, t.mz * q.tol * 1e-6];
+    const [a, b] = xicWin(t.mz, t.obs);
+    return [rh((a + b) / 2, 2), rh((b - a) / 2, 2)];
+  }
+  // lower and upper m/z written in the header of an XIC panel for trace t (ion traces: the window of the first high-resolution file)
+  function xicEdges(t, p) {
+    const f = xicFiles(p.tab).find(x => isHr(x, x.lv)), q = f && prof(f, f.lv);
+    if (!t.ion || !q) return null;
+    const d = q.dec, w = t.mz * q.tol * 1e-6; return [+(t.mz - w).toFixed(d + 1), +(t.mz + w).toFixed(d + 1)];
+  }
+  return { LOW, on, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
 })();
 window.HR = HR;
