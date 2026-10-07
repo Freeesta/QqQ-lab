@@ -17,19 +17,21 @@
   // while the engine loads the page shows the same loading screen as everywhere else (#loading, funny phrases);
   // the step text goes under the phrase (#ldsub). window.qqStep is also read by loading() in explore.js.
   window.qqStep = "Preparo il motore di calcolo...";
-  const step = t => { window.qqStep = t; const e = document.getElementById("ldsub"); if (e) e.textContent = t; };
+  // technical steps go to the console only (the screen shows just the funny phrases); an ERROR replaces the phrase, clearly, in Italian
+  const step = t => { window.qqStep = t; console.debug("[QqQ lab]", t); };
+  const fail = t => { window.qqFailed = t; const show = () => { const m = document.getElementById("ldmsg"), s = document.getElementById("ldsub"); if (m) m.textContent = t; if (s) s.textContent = ""; }; show(); document.addEventListener("DOMContentLoaded", show); };
   document.addEventListener("DOMContentLoaded", () => step(window.qqStep));
 
   const ready = new Promise((res, rej) => {
-    if (!worker) { const t = "questo browser è troppo vecchio: usa una versione recente di Chrome, Edge, Firefox o Safari."; failed = t; document.addEventListener("DOMContentLoaded", () => step(t)); return rej(new Error(t)); }
+    if (!worker) { const t = "questo browser è troppo vecchio: usa una versione recente di Chrome, Edge, Firefox o Safari."; failed = t; fail(t); return rej(new Error(t)); }
     worker.onmessage = ev => {
       const m = ev.data;
       if (m.type === "step") return step(m.text);
       if (m.type === "ready") { isReady = true; window.qqStep = ""; return res(); }
-      if (m.type === "fatal") { failed = m.text; step("Non riesco ad avviare il motore di calcolo: " + m.text); return rej(new Error(m.text)); }
+      if (m.type === "fatal") { failed = m.text; fail("Non riesco ad avviare il motore di calcolo: " + m.text); return rej(new Error(m.text)); }
       const p = pending.get(m.id); if (!p) return; pending.delete(m.id); p(m);
     };
-    worker.onerror = e => { failed = e.message || "errore del worker"; step("Errore: " + failed); rej(new Error(failed)); };
+    worker.onerror = e => { failed = e.message || "errore del worker"; fail("Errore: " + failed); rej(new Error(failed)); };
   });
   ready.catch(() => {});
 

@@ -26,7 +26,7 @@ canvas{display:block;width:100%}
 .alt{color:var(--muted);font-size:12px}
 
 .hq{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;margin:0 4px;border-radius:50%;border:1px solid var(--accent);color:var(--accent);background:var(--panel);font-size:11px;font-weight:700;line-height:1;cursor:help;vertical-align:middle;flex:none}.hq:hover{background:var(--accent);color:#fff}
-#helppop{position:fixed;z-index:10001;max-width:min(420px,92vw);background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;box-shadow:0 8px 26px rgba(20,30,50,.22);padding:8px 12px;font-size:12.5px;line-height:1.5;color:var(--ink)}#helppop .hp-t{display:flex;align-items:center;margin-bottom:4px}#helppop .hp-t b{flex:1;font-size:13px}
+#helppop.guide{max-height:80vh;overflow:auto;width:min(760px,94vw)}#helppop .hp-s{margin:6px 0 10px;padding-left:8px;border-left:3px solid var(--line)}#helppop details{margin:8px 0}#helppop summary{cursor:pointer}#helppop{position:fixed;z-index:10001;max-width:min(420px,92vw);background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;box-shadow:0 8px 26px rgba(20,30,50,.22);padding:8px 12px;font-size:12.5px;line-height:1.5;color:var(--ink)}#helppop .hp-t{display:flex;align-items:center;margin-bottom:4px}#helppop .hp-t b{flex:1;font-size:13px}
 [hidden]{display:none!important}
 .tbg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}.tbg button{border:0;border-radius:0;color:var(--muted);padding:3px 9px}.tbg button+button{border-left:1px solid var(--line)}.tbg button.on{background:var(--accent);color:#fff}#start{max-width:920px;margin:16px auto;padding:0 14px;font-size:calc(13px + 2pt)}#flist,#mlist{overflow-x:auto}#start .card{min-width:0}#start .card h3{font-size:inherit}#start #drop b,#start #dropdam b{font-size:inherit}
 #start table input,#start table select{font-size:inherit}#start th select{font-weight:400}#start .note{margin-top:6px;color:var(--accent)}
@@ -104,12 +104,12 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 <section id="v-data" hidden>
  <aside id="dfiles"><div class="card"><div class="bar"><b>File</b><span class="sp"></span><button id="addf" title="Carica altri file">+</button><button id="ffold" title="Nascondi l'elenco dei file: più spazio ai grafici">&#9664;</button></div><div id="flst"></div><div id="fnote"></div></div></aside>
  <div>  <div id="dtabs"></div>
-  <div class="bar" id="tools"><button id="funfold" hidden title="Mostra l'elenco dei file">&#9654; File</button><button class="hq" data-help="toolbar" title="Che cos'è?">?</button>
-   <span class="tbx" id="g-file"><span id="navfile"><button id="fprev" title="File precedente (freccia sinistra)">&#9664;</button> <select id="fsel"></select> <button id="fnext" title="File successivo (freccia destra)">&#9654;</button></span><span class="seg" id="fmode" title="Con «Solo il file selezionato» i grafici mostrano un file alla volta (gli XIC restano, cambia il campione: le frecce ◀ ▶ lo cambiano); con «Tutti i file sovrapposti» i file spuntati nell'elenco sono disegnati insieme."><button data-m="sel">Solo il selezionato</button><button data-m="all">Tutti sovrapposti</button></span><button class="hq" data-help="nav" title="Che cos'è?">?</button></span>
+  <div class="bar" id="tools"><button id="funfold" hidden title="Mostra l'elenco dei file">&#9654; File</button>
+   <span class="tbx" id="g-file"><span id="navfile"><button id="fprev" title="File precedente (freccia sinistra)">&#9664;</button> <select id="fsel"></select> <button id="fnext" title="File successivo (freccia destra)">&#9654;</button></span><span class="seg" id="fmode" title="Con «Solo il file selezionato» i grafici mostrano un file alla volta (gli XIC restano, cambia il campione: le frecce ◀ ▶ lo cambiano); con «Tutti i file sovrapposti» i file spuntati nell'elenco sono disegnati insieme."><button data-m="sel">Solo il selezionato</button><button data-m="all">Tutti sovrapposti</button></span></span>
    <span class="tbx" id="g-add"><button id="np-chrom">+ Cromatogramma</button><button id="np-spec">+ Spettro</button><button id="np-map" title="Mappa di tutti gli ioni nel tempo: ogni pixel è un m/z a un certo RT">+ Mappa RT-m/z</button><button id="np-xic" title="Estrai il cromatogramma di uno ione (XIC): scegli tu la finestra di m/z">+ XIC</button><button id="np-mrm">+ Transizioni MRM</button></span>
    <span class="tbx" id="g-tools"><button id="np-merge" title="Porta tutti gli XIC in un solo pannello">Unisci gli XIC</button><button id="np-tile" title="Mette i pannelli uno sotto l'altro, larghi come la pagina">Ordina</button></span>
    <button id="np-more" hidden title="Altri strumenti">Altro &#9662;</button>
-   <span class="sp"></span><button id="np-method" class="imp" title="Come sono stati acquisiti questi dati: tipo di esperimento, intervallo di massa, transizioni e parametri del metodo"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.8 2.5H4.6A1.6 1.6 0 0 0 3 4.1v8.8a1.6 1.6 0 0 0 1.6 1.6h6.8a1.6 1.6 0 0 0 1.6-1.6V4.1a1.6 1.6 0 0 0-1.6-1.6h-1.2"/><rect x="5.8" y="1" width="4.4" height="2.8" rx="1"/><path d="M5.4 6h5.2"/><path d="M5 12h1.7c.9 0 1-3 1.3-3s.4 3 1.3 3H11"/></svg>Metodo</button><button class="hq" data-help="tools" title="Che cos'è?">?</button></div>
+   <span class="sp"></span><button id="np-method" class="imp" title="Come sono stati acquisiti questi dati: tipo di esperimento, intervallo di massa, transizioni e parametri del metodo"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.8 2.5H4.6A1.6 1.6 0 0 0 3 4.1v8.8a1.6 1.6 0 0 0 1.6 1.6h6.8a1.6 1.6 0 0 0 1.6-1.6V4.1a1.6 1.6 0 0 0-1.6-1.6h-1.2"/><rect x="5.8" y="1" width="4.4" height="2.8" rx="1"/><path d="M5.4 6h5.2"/><path d="M5 12h1.7c.9 0 1-3 1.3-3s.4 3 1.3 3H11"/></svg>Metodo</button></div>
   <div id="tabempty" class="card" hidden></div>
   <div id="dpanels"></div></div>
 </section>
@@ -125,7 +125,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
   <div class="card"><h3>Disegna veloce</h3><div class="bar"><input id="ex-smi" placeholder="Incolla uno SMILES" style="flex:1"><button id="ex-load">Disegna</button></div>
    <div id="smi-warn" class="sm" style="color:#b3261e;margin-top:4px" hidden></div></div>
   <div class="card" id="sel-card" hidden><h3>SMILES della selezione</h3><div id="sel-body"></div></div>
-  <div class="card" id="prop-card" hidden><h3>Propriet&agrave; previste <button class="hq" data-help="prop" title="Che cos&#39;&egrave;?">?</button></h3><div id="prop-body"></div></div>
+  <div class="card" id="prop-card" hidden><h3>Propriet&agrave; previste</h3><div id="prop-body"></div></div>
   <div class="card"><h3>Esporta la tela</h3><div class="bar"><button id="ex-png">PNG</button><button id="ex-jpg">JPEG</button><button id="ex-svg">SVG</button><button id="ex-ket">Salva (.ket)</button></div>
    <label class="muted sm" title="PNG e SVG con sfondo trasparente (il JPEG non lo supporta: con questa spunta il pulsante JPEG è disattivato). Senza spunta lo sfondo è bianco."><input type="checkbox" id="ex-nobg" autocomplete="off"> Sfondo trasparente</label>
    <div class="bar" style="margin-top:6px"><label class="muted sm" title="Nome dei file scaricati (senza estensione). Predefinito: disegno_data_ora. Solo lettere minuscole senza accento, numeri, trattino e trattino basso.">Nome file <input id="ex-name" autocomplete="off" spellcheck="false" style="width:200px"></label></div>
@@ -141,14 +141,14 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
  <li>Scegli il <b>tipo di trasformazione</b>. Per l'ambiente si provano «Environmental Microbial» e «Abiotic»; «CYP450», «Phase II» e gut microbiota riguardano il metabolismo umano: chiediti se hanno senso per la tua reazione. Nessun modulo simula esplicitamente l'ossidazione radicalica da TiO<sub>2</sub>/UV: usa i risultati come spunto.</li>
  <li>Imposta il numero di <b>iterazioni</b> (passi di reazione): 1 dà i prodotti primari, 2-3 i secondari (ma le liste crescono molto).</li>
  <li>Invia e attendi la tabella dei prodotti (formula, massa monoisotopica, SMILES).</li>
- <li>Torna qui: calcola [M+H]<sup>+</sup> = massa + 1.00728 e controlla nel full scan, con una finestra di ±1 Da, se compare uno ione che cresce con il tempo. Una previsione è un'ipotesi: la conferma viene da MS/MS e tempo di ritenzione. Annota i candidati che trovi (m/z, RT, andamento) per la relazione.</li></ol>
+ <li>Torna qui: calcola [M+H]<sup>+</sup> = massa + 1.00728 e controlla nel full scan, con una finestra di ±1 Da, se compare uno ione che cresce con il tempo. Annota i candidati che trovi (m/z, RT, andamento) per la relazione.</li></ol>
  <div class="bar"><button id="bt-open">Riapri BioTransformer</button><span class="sp"></span><button id="btx2">Chiudi</button></div></div>
 <div id="loading"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><div id="ldmsg"></div><div id="ldsub"></div></div>
 <dialog id="calcdlg" style="max-width:560px"><div class="top" style="display:flex"><h3 style="margin:0;flex:1">Calcolatrice m/z</h3><button class="x" id="calcx" title="Chiudi">&times;</button></div>
- <div class="muted sm">Scrivi la formula bruta (anche con parentesi, es. C9H10N2O). Lo strumento ha risoluzione unitaria: in pratica conta la prima cifra decimale, e a volte solo l'intero.</div>
+ <div class="muted sm">Scrivi la formula bruta (anche con parentesi, es. C9H10N2O).</div>
  <input id="calcin" placeholder="formula bruta, es. C14H12Cl2NO3" autocomplete="off"><div id="calcout"></div></dialog>
 <dialog id="xicdlg" style="max-width:520px"><h3 style="margin:0 0 6px">Estrai uno ione (XIC)</h3>
- <div class="muted sm">XIC significa <i>Extracted Ion Chromatogram</i>: è il cromatogramma ricostruito mostrando <b>solo i segnali con <i>m/z</i> dentro un intervallo scelto</b>, mentre gli altri ioni sono ignorati. È da questo cromatogramma che si integra. Lavorando a <b>bassa risoluzione (risoluzione unitaria)</b> si sceglie un intervallo <b>unitario</b>, largo 1 Da, attorno alla massa nominale dello ione.</div>
+ <div class="muted sm">XIC (<i>Extracted Ion Chromatogram</i>): il cromatogramma dei <b>soli segnali con <i>m/z</i> dentro un intervallo</b> largo 1 Da attorno alla massa nominale dello ione. Si integra da qui.</div>
  <div class="xrow"><label>Un valore di <i>m/z</i> <input id="xic-mz" class="mzf" inputmode="decimal" step="0.1" autocomplete="off" placeholder="es. 364.1"></label></div>
  <div class="xor">oppure</div>
  <div class="xrow"><label>Formula <b>neutra</b> (senza carica, es. C9H10Cl2N2O) <input id="xic-q" placeholder="C9H10Cl2N2O" autocomplete="off" style="width:170px"></label> <select id="xic-ad" title="L'addotto trasforma la formula neutra nell'm/z dello ione: [M+H]+ aggiunge un protone"></select></div>
@@ -158,7 +158,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 <div id="ctx" hidden></div>
 <section id="start" hidden>
  <div class="card" id="loaded" hidden></div>
- <div class="card req"><h3>1. Carica i file dei dati (.mzML) <button class="hq" data-help="start" title="Che cos'è?">?</button></h3>
+ <div class="card req"><h3>1. Carica i file dei dati (.mzML)</h3>
   <div id="drop"><b>Trascina qui i file .mzML</b><br>oppure <u>clicca per sceglierli dal computer</u></div>
   <details id="wiffhelp" class="sm"><summary>Hai i file .wiff dello strumento? Convertili prima in .mzML</summary>
    <ol class="muted">

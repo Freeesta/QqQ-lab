@@ -17,7 +17,7 @@ const PALS = {
   // viridis cut at 72% (the yellow end is almost invisible on white): dark purple (t0) to green; neighbours stay >= 8 in CIE Lab even for n = 7 and with CVD
   time: { name: "Per tempo (predefinito)", seq: VIRIDIS, a: 0, b: 0.72, cat: ["#1f77b4", "#e6550d", "#2ca02c", "#9467bd", "#d62728", "#17becf", "#bcbd22", "#e377c2", "#8c564b", "#0b6e4f", "#f2a900", "#5b5fc7"], blank: "#8a8a8a", std: "#4d4d4d" },
   // CVD-safe: cividis (varies in lightness, not in hue) + line style as a second code; Okabe-Ito for files without time
-  cb: { name: "Daltonici", seq: CIVIDIS, a: 0, b: 0.75, cat: OKABE, dash: true, blank: "#8a8a8a", std: "#4d4d4d" },
+  cb: { name: "Accessibili", seq: CIVIDIS, a: 0, b: 0.75, cat: OKABE, dash: true, blank: "#8a8a8a", std: "#4d4d4d" },
   // every colour >= 4.5:1 on white (cividis dark half, dark saturated categorical), +1 px lines, line style as a second code, black text and axes
   hc: { name: "Alto contrasto", seq: CIVIDIS, a: 0, b: 0.45, cat: ["#003f9e", "#b30000", "#006b2e", "#6a1b9a", "#8a4b00", "#00727f", "#a1006b", "#000000"], dash: true, lw: 1, blank: "#6e6e6e", std: "#333333" },
   // well separated hues; on time series the hue order still follows the time
@@ -78,6 +78,7 @@ const PHRASES = [
 // loading screen: one phrase every 5 s, in random order without repeats; the three dots appear one after the other
 let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
 function ldNext() {
+  if (window.qqFailed) return;                                    // a failed start keeps its error message on screen
   if (!ldBag.length) {                                            // refill with a fresh shuffle, never starting with the phrase just shown
     ldBag = PHRASES.map((_, i) => i).sort(() => Math.random() - 0.5);
     if (ldBag[ldBag.length - 1] === ldLast) ldBag.unshift(ldBag.pop());
@@ -90,14 +91,16 @@ function ldNext() {
   let n = 3; clearInterval(ldDotTimer);
   ldDotTimer = setInterval(() => { n = (n + 1) % 4; [...dots.children].forEach((d, i) => { d.style.visibility = i < n ? "visible" : "hidden"; }); }, 450);
 }
+let ldSlow = 0;
 function loading(on, msg) {
   const L = Q("#loading");
   if (on) {
-    ldSince = Date.now(); Q("#ldsub").textContent = msg || window.qqStep || "";
+    ldSince = Date.now(); Q("#ldsub").textContent = msg || "";
+    clearTimeout(ldSlow); ldSlow = setTimeout(() => { if (!window.qqFailed && !Q("#loading").hidden && !Q("#ldsub").textContent) Q("#ldsub").textContent = "La prima apertura scarica circa 15 MB: può volerci un minuto."; }, 20000);
     clearInterval(ldTimer); ldNext(); ldTimer = setInterval(ldNext, 5000); L.hidden = false;
   } else {
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
-    setTimeout(() => { L.hidden = true; clearInterval(ldTimer); clearInterval(ldDotTimer); }, wait);
+    clearTimeout(ldSlow); setTimeout(() => { L.hidden = true; clearInterval(ldTimer); clearInterval(ldDotTimer); }, wait);
   }
 }
 
@@ -277,8 +280,8 @@ function renderFileList() {
 </div></div>`;
   const ghost = f => `<div class="fl ghost" data-go="${f.k}" title="Questo file è ${EH(kindOf(f))}: non si usa in questa scheda. Clic per aprire la scheda ${EH(TABS.find(x => x[0] === f.kind)[1])}."><input type="checkbox" disabled><i style="background:${f.color}"></i><div class="fi"><b class="nm">${EH(f.label)}</b><small>${sub(f)}</small></div></div>`;
   const pre = E.tab === "ms2" && window.ms2Exps && ms2Exps().length ? `<div class="fgh"><span>Precursori</span><em>${ms2Exps().length}</em></div>` + ms2Exps().map(x => `<div class="fl pr"><input type="checkbox" data-pr="${x.prec}" ${ms2PairOf(x.prec) ? "checked" : ""} title="Aggiunge (o chiude) una seconda coppia di grafici per confrontare questo precursore con quello mostrato"><div class="fi"><b class="pn" data-pg="${x.prec}" title="Clic: i grafici passano a questo precursore. Presente in ${x.files.size} file">${x.prec != null ? "<span style=\"font-style:italic\">m/z</span> " + EH(x.prec) : "?"}</b><small>${x.ce.size ? "CE " + [...x.ce].join(", ") + " V · " : ""}${x.n} scan</small></div></div>`).join("") : "";
-  const others = TABS.filter(([t]) => t !== E.tab && tabFiles(t).length).map(([t, n]) => `<div class="fgh sep">${modeIcon(t, 14)}<span>${EH(n)}</span><em>${tabFiles(t).length}</em></div>` + tabFiles(t).map(ghost).join("")).join("");
-  const gh = (G, label, cls = "") => `<div class="fgh ${cls}"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="Mostra o nascondi tutto il gruppo">${cls ? "" : modeIcon(E.tab, 14)}<span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
+  const others = TABS.filter(([t]) => t !== E.tab && tabFiles(t).length).map(([t, n]) => `<div class="fgh sep">${modeIcon(t, 18)}<span>${EH(n)}</span><em>${tabFiles(t).length}</em></div>` + tabFiles(t).map(ghost).join("")).join("");
+  const gh = (G, label, cls = "") => `<div class="fgh ${cls}"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="Mostra o nascondi tutto il gruppo">${cls ? "" : modeIcon(E.tab, 18)}<span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
   // MRM tab: like the other tabs the header is the type of experiment («MRM»); standard / campioni / bianchi are smaller sub-groups, written only when there is more than one
   const body = E.tab === "mrm" && groups.length
     ? gh({ g: "__all", fs: tabFiles() }, "MRM") + groups.map(G => (groups.length > 1 ? gh(G, G.g.toLowerCase(), "sub") : "") + G.fs.map(row).join("")).join("")
@@ -569,7 +572,7 @@ function addPanel(type, o, after) {
   Object.assign(p, g);
   const el = document.createElement("div");
   el.className = "card pnl " + type;
-  el.innerHTML = `<div class="hd"><span class="pnum" hidden></span><b class="ttl" title="Doppio clic per rinominare"></b>${type === "spec" ? '<span class="rtl"></span>' : ""}${helpBtn("pnl-" + type)}<span class="ctl"></span><span class="rd"></span>${(() => {
+  el.innerHTML = `<div class="hd"><span class="pnum" hidden></span><b class="ttl" title="${EH(shortHelp("pnl-" + type))} Doppio clic per rinominare."></b>${type === "spec" ? '<span class="rtl"></span>' : ""}<span class="ctl"></span><span class="rd"></span>${(() => {
     // button groups, separated by a vertical bar: [zoom + reset] | [integration] | [XIC] ▲▼ | [PNG / Excel] □ ×
     const lens = type === "chrom" || type === "xic" || type === "mrm";
     const fit = `<button class="bt" data-a="fit" disabled title="Torna a vedere tutto il grafico (attivo solo quando è ingrandito). Da tastiera: Backspace = vista intera, Ctrl/Cmd+Z = zoom precedente">${IC_FIT}</button>`;
@@ -843,8 +846,7 @@ function ctl(p) {
     const f = TF, hasMs2 = f.some(x => x.ms2);
     const fol = follow(T0), FW = "Hai scelto «Solo il selezionato» nella barra: questo grafico segue il file scelto lì. Con «Tutti sovrapposti» scegli qui il file.";
     c.innerHTML = `<select data-o="k"${off(fol, FW)}>${f.map(x => `<option value="${x.k}" ${x.k === (fol ? E.cur : p.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${chk("all", "sovrapponi i file", fol || ONEF, fol ? FW : "Hai caricato un solo file in questa scheda.")}` +
-      (!fol && !ONEF && !p.all ? `<span class="muted sm" title="In alto è scelto «Tutti sovrapposti», che vale per i cromatogrammi. Due spettri sovrapposti sono difficili da leggere con molti file: per questo lo spettro mostra un solo file finché non spunti «sovrapponi i file».">(uno spettro alla volta: spunta “sovrapponi i file” per vederli insieme)</span>` : "") +
-      (hasMs2 ? `<select data-o="level"${off(T0 === "ms2", "Nella scheda MS² lo spettro è sempre quello degli ioni prodotto (livello MS2).")}><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="2" ${p.level === 2 ? "selected" : ""}>MS2</option></select>` : "") +
+            (hasMs2 ? `<select data-o="level"${off(T0 === "ms2", "Nella scheda MS² lo spettro è sempre quello degli ioni prodotto (livello MS2).")}><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="2" ${p.level === 2 ? "selected" : ""}>MS2</option></select>` : "") +
       `<select data-o="bg" title="Sottrai lo spettro di fondo (come «Subtract spectrum» di Xcalibur): lo spettro medio di un tratto di tempo dello stesso file, oppure lo stesso intervallo in un file bianco. I valori negativi diventano zero">` +
       `<option value="">Fondo: nessuno</option><option value="w" ${p.bg === "w" ? "selected" : ""}>Fondo: un tratto di tempo</option><optgroup label="Fondo: un file bianco">${(() => { const bl = f.filter(x => x.kind !== "mrm" && (x.type === "blank" || String(p.bg) === String(x.k))); return bl.length ? bl.map(x => `<option value="${x.k}" ${String(p.bg) === String(x.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("") : "<option disabled>nessun file indicato come bianco</option>"; })()}</optgroup></select>` +
       (p.bg === "w" ? `<label class="muted">da <input data-o="bw0" type="number" step="0.1" value="${p.bw0 ?? ""}" style="width:56px"> a <input data-o="bw1" type="number" step="0.1" value="${p.bw1 ?? ""}" style="width:56px"> min</label>` : "") +
@@ -1971,11 +1973,11 @@ async function calcRun() {
 }
 Q("#calcin").oninput = calcRun;
 
-// ---- discreet tooltip on the buttons and controls of the panels: it appears when the pointer rests on one for about 1.7 s and goes away when the pointer leaves.
+// ---- discreet tooltip on the buttons and controls of the panels: it appears when the pointer rests on one for about 1.5 s and goes away when the pointer leaves.
 // The text is the element's title; the title is moved to data-tip on the first hover so the browser's own (earlier, fixed-style) tooltip does not also show up.
 (function () {
   const tip = document.createElement("div"); tip.id = "qtip"; tip.hidden = true; document.body.appendChild(tip);
-  const SEL = ".pnl .hd [title], .pnl .hd [data-tip], .pnl .ctl [title], .pnl .ctl [data-tip]", DELAY = 1700;
+  const SEL = ".pnl .hd [title], .pnl .hd [data-tip], .pnl .ctl [title], .pnl .ctl [data-tip]", DELAY = 1500;
   let timer = null, cur = null;
   const hide = () => { clearTimeout(timer); timer = null; tip.hidden = true; cur = null; };
   document.addEventListener("mouseover", e => {

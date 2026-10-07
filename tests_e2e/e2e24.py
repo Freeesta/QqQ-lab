@@ -87,8 +87,8 @@ try:
             assert "forma neutra" not in pg.inner_text("#prop-body")
         step("2.1 charged structures: neutral form (acetate = acetic acid, ammonium, counter-ion dropped, quaternary = message)", charge)
         def helptext():
-            assert pg.locator("#prop-card .hq").count() == 1
-            pg.locator("#prop-card .hq").click(); pg.wait_for_timeout(300)
+            assert pg.locator("#prop-card .hq").count() == 0
+            pg.locator("button.hq[data-help=header]").click(); pg.wait_for_timeout(300)
             t = pg.inner_text("#helppop"); assert "0.5" in t and "logD" in t, t
             pg.keyboard.press("Escape")
             assert "L'errore tipico" not in pg.inner_text("#prop-body")

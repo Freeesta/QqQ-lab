@@ -33,7 +33,7 @@ try:
             for bad in ("Dimensione del testo dell", "Vale per menu", "tutorial", "Installare", "Numera", "suggerimenti", "Mostra"):
                 assert bad.lower() not in t.lower(), bad
             assert pg.locator("#uipset input[type=checkbox]").count() == 0
-            assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["Per tempo (predefinito)", "Daltonici", "Alto contrasto", "Arcobaleno"]
+            assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["Per tempo (predefinito)", "Accessibili", "Alto contrasto", "Arcobaleno"]
             assert pg.input_value("#uip-pal") == "time"
             pg.click("#uipset [data-f='1']"); pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(400)
             assert pg.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--z').trim()") == "1.15"

@@ -16,42 +16,13 @@ Lavori in `~/QqQ_lab/QqQ_lab` (sul Mac) oppure nel clone GitHub (cloud). Leggi `
 - **Aggiorna Federico**: alla fine di OGNI blocco scrivigli un messaggio breve (3-5 righe): cosa hai fatto, cosa non hai potuto fare, cosa provare a mano. Se un punto richiede una scelta che cambia l'interfaccia in modo non descritto qui, fai la versione più semplice e segnalalo nel messaggio.
 
 ## Ordine di lavoro (per importanza)
-(I blocchi A, S e G sono fatti: vedi `AGENTS.md` sez. 17. Restano da rifinire: nel menu «Correzione» le voci non hanno ancora l'icona con etichetta (è un menu a tendina con `title`).)
-1. **Blocco B** aiuti e testi
-2. **Blocco C** calcolatrice + **Blocco F** Disegno (piccoli, insieme)
-3. **Blocco H** strumenti per la cromatografia (più avanzati: S/N, parametri del picco, vista a cascata)
-4. **Blocco I** file misti (DDA, Full Scan + MS2, MRM + EPI, polarità alternate): non urgente, solo dopo gli altri
-5. **Blocco D** licenze
-6. **Blocco E** residui
+(I blocchi A, S, G e B sono fatti: vedi `AGENTS.md` sez. 17. Restano da rifinire: nel menu «Correzione» le voci non hanno ancora l'icona con etichetta (è un menu a tendina con `title`).)
+1. **Blocco C** calcolatrice + **Blocco F** Disegno (piccoli, insieme)
+2. **Blocco H** strumenti per la cromatografia (più avanzati: S/N, parametri del picco, vista a cascata)
+3. **Blocco I** file misti (DDA, Full Scan + MS2, MRM + EPI, polarità alternate): non urgente, solo dopo gli altri
+4. **Blocco D** licenze
+5. **Blocco E** residui
 Un commit per blocco e un messaggio a Federico per blocco. Se il tempo o i token finiscono, fermati dopo un commit pulito: è meglio finire bene i blocchi 1-2 che iniziare tutto.
-
----
-
-## BLOCCO B: aiuti e testi (interfaccia più pulita)
-
-### B1. Via i «?»: etichette al passaggio del mouse
-Ci sono troppi pulsanti «?» (`.hq`, `helpBtn(...)` in `explore.js`, `index.html`, `tabs.js`, `origine.js`; testi in `HELP` di `help.js`). Federico preferisce: **resti fermo ~1.5 s su un controllo e compare una piccola etichetta** che spiega cosa fa (esiste già un tooltip ritardato dalla chat del 6/10: cerca in `explore.js`/`index.html` il ritardo ~1.7 s e riusalo, uniformandolo a ~1.5 s).
-1. **Togli tutti i «?»** dei pannelli, delle barre, delle schede Full Scan/MS2/MRM e della schermata di caricamento. Resta SOLO il «?» generale in alto a destra nell'header.
-2. Il testo breve di ogni «?» tolto diventa l'etichetta (`title` o tooltip proprio) del controllo o del titolo del pannello corrispondente: 1-2 frasi, niente paragrafi.
-3. I testi lunghi di `HELP` che servono ancora (spiegazioni di metodo) vanno nel «?» generale, organizzati per voce (Dati, XIC, Integrazione, Taratura, Disegno, ...), oppure in Teoria se lì c'è già il capitolo: non perderli, ma non lasciarli sparsi nell'interfaccia.
-4. Ogni pulsante con sola icona deve avere un'etichetta. Controllo: uno script e2e conta i `.hq` visibili (= 1) e verifica che ogni `button` visibile senza testo abbia `title` o `aria-label`.
-
-### B2. Meno avvisi e disclaimer
-Federico: «ci sono troppi disclaimer ovunque, danno fastidio».
-1. Fai l'elenco (`grep -n` su `qqq_lab/web/*.js` e `index.html`: frasi tipo «può essere», «attenzione», «ricorda», «nota», «non è un'identificazione», testi in `class="muted"` sotto tabelle e finestre).
-2. Togli dall'interfaccia quelli ripetuti o ovvi; tieni solo gli avvisi che impediscono un errore concreto in quel momento (es. «servono almeno due standard»). Il concetto scientifico (risoluzione unitaria: un m/z è un candidato) resta UNA volta in Teoria e nel «?» generale, non in ogni finestra.
-3. Aggiorna `AGENTS.md` sez. 1 principio 4 di conseguenza («mostrarlo sempre» diventa «spiegarlo in Teoria e nel ? generale, senza avvisi ripetuti»). Nel report elenca cosa hai tolto (una riga per testo).
-
-### B3. Icone delle schede Full Scan / MS2 / MRM
-Le icone nelle schede (`tabs.js` ~r.12: `QICON.get(TABICON[t], 16)`) e nelle intestazioni della lista file sono troppo piccole e confuse. Portale a ~22-24 px con un disegno più semplice (meno linee, tratto più spesso: `icons-modi.js`), e controlla con uno screenshot a 1280 e 1440 px. Se anche ingrandite restano poco leggibili, toglile dalle schede e dalla lista file (resta il testo) e tienile solo dove spiegano i modi (Teoria cap. 9, aiuto). Scegli e motiva nel report con lo screenshot.
-
----
-
-### B4. Schermata di caricamento: solo le frasi divertenti
-Durante il caricamento ci sono due scritte: la frase divertente grande (`explore.js` ~r.77, «Contaminando la sorgente»…) e sotto il passo tecnico in grigio (`#ldsub`: «Carico Python...», «Carico numpy...», «Carico il programma...», «Riapro i file della volta scorsa...»; scritti da `browser-worker.js` ~r.23-32 con `say()`, mostrati da `browser.js` ~r.18-20 e da `loading()` in `explore.js` ~r.93-96). Federico vuole **solo le frasi divertenti**: togli la riga `#ldsub` e i passi tecnici dall'interfaccia (lasciali, se servono, solo in `console.debug`). Eccezioni: se il caricamento **fallisce** mostra il messaggio d'errore (chiaro, in italiano) al posto della frase; se dura più di ~20 s puoi aggiungere sotto UNA riga neutra («La prima apertura scarica circa 15 MB: può volerci un minuto.») e nient'altro. e2e13 (sito) e gli e2e che leggono `#ldsub`/`qqStep` vanno adattati.
-
-### B5. Nome della palette «Daltonici»
-Nell'ingranaggio, menu «Colori dei grafici» (`settings.js` ~r.28, nomi in `explore.js` ~r.20: `cb: { name: "Daltonici" … }`), «Daltonici» suona come un'etichetta sulle persone. Rinomina le voci in modo neutro e descrittivo: **«Per tempo (predefinito)», «Accessibili», «Alto contrasto», «Arcobaleno»**; l'etichetta di «Accessibili» dice: «Colori distinguibili anche con le forme comuni di daltonismo, più linee tratteggiate». Aggiorna Teoria/aiuto/AGENTS.md (sez. 16) ed e2e che cercano il testo vecchio. La chiave interna (`cb`) e la preferenza salvata restano uguali.
 
 ---
 
