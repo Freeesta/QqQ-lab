@@ -157,7 +157,7 @@ class Run:
         """mode: "mmap", "file" (plain reads: Blobs mounted in the browser, very large files) or "auto"."""
         self.path = Path(path)
         if mode == "auto":
-            big = self.path.stat().st_size > FILE_MODE_BYTES or os.path.realpath(self.path).startswith(WORKERFS_ROOT + "/")
+            big = self.path.stat().st_size > FILE_MODE_BYTES or os.path.realpath(self.path).replace("\\", "/").startswith(str(WORKERFS_ROOT).replace("\\", "/").rstrip("/") + "/")
             mode = "file" if big else "mmap"
         self.mode = mode
         if mode == "file":
