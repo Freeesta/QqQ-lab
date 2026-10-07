@@ -43,14 +43,16 @@ const DDA = (() => {
     try {
       const W = hostWidth(), wide = W >= MIN_W;
       E.panels.forEach(q => { if (q.el) { q.el.classList.toggle("jb", false); q.el.classList.toggle("jt", false); q.el.classList.toggle("dk", false); } });
+      const halved = new Set();
       E.panels.forEach(s2 => {
         if (s2.dock == null || !s2.el) return;
         const s1 = byId(s2.dock); if (!s1) return;
-        if (wide) { const half = Math.floor((W - 8) / 2); set(s1, { x: 0, w: half }); set(s2, { x: half + 8, y: s1.y, w: W - half - 8, h: s1.h }); }
+        if (wide) { const half = Math.floor((W - 8) / 2); set(s1, { x: 0, w: half }); set(s2, { x: half + 8, y: s1.y, w: W - half - 8, h: s1.h }); halved.add(s1); s1._dk = true; }
         else { set(s1, { x: 0, w: W }); set(s2, { x: 0, w: W }); }
         s2.el.classList.add("dk"); s1.el.classList.add("jb"); s2.el.classList.toggle("jb", wide);
         const c = s1.link != null ? byId(s1.link) : null; if (c && c.y + c.h <= s1.y + 1) c.el.classList.add("jt");
       });
+      E.panels.forEach(q => { if (q._dk && !halved.has(q)) { q._dk = false; if (q.full && q.el) set(q, { x: 0, w: W }); } });       // the MS2 panel is gone: the Full Scan has the whole width again
     } catch (e) { console.info("DDA sync", e); }
   }
 

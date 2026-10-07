@@ -66,7 +66,21 @@ try:
             pg.keyboard.press("ArrowLeft"); pg.wait_for_timeout(1500)
             back = pg.evaluate("(()=>{const t=" + TRIO + ";return t.s2.sid})()"); assert back == before, (before, back)
         step("arrows in the MS2 panel: next / previous MS2; s1 follows the parent", arrows)
+        def close_and_back():
+            n0 = pg.evaluate("E.panels.length")
+            pg.evaluate("(()=>{const t=" + TRIO + ";t.s2.el.querySelector('.x').click()})()"); pg.wait_for_timeout(800)
+            assert pg.evaluate("E.panels.find(p=>p.dda!=null)") is None and pg.evaluate("E.panels.length") == n0 - 1
+            geo = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='full'),s1=E.panels.find(p=>p.link===c.id);return [c.y+c.h,s1.y,s1.w,hostWidth()]})()"); print(geo)
+            assert geo[2] > geo[3] - 5, geo                                      # the Full Scan has the whole width again
+            pos = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');c.el.scrollIntoView({block:'center'});const r=c.cv.getBoundingClientRect();return {x:r.left+300,y:r.top+150}})()")
+            pg.mouse.click(pos["x"], pos["y"], button="right"); pg.wait_for_timeout(400)
+            assert "Mostra le MS2 accanto alla Full Scan" in pg.inner_text("#ctx")
+            pg.click("#ctx >> text=Mostra le MS2 accanto alla Full Scan"); pg.wait_for_timeout(2500)
+            c, s1, s2 = pg.evaluate(GEO); print(c, s1, s2)
+            assert s2 is not None and s2[1] == s1[1] and s2[0] > s1[0], (s1, s2)
+        step("close the MS2 panel, then «Mostra le MS2 accanto alla Full Scan» in the right-click menu brings it back", close_and_back)
         def reload():
+            pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k);await DDA.selectMs2(t.s2,D.sid[7])})()"); pg.wait_for_timeout(1500)
             pg.evaluate("uiSave(true)"); pg.wait_for_timeout(1500); pg.reload(); pg.wait_for_timeout(8000)
             c, s1, s2 = pg.evaluate(GEO); sid = pg.evaluate("(()=>{const t=" + TRIO + ";return t.s2.sid})()"); print(c, s1, s2, sid)
             assert s2 and s1[1] == c[1] + c[3] and s2[1] == s1[1] and sid is not None
