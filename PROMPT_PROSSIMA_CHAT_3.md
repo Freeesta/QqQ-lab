@@ -19,17 +19,9 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 3. ~~Dimensione del testo anche dentro i grafici~~ (fatto il 7/10, `AGENTS.md` sez. 19)
 4. ~~Strumenti dell'header e schermata di caricamento~~ (fatto il 7/10, `AGENTS.md` sez. 19)
 5. ~~Rifiniture~~ (fatto il 7/10)
-6. **Disegno** (campo SMILES che si svuota, via il menu «Ione»)
+6. ~~Disegno~~ (fatto il 7/10)
 7. **Simboli** (segno di polarità leggibile e senza sbordare, «MS2» con un vero apice)
 8. **Ordine di cartelle e file** (inventario, cartelle vuote, cestino fuori da git, test obsoleti): per ultimo
-
----
-
-## BLOCCO 6: scheda Disegno (`draw.js`, `index.html`)
-
-**6.1 «Disegna veloce»: il campo si svuota dopo il disegno.** Dopo che lo SMILES è stato disegnato con successo (`#ex-load` → struttura aggiunta alla tela), il campo `#ex-smi` si **svuota** (pronto per lo SMILES successivo). Se lo SMILES non è valido o la tela non cambia, il testo **resta** nel campo, con l'avviso sotto (`#smi-warn`) come oggi, così lo studente può correggerlo. e2e: SMILES valido → campo vuoto e struttura sulla tela; SMILES sbagliato → testo ancora nel campo e avviso visibile.
-
-**6.2 Via il menu «Ione» (decisione di Federico).** Il menu «Ione: nessuno (molecola neutra) / [M+H]+ / …» (`#lb-ion`, `IONS`, `withIon` in `draw.js` ~r.231-291, riga in `index.html` ~r.124, `NB.labIon`) crea troppa confusione: gli studenti disegnano molecole neutre o ioni con la carica messa da loro con gli strumenti di Ketcher, mai addotti con Na+ o simili. **Toglilo** del tutto (menu, codice, salvataggio). Le scritte sotto le strutture restano: formula e massa della struttura **così come è disegnata**; se lo studente ha messo una carica, la scritta usa quella e mostra «m/z» (comportamento già esistente per le cariche disegnate). Un taccuino vecchio con `labIon` si apre senza errori (valore ignorato). Aggiorna `e2e24.py` (oggi usa `#lb-ion`), Teoria cap. 12 se cita il menu, `AGENTS.md` sez. 3 (riga `draw.js`) e le immagini d'esempio solo se le generava con il menu (`tests_e2e/make_examples.py`).
 
 ---
 

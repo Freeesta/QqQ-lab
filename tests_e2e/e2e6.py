@@ -177,17 +177,10 @@ try:
             assert pg.is_enabled("#ex-jpg") and pg.evaluate(corner) == [255, 255, 255, 255]
         step("\"senza sfondo\": transparent PNG and SVG, JPEG disabled; off = white", nobg)
         def ion_choice():
-            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); pg.wait_for_timeout(1200)
-            for ad, want in [("[M+H]+", ["C8H10NO2+  m/z 152"]), ("[M-H]-", ["C8H8NO2\u2212  m/z 150"]), ("[M+Na]+", ["C8H9NNaO2+  m/z 174"]), ("[M+NH4]+", ["C8H13N2O2+  m/z 169"])]:
-                pg.select_option("#lb-ion", ad); pg.wait_for_timeout(400)
-                t = pg.evaluate(LBL); assert [x for x in [" ".join(t)]] == [w.replace("  ", " ") for w in want], (ad, t)
-            # a structure drawn with its own charge keeps it: the ion menu adds nothing
-            pg.select_option("#lb-ion", "[M+Na]+")
-            pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); pg.wait_for_timeout(1200)
+            pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); pg.wait_for_timeout(1200)       # the charge drawn by the student gives the ion label (there is no Ione menu any more)
             t = pg.evaluate(LBL); assert " ".join(t) == "C8H10NO2+ m/z 152", t
-            pg.select_option("#lb-ion", ""); pg.wait_for_timeout(300)
             pg.screenshot(path=SH + "67_ion_choice.png")
-        step("ion menu: [M+H]+ 152, [M-H]- 150, [M+Na]+ 174, [M+NH4]+ 169; drawn charge wins", ion_choice)
+        step("a drawn charge: C8H10NO2+ m/z 152", ion_choice)
         def nh3():
             pg.evaluate(KQ + ".setMolecule('Oc1ccc([NH3+])cc1>>Oc1cc[c+]cc1')"); pg.wait_for_timeout(1500)
             t = pg.evaluate(LBL); print("NH3:", t)

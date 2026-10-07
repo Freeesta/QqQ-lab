@@ -6,11 +6,6 @@ import * as OCL from "./vendor/openchemlib.js";
 
 const Q = s => document.querySelector(s);
 const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-// ion shown under a structure when the student picks one: atoms to add or remove, and the charge ([M+H]+ = +H, +1 ...)
-const IONS = {
-  "[M+H]+": { add: { H: 1 }, q: 1 }, "[M+NH4]+": { add: { N: 1, H: 4 }, q: 1 }, "[M+Na]+": { add: { Na: 1 }, q: 1 }, "[M+K]+": { add: { K: 1 }, q: 1 },
-  "[M-H]-": { add: { H: -1 }, q: -1 }, "[M+Cl]-": { add: { Cl: 1 }, q: -1 }, "[M+HCOO]-": { add: { C: 1, H: 1, O: 2 }, q: -1 },
-};
 let K = null, starting = null, restored = false, timer = null;
 
 function start() {
@@ -226,18 +221,9 @@ function arrowDeltas() {
   });
   return out;
 }
-// The ion chosen in "Ione" ([M+H]+ ...) applied to a structure drawn without charge: formula of the ion, its charge, and the mass of its atoms
-// (labelParts then removes the electrons). A structure that already carries a charge (drawn by the student) is used as it is.
-function withIon(d) {
-  const ion = IONS[Q("#lb-ion").value];
-  if (!ion || d.q) return d;
-  const n = { ...d.n };
-  for (const [e, k] of Object.entries(ion.add)) n[e] = (n[e] || 0) + k;
-  return { ...d, ...formulaOf(n), n, q: ion.q };
-}
 // text of a label as LINES of pieces: [[text, "sub" | "sup" | "it" | ""], ...] (formula on the first line, "m/z 241" in italics on the next)
 function labelParts(d0) {
-  const d = withIon(d0), parts = [], f = Q("#lb-f").checked, m = Q("#lb-m").checked, dec = +Q("#lb-dec").value, lines = [parts];
+  const d = d0, parts = [], f = Q("#lb-f").checked, m = Q("#lb-m").checked, dec = +Q("#lb-dec").value, lines = [parts];
   if (f) {
     for (const x of d.formula.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([x[1], ""]); if (x[2]) parts.push([x[2], "sub"]); }
     if (d.q) parts.push([(Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "−"), "sup"]);
@@ -282,13 +268,12 @@ function ketWithLabels(ket) {
   for (const a of arrowDeltas()) { const t = plain(a.parts); add([a.parts], a.x - t.length * 0.09, -(a.y - 0.75), 14); }
   return JSON.stringify(j);
 }
-["#lb-f", "#lb-m", "#lb-dec", "#lb-ion"].forEach(id => Q(id).addEventListener("change", () => {
-  drawLabels(); NB.labF = Q("#lb-f").checked; NB.labM = Q("#lb-m").checked; NB.labDec = +Q("#lb-dec").value; NB.labIon = Q("#lb-ion").value; nbSave();
+["#lb-f", "#lb-m", "#lb-dec"].forEach(id => Q(id).addEventListener("change", () => {
+  drawLabels(); NB.labF = Q("#lb-f").checked; NB.labM = Q("#lb-m").checked; NB.labDec = +Q("#lb-dec").value; nbSave();
 }));
 document.addEventListener("nbloaded", () => {      // older notebooks only have NB.labels (both on)
   Q("#lb-f").checked = NB.labF !== undefined ? NB.labF : NB.labels !== false; Q("#lb-m").checked = NB.labM !== undefined ? NB.labM : NB.labels !== false;
   Q("#lb-dec").value = String(Math.min(5, Math.max(0, +NB.labDec || 0)));
-  Q("#lb-ion").value = IONS[NB.labIon] ? NB.labIon : "";          // default (new session, old notebooks): no ion
   Q("#ex-name").value = NB.drawName || stamp();
   drawLabels();
 });
@@ -467,16 +452,16 @@ function syncBg() {                                    // JPEG cannot be transpa
 Q("#ex-nobg").addEventListener("change", syncBg); syncBg();
 freshName();
 Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote("");
-  try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote("SMILES non valido: non è stata aggiunta nessuna struttura."); }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
+  try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote("SMILES non valido: non è stata aggiunta nessuna struttura."); else Q("#ex-smi").value = ""; }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e) { dnote("SMILES non valido: " + e.message); } };
 
-window.TPDraw = { ions: IONS, image, info: showInfo, smiles: async () => { await start(); return K.getSmiles(); }, ready: () => !!K };
+window.TPDraw = { image, info: showInfo, smiles: async () => { await start(); return K.getSmiles(); }, ready: () => !!K };
 document.addEventListener("tpview", e => { if (e.detail.view === "draw") start(); });
 document.addEventListener("nbloaded", () => { if (K) { restored = false; restore(); } });
 // "Nuova sessione": the drawing and its controls go back to the start (the notebook was already emptied)
 document.addEventListener("nbreset", () => {
   clearTimeout(timer);
-  Q("#lb-f").checked = true; Q("#lb-m").checked = true; Q("#lb-dec").value = "0"; Q("#lb-ion").value = ""; Q("#ex-nobg").checked = false; syncBg();
+  Q("#lb-f").checked = true; Q("#lb-m").checked = true; Q("#lb-dec").value = "0"; Q("#ex-nobg").checked = false; syncBg();
   Q("#ex-name").value = stamp(); Q("#ex-smi").value = ""; dnote(""); exwarn(""); usedNames.clear();
   if (K) { try { K.editor.clear(); } catch (_) { /* nothing to clear */ } restored = true; requestAnimationFrame(() => { drawLabels(); showInfo(); }); }
 });

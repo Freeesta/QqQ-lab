@@ -94,7 +94,8 @@ try:
             assert pg.evaluate("['selcard','selbody','dcard','dcomp','cap-name','cap-part','cap-ad','cap-on','cap-txt','cap-copy'].every(i=>!document.getElementById(i))")
             LB = "[...document.getElementById('kframe').contentWindow.ketcher.editor.render.paper.canvas.querySelectorAll('#qqq-labels text')].map(t=>t.textContent)"
             assert pg.evaluate(LB) == ["C7H7NO2", "M = 137"], pg.evaluate(LB)
-            pg.select_option("#lb-ion", "[M+H]+"); pg.wait_for_timeout(500)
+            pg.fill("#ex-smi", "Oc1ccc(cc1)C(=O)[NH3+]"); pg.click("#ex-load"); pg.wait_for_timeout(2500)         # a structure drawn with its charge: formula of the ion and m/z
+            pg.evaluate("(()=>{const k=document.getElementById('kframe').contentWindow.ketcher;k.setMolecule('Oc1ccc(cc1)C(=O)[NH3+]')})()"); pg.wait_for_timeout(1500)
             t = pg.evaluate(LB); print("ION:", t); assert t == ["C7H8NO2+", "m/z 138"], t
             pg.screenshot(path=SH + "54_ion.png")
             with pg.expect_download() as d: pg.click("#ex-svg")
@@ -103,10 +104,7 @@ try:
             with pg.expect_download() as d: pg.click("#ex-png")
             import os; sz = os.path.getsize(d.value.path()); print("png bytes", sz); assert sz > 5000
             open(SH + "55_ion.png", "wb").write(open(d.value.path(), "rb").read())
-            pg.select_option("#lb-ion", ""); pg.wait_for_timeout(300)
-            with pg.expect_download() as d: pg.click("#ex-svg")
-            assert "m/z" not in open(d.value.path(), encoding="utf-8").read()
-        step("drawing: no helper boxes, ion choice in the label (canvas, svg, png)", draw_ion)
+        step("drawing: no helper boxes, drawn charge gives the ion label (canvas, svg, png)", draw_ion)
         pg.wait_for_timeout(500)
 finally:
     r.close()

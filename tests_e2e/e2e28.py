@@ -31,13 +31,9 @@ try:
             pg.locator("#ad-tbl .adtog").first.click(); pg.wait_for_timeout(200); assert "[2M+H]+" not in pg.inner_text("#ad-tbl")
         step("table: nominal column, expected adducts first, drift and monoisotopic notes", table)
         def aligned():
-            qa = pg.evaluate("QADD.map(a=>[a.n,a.shift,a.k,a.z])"); ions = pg.evaluate("TPDraw.ions")
+            qa = pg.evaluate("QADD.map(a=>[a.n,a.shift,a.k,a.z])")
             for n, shift, k, z in qa:
                 if k == 1 and abs(z) == 1 and n in ADDUCT_SHIFT: assert abs(shift - ADDUCT_SHIFT[n]) < 2e-5, (n, shift, ADDUCT_SHIFT[n])
-            for n, i in ions.items():
-                sh = sum(MASS[el] * c for el, c in i["add"].items()) - i["q"] * ELECTRON
-                assert n in ADDUCT_SHIFT and abs(sh - ADDUCT_SHIFT[n]) < 2e-5, (n, sh)
-                assert any(a[0] == n for a in qa), n
             for n, shift, mult in ionfamily.ADDUCTS:
                 if mult == 1:
                     q = [a for a in qa if a[0] == n]; assert q and abs(q[0][1] - shift) < 2e-4, (n, shift, q)
