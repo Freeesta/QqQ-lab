@@ -15,19 +15,10 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 - Se il budget sta finendo: fermati dopo un commit pulito e aggiorna questo file.
 
 ## Ordine di lavoro (i blocchi sono raggruppati per file, così leggi ogni file una volta)
-0. **Manutenzione** (test rossi, cache del sito): breve
 1. **Spettro e menu del clic destro** (`explore.js`: disegno dello spettro, menu, annotazioni)
 2. **Intestazioni, zoom sugli assi, etichette** (`explore.js` `addPanel`/`ctl`/assi + CSS in `index.html`)
 3. **Finestra XIC e calcolatrice** (`openXic`, `#xicdlg`, `#calcdlg`)
 4. **Perdite neutre** (`web/tables.js`, Teoria cap. 8)
-
----
-
-## BLOCCO 0: manutenzione
-**0.1 Test rossi «noti».** Alla fine del blocco non devono restare test rossi.
-- **e2e6** (fallisce dal 6/10, proprietà logP del Disegno) ed **e2e24** (sospetto problema di tempi): leggi SOLO `.verifica/log/e2e6.log`, `e2e24.log` e la parte del test che fallisce. Test che controlla cose cambiate apposta → aggiorna il test; problema di tempi → aspetta la condizione giusta (elemento visibile, valore in `E`/`NB`), non un tempo fisso; difetto del programma → correggilo. Una riga sulla causa di ciascuno nel messaggio.
-
-**0.2 Il sito deve mostrare subito la versione nuova.** GitHub Pages manda i file con `cache-control: max-age=600` e il service worker (`web/sw.js`) per i file dell'app fa `fetch(req)`, che passa dalla cache HTTP del browser: dopo un aggiornamento Federico vedeva la versione vecchia fino a 10 minuti. Per i file dell'app (non `static/pyodide`/`static/vendor`) usa `fetch(req, { cache: "no-cache" })` (il server risponde 304 se il file non è cambiato), compresi `index.html` e `qqq_lab.zip`. Offline resta il ripiego sulla cache. Niente test Pyodide: verifica leggendo `sw.js`.
 
 ---
 

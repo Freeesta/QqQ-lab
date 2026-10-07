@@ -154,8 +154,13 @@ try:
         def props_ion():
             pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1.Oc1ccc([NH3+])cc1')"); pg.wait_for_timeout(1500)
             rows = pg.evaluate("[...document.querySelectorAll('#prop-body tr')].slice(1).map(r=>[...r.cells].map(c=>c.textContent))"); print("PROPS:", rows)
-            assert len(rows) == 2 and rows[1][1] == "\u2013" and rows[0][1] != "\u2013", rows     # the ion has no logP
-        step("properties: ions are excluded (no logP for a charged species)", props_ion)
+            # default: charge excluded -> the ion is computed on its neutral form (4-aminophenol, C6H7NO)
+            assert len(rows) == 2 and rows[1][0] == "C6H7NO" and rows[1][1] != "\u2013" and rows[0][1] != "\u2013", rows
+            # untick "Escludi la carica": the charged species has no logP
+            pg.evaluate("(()=>{const c=document.querySelector('#prop-neut');c.checked=false;c.dispatchEvent(new Event('change',{bubbles:true}))})()"); pg.wait_for_timeout(1500)
+            rows = pg.evaluate("[...document.querySelectorAll('#prop-body tr')].slice(1).map(r=>[...r.cells].map(c=>c.textContent))"); print("PROPS (charge kept):", rows)
+            assert len(rows) == 2 and rows[1][1] == "\u2013" and rows[0][1] != "\u2013", rows
+        step("properties: ions on the neutral form by default, no logP with the charge kept", props_ion)
         def hires():
             w = pg.evaluate("""async()=>{const b=await TPDraw.image('png');const i=await createImageBitmap(b);return [i.width,i.height]}"""); print("PNG px:", w)
             assert w[0] >= 3000, w
