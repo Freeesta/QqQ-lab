@@ -5,6 +5,7 @@ students choose what to extract. Unit resolution data: windows are in Da.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import numpy as np
@@ -347,6 +348,12 @@ class Item:
         return u, smz, sy / n, n
 
     # ------------------------------------------------------------------ DDA and single scans as they are in the file
+    @staticmethod
+    def _no(s) -> int:
+        """Scan number as the instrument software shows it: the 'scan=N' of the id (Thermo), otherwise the position in the file + 1."""
+        m = re.search(r"scan=(\d+)", s.native or "")
+        return int(m.group(1)) if m else s.index + 1
+
     def dda(self, hr: bool = True) -> dict:
         """Every MS2 of the physical file with its parent, isolation window and activation, in columns, plus the survey scans (sid = index in the file).
 
@@ -357,7 +364,7 @@ class Item:
         ms1 = [s for s in r.scans if s.level == 1]
         by = {s.index: s for s in r.scans}
         rt = lambda s: round(float(s.rt), 4)
-        return {"sid": [s.index for s in ms2], "rt": [rt(s) for s in ms2],
+        return {"sid": [s.index for s in ms2], "rt": [rt(s) for s in ms2], "no": [self._no(s) for s in ms2],
                 "prec": [round(float(s.precursor), d) if s.precursor else None for s in ms2],
                 "tgt": [round(float(sum(s.iso) / 2), d) if s.iso else None for s in ms2],
                 "parent": [s.parent for s in ms2], "prt": [rt(by[s.parent]) if s.parent in by else None for s in ms2],
@@ -373,7 +380,8 @@ class Item:
         s = r.scans[sid]
         mz, y = r.read(sid)
         d = self.profile(s.level, hr)["dec"] + 1
-        return {"sid": sid, "rt": round(float(s.rt), 4), "level": s.level, "mz": [round(float(v), d) for v in mz], "y": [round(float(v), 1) for v in y],
+        return {"sid": sid, "no": self._no(s), "parent_no": self._no(r.scans[s.parent]) if s.parent is not None else None,
+                "rt": round(float(s.rt), 4), "level": s.level, "mz": [round(float(v), d) for v in mz], "y": [round(float(v), 1) for v in y],
                 "prec": round(float(s.precursor), d) if s.precursor else None, "lo": round(float(s.iso[0]), d) if s.iso else None, "hi": round(float(s.iso[1]), d) if s.iso else None,
                 "act": s.act, "ce": s.collision_energy, "nce": bool(r.nce), "res": s.res, "an": s.an, "parent": s.parent, "filter": s.filter,
                 "profile": bool(s.profile)}

@@ -9,7 +9,11 @@ function uipLoad() {
   try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if ([90, 100, 115, 130].includes(o.font)) UIP.font = o.font; if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.pal; if (o.merge === false) UIP.merge = false; if (o.hr === false) UIP.hr = false; if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
   setPal(UIP.pal);
 }
-function uipSave() { uipWrite(UIP_KEY, JSON.stringify({ font: UIP.font, theme: UIP.theme, pal: UIP.pal, merge: UIP.merge, hr: UIP.hr, hrPpm: UIP.hrPpm, hrDec: UIP.hrDec })); }
+function uipSave() {
+  const o = { font: UIP.font, theme: UIP.theme, pal: UIP.pal, merge: UIP.merge };
+  if (UIP.hr === false) o.hr = false; if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;         // high resolution: only what differs from the defaults
+  uipWrite(UIP_KEY, JSON.stringify(o));
+}
 function uipApply() {
   const r = document.documentElement;
   r.style.setProperty("--z", UIP.font / 100);

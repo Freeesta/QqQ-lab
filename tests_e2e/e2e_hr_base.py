@@ -34,7 +34,7 @@ try:
             assert pg.is_visible("#uip-hr") and "automatica" in pg.inner_text("#uipset") and "ppm" in pg.inner_text("#uipset")
             pg.fill("#uip-ppm", "8"); pg.dispatch_event("#uip-ppm", "change"); pg.fill("#uip-hdec", "5"); pg.dispatch_event("#uip-hdec", "change"); pg.wait_for_timeout(300)
             v = pg.evaluate("(()=>{const ex=E.files.find(f=>f.file.includes('Exploris')&&f.lv===1);return [HR.prof(ex,1),JSON.parse(localStorage.getItem('qqq.prefs'))]})()"); print(v)
-            assert v[0]["tol"] == 8 and v[0]["dec"] == 5 and v[1]["hrPpm"] == 8 and v[1]["hrDec"] == 5
+            assert v[0]["tol"] == 8 and v[0]["dec"] == 5 and v[1]["hrPpm"] == 8 and v[1]["hrDec"] == 5 and "hr" not in v[1]
             pg.select_option("#uip-hr", "0"); pg.wait_for_timeout(300)
             v = pg.evaluate("(()=>{const ex=E.files.find(f=>f.file.includes('Exploris')&&f.lv===1),qq=E.files.find(f=>f.file.startsWith('B_Full'));return [HR.prof(ex,1),HR.prof(qq,1),HR.q(),HR.label(ex)!=='']})()"); print(v)
             assert v[0]["hr"] is False and v[0]["dec"] == 1 and v[0]["unit"] == "Da" and v[2] == "&hr=0", v          # switched off: the Exploris behaves as a QqQ file
