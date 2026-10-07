@@ -31,7 +31,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati
 **Stato** (aggiornalo e fai push a ogni punto finito: è quello che legge la chat successiva). Ogni sessione cambia **solo la riga sotto il suo titolo** (le righe vuote fra una sessione e l'altra evitano i conflitti di git: non toglierle). Formato: punti fatti · punto in corso · ramo non ancora in `main`.
 
 **S1**
-- A0, A1, A2 fatti (A0: CI Windows da ricontrollare) · in corso: A3 · ramo claude/upbeat-johnson-xted9o
+- A0-A3 fatti e uniti in main (A0: CI Windows da ricontrollare) · in corso: A4 · ramo claude/upbeat-johnson-xted9o
 
 **S3**
 - —
@@ -65,15 +65,6 @@ Regole per lavorare in parallelo:
 
 ## A0: test su Windows (sessione S1, per primo)
 Da quando è entrato `tests/test_perdite.py` (PR #5, 7/10) la CI fallisce **solo su Windows** (`pytest (windows-latest, 3.11 e 3.14)`); Linux e macOS sono verdi. Causa probabile (i log non li ha visti nessuno): `subprocess.run([...node...], capture_output=True, text=True)` su Windows decodifica l'output di node con cp1252 e i caratteri Δ • − si rompono. Prima leggi il log (`gh run list -R Freeesta/QqQ-lab`, `gh run view <id> --log-failed`; serve `add_repo` in lettura). Se è questo: in `tests/test_perdite.py`, `test_calcola.py`, `test_cromato.py` (e ogni altro test che legge l'output di node) sostituisci `text=True` con `encoding="utf-8"`. Push e controlla che la CI sia verde anche su Windows (`gh run watch`). Se la causa è un'altra, correggi quella e scrivila in `AGENTS.md` (sez. 2, accanto alla nota sui file mmap su Windows).
-
-## A3: header sempre visibile, niente scorrimento cliccando «Dati»
-
-**A3.1 Header fisso in alto.** L'header (logo, Dati / Disegno / Teoria, ingranaggio, pulsanti a destra) deve restare **sempre visibile** mentre si scorre la pagina: `position: sticky; top: 0`, sfondo pieno (stesso colore di oggi), una leggera ombra solo quando la pagina è scorsa, `z-index` sopra pannelli e lista dei file ma **sotto** menu, tendine, finestre e tooltip (che stanno sopra 10000: controlla che non finiscano dietro l'header). Correggi gli elementi che calcolano posizioni rispetto alla cima della pagina e ora devono tenere conto dell'altezza dell'header: la lista dei file a sinistra (`#dfiles{position:sticky;top:8px}` → sotto l'header), gli scorrimenti verso un pannello (`window.scrollTo(... - 70)` in `explore.js` ~r.514 e `tabs.js` ~r.175, `scrollIntoView` ~r.555: usa `scroll-margin-top` o l'altezza reale dell'header), i menu del clic destro vicino al bordo alto. A schermo intero (pannello ⤢) l'header non deve coprire il pannello.
-
-**A3.2 Cliccando «Dati» la pagina non deve scorrere.** Oggi tornando a «Dati» da Disegno o Teoria la pagina salta al punto dove si lavorava (spesso il primo cromatogramma) e l'header sparisce: lo fa `setView` in `index.html` (~r.232-233: `S.dataWork`/`S.dataScroll` e `scrollTo(0, S.dataScroll)`), introdotto per «tornare a Dati dove si era». Decisione di Federico: **nessuno scorrimento automatico** cambiando vista. Togli il ripristino dello scorrimento in `setView` (i pannelli, lo zoom, il cursore e il pannello attivo restano: sono stato del programma, non scorrimento). Fai lo stesso per il cambio di scheda Full Scan / MS² / MRM (`tabs.js` ~r.43-58: `E.workY`, `E.scrollBy`, `scrollTo(0, E.scrollBy[t])`) se produce lo stesso salto. Lo scorrimento automatico resta solo quando lo studente crea un pannello nuovo (per mostrarglielo) o usa un comando che porta a un pannello.
-e2e: da Disegno clic su «Dati» → `scrollY` invariato (0 se la pagina era in cima) e header visibile; pagina scorsa in basso → header ancora visibile (`getBoundingClientRect().top == 0`); un menu del clic destro aperto vicino al bordo alto sta sopra l'header.
-
----
 
 ## A4: spettri e pannelli
 
