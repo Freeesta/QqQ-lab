@@ -31,7 +31,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati
 **Stato** (aggiornalo e fai push a ogni punto finito: è quello che legge la chat successiva). Ogni sessione cambia **solo la riga sotto il suo titolo** (le righe vuote fra una sessione e l'altra evitano i conflitti di git: non toglierle). Formato: punti fatti · punto in corso · ramo non ancora in `main`.
 
 **S1**
-- A0-A3 fatti e uniti in main (A0: CI Windows da ricontrollare) · in corso: A5 · ramo claude/upbeat-johnson-xted9o
+- A0-A7 e D1-D5 fatti e uniti in main (PR 8 e 10). Restano: D6 (serve `/api/dda` di S3); rossi su Windows `tests/test_filebuf.py` e nei job browser Firefox / WebKit-macOS (sono di S4) · nessun punto in corso · nessun ramo da unire
 
 **S3**
 - —
