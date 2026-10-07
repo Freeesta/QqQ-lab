@@ -28,7 +28,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati
 **Se riprendi dopo un'interruzione** (nuova sessione, stesso prompt): 1) `git fetch origin`; 2) guarda «Stato» qui sopra e le PR aperte (`gh pr list`) o i rami `claude/...` non uniti con commit «[in corso]» (`git branch -r --no-merged origin/main`); 3) se c'è lavoro non unito, portalo nel tuo ramo (`git merge origin/<quel ramo>`), lancia `python3 tools/verifica.py --solo <test del punto>` e **riparti dal punto in corso**, senza rifare ciò che è già fatto; 4) chiudi la vecchia PR dopo aver unito la tua. Non rileggere i blocchi già fatti.
 
 ## Ordine di lavoro e sessioni
-**Parte A** (ritocchi): A1 barra dei file · A2 perdite neutre · A3 header fisso e niente scorrimento su «Dati» · A4 spettri e pannelli.
+**Parte A** (ritocchi): A0 cestino solo locale · A1 barra dei file · A2 perdite neutre · A3 header fisso e niente scorrimento su «Dati» · A4 spettri e pannelli.
 **Parte B** (alta risoluzione e DDA): nell'ordine della **scaletta di priorità** più sotto (B0 → B9).
 **Sessioni** (Federico può lanciarne più d'una insieme; ognuna fa SOLO i suoi blocchi, scritti nel primo messaggio, es. «Fai la sessione 1»):
 | Onda | Sessione | Blocchi | File principali | Insieme a |
@@ -43,6 +43,9 @@ Regole per le sessioni parallele: tocca solo i file del tuo blocco (se serve alt
 ---
 
 # PARTE A: ritocchi dell'interfaccia
+
+## A0: cestino solo locale (prima cosa della sessione S1)
+`_cestino/` oggi è in parte nel repository pubblico (vecchi prompt, `calib.js`, `Teoria QqQ lab.html` e anche `Flufenacet_FullScan_t60.mzML`, che rivela il nome dell'incognita) e in parte no: GitHub Desktop mostra a Federico file aggiunti e tolti che non capisce. Decisione: **il cestino resta solo sul computer**. Aggiungi `_cestino/` a `.gitignore` e togli la cartella dal repository **senza cancellare i file dal disco**: `git rm -r --cached _cestino` (sul Mac i file restano; nel cloud non servono). Commit «Cestino solo locale». Aggiorna la regola in `AGENTS.md` sez. 2 («non cancellare: sposta in `_cestino/`, che non va in git»).
 
 ## A1: barra sopra i pannelli (`#tools`)
 
