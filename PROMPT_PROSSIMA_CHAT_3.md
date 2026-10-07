@@ -18,6 +18,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 2. **Schermo intero**
 3. **Dimensione del testo anche dentro i grafici**
 4. **Strumenti dell'header**: via Isotopi, calcolatrice vera, Addotti più semplici
+5. **Rifiniture** (menu «Correzione» con icone, documenti per gli agenti)
 
 ---
 
@@ -84,6 +85,18 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 - e2e: righe comuni visibili, altri nascosti finché non si apre la riga; strumento «Due picchi» assente; testo nuovo presente.
 
 ---
+
+## BLOCCO 5: rifiniture rimaste dai prompt precedenti (piccolo)
+**5.1 Menu «Correzione» con icone.** Il menu unico «Correzione» (`data-o="corr"`, `setCorr`, `AGENTS.md` sez. 17) è un `<select>` con `title`: trasformalo in una tendina come quella dei «Parametri», con una piccola icona e un'etichetta di 1-2 righe per ogni voce (nessuna / file bianco / fondo di un tratto / linea di base automatica). Se l'intestazione in una riga del prompt 2 l'ha già spostato nei «Parametri», basta aggiungere icone ed etichette lì.
+
+**5.2 Documenti per gli agenti.** `AGENTS.md` (riga «Documenti di supporto per agenti» e «Alla fine di ogni sessione aggiorna `PROMPT_PROSSIMA_CHAT.md`») cita ancora un solo prompt. Aggiornalo alla regola attuale: i prompt sono file numerati `PROMPT_PROSSIMA_CHAT_N.md`, uno per chat; ognuno si ripulisce da solo e, quando è vuoto, va in `_cestino/<data>_prompt_completati/`; i lavori in coda che aspettano il via libera di Federico stanno nell'ultimo prompt aperto (sezione «Lavori in coda»).
+
+---
+
+## Lavori in coda (NON farli senza il via libera di Federico)
+1. **Dati dello studente**: `navigator.storage.persist()` + spazio usato; Esporta/Importa sessione (.zip con file, `taccuino.json`, `LEGGIMI.txt`; la scrittura zip c'è in `xlsx.js`). Dove mettere i pulsanti: da decidere con Federico (l'ingranaggio ha 3 controlli).
+2. **Origine degli ioni / frammenti in sorgente**: la finestra «Da dove viene?» è nascosta; proposta di Claude in attesa di risposta di Federico: (a) «impronta del t0» (ioni presenti all'apice del progenitore nel t0 segnati negli altri spettri), (b) XIC normalizzati sovrapposti con Δ apice, (c) colonna «rapporto con una traccia di riferimento» nella tabella delle integrazioni, (d) eventuale prova in laboratorio con il t0 a due DP diversi. TP Mine: `isf.isf_classify` → flag `insource` (verifica se già fatto); `/api/origin` lento in Pyodide (19-38 s).
+3. **Da provare a mano (Federico, non la chat)**: Windows, Safari, file grandi; un vero file IDA / MRM-IDA-EPI del 3200 QTRAP (il Blocco I è provato solo su dati sintetici); la vista a cascata con 7 file; S/N con la zona di rumore su un picco vero.
 
 ## Chiusura
 `python3 tools/verifica.py` completo (i test Pyodide li salta da solo). Messaggio finale a Federico: una riga per punto (fatto / non fatto e perché), cosa provare a mano con Cmd+Shift+R. Aggiorna `AGENTS.md` (integrazione senza sovrapposizioni e annulla, schermo intero, testo dei grafici, header senza Isotopi, calcolatrice, Addotti) e cancella da questo file ciò che è fatto.
