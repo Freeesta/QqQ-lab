@@ -18,7 +18,13 @@ from pathlib import Path
 
 import numpy as np
 
+from .profile import analyzer_from_components, mass_profile
+
 _CV = {}
+_ANALYZERS = ("FTMS", "ITMS", "TOFMS", "TQMS", "SQMS")      # first token of a Thermo filter string
+_RX_REF = re.compile(r'<precursor\b[^>]*?spectrumRef="([^"]*)"')
+_RX_ICREF = re.compile(r'<scan\b[^>]*?instrumentConfigurationRef="([^"]*)"')
+_RX_ACT = re.compile(r"@(hcd|cid|etd|ecd|pqd|uvpd)", re.I)
 
 
 def _cv(header: str, accession: str):
@@ -115,6 +121,13 @@ class Scan:
     collision_energy: float | None
     filter: str
     profile: bool = False  # the scan is a profile spectrum (MS:1000128), not centroids (MS:1000127)
+    # --- fields for high resolution / DDA (None = the file does not say) ---
+    parent: int | None = None          # index of the Full Scan the MS2 was triggered from (spectrumRef; otherwise the previous MS1 of the same polarity)
+    iso: tuple | None = None           # isolation window (low, high) in m/z, absolute
+    act: str | None = None             # activation: "HCD", "CID", "ETD"...
+    res: float | None = None           # mass resolving power of the scan (MS:1000800)
+    an: str | None = None              # analyzer: FTMS / ITMS / TOFMS / TQMS / SQMS, or "?" (see Run._analyzer)
+    pint: float | None = None          # intensity of the selected ion in the survey scan (MS:1000042)
 
 
 @dataclass
@@ -144,7 +157,7 @@ class Run:
         """mode: "mmap", "file" (plain reads: Blobs mounted in the browser, very large files) or "auto"."""
         self.path = Path(path)
         if mode == "auto":
-            big = self.path.stat().st_size > FILE_MODE_BYTES or os.path.realpath(self.path).startswith(WORKERFS_ROOT + "/")
+            big = self.path.stat().st_size > FILE_MODE_BYTES or os.path.realpath(self.path).replace("\\", "/").startswith(str(WORKERFS_ROOT).replace("\\", "/").rstrip("/") + "/")
             mode = "file" if big else "mmap"
         self.mode = mode
         if mode == "file":
@@ -156,12 +169,47 @@ class Run:
         if b"mzML" not in head:
             raise ValueError(f"{self.path.name} does not look like an mzML file")
         self.scans: list[Scan] = []
+        self._read_header()
         self.timing: dict = {}                       # seconds spent reading the file ("indice", "tabella MS1"...), shown by the ?perf meter
         t0 = time.perf_counter()
         self._index()
         self.timing["indice"] = round(time.perf_counter() - t0, 3)
         self.n_chromatograms = self._count(b"<chromatogram ")
         self._tables: dict = {}
+
+    def _read_header(self):
+        """Instrument configurations (analyzers of each), the default one, and whether the file comes from Thermo (relative collision energy)."""
+        head = self._mm[:max(self._mm.find(b"<run "), 0) or 200000].decode("utf-8", "replace")
+        self.nce = 'accession="MS:1000768"' in head                       # Thermo nativeID format: the "collision energy" is relative (NCE), not eV
+        self._ic: dict = {}
+        for m in re.finditer(r'<instrumentConfiguration\s+id="([^"]*)"(.*?)</instrumentConfiguration>', head, re.S):
+            names = []
+            for blk in re.findall(r"<analyzer\b.*?</analyzer>", m.group(2), re.S):
+                names += re.findall(r'<cvParam [^>]*name="([^"]*)"', blk)
+            self._ic[m.group(1)] = analyzer_from_components(names)
+        mm = re.search(r'<run\b[^>]*defaultInstrumentConfigurationRef="([^"]*)"', self._mm[:self._mm.find(b"<run ") + 2000].decode("utf-8", "replace"))
+        self._ic_default = (mm.group(1) if mm and mm.group(1) in self._ic else next(iter(self._ic), None))
+
+    def _analyzer(self, filt: str, ic_ref: str | None) -> str:
+        """Analyzer code of a scan: the first token of a Thermo filter string; else the analyzer of its (or the default) instrumentConfiguration; else "?"."""
+        tok = filt.split(" ", 1)[0].upper() if filt else ""
+        if tok in _ANALYZERS:
+            return tok
+        return self._ic.get(ic_ref or "", self._ic.get(self._ic_default or "", "?"))
+
+    def _link_parents(self, refs: dict):
+        """Parent of every MS2: the Full Scan its spectrumRef names; when that is missing, the last MS1 before it with the same polarity."""
+        by_native = {s.native: s.index for s in self.scans}
+        last: dict = {}
+        for s in self.scans:
+            if s.level == 1:
+                last[s.polarity] = s.index
+            elif s.level > 1:
+                ref = refs.get(s.index)
+                s.parent = by_native.get(ref) if ref else None
+                if s.parent is None:
+                    s.parent = last.get(s.polarity, last.get(0))
+        self.hr1 = bool(mass_profile([s for s in self.scans if s.level == 1])["hr"])        # high-resolution survey scans (used to size the peak table)
 
     def _count(self, pat: bytes) -> int:
         n, pos = 0, 0
@@ -176,7 +224,7 @@ class Run:
 
     # ------------------------------------------------------------------ index
     def _index(self):
-        mm, pos = self._mm, 0
+        mm, pos, refs = self._mm, 0, {}
         while True:
             a = mm.find(b"<spectrum ", pos)
             if a < 0:
@@ -198,13 +246,34 @@ class Run:
             prec = _float(_cv(h, "MS:1000744"))
             if prec is None:
                 prec = _float(_cv(h, "MS:1000827"))
+            lvl_i = int(float(lvl)) if lvl else 1
+            hs = h.split("<precursorList", 1)[0]                   # what belongs to the scan itself, not to its precursor (a "ms level" there is the parent's)
+            filt = _cv(hs, "MS:1000512") or ""
+            iso = act = pint = None
+            if lvl_i > 1:
+                tgt = _float(_cv(h, "MS:1000827"))
+                tgt = prec if tgt is None else tgt
+                if tgt is not None:
+                    lo, hi = _float(_cv(h, "MS:1000828")), _float(_cv(h, "MS:1000829"))
+                    iso = (tgt - (0.5 if lo is None else lo), tgt + (0.5 if hi is None else hi))
+                act = "HCD" if 'accession="MS:1000422"' in h else "CID" if 'accession="MS:1000133"' in h else "ETD" if 'accession="MS:1000598"' in h else None
+                if act is None:
+                    ma = _RX_ACT.search(filt)
+                    act = ma.group(1).upper() if ma else None
+                pint = _float(_cv(h, "MS:1000042"))
+                mr = _RX_REF.search(h)
+                if mr:
+                    refs[len(self.scans)] = mr.group(1)
+            mi = _RX_ICREF.search(hs)
             self.scans.append(Scan(
                 index=len(self.scans), native=m.group(1) if m else "", start=a, end=b,
-                level=int(float(lvl)) if lvl else 1, rt=rt, polarity=pol,
+                level=lvl_i, rt=rt, polarity=pol,
                 tic=_float(_cv(h, "MS:1000285")) or 0.0, precursor=prec,
-                collision_energy=_float(_cv(h, "MS:1000045")), filter=_cv(h, "MS:1000512") or "",
-                profile='accession="MS:1000128"' in h))
+                collision_energy=_float(_cv(h, "MS:1000045")), filter=filt,
+                profile='accession="MS:1000128"' in h, iso=iso, act=act, res=_float(_cv(hs, "MS:1000800")), pint=pint,
+                an=self._analyzer(filt, mi.group(1) if mi else None)))
             pos = b
+        self._link_parents(refs)
 
     # ------------------------------------------------------------------ arrays
     def read(self, i: int):
@@ -295,6 +364,15 @@ class Run:
             return re.findall(r'<cvParam [^>]*name="([^"]*)"', block)
         ic = re.search(r"<instrumentConfiguration.*?</instrumentConfiguration>", head, re.S)
         ser = re.search(r'name="instrument serial number" value="([^"]*)"', head)
+        # the model: the first cvParam of the instrumentConfiguration (or of the referenceableParamGroup it points to) that is not the serial number
+        # nor a component (Thermo files keep it in a referenceableParamGroup; the 3200 QTRAP writes it directly)
+        own = ic.group(0).split("<componentList", 1)[0] if ic else ""
+        pool = names(own)
+        for ref in re.findall(r'<referenceableParamGroupRef\s+ref="([^"]*)"', own):
+            g = re.search(r'<referenceableParamGroup\s+id="%s"(.*?)</referenceableParamGroup>' % re.escape(ref), head, re.S)
+            if g:
+                pool += names(g.group(1))
+        pool = [n for n in pool if n != "instrument serial number"]
         src = re.findall(r'<sourceFile id="[^"]*" name="([^"]*)"', head)
         soft = re.findall(r'<software id="[^"]*" version="([^"]*)">\s*<cvParam [^>]*name="([^"]*)"', head)
         comp = []
@@ -302,8 +380,8 @@ class Run:
             for kind in ("source", "analyzer", "detector"):
                 for blk in re.findall(r"<%s .*?</%s>" % (kind, kind), ic.group(0), re.S):
                     comp.extend(names(blk))
-        model = names(ic.group(0))[0] if ic and names(ic.group(0)) else ""
-        return {"instrument": model, "serial": ser.group(1) if ser else "", "components": comp,
+        model = pool[0] if pool else ""
+        return {"instrument": model, "serial": ser.group(1) if ser else "", "components": comp, "analyzers": sorted(set(self._ic.values())),
                 "source_files": src, "software": [f"{n} {v}".strip() for v, n in soft]}
 
     def scan_window(self):

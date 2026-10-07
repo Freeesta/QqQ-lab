@@ -268,29 +268,32 @@ class App:
         return ionfamily.origin_report(samples, mz, parent, rt0, rt1, ref, formula_p=formula or None, top=25, ms2=ms2)   # 25 co-eluting ions are plenty to read (and the browser version is ~10x slower)
 
     @staticmethod
-    def _spec_json(item, level: int, mz, y, merge: bool) -> dict:
+    def _spec_json(item, level: int, mz, y, merge: bool, hr: bool = True) -> dict:
         """A spectrum for the front end. Centroids: the peaks (merged by unit window if asked). Profile: `mz`/`y` are the PEAKS (one per
         nominal mass, `peaks.profile_peaks`) and `pmz`/`py` the profile points, drawn as a line; labels, table, ruler and clicks use the peaks."""
-        r3 = lambda a: [round(float(v), 3) for v in a]
+        hr = item.hr_on(level, hr)                                  # high-resolution centroids: decimals of the profile + 1, never merged by nominal mass
+        d = item.profile(level)["dec"] + 1 if hr else 3
+        r3 = lambda a: [round(float(v), d) for v in a]
         r1 = lambda a: [round(float(v), 1) for v in a]
         if item.spectrum_mode(level) == "profile":
             pm, py = profile_peaks(mz, y)
             lm, ly = pad_zeros(mz, y, item._step(level))
             return {"mode": "profile", "mz": r3(pm), "y": r1(py), "pmz": r3(lm), "py": r1(ly)}
-        if merge:
+        if merge and not hr:
             mz, y = merge_unit(mz, y)
         return {"mode": item.spectrum_mode(level), "mz": r3(mz), "y": r1(y)}
 
-    def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None, merge: bool = False) -> dict:
+    def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None, merge: bool = False, hr: bool = True) -> dict:
         if bg is not None:
             bg = {**bg, "item": self._item(bg["k"])}
         item = self._item(k)
-        mz, y, n = item.spectrum(rt0, rt1, level, precursor, bin_da=bin_da, bg=bg)
-        return {**self._spec_json(item, level, mz, y, merge), "scans": n, **item.window_scans(rt0, rt1, level, precursor)}
+        pt = item.ptol(level, precursor, hr)
+        mz, y, n = item.spectrum(rt0, rt1, level, precursor, prec_tol=pt, bin_da=bin_da, bg=bg, hr=hr)
+        return {**self._spec_json(item, level, mz, y, merge, hr), "scans": n, **item.window_scans(rt0, rt1, level, precursor, pt)}
 
     MAX_SPECTRA = 60       # scans per /api/spectra request
 
-    def spectra(self, k: int, i0: int, i1: int, level: int, precursor, bin_da: float, merge: bool = False) -> dict:
+    def spectra(self, k: int, i0: int, i1: int, level: int, precursor, bin_da: float, merge: bool = False, hr: bool = True) -> dict:
         """Single scans i0..i1 of file k (for scan-by-scan navigation); each one equals /api/spectrum on a window holding only that scan."""
         item = self._item(k)
         if item.kind() == "mrm":
@@ -299,11 +302,24 @@ class App:
             raise ValueError("intervallo di scansioni non valido: i0 è maggiore di i1")
         if i1 - i0 + 1 > self.MAX_SPECTRA:
             raise ValueError(f"al massimo {self.MAX_SPECTRA} scansioni per richiesta")
-        n = item.scan_count(level, precursor)
+        pt = item.ptol(level, precursor, hr)
+        n = item.scan_count(level, precursor, pt)
         if i0 < 0 or i0 >= n:
             raise ValueError(f"scansione fuori dal file (il file ne ha {n})")
-        return {"n": n, "scans": [{"i": s["i"], "rt": round(s["rt"], 4), **self._spec_json(item, level, s["mz"], s["y"], merge)}
-                                  for s in item.scans(i0, i1, level, precursor, bin_da=bin_da)]}
+        return {"n": n, "scans": [{"i": s["i"], "sid": s["sid"], "rt": round(s["rt"], 4), **self._spec_json(item, level, s["mz"], s["y"], merge, hr)}
+                                  for s in item.scans(i0, i1, level, precursor, prec_tol=pt, bin_da=bin_da, hr=hr)]}
+
+    def dda(self, k: int, hr: bool = True) -> dict:
+        """The MS2 scans of the physical file of item k with parent / isolation / activation (see Item.dda)."""
+        return self._item(k).dda(hr)
+
+    def scan(self, k: int, sid: int, hr: bool = True) -> dict:
+        return self._item(k).scan(sid, hr)
+
+    def scanavg(self, k: int, sids: list[int], hr: bool = True) -> dict:
+        if len(sids) > 200:
+            raise ValueError("al massimo 200 scansioni per media")
+        return self._item(k).scan_avg(sids, hr)
 
     def ionmap(self, k: int, level: int) -> dict:
         """RT x m/z intensity matrix (float32, row = RT bin, column = m/z bin, base64) on the session-wide grid."""

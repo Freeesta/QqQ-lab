@@ -17,6 +17,7 @@ const CHAPTERS = [
   ["11-glossario.html", "11", "Glossario e bibliografia"],
   ["12-disegno.html", "12", "Disegnare le molecole"],
   ["13-origine.html", "13", "Da dove viene questo ione?"],
+  ["14-alta-risoluzione.html", "14", "Alta risoluzione e DDA"],
 ];
 const APP = typeof APP_NAME === "string" ? APP_NAME : "mzLab";        // appname.js is loaded first by every page
 CHAPTERS.forEach(c => { c[2] = c[2].split("{APP}").join(APP); });

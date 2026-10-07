@@ -74,12 +74,21 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             if q.get("bgk") not in (None, ""):
                 bg = {"k": int(q["bgk"]), "rt0": float(q["bgrt0"]), "rt1": float(q["bgrt1"]), "factor": float(q.get("bgf", 1.0))}
             return _json(app.spectrum(int(q["k"]), float(q["rt0"]), float(q["rt1"]), int(q.get("level", 1)),
-                                      float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), bg, q.get("merge") == "1"))
+                                      float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), bg, q.get("merge") == "1", q.get("hr") != "0"))
         if path == "/api/spectra":       # single scans i0..i1 (at most 60), for scan-by-scan navigation
             pr = q.get("prec", q.get("precursor"))
             try:
                 return _json(app.spectra(int(q["k"]), int(q["i0"]), int(q["i1"]), int(q.get("level", 1)),
-                                         float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), q.get("merge") == "1"))
+                                         float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), q.get("merge") == "1", q.get("hr") != "0"))
+            except (ValueError, KeyError) as e:
+                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
+        if path in ("/api/dda", "/api/scan", "/api/scanavg"):       # DDA and single scans as stored in the file (high resolution, B2)
+            try:
+                if path == "/api/dda":
+                    return _json(app.dda(int(q["k"]), q.get("hr") != "0"))
+                if path == "/api/scan":
+                    return _json(app.scan(int(q["k"]), int(q["sid"]), q.get("hr") != "0"))
+                return _json(app.scanavg(int(q["k"]), [int(x) for x in q["sids"].split(",") if x], q.get("hr") != "0"))
             except (ValueError, KeyError) as e:
                 return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
         if path == "/api/formula":
