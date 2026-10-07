@@ -2,7 +2,7 @@
 (cloud sessions, CI). The real data never go into the repository: this script WRITES files with the same names and
 the same structure as the lab files, but every number is invented.
 
-    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_FullMass-neg-t0 (ESI-), C_IDA / C_MRM-EPI / C_POLALT (mixed files), B_MS2-t15, B_MRM-*, B_MRM-STD_*
+    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_FullMass-neg-t0 (ESI-), C_IDA / C_MRM-EPI / C_POLALT (mixed files), HR_DDA-Exploris-t30 / HR_DDA-Fusion-t30 / HR_rotto-t30 (Orbitrap DDA, see hr_dda), B_MS2-t15, B_MRM-*, B_MRM-STD_*
 
 What is built in (so the e2e tests find what they expect):
 - Full Scan (7 times, RT 0.5-20 min, ~1100 scans, m/z 120-480, +0.3 Da offset like the instrument): parent 364.4 at
@@ -217,6 +217,154 @@ def full_scan_profile(path: Path, t: float, rng) -> None:
     _write(path, specs, [_chrom(0, "TIC", rts, tic), _chrom(1, "BPC", rts, bpc)])
 
 
+# ---------------------------------------------------------------------------------------------- high resolution (Orbitrap) DDA
+HR_PARENT = "C14H13F4N3O2S"       # formula of the invented "parent" of the HR files (m/z computed with qqq_lab.chem.elements)
+HR_NAMES = {"exploris": "HR_DDA-Exploris-t30.mzML", "fusion": "HR_DDA-Fusion-t30.mzML", "broken": "HR_rotto-t30.mzML"}
+
+
+def _cvp(acc, name, value="", unit=""):
+    return f'<cvParam cvRef="MS" accession="{acc}" name="{name}" value="{value}"{unit}/>'
+
+
+_U_MZ = ' unitCvRef="MS" unitAccession="MS:1000040" unitName="m/z"'
+
+
+def _hr_head(kind: str, broken: bool, stem: str) -> str:
+    """Header of a Thermo-like mzML: model in a referenceableParamGroup, instrumentConfiguration(s) with the components."""
+    fus = kind == "fusion"
+    model = (_cvp("MS:1002416", "Orbitrap Fusion") if fus else _cvp("MS:1003095", "Orbitrap Exploris 120"))
+    if broken:
+        model = _cvp("MS:1009999", "Modello sconosciuto")
+    def conf(ic, ana, det):
+        return (f'<instrumentConfiguration id="{ic}"><referenceableParamGroupRef ref="CommonInstrumentParams"/><componentList count="4">'
+                f'<source order="1">{_cvp("MS:1000073", "electrospray ionization")}{_cvp("MS:1000057", "electrospray inlet")}</source>'
+                f'<analyzer order="2">{_cvp("MS:1000081", "quadrupole")}</analyzer><analyzer order="3">{ana}</analyzer>'
+                f'<detector order="4">{det}</detector></componentList><softwareRef ref="Xcalibur"/></instrumentConfiguration>')
+    ics = conf("IC1", _cvp("MS:1000484", "orbitrap"), _cvp("MS:1000624", "inductive detector"))
+    if fus:
+        ics += conf("IC2", _cvp("MS:1000083", "radial ejection linear ion trap"), _cvp("MS:1000253", "electron multiplier"))
+    return ('<?xml version="1.0" encoding="utf-8"?><mzML xmlns="http://psi.hupo.org/ms/mzml" version="1.1.0">'
+            '<cvList count="2"><cv id="MS" fullName="Proteomics Standards Initiative Mass Spectrometry Ontology" version="4.1.163" URI="x"/>'
+            '<cv id="UO" fullName="Unit Ontology" version="09:04:2014" URI="x"/></cvList>'
+            f'<fileDescription><fileContent>{_cvp("MS:1000579", "MS1 spectrum")}{_cvp("MS:1000580", "MSn spectrum")}</fileContent>'
+            f'<sourceFileList count="1"><sourceFile id="RAW1" name="{stem}.raw" location="file:///sintetico">{_cvp("MS:1000768", "Thermo nativeID format")}'
+            f'{_cvp("MS:1000563", "Thermo RAW format")}</sourceFile></sourceFileList></fileDescription>'
+            f'<referenceableParamGroupList count="1"><referenceableParamGroup id="CommonInstrumentParams">{model}'
+            f'{_cvp("MS:1000529", "instrument serial number", "SINTETICO")}</referenceableParamGroup></referenceableParamGroupList>'
+            '<softwareList count="2"><software id="Xcalibur" version="0.0">' + _cvp("MS:1000532", "Xcalibur") + '</software>'
+            '<software id="pwiz" version="0.0">' + _cvp("MS:1000615", "ProteoWizard software") + '</software></softwareList>'
+            f'<instrumentConfigurationList count="{2 if fus else 1}">{ics}</instrumentConfigurationList>'
+            '<dataProcessingList count="1"><dataProcessing id="pwiz_Reader_Thermo_conversion"><processingMethod order="0" softwareRef="pwiz">'
+            + _cvp("MS:1000544", "Conversion to mzML") + '</processingMethod><processingMethod order="1" softwareRef="pwiz">'
+            + _cvp("MS:1000035", "peak picking") + '</processingMethod></dataProcessing></dataProcessingList>'
+            f'<run id="{stem}" defaultInstrumentConfigurationRef="IC1">')
+
+
+def hr_dda(path: Path, rng, kind: str = "exploris", broken: bool = False) -> dict:
+    """Thermo-like Orbitrap DDA file (all numbers invented). kind = "exploris" (HCD NCE 30, MS2 in the Orbitrap, isolation +-0.75, 4 decimals)
+    or "fusion" (CID 35 in the ion trap, MS2 with 2 decimals and no resolution, isolation +-1.5, +3 ppm systematic error on the MS1);
+    broken=True removes everything an HR reader might rely on (spectrumRef, isolation window, resolution, known model, normal filter string).
+
+    Cycle every 0.03 min: one Full Scan (centroids, ~150 noise peaks) + the top-3 ions above 5e4 with 0.3 min dynamic exclusion.
+    Ground truth (masses are invented, m/z of the parent from its formula):
+    parent [M+H]+ at RT 14.3 (with 13C and 34S isotopes); isobars 305.0702 (RT 9.0) and 305.1066 (RT 12.0); isobars at the same RT
+    412.1000 and 412.1364 (RT 16.0); co-isolation: 229.0500 (weak, 4e4: never picked) beside 229.6000 (5x) at RT 7.07;
+    250.1234 at 3e4 (RT 11.0), never fragmented; a few other ions and two constant background ions to keep the cycles busy."""
+    import sys as _sys
+    _sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from qqq_lab.chem.elements import ion_mz, mass, parse_formula
+    fus, sd = kind == "fusion", 0.8e-6
+    mz_par = ion_mz(mass(parse_formula(HR_PARENT)), "[M+H]+")
+    sys_ppm = 3e-6 if fus else 0.0
+    # (m/z, RT, sigma, amplitude, selectable); the background ions have sigma = 0 -> constant
+    ions = [(mz_par, 14.3, 0.07, 3.0e7, True), (305.0702, 9.0, 0.07, 4.0e6, True), (305.1066, 12.0, 0.07, 3.0e6, True),
+            (412.1000, 16.0, 0.07, 2.0e6, True), (412.1364, 16.0, 0.07, 1.5e6, True),
+            (229.0500, 7.07, 0.07, 4.4e4, True), (229.6000, 7.07, 0.07, 2.2e5, True), (250.1234, 11.0, 0.07, 3.0e4, True),
+            (195.0877, 5.0, 0.07, 8.0e5, True), (346.1218, 10.5, 0.07, 6.0e5, True), (505.2005, 18.0, 0.07, 5.0e5, True),
+            (279.1591, 0.0, 0.0, 1.5e5, True), (391.2843, 0.0, 0.0, 3.0e5, True)]
+    frag_rng = np.random.default_rng(99)
+    frags = {}
+    for m, *_ in ions:         # invented fragments: fractions of the precursor, with a mass defect
+        f = np.sort(m * frag_rng.uniform(0.25, 0.93, 4))
+        frags[m] = (np.round(f, 4), frag_rng.uniform(0.15, 1.0, 4))
+    frags[mz_par] = (np.round(mz_par - np.array([33.9950, 61.9896, 97.9765, 125.0000]), 4), np.array([0.3, 1.0, 0.6, 0.2]))
+    iso = lambda m: [(m + 1.00335, 0.13)] + ([(m + 1.99580, 0.045)] if m == mz_par else [])        # 13C (+34S for the parent)
+    def level(m, rt, c, s, a):
+        if s <= 0:
+            return a * (1 + 0.1 * np.sin(rt / 2.0))
+        return a * float(_g(rt, c, s))
+    pre, ex = "controllerType=0 controllerNumber=1 scan=", {}
+    if kind == "fusion":
+        ms2_filter = lambda p: f"ITMS + c ESI d Full ms2 {p:.4f}@cid35.00 [50.0000-{p + 10:.4f}]"; act, ce, hw = "MS:1000133", 35.0, 1.5
+    else:
+        ms2_filter = lambda p: f"FTMS + p ESI d Full ms2 {p:.4f}@hcd30.00 [50.0000-{p + 10:.4f}]"; act, ce, hw = "MS:1000422", 30.0, 0.75
+    ms1_filter, res1, res2 = "FTMS + p ESI Full ms [100.0000-900.0000]", (60000 if fus else 45000), 15000
+    if broken:
+        ms1_filter = "FTMS {1,2} + p ESI w Full ms [100.0000-900.0000]"
+        ms2_filter = lambda p: f"FTMS {{1,2}} + p ESI d w Full ms2 {p:.4f}@hcd30.00 [50.0000-{p + 10:.4f}]"
+    specs, tic, rts_ms1, i, n_ms2 = [], [], [], 0, 0
+
+    def build(idx, rt, level_, mz, it, extra_scan="", extra_prec=""):
+        n = len(mz)
+        base = int(np.argmax(it)) if n else 0
+        return (f'<spectrum index="{idx}" id="{pre}{idx + 1}" defaultArrayLength="{n}">'
+                + _cvp("MS:1000579" if level_ == 1 else "MS:1000580", "MS1 spectrum" if level_ == 1 else "MSn spectrum")
+                + _cvp("MS:1000511", "ms level", level_) + _cvp("MS:1000130", "positive scan") + _cvp("MS:1000127", "centroid spectrum")
+                + _cvp("MS:1000504", "base peak m/z", f"{mz[base]:.6f}" if n else 0, _U_MZ) + _cvp("MS:1000505", "base peak intensity", f"{it[base]:.6g}" if n else 0)
+                + _cvp("MS:1000285", "total ion current", f"{float(np.sum(it)):.6g}")
+                + f'<scanList count="1">{_cvp("MS:1000795", "no combination")}<scan{extra_scan}>'
+                + _cvp("MS:1000016", "scan start time", f"{rt:.6f}", ' unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"')
+                + (extra_prec[0] if extra_prec else "") + '<scanWindowList count="1"><scanWindow>' + _cvp("MS:1000501", "scan window lower limit", 50.0, _U_MZ)
+                + _cvp("MS:1000500", "scan window upper limit", 900.0, _U_MZ) + '</scanWindow></scanWindowList></scan></scanList>'
+                + (extra_prec[1] if extra_prec else "") + '<binaryDataArrayList count="2">'
+                + _arr("MS:1000514", "m/z array", mz) + _arr("MS:1000515", "intensity array", it) + "</binaryDataArrayList></spectrum>")
+
+    cyc = 0.03
+    for rt in np.arange(0.5, 20.0, cyc):
+        vals = [(m, level(m, rt, c, s, a) * rng.normal(1, 0.03), sel) for m, c, s, a, sel in ions]
+        mz = list(rng.uniform(100, 900, 150)); it = list(rng.lognormal(np.log(8e3), 0.7, 150))
+        meas = {}
+        for m, v, _ in vals:
+            if v < 2e3:
+                continue
+            e = m * (1 + sys_ppm + rng.normal(0, sd)); meas[m] = (e, v); mz.append(e); it.append(v)
+            for d, r in iso(m):
+                mz.append((m + (d - m)) * (1 + sys_ppm + rng.normal(0, sd))); it.append(v * r)
+        o = np.argsort(mz); mz = np.array(mz)[o]; it = np.array(it)[o]
+        idx1 = i
+        res_xml = "" if broken else _cvp("MS:1000800", "mass resolving power", res1)
+        specs.append(build(i, rt, 1, mz, it, "", (res_xml + _cvp("MS:1000512", "filter string", ms1_filter), ""))); tic.append(float(it.sum())); rts_ms1.append(rt); i += 1
+        # data-dependent selection: the most intense ions above 5e4 that are not on the exclusion list (0.3 min)
+        cand = sorted([(v, m) for m, v, sel in vals if sel and v > 5e4 and m in meas and not (m in ex and rt < ex[m])], reverse=True)[:3]
+        for k, (v, m) in enumerate(cand):
+            ex[m] = rt + 0.3
+            e, vint = meas[m]
+            w = [(mm, vv) for mm, vv, _ in vals if abs(mm - m) <= hw and mm in meas]                    # co-isolated ions
+            fm, fi = [], []
+            for mm, vv in w:
+                fm += list(frags[mm][0] * (1 + rng.normal(0, sd, 4))); fi += list(frags[mm][1] * vv * 0.2 * rng.normal(1, 0.05, 4))
+            fm += list(rng.uniform(60, m, 8)); fi += list(rng.lognormal(np.log(1.5e3), 0.5, 8))
+            o = np.argsort(fm); fm = np.array(fm)[o]; fi = np.array(fi)[o]
+            if fus:
+                fm = np.round(fm + rng.normal(0, 0.05, fm.size), 2)
+            res2_xml = "" if (broken or fus) else _cvp("MS:1000800", "mass resolving power", res2)
+            sc = (res2_xml + _cvp("MS:1000512", "filter string", ms2_filter(m)))
+            cfg = ' instrumentConfigurationRef="IC2"' if fus else ""
+            win = ("" if broken else "<isolationWindow>" + _cvp("MS:1000827", "isolation window target m/z", f"{m:.6f}", _U_MZ)
+                   + _cvp("MS:1000828", "isolation window lower offset", hw, _U_MZ) + _cvp("MS:1000829", "isolation window upper offset", hw, _U_MZ) + "</isolationWindow>")
+            ref = "" if broken else f' spectrumRef="{pre}{idx1 + 1}"'
+            prec = (f'<precursorList count="1"><precursor{ref}>{win}<selectedIonList count="1"><selectedIon>' + _cvp("MS:1000744", "selected ion m/z", f"{e:.6f}", _U_MZ)
+                    + _cvp("MS:1000041", "charge state", 1) + _cvp("MS:1000042", "peak intensity", f"{vint:.6g}") + "</selectedIon></selectedIonList><activation>"
+                    + _cvp(act, "collision-induced dissociation") + _cvp("MS:1000045", "collision energy", ce, ' unitCvRef="UO" unitAccession="UO:0000266" unitName="electronvolt"')
+                    + "</activation></precursor></precursorList>")
+            specs.append(build(i, rt + 0.004 * (k + 1), 2, fm, fi, cfg, (sc, prec))); i += 1; n_ms2 += 1
+    chroms = [_chrom(0, "TIC", np.array(rts_ms1), np.array(tic)), _chrom(1, "Pump Pressure", np.array(rts_ms1), 250.0 + 5 * rng.normal(0, 1, len(rts_ms1)))]
+    stem = Path(path).stem
+    Path(path).write_text(_hr_head(kind, broken, stem) + f'<spectrumList count="{len(specs)}">' + "".join(specs) + "</spectrumList>"
+                          + f'<chromatogramList count="{len(chroms)}">' + "".join(chroms) + "</chromatogramList></run></mzML>", encoding="utf-8")
+    return {"n_ms1": len(rts_ms1), "n_ms2": n_ms2, "parent_mz": mz_par}
+
+
 def make(out: Path) -> Path:
     out = Path(out); out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(2026)
@@ -234,6 +382,8 @@ def make(out: Path) -> Path:
     rng3 = np.random.default_rng(5)                   # profile files, written last: nothing else changes
     for t in (0, 15, 60):
         full_scan_profile(out / f"P_FullMass-t{t}.mzML", t, rng3)
+    rng4 = np.random.default_rng(31)                  # high-resolution DDA files, written last: nothing else changes
+    hr_dda(out / HR_NAMES["exploris"], rng4, "exploris"); hr_dda(out / HR_NAMES["fusion"], rng4, "fusion"); hr_dda(out / HR_NAMES["broken"], rng4, "exploris", broken=True)
     (out / "SINTETICI.txt").write_text("Dati sintetici scritti da tools/dati_sintetici.py: NON sono misure del laboratorio.\n", encoding="utf-8")
     return out
 

@@ -1,0 +1,78 @@
+"""B4: XIC with the tolerance of the profile (5 ppm for the Orbitrap), the unit window for the QqQ, and the switch «spenta»."""
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib import *
+from lib_hr import synth, load
+steps = []
+def step(name, fn):
+    try: fn(); steps.append((name, "ok"))
+    except Exception as e:
+        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_hr_xic.py")][-1]
+        steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
+D = synth("hrxic")
+r = Run(port=8894, wd="/tmp/wdhr5")
+try:
+    with sync_playwright() as p:
+        pg = r.page(p)
+        load(pg, [D / "HR_DDA-Exploris-t30.mzML", D / "B_FullMass-t0.mzML"], 4000, 3)
+        K = pg.evaluate("E.files.find(f=>f.file==='HR_DDA-Exploris-t30.mzML#MS1').k")
+        Q = pg.evaluate("E.files.find(f=>f.file==='B_FullMass-t0.mzML').k")
+        def via_dialog(txt):
+            pg.evaluate("openXic(null,{})"); pg.wait_for_timeout(400)
+            pg.fill("#xic-mz", txt); pg.wait_for_timeout(400)
+            summ = pg.inner_text("#xic-sum")
+            pg.click("#xic-go"); pg.wait_for_timeout(2500)
+            return summ, pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().id")
+        def series(pid):
+            pg.wait_for_function(f"(()=>{{const p=E.panels.find(q=>q.id=={pid});return p&&p._a&&p._a.sr&&p._a.sr.length}})()", timeout=20000)
+            return pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid});return p._a.sr.map(s=>{{const n=s.y.length;let b=0;s.y.forEach((v,i)=>{{if(v>s.y[b])b=i}});const at=t=>{{let j=0;s.x.forEach((v,i)=>{{if(Math.abs(v-t)<Math.abs(s.x[j]-t))j=i}});return Math.max(...s.y.slice(Math.max(0,j-2),j+3))}};return {{k:s.k,rt:s.x[b],max:s.y[b],at9:at(9.0),at12:at(12.0)}}}})}})()")
+        def isobars():
+            sm, pid = via_dialog("305.0702"); print(sm)
+            assert "ppm" in sm and "305.0702" in sm and "bassa risoluzione" in sm, sm               # high resolution window, plus the unit window for the QqQ file of the tab
+            tr = pg.evaluate(f"E.panels.find(q=>q.id=={pid}).traces[0]"); assert tr["ion"] and abs(tr["mz"] - 305.0702) < 1e-6 and "± 5 ppm" in tr["label"], tr
+            s = {x["k"]: x for x in series(pid)}; print(s)
+            ex = s[K]; assert abs(ex["rt"] - 9.0) < 0.15 and ex["at9"] > 1e6 and ex["at12"] < 1e4, ex           # the isobar at 12.0 min is not in the window
+            sm2, pid2 = via_dialog("305.1066")
+            s2 = {x["k"]: x for x in series(pid2)}[K]; print(s2)
+            assert abs(s2["rt"] - 12.0) < 0.15 and s2["at12"] > 1e6 and s2["at9"] < 1e4, s2
+        step("XIC 305.0702 gives the peak at 9.0 min only; 305.1066 the peak at 12.0 min only", isobars)
+        def mixed_files():
+            pid = pg.evaluate("E.panels.filter(p=>p.type==='xic')[0].id")
+            a = pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid}),t=p.traces[0];return [HR.xicArgs(E.files[{K}],t,p),HR.xicArgs(E.files[{Q}],t,p)]}})()"); print(a)
+            assert abs(a[0][1] - 305.0702 * 5e-6) < 1e-7, a                      # Orbitrap: 5 ppm
+            assert abs(a[1][0] - 305.3) < 1e-6 and abs(a[1][1] - 0.5) < 1e-6, a   # QqQ: the unit window [304.8, 305.8] of today
+        step("each file uses its own tolerance (ppm for the Orbitrap, unit window for the QqQ)", mixed_files)
+        def direct():
+            pid = pg.evaluate("(()=>{const p=xicDirect(412.1364);return p.id})()"); pg.wait_for_timeout(1500)
+            tr = pg.evaluate(f"E.panels.find(q=>q.id=={pid}).traces[0]"); print(tr)
+            assert tr["ion"] and tr["label"] == "m/z 412.1364 ± 5 ppm", tr
+            assert pg.evaluate(f"xicName(E.panels.find(q=>q.id=={pid}))") == "m/z 412.1364 ± 5 ppm"
+        step("click on a centroid: XIC centred on it, named «m/z 412.1364 ± 5 ppm»", direct)
+        def edit_edges():
+            pid = pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().id")
+            pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid});ctl(p)}})()")
+            v = pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid});return [p.el.querySelector('[data-o=xlo]').value,p.el.querySelector('[data-o=xhi]').value]}})()"); print(v)
+            assert 412.13 < float(v[0]) < 412.1364 < float(v[1]) < 412.14, v
+            pg.fill(f"#dpanels .pnl:nth-of-type(1) [data-o=xlo]", v[0]) if False else None
+            pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid});const l=p.el.querySelector('[data-o=xlo]'),h=p.el.querySelector('[data-o=xhi]');l.value='412.1360';h.value='412.1370';l.dispatchEvent(new Event('change'))}})()"); pg.wait_for_timeout(800)
+            t = pg.evaluate(f"E.panels.find(q=>q.id=={pid}).traces[0]"); print(t)
+            assert not t.get("ion") and abs(t["w"] - 0.0005) < 1e-6 and abs(t["mz"] - 412.1365) < 1e-6, t      # an explicit window written by the student
+        step("the edges can be edited: they become an explicit window", edit_edges)
+        def off():
+            pid = pg.evaluate("E.panels.filter(p=>p.type==='xic')[0].id")
+            pg.evaluate("UIP.hr=false;CACHE.clear();redrawAll()"); pg.wait_for_timeout(2500)
+            s = {x["k"]: x for x in series(pid)}[K]; print(s)
+            assert s["at9"] > 1e6 and s["at12"] > 1e6, s                          # unit window: both isobars (the classic behaviour)
+            pg.evaluate("UIP.hr=true;CACHE.clear();redrawAll()"); pg.wait_for_timeout(1000)
+        step("switch «spenta»: both isobars are in the window", off)
+        def reload():
+            pg.evaluate("uiSave(true)"); pg.wait_for_timeout(1500); pg.reload(); pg.wait_for_timeout(7000)
+            tr = pg.evaluate("E.panels.filter(p=>p.type==='xic')[0].traces[0]"); print(tr)
+            assert tr["ion"] and abs(tr["mz"] - 305.0702) < 1e-6, tr
+        step("an ion trace comes back after a reload", reload)
+    r.close()
+except Exception as e:
+    steps.append(("run", "FAIL " + str(e)[:300]))
+    try: r.close()
+    except Exception: pass
+for n, s in steps: print(s.split(" ")[0].upper(), n, s if s != "ok" else "")
+r.report()

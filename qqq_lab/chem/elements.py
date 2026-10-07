@@ -98,7 +98,7 @@ def formula_mz(formula: str, adduct: str | None = None) -> dict:
     rows = {}
     for a in ADDUCT_SHIFT:
         z = ion_mz(m, a)
-        rows[a] = {"mz": round(z, 4), "mz1": round_half_up(z, 1), "nominal": int(round_half_up(z, 0))}
+        rows[a] = {"mz": round(z, 4), "mz5": round(z, 5), "mz1": round_half_up(z, 1), "nominal": int(round_half_up(z, 0))}      # mz5: the decimals of a high-resolution profile
     out = {"formula": fmt(f), "neutral": round(m, 4), "nominal_neutral": int(round_half_up(m, 0)), "adducts": rows}
     if adduct:
         if adduct not in ADDUCT_SHIFT:

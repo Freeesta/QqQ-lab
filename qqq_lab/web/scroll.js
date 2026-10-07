@@ -136,6 +136,7 @@ document.addEventListener("keydown", e => {
     return;
   }
   const dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (!dir) return;
+  if (window.DDA && DDA.key(e, dir)) return;                          // the MS2 spectrum of a DDA trio is active: arrows = the next / previous MS2
   e.preventDefault();
   const ap = walkTarget(false);                                      // active panel with a cursor: arrows = previous/next scan; otherwise arrows change file
   if (!ap) { if (!fsPanel()) goFile(dir); return; }

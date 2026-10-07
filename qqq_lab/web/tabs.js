@@ -108,6 +108,7 @@ function defaultLayoutTab(t) {
     let hc = 330, hs = 310; if (avail < hc + hs + 10) { hc = Math.max(190, Math.round((avail - 10) * 0.5)); hs = Math.max(190, Math.round(avail - 10 - hc)); }
     const c = addPanel("chrom", { tab: "full", x: 0, y: 0, w, h: hc, full: true });
     const sp = addPanel("spec", { tab: "full", link: c.id, k: f0.k, level: 1, x: 0, y: hc + 10, w, h: hs, full: true });
+    if (window.DDA && f0.dda) DDA.make(c, sp);                 // a data-dependent file: the MS2 scans sit to the right of the Full Scan
     apexSpectrum(c, sp);
     let tries = 0, h0 = [c.h, sp.h];       // once the graphs are on screen the real top of the page is known (a wrapped toolbar moves it): correct the heights then
     const fix = () => {
@@ -115,7 +116,7 @@ function defaultLayoutTab(t) {
       if (!dp.offsetParent) { if (++tries < 60) requestAnimationFrame(fix); return; }
       const av = innerHeight - (dp.getBoundingClientRect().top + scrollY) - 14;
       if (c.h + sp.h + 10 <= av) return;
-      c.h = Math.max(190, Math.round((av - 10) * 0.5)); sp.h = Math.max(190, Math.round(av - 10 - c.h)); sp.y = c.y + c.h + 10; apply(c); apply(sp); fitHost(); draw(c); draw(sp);
+      c.h = Math.max(190, Math.round((av - 10) * 0.5)); sp.h = Math.max(190, Math.round(av - 10 - c.h)); sp.y = c.y + c.h + gapAfter(c, sp); apply(c); apply(sp); relayout(); fitHost(); draw(c); draw(sp);
     };
     requestAnimationFrame(fix);
   } else if (t === "ms2") {

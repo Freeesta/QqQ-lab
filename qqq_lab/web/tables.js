@@ -136,10 +136,13 @@
   // the losses with the same nominal mass sit in a box (unit resolution cannot tell them apart); «Cerca Δm» lists single, pair and repeated candidates.
   const NL = { q: "", pol: "", open: new Set(), more: false };       // state kept while the window is open (the ruler of the spectrum can fill q)
   const fl = f => sub(f.replace(/^(CH3|NO2|Cl)$/, "•$1")).replace(/^•/, "•");   // radicals are written with the dot
+  // high resolution (an Orbitrap / Q-TOF file is loaded): the exact mass of each loss is shown and «Cerca Δm» looks within 3 mDa instead of 0.5 Da
+  const hrOn = () => !!(window.HR && typeof E !== "undefined" && E.files.some(f => !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2))));
+  const NL_TOL = () => hrOn() ? 0.003 : 0.5, NL_DEC = () => hrOn() ? 4 : 1;
   const polChip = p => `<span class="pol" title="Polarità in cui la perdita si osserva di solito">${p === "±" ? "entrambe" : p === "+" ? "ESI+" : "ESI&minus;"}</span>`;
   const lossRow = (l, o) => {
     const m = massOf(l.f), id = l.f;
-    return `<div class="nlr${o.hit.has(id) ? " hit" : ""}" data-f="${id}"><div class="nlm">${Math.round(m)}</div><div class="nlf"><b>${fl(l.f)}</b><span class="muted">${H(l.name)}</span></div>
+    return `<div class="nlr${o.hit.has(id) ? " hit" : ""}" data-f="${id}"><div class="nlm">${Math.round(m)}${hrOn() ? `<small class="muted" title="Massa esatta, da elements.py" style="display:block;font-size:10.5px;font-weight:400">${m.toFixed(4)}</small>` : ""}</div><div class="nlf"><b>${fl(l.f)}</b><span class="muted">${H(l.name)}</span></div>
       <div class="nls">${H(l.seen)}</div><div class="nlpp">${polChip(l.pol)}</div><button class="nld" type="button" data-d="${id}" aria-expanded="${NL.open.has(id)}">Dettagli</button>
       ${l.rad ? `<div class="nlrad">• ${H(LOSS_RAD)}</div>` : ""}
       <div class="nldet"${NL.open.has(id) ? "" : " hidden"}><div>massa esatta <b>${m.toFixed(4)}</b> · <span class="muted">meccanismo:</span> ${H(l.mech)}</div><div class="muted sm">Fonti: ${H(LOSS_REFS)}${l.rad ? "; regola degli elettroni pari: Holčapek 2010" : ""}</div></div></div>`;
@@ -147,15 +150,15 @@
   function lossList() {
     const hit = new Set(), q = parseFloat(String(NL.q).replace(",", "."));
     const vis = LOSSES.filter(l => !NL.pol || l.pol === "±" || l.pol === NL.pol).sort((a, b) => massOf(a.f) - massOf(b.f));
-    if (isFinite(q)) vis.forEach(l => { if (Math.abs(massOf(l.f) - q) <= 0.5) hit.add(l.f); });
+    if (isFinite(q)) vis.forEach(l => { if (Math.abs(massOf(l.f) - q) <= NL_TOL()) hit.add(l.f); });
     const groups = []; vis.forEach(l => { const n = Math.round(massOf(l.f)), g = groups[groups.length - 1]; if (g && g.n === n) g.ls.push(l); else groups.push({ n, ls: [l] }); });
     return groups.map(g => g.ls.length < 2 ? lossRow(g.ls[0], { hit }) : `<div class="nlg"><div class="nlgn">Stessa massa nominale (${g.n}): a risoluzione unitaria non si distinguono, servono altri indizi.${g.n === 80 ? ` Controlla <i>M+2</i> con il profilo isotopico nello spettro (clic destro; Br: M e M+2 quasi uguali).` : ""}</div>${g.ls.map(l => lossRow(l, { hit })).join("")}</div>`).join("");
   }
   function lossCombosHtml() {
     const q = parseFloat(String(NL.q).replace(",", ".")); if (!isFinite(q) || q <= 0) return "";
-    const c = lossCombos(q, massOf), nm = l => `<b>${fl(l.f)}</b>`;
-    const li = [...c.single.map(x => `<li>${nm(x[0])} <span class="muted">(${massOf(x[0].f).toFixed(1)})</span></li>`), ...c.pairs.map(p => `<li>${nm(p[0])} + ${nm(p[1])} <span class="muted">(${(massOf(p[0].f) + massOf(p[1].f)).toFixed(1)})</span></li>`), ...c.reps.map(r => `<li>${r.n} &times; ${nm(r.l)} <span class="muted">(${(r.n * massOf(r.l.f)).toFixed(1)})</span></li>`)];
-    return `<div class="nlc"><b>Possibili perdite (da verificare sullo spettro)</b>${li.length ? `<ul>${li.join("")}</ul>` : `<div class="muted sm">Nessuna perdita o combinazione della lista entro &plusmn;0.5.</div>`}</div>`;
+    const c = lossCombos(q, massOf, NL_TOL()), nm = l => `<b>${fl(l.f)}</b>`, nd = NL_DEC();
+    const li = [...c.single.map(x => `<li>${nm(x[0])} <span class="muted">(${massOf(x[0].f).toFixed(nd)})</span></li>`), ...c.pairs.map(p => `<li>${nm(p[0])} + ${nm(p[1])} <span class="muted">(${(massOf(p[0].f) + massOf(p[1].f)).toFixed(nd)})</span></li>`), ...c.reps.map(r => `<li>${r.n} &times; ${nm(r.l)} <span class="muted">(${(r.n * massOf(r.l.f)).toFixed(nd)})</span></li>`)];
+    return `<div class="nlc"><b>Possibili perdite (da verificare sullo spettro)</b>${li.length ? `<ul>${li.join("")}</ul>` : `<div class="muted sm">Nessuna perdita o combinazione della lista entro &plusmn;${hrOn() ? "0.003" : "0.5"}.</div>`}</div>`;
   }
   function lossTab() {
     return `<div class="nlintro"><p>Nella cella di collisione (q2) lo ione selezionato urta le molecole del gas: parte della sua energia di movimento diventa energia interna (vibrazioni). Lo ione la scarica <b>rompendo un legame</b>, spesso dopo un <b>riarrangiamento</b> in cui un atomo di idrogeno si sposta: si stacca una piccola molecola stabile e <b>neutra</b> (H<sub>2</sub>O, CO, NH<sub>3</sub>, CO<sub>2</sub>…), che il rivelatore non vede, mentre la carica resta sul frammento. Per questo nello spettro MS<sup>2</sup> si legge la perdita come differenza: <b>&Delta;m = <i>m/z</i> del precursore &minus; <i>m/z</i> del frammento</b>.</p>
