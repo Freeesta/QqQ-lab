@@ -33,7 +33,7 @@ try:
             assert pg.evaluate("document.querySelector('#cunit').title").find("1 ppm = 1 mg/L") >= 0
         step("B-1/B-4/B-5 concentrations 0.6, 7.2, 18 read from the names, yellow, with the unit", conc)
         def guess():
-            assert pg.is_visible("#guessnote"), "note about the yellow cells"
+            assert pg.locator("#guessnote").count() == 0, "the sentence about the yellow cells is gone (the yellow cells and their hover label stay)"
             n0 = pg.evaluate("document.querySelectorAll('#flist .guess').length"); assert n0 >= 9, n0
             pg.fill("#flist [data-k=conc] >> nth=0", "0.5"); pg.press("#flist [data-k=conc] >> nth=0", "Enter"); pg.wait_for_timeout(300)
             assert pg.evaluate("document.querySelectorAll('#flist .guess').length") == n0 - 1

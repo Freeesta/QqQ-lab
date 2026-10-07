@@ -63,7 +63,7 @@
     { n: "[M+H]+", k: 1, add: "H", z: 1, exp: 1, note: "lo ione più comune in ESI+ con acido formico in fase mobile (come in questo laboratorio)" },
     { n: "[M+NH4]+", k: 1, add: "NH4", z: 1, exp: 1, note: "solo se la fase mobile contiene ammonio (formiato, acetato); tipico di esteri, chetoni, zuccheri" },
     { n: "[M+Na]+", k: 1, add: "Na", z: 1, exp: 1, note: "sodio da vetreria, acqua, campione: frequentissimo; frammenta poco in MS/MS" },
-    { n: "[M+K]+", k: 1, add: "K", z: 1, note: "come il sodio, meno intenso" },
+    { n: "[M+K]+", k: 1, add: "K", z: 1, exp: 1, note: "come il sodio, meno intenso" },
     { n: "[M+H-H2O]+", k: 1, add: "H", sub: "H2O", z: 1, note: "perdita d'acqua in sorgente (alcoli, acidi carbossilici)" },
     { n: "[M+CH3OH+H]+", k: 1, add: "CH5O", z: 1, note: "con metanolo in fase mobile" },
     { n: "[M+H+ACN]+", k: 1, add: "C2H4N", z: 1, note: "con acetonitrile in fase mobile" },
@@ -72,8 +72,8 @@
     { n: "[2M+Na]+", k: 2, add: "Na", z: 1, note: "dimero con sodio" },
     { n: "[M]+", k: 1, add: "", z: 1, note: "catione già formato (es. ammonio quaternario): si inserisce la formula del <b>catione</b>, perché la massa sottrae l'elettrone. Per il radicale catione M<sup>+&bull;</sup> si inserisce invece la formula della molecola <b>neutra</b>" },
     { n: "[M-H]-", k: 1, sub: "H", z: -1, exp: 1, note: "lo ione più comune in ESI&minus; (acidi, fenoli, sulfonati)" },
-    { n: "[M+Cl]-", k: 1, add: "Cl", z: -1, note: "con solventi clorurati o campioni salini (cerca la coppia 35/37 a 3:1)" },
     { n: "[M+HCOO]-", k: 1, add: "CHO2", z: -1, exp: 1, note: "con acido formico in fase mobile" },
+    { n: "[M+Cl]-", k: 1, add: "Cl", z: -1, exp: 1, note: "con solventi clorurati o campioni salini (cerca la coppia 35/37 a 3:1)" },
     { n: "[M+CH3COO]-", k: 1, add: "C2H3O2", z: -1, note: "con acido acetico o acetato di ammonio" },
     { n: "[M-H-H2O]-", k: 1, sub: "H3O", z: -1, note: "perdita d'acqua in sorgente" },
     { n: "[M+Na-2H]-", k: 1, add: "Na", sub: "H2", z: -1, note: "sale sodico" },
@@ -85,6 +85,7 @@
   const mzOf = (a, M) => (a.k * M + a.shift) / Math.abs(a.z);
   const fmtAd = n => H(n).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>").replace(/(\d?[+-])$/, "<sup>$1</sup>");
   const sgn = x => (x >= 0 ? "+" : "&minus;");
+  const AD_MORE = { 1: false, "-1": false };                // the less common adducts stay folded until the student opens them
   function adducts(M) {
     const ref = { 1: ADD[0], "-1": ADD.find(a => a.n === "[M-H]-") };
     const row = (a, pol) => {
@@ -93,46 +94,30 @@
       return `<tr${a.exp ? ' class="exp"' : ""}><td><b>${fmtAd(a.n)}</b></td><td>${expr}</td><td class="num">${M != null ? mzOf(a, M).toFixed(4) : ""}</td><td class="num">${M != null ? rh(mzOf(a, M), 0) : ""}</td><td class="num">${d}</td><td class="muted sm">${a.note}</td></tr>`;
     };
     const rows = pol => { const l = ADD.filter(a => Math.sign(a.z) === pol);
-      return l.filter(a => a.exp).map(a => row(a, pol)).join("") + `<tr><td colspan="6" class="muted sm" style="padding-top:8px"><i>Meno frequenti nelle condizioni del laboratorio</i></td></tr>` + l.filter(a => !a.exp).map(a => row(a, pol)).join(""); };
+      return l.filter(a => a.exp).map(a => row(a, pol)).join("") + `<tr class="admore" data-pol="${pol}"><td colspan="6" style="padding-top:8px"><a href="#" class="adtog">${AD_MORE[pol] ? "&#9662;" : "&#9656;"} Altri addotti (meno comuni)</a></td></tr>` + (AD_MORE[pol] ? l.filter(a => !a.exp).map(a => row(a, pol)).join("") : ""); };
     const head = pol => `<tr><th>addotto</th><th>m/z =</th><th class="num">m/z esatto</th><th class="num"><i>m/z</i> nominale</th><th class="num">&Delta; da ${pol > 0 ? "[M+H]<sup>+</sup>" : "[M&minus;H]<sup>&minus;</sup>"}</th><th>quando si vede</th></tr>`;
     const blk = pol => `<h4>${pol > 0 ? "ESI positivo" : "ESI negativo"}</h4><table>${head(pol)}${rows(pol)}</table>`;
     const neg = typeof E !== "undefined" && E.files.some(f => f.polarity === "negative") && !E.files.some(f => f.polarity === "positive");      // the polarity of the loaded files first
     return neg ? blk(-1) + blk(1) : blk(1) + blk(-1);
   }
-  // two OBSERVED m/z: does their difference match a difference between two adducts of the list? (a hint, never a conclusion; calibration drift cancels in a difference)
-  function pairs(m1, m2) {
-    const d = m2 - m1, out = [];
-    [1, -1].forEach(pol => { const l = ADD.filter(a => Math.sign(a.z) === pol && a.k === 1 && Math.abs(a.z) === 1);
-      l.forEach(a => l.forEach(b => { if (a !== b && a.n !== "[M]+" && b.n !== "[M]+") { const e = b.shift - a.shift; if (Math.abs(e - d) <= 0.1 + 1e-9) out.push({ a, b, e, pol }); } })); });
-    return { d, out };
-  }
-  window.QPAIRS = pairs;
-  function pairsHtml(m1, m2) {
-    const { d, out } = pairs(m1, m2), dd = `${sgn(d)}${Math.abs(d).toFixed(2)}`;
-    if (!out.length) return `Differenza ${dd}: non coincide (entro 0.1) con nessuna differenza fra addotti monocarica della lista. Può non essere una coppia di addotti dello stesso composto.`;
-    return `Differenza ${dd}: coincide, entro 0.1, con ` + out.map(o => `${fmtAd(o.b.n)} &minus; ${fmtAd(o.a.n)} = ${sgn(o.e)}${Math.abs(o.e).toFixed(4)}`).join("; ") + `. È un suggerimento da verificare (stesso RT, stessa forma del picco), non una conclusione.`;
-  }
   function adductTab() {
     return `<div class="bar"><label>M (massa neutra) o formula <input id="ad-in" placeholder="es. 363.0665 oppure C14H13F4N3O2S" style="width:260px"></label><span id="ad-msg" class="muted sm"></span></div>
-      <div class="muted sm">M è la massa esatta <b>monoisotopica</b> della molecola neutra (Cl-35, Br-79, C-12): per composti con Cl o Br il picco più alto può essere M+2 (vedi la scheda Isotopi). La colonna &Delta; aiuta a riconoscere gli addotti nello spettro: per esempio un picco 21.98 sopra [M+H]<sup>+</sup> è quasi sempre [M+Na]<sup>+</sup>.</div>
-      <div id="ad-tbl">${adducts(null)}</div>
-      <h4>Due picchi: sono addotti dello stesso composto?</h4>
-      <div class="bar"><label><i>m/z</i> osservati <input id="pr-a" class="mzf" inputmode="decimal" autocomplete="off" placeholder="es. 364.4"> e <input id="pr-b" class="mzf" inputmode="decimal" autocomplete="off" placeholder="es. 386.4"></label></div>
-      <div id="pr-out" class="sm"></div>`;
+      <div class="sm">Un <b>addotto</b> è lo ione che la molecola M forma nella sorgente legandosi a un piccolo ione presente in soluzione (H<sup>+</sup>, Na<sup>+</sup>, NH<sub>4</sub><sup>+</sup>, K<sup>+</sup> in positivo; HCOO<sup>−</sup> o Cl<sup>−</sup> in negativo) o cedendo un protone ([M−H]<sup>−</sup>). Nello spettro non si vede M, ma l'm/z dei suoi addotti: per questo lo stesso composto può dare più picchi, sempre alla stessa distanza fra loro (per esempio circa 22 tra [M+H]<sup>+</sup> e [M+Na]<sup>+</sup>).</div>
+      <div id="ad-tbl">${adducts(null)}</div>`;
   }
   function bindAdducts(root) {
     const inp = root.querySelector("#ad-in"), msg = root.querySelector("#ad-msg"), tb = root.querySelector("#ad-tbl");
-    const pa = root.querySelector("#pr-a"), pb = root.querySelector("#pr-b"), po = root.querySelector("#pr-out");
-    const prr = () => { const x = parseFloat(pa.value.replace(",", ".")), y = parseFloat(pb.value.replace(",", ".")); po.innerHTML = isFinite(x) && isFinite(y) && x > 0 && y > 0 ? pairsHtml(x, y) : ""; };
-    pa.oninput = pb.oninput = prr;
+    let lastM = null;                                               // the table is rebuilt at every keystroke: the open / folded state lives in AD_MORE
+    const redo = () => { tb.innerHTML = adducts(lastM); };
+    tb.onclick = e => { const t = e.target.closest(".adtog"); if (!t) return; e.preventDefault(); const pol = t.closest("tr").dataset.pol; AD_MORE[pol] = !AD_MORE[pol]; redo(); };
     inp.oninput = async () => {
       const t = inp.value.trim().replace(",", ".");
-      if (!t) { msg.textContent = ""; tb.innerHTML = adducts(null); return; }
-      if (/^\d+(\.\d*)?$/.test(t)) { msg.textContent = ""; tb.innerHTML = adducts(+t); return; }
+      if (!t) { msg.textContent = ""; lastM = null; redo(); return; }
+      if (/^\d+(\.\d*)?$/.test(t)) { msg.textContent = ""; lastM = +t; redo(); return; }
       try { const r = await (await fetch("api/formula?f=" + encodeURIComponent(t))).json(); if (r.error) throw new Error(r.error);
         let M = r.neutral; try { M = massOf(r.formula); } catch (_) { /* element without isotope data here: use the server value */ }
-        msg.innerHTML = `${sub(r.formula)}: M = ${M.toFixed(4)}`; tb.innerHTML = adducts(M); }
-      catch (e) { msg.textContent = "formula non valida"; tb.innerHTML = adducts(null); }
+        msg.innerHTML = `${sub(r.formula)}: M = ${M.toFixed(4)}`; lastM = M; redo(); }
+      catch (e) { msg.textContent = "formula non valida"; lastM = null; redo(); }
     };
   }
 
@@ -164,7 +149,7 @@
     const vis = LOSSES.filter(l => !NL.pol || l.pol === "±" || l.pol === NL.pol).sort((a, b) => massOf(a.f) - massOf(b.f));
     if (isFinite(q)) vis.forEach(l => { if (Math.abs(massOf(l.f) - q) <= 0.5) hit.add(l.f); });
     const groups = []; vis.forEach(l => { const n = Math.round(massOf(l.f)), g = groups[groups.length - 1]; if (g && g.n === n) g.ls.push(l); else groups.push({ n, ls: [l] }); });
-    return groups.map(g => g.ls.length < 2 ? lossRow(g.ls[0], { hit }) : `<div class="nlg"><div class="nlgn">Stessa massa nominale (${g.n}): a risoluzione unitaria non si distinguono, servono altri indizi.${g.n === 80 ? ` Guarda <i>M+2</i> nella scheda <a href="#" data-go="is">Isotopi</a> (Br: M e M+2 quasi uguali).` : ""}</div>${g.ls.map(l => lossRow(l, { hit })).join("")}</div>`).join("");
+    return groups.map(g => g.ls.length < 2 ? lossRow(g.ls[0], { hit }) : `<div class="nlg"><div class="nlgn">Stessa massa nominale (${g.n}): a risoluzione unitaria non si distinguono, servono altri indizi.${g.n === 80 ? ` Controlla <i>M+2</i> con il profilo isotopico nello spettro (clic destro; Br: M e M+2 quasi uguali).` : ""}</div>${g.ls.map(l => lossRow(l, { hit })).join("")}</div>`).join("");
   }
   function lossCombosHtml() {
     const q = parseFloat(String(NL.q).replace(",", ".")); if (!isFinite(q) || q <= 0) return "";
@@ -237,45 +222,8 @@
     if (Object.values(n).some(k => k < 0)) throw new Error("l'addotto toglie più atomi di quanti ce ne sono");
     return { n, z: a.z, ad: a.n };
   }
-  function isoTab() {
-    return `<div class="bar"><label>Formula <input id="is-f" placeholder="es. C14H13F4N3O2S" style="width:220px"></label>
-      <label>Addotto <select id="is-ad">${ADD.map(a => `<option>${H(a.n)}</option>`).join("")}</select></label><span id="is-msg" class="muted sm"></span></div>
-      <div class="muted sm">Profilo isotopico calcolato dalla formula che scrivi tu (abbondanze naturali): un picco per ogni massa intera (M, M+1, M+2...). Nello spettro, clic destro &rarr; &laquo;Profilo isotopico di una formula&raquo; lo disegna sopra i picchi.</div>
-      <div id="is-out"></div>`;
-  }
-  // stick spectrum of the pattern (m/z on x, relative intensity on y): every peak M, M+1, M+2... is a stem with its label and percentage
-  function isoSvg(rows) {
-    const w = 620, h = 200, l = 44, r = 14, t = 22, b = 36, lo = Math.min(...rows.map(q => q.mz)) - 1, hi = Math.max(...rows.map(q => q.mz)) + 1;
-    const X = v => l + (v - lo) / (hi - lo) * (w - l - r), Y = v => t + (100 - v) / 100 * (h - t - b), ink = "#6b7280", bar = "#2b5c8a";
-    let g = `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px;background:#fff;border:1px solid #d8dde6;border-radius:6px;margin-top:6px" font-family="system-ui" font-size="11"><path d="M${l} ${t - 6}V${h - b}H${w - r}" fill="none" stroke="${ink}"/>`;
-    for (const v of [0, 25, 50, 75, 100]) g += `<path d="M${l - 3} ${Y(v)}H${l}" stroke="${ink}"/><text x="${l - 6}" y="${Y(v) + 4}" text-anchor="end" fill="${ink}">${v}</text>`;
-    for (let v = Math.ceil(lo); v <= hi; v++) g += `<path d="M${X(v)} ${h - b}v3" stroke="${ink}"/><text x="${X(v)}" y="${h - b + 15}" text-anchor="middle" fill="${ink}">${v}</text>`;
-    for (const q of rows) {
-      const lab = (q.off ? "M+" + q.off : "M"), pc = q.rel < 1 ? q.rel.toFixed(2) : q.rel.toFixed(1);
-      g += `<path d="M${X(q.mz)} ${Y(0)}V${Y(q.rel)}" stroke="${bar}" stroke-width="3"/><text x="${X(q.mz)}" y="${Y(q.rel) - 14}" text-anchor="middle" fill="#1f2937" font-weight="600">${lab}</text><text x="${X(q.mz)}" y="${Y(q.rel) - 3}" text-anchor="middle" fill="${ink}">${pc}%</text>`;
-    }
-    return g + `<text x="${(l + w - r) / 2}" y="${h - 4}" text-anchor="middle" fill="#1f2937">m/z</text><text transform="translate(12 ${(t + h - b) / 2}) rotate(-90)" text-anchor="middle" fill="#1f2937">Intensità relativa (%)</text></svg>`;
-  }
-  function isoHtml(rows) {
-    return isoSvg(rows) + `<table style="margin-top:6px;max-width:560px"><tr><th>picco</th><th class="num">m/z</th><th class="num">intensità relativa %</th><th></th></tr>` +
-      rows.map(r => `<tr><td>${r.off ? "M+" + r.off : "M"}</td><td class="num">${r.mz.toFixed(4)}</td><td class="num"><b>${r.rel < 1 ? r.rel.toFixed(2) : r.rel.toFixed(1)}</b></td>` +
-      `<td><i class="pt-bar" style="width:${Math.max(1, Math.round(r.rel * 2))}px"></i></td></tr>`).join("") + "</table>";
-  }
-  function bindIso(root) {
-    const f = root.querySelector("#is-f"), ad = root.querySelector("#is-ad"), msg = root.querySelector("#is-msg"), out = root.querySelector("#is-out");
-    const run = async () => {
-      const t = f.value.trim(); if (!t) { out.innerHTML = ""; msg.textContent = ""; return; }
-      try {
-        const r = await (await fetch("api/formula?f=" + encodeURIComponent(t))).json(); if (r.error) throw new Error("formula non valida");
-        const ion = ionCounts(r.formula, ad.value); msg.innerHTML = sub(r.formula) + " " + H(ion.ad);
-        out.innerHTML = isoHtml(isoPattern(ion.n, ion.z));
-      } catch (e) { msg.textContent = e.message; out.innerHTML = ""; }
-    };
-    f.oninput = run; ad.onchange = run;
-  }
-
-  // ---------------------------------------------------------------- dialog with three tabs
-  const TABS = [["pt", "Tavola periodica", periodic, bindPeriodic], ["ad", "Addotti", adductTab, bindAdducts], ["is", "Isotopi", isoTab, bindIso], ["ls", "Perdite neutre", lossTab, bindLoss]];
+  // ---------------------------------------------------------------- dialog with three tabs (Tavola periodica, Addotti, Perdite neutre)
+  const TABS = [["pt", "Tavola periodica", periodic, bindPeriodic], ["ad", "Addotti", adductTab, bindAdducts], ["ls", "Perdite neutre", lossTab, bindLoss]];
   function open(which, opt = {}) {
     const d = Qs("#refdlg"), body = Qs("#refbody");
     if (which === "ls") { if (!d.open) lossPolStart(); if (opt.q != null) NL.q = String(opt.q); }
@@ -290,7 +238,6 @@
   }
   Qs("#np-pt").onclick = () => open("pt");
   Qs("#np-ad").onclick = () => open("ad");
-  Qs("#np-iso").onclick = () => open("is");
   Qs("#np-nl").onclick = () => open("ls");
   window.QQQRef = { open, massOf, mono, isoPattern, ionCounts, ADD };
 })();

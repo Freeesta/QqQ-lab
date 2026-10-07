@@ -8,7 +8,7 @@ def step(name, fn):
     except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:200]))
 PAGES = ["index.html", "01-tp.html", "02-fotocatalisi.html", "03-lc.html", "04-esi.html", "05-vuoto.html",
          "06-quadrupolo.html", "07-qqq.html", "08-frammentazione.html", "09-dati.html", "10-strategia.html",
-         "11-glossario.html", "12-disegno.html"]
+         "11-glossario.html", "12-disegno.html", "00-uso.html"]
 r = Run(port=8817, wd="/tmp/wd7")
 try:
     with sync_playwright() as p:

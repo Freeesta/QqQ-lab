@@ -17,45 +17,11 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 1. ~~Integrazione dei picchi e file in profilo~~ (fatto il 7/10, vedi `AGENTS.md` sez. 19)
 2. ~~Schermo intero~~ (fatto il 7/10, `AGENTS.md` sez. 19)
 3. ~~Dimensione del testo anche dentro i grafici~~ (fatto il 7/10, `AGENTS.md` sez. 19)
-4. **Strumenti dell'header e schermata di caricamento**: via Isotopi, calcolatrice vera, Addotti più semplici, pulsante dei file di esempio, «Informazioni» al posto del «?»
+4. ~~Strumenti dell'header e schermata di caricamento~~ (fatto il 7/10, `AGENTS.md` sez. 19)
 5. **Rifiniture** (menu «Correzione» con icone, documenti per gli agenti)
 6. **Disegno** (campo SMILES che si svuota, via il menu «Ione»)
 7. **Simboli** (segno di polarità leggibile e senza sbordare, «MS2» con un vero apice)
 8. **Ordine di cartelle e file** (inventario, cartelle vuote, cestino fuori da git, test obsoleti): per ultimo
-
----
-
-## BLOCCO 4: strumenti dell'header e schermata di caricamento
-
-**4.1 Via «Isotopi» dall'header.** Togli il pulsante Isotopi dall'header e la scheda Isotopi dalla finestra Tavola/Addotti (semplificazione decisa da Federico). Il profilo isotopico si usa **solo dentro i grafici**: clic destro sullo spettro → «Profilo isotopico di una formula…» (già esiste, `p.iso`). Aggiorna i rimandi alla «scheda Isotopi» (es. nelle Perdite neutre: «guarda M+2 nella scheda Isotopi» diventa «controlla M+2 con il profilo isotopico nello spettro (clic destro)»), Teoria, aiuto, `AGENTS.md` ed e2e.
-
-**4.2 Calcolatrice vera (oltre alla calcolatrice m/z).** La calcolatrice dell'header serve anche per **semplici addizioni e sottrazioni** (es. capire le perdite: 364.4 − 194.2). Deve essere **grande e facile**:
-- **un solo campo**: se lo studente scrive un'**espressione con numeri** (`364.4-194.2`, `305+18`, `(229.1-171.2)*2`) la calcolatrice fa il **conto**; se scrive una **formula chimica** (`C9H10Cl2N2O`, anche in minuscolo) fa come oggi (m/z degli addotti). Riconoscimento: solo cifre, punto/virgola decimale, spazi, `+ − * / ( )` → conto; altrimenti formula. Accetta la virgola decimale e il segno «−»/«x»/«×»/«÷» scritti in modo italiano.
-- **tastierino** sotto il campo con tasti grandi: 0-9, «,» (punto decimale), + − × ÷, ( ), «←» (cancella un carattere), «C» (azzera), «=». Funziona anche dalla **tastiera** del computer (cifre, + − * /, Invio = risultato, Esc = azzera, Backspace).
-- **Risultato grande** sotto il campo, con 4 decimali al massimo (zeri finali tolti); niente notazione scientifica per i numeri normali.
-- **Nastro** (storico) delle ultime 10 operazioni sotto il risultato («364.4 − 194.2 = 170.2»); clic su una riga = rimette il risultato nel campo per continuare il conto; «Ans» = ultimo risultato.
-- Il tastierino resta nascosto quando nel campo c'è una formula (lì serve la tabella degli addotti).
-- e2e: `364.4-194.2` → 170.2; `364,4 − 194,2` → 170.2; tastierino 1 + 2 = → 3; Invio dalla tastiera; formula → tabella addotti come prima; nastro con 2 righe dopo due conti.
-
-**4.3 Scheda Addotti più semplice.**
-- Mostra subito solo gli **addotti comuni** in ESI con acido formico: positivo [M+H]+, [M+Na]+, [M+NH4]+, [M+K]+; negativo [M−H]−, [M+HCOO]−, [M+Cl]− (con la regola di polarità già prevista: prima o solo quelli della polarità dei file). Tutti gli altri (dimeri, doppie cariche, perdite d'acqua, [M]+, ecc.) sotto una riga **«▸ Altri addotti (meno comuni)»** che si espande con un clic e si richiude.
-- **Togli** lo strumento «Due picchi: sono addotti dello stesso composto?» e il campo degli «m/z osservati» (codice, testi, test).
-- **Togli** il testo «M è la massa esatta monoisotopica della molecola neutra (Cl-35, Br-79, C-12): per composti con Cl o Br il picco più alto può essere M+2 (vedi la scheda Isotopi). La colonna Δ aiuta a riconoscere gli addotti nello spettro: per esempio un picco 21.98 sopra [M+H]+ è quasi sempre [M+Na]+.» e mettilo al suo posto **esattamente** questo testo (scritto da Federico/Claude, non cambiarlo):
-  > «Un **addotto** è lo ione che la molecola M forma nella sorgente legandosi a un piccolo ione presente in soluzione (H<sup>+</sup>, Na<sup>+</sup>, NH<sub>4</sub><sup>+</sup>, K<sup>+</sup> in positivo; HCOO<sup>−</sup> o Cl<sup>−</sup> in negativo) o cedendo un protone ([M−H]<sup>−</sup>). Nello spettro non si vede M, ma l'm/z dei suoi addotti: per questo lo stesso composto può dare più picchi, sempre alla stessa distanza fra loro (per esempio circa 22 tra [M+H]<sup>+</sup> e [M+Na]<sup>+</sup>).»
-  (Apici e pedici con `<sup>`/`<sub>` come scritto qui, non con caratteri Unicode: vedi 7.2.)
-- e2e: righe comuni visibili, altri nascosti finché non si apre la riga; strumento «Due picchi» assente; testo nuovo presente.
-
-**4.4 Schermata di caricamento: solo il pulsante «Prova con i file di esempio».** Oggi (`index.html`, `#demo`, `#demobtn`) accanto al pulsante c'è la riga «4 file Full Scan (flufenacet, 0-60 min). Da scaricare: t0 · t15 · t30 · t60 · info»: **toglila** (testo e link). Resta solo il pulsante, messo bene in vista: **dentro il riquadro 1** (quello dei file mzML), subito **sotto la zona «Trascina qui i file»**, centrato, stile secondario (bordo, non pieno) con una piccola icona (es. provetta o «play»), separato da una riga sottile «oppure». Etichetta al passaggio del mouse: «Apre 4 file Full Scan di esempio (0, 15, 30 e 60 minuti di irraggiamento)». **Attenzione**: oggi il `title` del pulsante e la riga tolta nominano il composto (flufenacet), che per gli studenti è l'inquinante **incognito** dell'esperienza (`AGENTS.md` sez. 1): non deve comparire da nessuna parte nell'interfaccia (controlla con `grep -rni flufenacet qqq_lab/web` e togli dove è visibile allo studente; nei commenti del codice e nei test può restare). Anche i **nomi dei file di esempio** (`qqq_lab/web/esempi/Flufenacet_FullScan_t*.mzML`, lista `DEMO_FILES` in `index.html`) contengono il nome del composto e compaiono nella lista dei file: rinominali con `git mv` in `Esempio_FullScan_t0.mzML`, `…_t15`, `…_t30`, `…_t60` e aggiorna `DEMO_FILES`. e2e: niente link di download, pulsante presente e funzionante, «flufenacet» assente dal testo visibile della pagina (anche dopo aver aperto i file di esempio).
-
-**4.5 Il «?» dell'header diventa «Informazioni».** Oggi il «?» in alto a destra apre la «Guida di QqQ lab» (`help.js`, chiave `header`, `guideHtml()`). Federico vuole lì **solo** chi ha fatto il programma e a cosa serve, quindi:
-- il pulsante diventa un'icona **«i» (informazioni)** nel cerchio, stesso stile delle altre icone dell'header, etichetta «Informazioni su QqQ lab»;
-- apre un riquadro piccolo **senza titolo** con esattamente questo testo (due paragrafi, l'indirizzo come link `mailto:`):
-  > QqQ lab è il programma didattico per il laboratorio di inquinanti della laurea magistrale in Chimica dell'ambiente.
-  > Suggerimenti e correzioni: federico.cristaudo@unito.it (Federico Cristaudo, Università di Torino).
-- **Non perdere la guida**: il contenuto di `guideHtml()` (uso dei pannelli, scorciatoie da tastiera, ecc.) va in Teoria come capitolo breve **«Come si usa QqQ lab»** (primo nel menu della Teoria), senza ripetere ciò che c'è già negli altri capitoli; le etichette dei pulsanti restano come sono. Aggiorna i rimandi al «? generale» in Teoria, aiuto, `AGENTS.md`, e gli e2e che aprivano la guida dall'header.
-- e2e: l'icona apre il riquadro con i due paragrafi e il link email; il capitolo «Come si usa» esiste e contiene le scorciatoie.
-
-**4.6 Via la riga «Controlla i valori in giallo (letti dal nome dei file).»** Nella schermata di caricamento (`index.html`, `#guessnote`) togli la riga di testo (e il suo codice). Lo sfondo giallo delle celle indovinate dal nome e la loro etichetta al passaggio del mouse («letto dal nome del file: controlla») restano.
 
 ---
 

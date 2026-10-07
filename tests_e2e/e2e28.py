@@ -1,4 +1,4 @@
-"""Addotti tab: nominal column, expected adducts first, pair tool, lists aligned with the Python ones, one rounding rule (JS rh = Python round_half_up). No data files needed."""
+"""Addotti tab: nominal column, common adducts first, the rest folded, no pair tool, lists aligned with the Python ones, one rounding rule (JS rh = Python round_half_up). No data files needed."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from lib import *
@@ -16,21 +16,20 @@ try:
         pg = r.page(p)
         def table():
             pg.click("#np-ad"); pg.wait_for_timeout(500)
-            t = pg.inner_text("#refbody"); assert "nominale" in t and "1 decimale" not in t and "monoisotopica" in t and "Cl-35" in t and "Meno frequenti" in t, t[:600]
-            assert "catione" in t and "neutra" in t
+            t = pg.inner_text("#refbody"); assert "nominale" in t and "1 decimale" not in t and "Altri addotti (meno comuni)" in t and "Un addotto è lo ione che la molecola M forma" in t, t[:600]
+            assert "Due picchi" not in t and "m/z osservati" not in t and "scheda Isotopi" not in t and "Cl-35" not in t
             pg.fill("#ad-in", "363.0665"); pg.wait_for_timeout(400)
             rows = pg.evaluate("[...document.querySelectorAll('#ad-tbl tr')].map(tr=>[tr.className,...[...tr.children].map(c=>c.textContent)])")
             hrow = [x for x in rows if x[1].startswith("[M+H]")][0]; assert hrow[0] == "exp" and hrow[4] == "364", hrow          # nominal, expected row
             na = [x for x in rows if x[1].startswith("[M+Na]+")][0]; assert na[0] == "exp" and na[4] == "386", na
-            k = [x for x in rows if x[1].startswith("[M+K]+")][0]; assert k[0] == "", k
-            order = [x[1] for x in rows if x[1].startswith("[")]; assert order.index("[M+H]+") < order.index("[M+K]+") and order.index("[M-H]-") < order.index("[M+Cl]-"), order
+            k = [x for x in rows if x[1].startswith("[M+K]+")][0]; assert k[0] == "exp", k
+            shown = [x[1] for x in rows if x[1].startswith("[")]; assert shown == ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+", "[M-H]-", "[M+HCOO]-", "[M+Cl]-"], shown      # only the common ones until the fold is opened
+            pg.locator("#ad-tbl .adtog").first.click(); pg.wait_for_timeout(200)
+            more = pg.evaluate("[...document.querySelectorAll('#ad-tbl tr')].map(tr=>tr.children[0].textContent).filter(t=>t.startsWith('['))"); assert "[2M+H]+" in more and "[M+H-H2O]+" in more, more
+            pg.fill("#ad-in", "363.0665"); pg.wait_for_timeout(300)
+            assert "[2M+H]+" in pg.inner_text("#ad-tbl"), "the fold stays open while typing"
+            pg.locator("#ad-tbl .adtog").first.click(); pg.wait_for_timeout(200); assert "[2M+H]+" not in pg.inner_text("#ad-tbl")
         step("table: nominal column, expected adducts first, drift and monoisotopic notes", table)
-        def pairs():
-            pg.fill("#pr-a", "364.4"); pg.fill("#pr-b", "386.4"); t = pg.inner_text("#pr-out"); assert "[M+Na]+" in t and "[M+H]+" in t and "21.98" in t and "suggerimento" in t, t
-            pg.fill("#pr-b", "381.4"); assert "[M+NH4]+" in pg.inner_text("#pr-out") and "17.02" in pg.inner_text("#pr-out"), pg.inner_text("#pr-out")
-            pg.fill("#pr-b", "370.0"); assert "non coincide" in pg.inner_text("#pr-out"), pg.inner_text("#pr-out")
-            pg.fill("#pr-b", "380.4"); assert "[M+K]+" in pg.inner_text("#pr-out") and "15.97" in pg.inner_text("#pr-out"), pg.inner_text("#pr-out")   # K minus Na
-        step("pair tool: two observed m/z against adduct differences", pairs)
         def aligned():
             qa = pg.evaluate("QADD.map(a=>[a.n,a.shift,a.k,a.z])"); ions = pg.evaluate("TPDraw.ions")
             for n, shift, k, z in qa:

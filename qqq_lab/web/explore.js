@@ -2221,14 +2221,49 @@ function calcPlace() {
   const r = Q("#np-calc2").getBoundingClientRect(), w = Math.min(560, innerWidth - 16);
   calcBox.style.top = Math.round(r.bottom + 6) + "px"; calcBox.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + "px";
 }
-Q("#np-calc2").onclick = () => { if (!calcBox.hidden) return calcBox.close(); calcBox.hidden = false; calcPlace(); Q("#calcin").focus(); };
+Q("#np-calc2").onclick = () => { if (!calcBox.hidden) return calcBox.close(); calcBox.hidden = false; calcPlace(); Q("#calcin").focus(); calcRun(); };
 Q("#calcx").onclick = () => calcBox.close();
 addEventListener("resize", () => { if (!calcBox.hidden) calcPlace(); });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !calcBox.hidden) calcBox.close(); });
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape" || calcBox.hidden) return;
+  const i = Q("#calcin"); if (i.value) { i.value = ""; CALC.fresh = false; calcRun(); } else calcBox.close();      // Esc: first clear the field, then close
+});
+const CALC = { ans: 0, tape: [], fresh: false };       // fresh: the field holds a result; a digit typed now starts a new calculation
 let CALC_MORE = false;       // the calculator shows the adducts of the other polarity too
+// the field holds a CALCULATION (digits and + - x / ( )) -> big result, keypad and tape; or a chemical FORMULA -> table of the adducts
+function calcTape() {
+  const tp = Q("#calctape"); tp.hidden = !CALC.tape.length || !Q("#calcpad") || Q("#calcpad").hidden;
+  tp.innerHTML = CALC.tape.map((r, i) => `<div data-i="${i}" title="Rimette il risultato nel campo per continuare il conto">${EH(r.e)} = <b>${EH(r.r)}</b></div>`).join("");
+  tp.querySelectorAll("div").forEach(d => d.onclick = () => { const r = CALC.tape[+d.dataset.i]; Q("#calcin").value = r.r; CALC.ans = parseFloat(r.r); CALC.fresh = true; calcRun(); Q("#calcin").focus(); });
+}
+function calcEquals() {
+  const t = Q("#calcin").value.trim(), r = calcEval(t, CALC.ans); if (r.v == null) return;
+  const f = calcFmt(r.v); CALC.tape.unshift({ e: calcPretty(t.replace(/ans/gi, "Ans")), r: f }); CALC.tape.length = Math.min(CALC.tape.length, 10);
+  CALC.ans = r.v; Q("#calcin").value = f; CALC.fresh = true; calcRun();
+}
+function calcKey(k) {
+  const i = Q("#calcin");
+  if (k === "=") return calcEquals();
+  if (CALC.fresh && /[0-9(,.]/.test(k)) i.value = "";
+  CALC.fresh = false;
+  i.value = k === "C" ? "" : k === "\u2190" ? i.value.slice(0, -1) : i.value + k;
+  i.focus(); calcRun();
+}
+Q("#calcpad").querySelectorAll("button").forEach(b => { b.onmousedown = ev => ev.preventDefault(); b.onclick = () => calcKey(b.dataset.k); });      // the field keeps the focus
+Q("#calcin").onkeydown = ev => {
+  if (ev.key === "Enter" && calcIsExpr(ev.target.value)) { ev.preventDefault(); calcEquals(); return; }
+  if (CALC.fresh && /^[0-9(,.]$/.test(ev.key)) ev.target.value = "";
+  if (ev.key.length === 1 || ev.key === "Backspace") CALC.fresh = false;
+};
 async function calcRun() {
-  const t = Q("#calcin").value.trim(), out = Q("#calcout"), sum = Q("#calcsum");
-  if (!t) { out.innerHTML = ""; sum.innerHTML = ""; return; }
+  const t = Q("#calcin").value.trim(), out = Q("#calcout"), sum = Q("#calcsum"), res = Q("#calcres"), pad = Q("#calcpad");
+  const ex = !t || calcIsExpr(t);
+  pad.hidden = !ex; res.hidden = !ex || !t; calcTape();
+  if (!t) { out.innerHTML = ""; sum.innerHTML = ""; res.textContent = ""; return; }
+  if (ex) {
+    out.innerHTML = ""; const r = calcEval(t, CALC.ans); res.textContent = r.v != null ? calcFmt(r.v) : "";
+    sum.innerHTML = r.err ? EH(r.err) : ""; return;
+  }
   try {
     const r = await getFormula(t, "");
     const want = defAdduct();

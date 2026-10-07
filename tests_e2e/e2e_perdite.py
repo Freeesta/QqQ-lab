@@ -33,10 +33,8 @@ try:
             pg.locator("#nl-pol [data-p='']").click(); pg.wait_for_timeout(200)
             g80 = pg.locator("#nl-list .nlg", has_text="(80)"); assert g80.count() == 1 and "M+2" in g80.inner_text()
             assert pg.locator("#nl-list .nlg").count() == 4
-            g80.locator("[data-go=is]").click(); pg.wait_for_timeout(300)
-            assert pg.evaluate("document.querySelector('#reftabs .on').dataset.t") == "is"
-            pg.click("#reftabs [data-t=ls]"); pg.wait_for_timeout(200)
-        step("4.3: same nominal mass in a box; 80 links to Isotopi", groups)
+            assert "profilo isotopico nello spettro" in g80.inner_text() and "scheda" not in g80.inner_text()
+        step("4.3: same nominal mass in a box; 80 points to the isotope profile of the spectrum", groups)
         def radicals():
             t = pg.inner_text('#nl-list [data-f="CH3"]'); assert "•" in t and "radicale" in t and "elettroni pari" in t, t
             assert "•" in pg.inner_text('#nl-list [data-f="NO2"]')

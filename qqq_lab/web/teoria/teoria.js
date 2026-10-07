@@ -2,6 +2,7 @@
    Classic script, no modules, no network: the pages work from file:// and from the local server. */
 "use strict";
 const CHAPTERS = [
+  ["00-uso.html", "A", "Come si usa QqQ lab"],
   ["index.html", "0", "Introduzione e mappa del percorso"],
   ["01-tp.html", "1", "Prodotti di trasformazione"],
   ["02-fotocatalisi.html", "2", "Fotocatalisi con TiO₂"],

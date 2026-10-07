@@ -23,13 +23,14 @@ try:
             assert pg.evaluate("E.panels[0]._a.sr.every(s=>E.files[s.k].kind!=='mrm')"), "MRM TIC in the chromatogram"
         step("TIC on top, spectrum below at the apex, full width", layout)
         def helpq():
-            assert pg.locator(".hq:visible").count() == 1, "only the general ? is left"
+            assert pg.locator(".hq:visible").count() == 1, "only the general (i) is left"
             pg.locator('button.hq[data-help=header]').click(); pg.wait_for_timeout(300)
-            tx = pg.inner_text("#helppop"); assert pg.is_visible("#helppop") and "Cromatogramma" in tx and "Spettro" in tx and "Full Scan" in tx, tx[:200]
+            tx = pg.inner_text("#helppop"); assert pg.is_visible("#helppop") and "programma didattico" in tx and "federico.cristaudo@unito.it" in tx, tx[:200]
+            tg = r.teoria(pg); assert "Cromatogramma" in tg and "Spettro" in tg and "Full Scan" in tg, tg[:200]      # the old guide is the first chapter of the Teoria
             pg.screenshot(path=SH + "71_help.png")
             pg.keyboard.press("Escape"); pg.wait_for_timeout(200); assert not pg.is_visible("#helppop")
             assert "Doppio clic per rinominare" in pg.evaluate("document.querySelector('.pnl.chrom .ttl').title")
-        step("only the general ? is left: it opens the guide; panel titles carry the short explanation", helpq)
+        step("only the general (i) is left: it opens the info box; the guide is the first Teoria chapter; panel titles carry the short explanation", helpq)
         def xlsxexcel():
             pg.click("#dtabs [data-t=mrm]"); pg.wait_for_timeout(2500)
             with pg.expect_download() as d: pg.locator(".pnl.mrm [data-a=xlsx]").first.click()
@@ -78,19 +79,15 @@ try:
         step("adducts and neutral losses tables", adducts); print(steps[-2:])
         if pg.evaluate("Q(\"#refdlg\").open"): pg.evaluate("Q(\"#refdlg\").close()")
         def isotopes():
-            pg.click("#np-ad"); pg.wait_for_timeout(400); pg.click('#reftabs button[data-t="is"]')
-            pg.fill("#is-f", "C9H10Cl2N2O"); pg.wait_for_timeout(700)
-            t = pg.inner_text("#is-out"); print("ISO:", t.replace("\n", " | ")[:200])
-            assert "233.0243" in t and "64.7" in t and "10.7" in t, t      # diuron [M+H]+: Cl2 pattern 100 : 65 : 11
-            pg.screenshot(path=SH + "69_isotopes.png")
+            pg.click("#np-pt"); pg.wait_for_timeout(400)
+            assert pg.locator('#reftabs button[data-t="is"]').count() == 0, "no Isotopi tab any more (the profile is drawn from the spectrum)"
             # periodic table keeps the same size whatever element is shown
-            pg.click('#reftabs button[data-t="pt"]'); pg.wait_for_timeout(300)
             hs = []
             for el in ["F", "Sn", "C", "Hg"]:
                 pg.hover(f'.pt-c[data-s="{el}"]'); pg.wait_for_timeout(150); hs.append(pg.evaluate("Q('.pt').getBoundingClientRect().height"))
             assert max(hs) - min(hs) < 1, hs
             pg.click("#refx")
-        step("isotope pattern tab (diuron Cl2) and fixed-size periodic table", isotopes)
+        step("no Isotopi tab; fixed-size periodic table", isotopes)
         def overlay():
             sp = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')")
             pg.evaluate(f"(()=>{{const p=E.panels[{sp}];p.iso={{formula:'C14H13F4N3O2S',ad:'[M+H]+'}};p.zoom=[360,372];draw(p)}})()"); pg.wait_for_timeout(1500)
