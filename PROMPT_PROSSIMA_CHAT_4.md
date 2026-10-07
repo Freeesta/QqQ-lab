@@ -207,3 +207,10 @@ Tolleranza HR 5 ppm (predefinito di FreeStyle; copre anche lo scostamento del Fu
 
 ## Lavori in coda (NON fare: decisioni di Federico)
 **Q1. Nome nuovo del progetto.** Con l'alta risoluzione «QqQ lab» non descrive più il programma. Quando Federico sceglie il nome: cambiare **solo il nome visibile** (titolo della pagina, logo/scritta, README, Teoria, manifest del sito) e lasciare per ora i nomi interni (pacchetto `qqq_lab`, repository, cartelle) che romperebbero link, sito e test; il cambio dei repository su GitHub (con redirect automatico) e dell'indirizzo del sito è un passo separato da decidere con lui.
+
+**Q2. Confronto di una MS2 con le librerie** (idea di Federico, 7/10; da progettare dopo la parte B). Proposta di Claude Opus:
+- *Librerie* caricate dall'utente (mai distribuite con il programma): MSP (export di NIST, MoNA, MassBank), MGF (GNPS); salvate solo nel browser (IndexedDB), indicizzate per m/z del precursore. NIST e mzVault non si leggono direttamente: si esportano in MSP.
+- *Ricerca*: filtro sul precursore (tolleranza del profilo) → somiglianza **coseno** (radice delle intensità, tolleranza sui frammenti) e **entropia spettrale** (Li et al., *Nat. Methods* 2021), scritte in numpy (niente matchms: usa numba, che in Pyodide non c'è). Risultati: nome, punteggio, frammenti in comune, Δppm del precursore, CE/strumento della libreria.
+- *Vista*: clic destro sulla MS2 → «Cerca nelle librerie» → tabella; clic su una riga → **grafico a specchio** (sperimentale sopra, libreria sotto, frammenti in comune colorati). In più: «Cerca tutte le MS2 del file» in un worker.
+- *Per i prodotti di trasformazione* (raramente in libreria): **coseno modificato** fra la MS2 di un candidato e quella della madre (frammenti spostati del Δm fra i precursori) → piccola rete dei prodotti simili alla madre (idea del molecular networking di GNPS).
+- *Da decidere*: è una risposta pronta → solo modalità docente/ricerca (sblocco come TP Mine) o anche per gli studenti con le librerie scelte dal docente?
