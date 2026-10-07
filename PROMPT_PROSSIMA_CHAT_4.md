@@ -19,20 +19,28 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati
 ## Stato e ripresa
 **Stato** (aggiornalo e fai push a ogni punto finito: è quello che legge la chat successiva):
 - S1: —
-- S2: —
 - S3: —
 - S4: —
-- S5: —
 (per ogni sessione: punti fatti · punto in corso · ramo non ancora in `main`)
 
 **Se riprendi dopo un'interruzione** (nuova sessione, stesso prompt): 1) `git fetch origin`; 2) guarda «Stato» qui sopra e le PR aperte (`gh pr list`) o i rami `claude/...` non uniti con commit «[in corso]» (`git branch -r --no-merged origin/main`); 3) se c'è lavoro non unito, portalo nel tuo ramo (`git merge origin/<quel ramo>`), lancia `python3 tools/verifica.py --solo <test del punto>` e **riparti dal punto in corso**, senza rifare ciò che è già fatto; 4) chiudi la vecchia PR dopo aver unito la tua. Non rileggere i blocchi già fatti.
 
 ## Ordine di lavoro e sessioni
-**Parte A** (ritocchi): A1 barra dei file · A2 perdite neutre · A3 header fisso e niente scorrimento su «Dati» · A4 spettri e pannelli.
+**Parte A** (ritocchi): A0 test su Windows · A1 barra dei file · A2 perdite neutre · A3 header fisso e niente scorrimento su «Dati» · A4 spettri e pannelli.
 **Parte B** (alta risoluzione e DDA): nell'ordine della **scaletta di priorità** più sotto (B0 → B9).
-**Sessioni** (Federico può lanciarne più d'una insieme; ognuna fa SOLO i suoi blocchi, scritti nel primo messaggio, es. «Fai la sessione 1»):
-| Onda | Sessione | Blocchi | File principali | Insieme a |
-|---|---|---|---|---|
+**Sessioni** (stasera Federico ne lancia **tre insieme** nel cloud; ognuna fa SOLO i suoi blocchi, scritti nel primo messaggio, es. «Esegui `PROMPT_PROSSIMA_CHAT_4.md`, sessione S1»):
+| Sessione | Blocchi, in ordine | File principali |
+|---|---|---|
+| **S1** | A0 (CI su Windows), poi parte A | `tests/`, `index.html`, `explore.js`, `tables.js`, `spettro.js` |
+| **S3** | B0 → B1 → B2 → B3 → B4 → B5 → B6, poi B8 e B9 se c'è budget | `dati_sintetici.py`, `reader/`, `explore.py`, `app.py`, `api.py`, `web/hr.js` e `web/dda.js` (nuovi), agganci in `explore.js` |
+| **S4** | B7 (file grandi) | `reader/mzml.py` (solo la parte indicata in B7), `browser-worker.js`, schermata di carico |
+Regole per lavorare in parallelo:
+- Tocca solo i file del tuo blocco (se serve altro, il minimo indispensabile). Unisci in `main` alla fine di ogni blocco verde, dopo `git fetch origin && git merge origin/main` e una nuova verifica; conflitto non ovvio → non unire e scrivi a Federico.
+- **S3, prima di B3** (il primo blocco che tocca `explore.js` e `spettro.js`): `git fetch origin && git merge origin/main`, così lavori sopra la parte A di S1 (A4.1 e B5 toccano le stesse funzioni di impilamento: `relayout`, `stackAfter`).
+- **S4** non tocca `Run._index` né i campi di `Scan` (li cambia S3 in B2): vedi B7.
+- In «Stato» ogni sessione aggiorna solo la sua riga. `AGENTS.md`: solo la tua sezione (la sez. 2 la aggiorna S1).
+
+---|---|---|---|---|
 | 1 | S1 | Parte A | `index.html`, `explore.js`, `tables.js`, `spettro.js` | S2 |
 | 1 | S2 | B0, B1, B2 | `dati_sintetici.py`, `reader/`, `explore.py`, `app.py`, `api.py`, `web/hr.js` (nuovo) | S1 |
 | 2 | S3 | B3, B4, B5, B6 | `explore.js`, `spettro.js`, `web/hr.js`, `web/dda.js` (nuovo) | da sola, dopo l'onda 1 |
@@ -43,6 +51,9 @@ Regole per le sessioni parallele: tocca solo i file del tuo blocco (se serve alt
 ---
 
 # PARTE A: ritocchi dell'interfaccia
+
+## A0: test su Windows (sessione S1, per primo)
+Da quando è entrato `tests/test_perdite.py` (PR #5, 7/10) la CI fallisce **solo su Windows** (`pytest (windows-latest, 3.11 e 3.14)`); Linux e macOS sono verdi. Causa probabile (i log non li ha visti nessuno): `subprocess.run([...node...], capture_output=True, text=True)` su Windows decodifica l'output di node con cp1252 e i caratteri Δ • − si rompono. Prima leggi il log (`gh run list -R Freeesta/QqQ-lab`, `gh run view <id> --log-failed`; serve `add_repo` in lettura). Se è questo: in `tests/test_perdite.py`, `test_calcola.py`, `test_cromato.py` (e ogni altro test che legge l'output di node) sostituisci `text=True` con `encoding="utf-8"`. Push e controlla che la CI sia verde anche su Windows (`gh run watch`). Se la causa è un'altra, correggi quella e scrivila in `AGENTS.md` (sez. 2, accanto alla nota sui file mmap su Windows).
 
 ## A1: barra sopra i pannelli (`#tools`)
 
@@ -198,8 +209,8 @@ Come `mixed_ida` (usato da `e2e_misti.py`), aggiungi `hr_dda(path, rng, kind="ex
 6. e2e (stesso file di B5): ▽ e media; «Segui questo ione» su 305.0702 → XIC sopra il trio, triangolini solo dello ione, puntini; 250.1234 → «Nessuna MS2»; 229.05 → banda che contiene anche 229.60; elenco dei precursori → clic → trio.
 
 ## B7: file grandi (`reader/mzml.py`, `browser-worker.js`, schermata di carico)
-1. Tabella dei picchi **float32 solo per i profili hr** (`Run.table`): `mz` e `inten` float32, `pos` int32 (da 20 a 12 byte per picco; Exploris ~275 MB invece di 455); nella `xic` converti i limiti in float32. Il QqQ resta float64.
-2. `Run(path, mode="file")`: lettura con `seek/read` (indice in un passaggio a blocchi di 16 MB; ogni scansione con `read(end − start)`), usata per file su WORKERFS o > 300 MB; altrimenti mmap come oggi. pytest: stessi risultati nelle due modalità.
+1. Tabella dei picchi **float32 solo per i profili hr** (`Run.table`): `mz` e `inten` float32, `pos` int32 (da 20 a 12 byte per picco; Exploris ~275 MB invece di 455); nella `xic` converti i limiti in float32. Il QqQ resta float64. Per sapere se il file è hr usa `getattr(self, "hr1", False)`: l'attributo `Run.hr1` (MS1 ad alta risoluzione) lo aggiunge S3 in B1; finché non c'è vale falso e non cambia niente. Se lavori in parallelo a S3 non toccare `profile.py`.
+2. `Run(path, mode="file")`, usata per file su WORKERFS o > 300 MB (altrimenti mmap come oggi). **Senza toccare `_index`, `read` e i campi di `Scan`** (li cambia S3): scrivi una piccola classe `_FileBuf` che imita l'interfaccia di mmap usata dal lettore (`find(pat, start, end)` cercando a blocchi di 16 MB con sovrapposizione di `len(pat)`, `__getitem__(slice)` con `seek/read`, `__len__`, `close`) e in `Run.__init__` assegna `self._mm = _FileBuf(path)` invece di `mmap.mmap(...)`. pytest: stessi risultati nelle due modalità sui sintetici e su un file del QqQ.
 3. `browser-worker.js`: file > 50 MB → niente `FS.writeFile`: `py.FS.mount(py.FS.filesystems.WORKERFS, { blobs: [{ name, data: blob }] }, "/big")` e `mode="file"`; file > 300 MB non in IndexedDB («file grande: dopo aver ricaricato la pagina va ricaricato»).
 4. Profilo hr in **profilo** (MS1 con `MS:1000128`): avviso nella schermata di carico «File in profilo ad alta risoluzione: molto pesante, convertilo con il peak picking del vendor» + ricetta. Ricetta (anche in Teoria): `msconvert file.raw --mzML --zlib --filter "peakPicking vendor msLevel=1-"`; per alleggerire `--filter "scanTime [600,1500]"` (secondi) e `--filter "threshold count 300 most-intense"`.
 5. File che non entra comunque: messaggio chiaro con la ricetta, mai un blocco silenzioso.
