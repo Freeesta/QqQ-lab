@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 
 from .explore import Session, sniff
+from .peaks import merge_unit, pad_zeros, profile_peaks
 from .reader.methodinfo import check_against, read_methods
 from .project import guess_conc, guess_sample
 
@@ -256,16 +257,30 @@ class App:
                 break
         return ionfamily.origin_report(samples, mz, parent, rt0, rt1, ref, formula_p=formula or None, top=25, ms2=ms2)   # 25 co-eluting ions are plenty to read (and the browser version is ~10x slower)
 
-    def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None) -> dict:
+    @staticmethod
+    def _spec_json(item, level: int, mz, y, merge: bool) -> dict:
+        """A spectrum for the front end. Centroids: the peaks (merged by unit window if asked). Profile: `mz`/`y` are the PEAKS (one per
+        nominal mass, `peaks.profile_peaks`) and `pmz`/`py` the profile points, drawn as a line; labels, table, ruler and clicks use the peaks."""
+        r3 = lambda a: [round(float(v), 3) for v in a]
+        r1 = lambda a: [round(float(v), 1) for v in a]
+        if item.spectrum_mode(level) == "profile":
+            pm, py = profile_peaks(mz, y)
+            lm, ly = pad_zeros(mz, y, item._step(level))
+            return {"mode": "profile", "mz": r3(pm), "y": r1(py), "pmz": r3(lm), "py": r1(ly)}
+        if merge:
+            mz, y = merge_unit(mz, y)
+        return {"mode": item.spectrum_mode(level), "mz": r3(mz), "y": r1(y)}
+
+    def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None, merge: bool = False) -> dict:
         if bg is not None:
             bg = {**bg, "item": self._item(bg["k"])}
         item = self._item(k)
         mz, y, n = item.spectrum(rt0, rt1, level, precursor, bin_da=bin_da, bg=bg)
-        return {"mz": [round(float(v), 3) for v in mz], "y": [round(float(v), 1) for v in y], "scans": n, **item.window_scans(rt0, rt1, level, precursor)}
+        return {**self._spec_json(item, level, mz, y, merge), "scans": n, **item.window_scans(rt0, rt1, level, precursor)}
 
     MAX_SPECTRA = 60       # scans per /api/spectra request
 
-    def spectra(self, k: int, i0: int, i1: int, level: int, precursor, bin_da: float) -> dict:
+    def spectra(self, k: int, i0: int, i1: int, level: int, precursor, bin_da: float, merge: bool = False) -> dict:
         """Single scans i0..i1 of file k (for scan-by-scan navigation); each one equals /api/spectrum on a window holding only that scan."""
         item = self._item(k)
         if item.kind() == "mrm":
@@ -277,7 +292,7 @@ class App:
         n = item.scan_count(level, precursor)
         if i0 < 0 or i0 >= n:
             raise ValueError(f"scansione fuori dal file (il file ne ha {n})")
-        return {"n": n, "scans": [{"i": s["i"], "rt": round(s["rt"], 4), "mz": [round(float(v), 3) for v in s["mz"]], "y": [round(float(v), 1) for v in s["y"]]}
+        return {"n": n, "scans": [{"i": s["i"], "rt": round(s["rt"], 4), **self._spec_json(item, level, s["mz"], s["y"], merge)}
                                   for s in item.scans(i0, i1, level, precursor, bin_da=bin_da)]}
 
     def ionmap(self, k: int, level: int) -> dict:

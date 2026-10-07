@@ -4,7 +4,7 @@
 const E = { files: [], panels: [], seq: 1, key: "", cur: 0, browse: false, z: 10, fold: false, tab: "full" };
 const NB = { ui: null, session: null };   // taccuino: stato dell'interfaccia (+ disegno, vedi draw.js)
 // user preferences (settings gear): text size, theme, chart colours. Filled from localStorage by uipLoad() (settings.js).
-const UIP = { font: 100, theme: "auto", pal: "time" };
+const UIP = { font: 100, theme: "auto", pal: "time", merge: true };      // merge = join the centroids of the same nominal mass (centroid files only)
 // areas: at least 3 decimals in the label (2.243e+6), whole number with thousands separated by a thin space in the tooltip
 const fmtA = v => !Number.isFinite(v) || v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(3) : (+v.toPrecision(4)).toString();
 const fmtFull = v => Number.isFinite(v) ? Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "\u2009") : "";
@@ -50,10 +50,10 @@ const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", 
 const fmtFormula = f => !f ? "" : EH(f).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>");
 const fmtAdduct = a => !a ? "" : fmtFormula(a).replace(/([+-]+)$/, "<sup>$1</sup>");
 window.fmtFormula = fmtFormula; window.fmtAdduct = fmtAdduct;
-const KIND = { full: "Full Scan", ms2: "MS\u00b2 (Product Ion)", mrm: "MRM", empty: "vuoto" };
+const KIND = { full: "Full Scan", ms2: "MS2 (Product Ion)", mrm: "MRM", empty: "vuoto" };
 const kindOf = f => KIND[f.kind] || f.kind;
 // the three kinds of experiment never share a graph: Dati has one sub-tab for each (Full Scan, MS2, MRM); panels and files belong to one
-const TABS = [["full", "Full Scan"], ["ms2", "MS\u00b2 (Product Ion)"], ["mrm", "MRM"]];
+const TABS = [["full", "Full Scan"], ["ms2", "MS2 (Product Ion)"], ["mrm", "MRM"]];
 const tabFiles = (t = E.tab) => E.files.filter(f => f.kind === t && !f.gone);   // f.gone = removed from the session (the file on disk is untouched)
 const tabPanels = (t = E.tab) => E.panels.filter(p => p.tab === t);
 const grpOf = f => E.tab === "mrm" ? ({ standard: "Standard", sample: "Campioni", blank: "Bianchi" }[f.type] || "Campioni") : kindOf(f);
@@ -136,7 +136,7 @@ function uiSave(now = false) {
         traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label })),
         k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
         link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1, imode: p.imode || null, intf: p.intf || "",
-        lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, ibk: p.ibk || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, view: p.view, norm: p.norm, az: p.az, elv: p.elv, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
+        lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, sticks: p.type === "spec" && p.sticks ? true : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, ibk: p.ibk || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, view: p.view, norm: p.norm, az: p.az, elv: p.elv, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
       }))
     };
     nbSave(now);
@@ -147,20 +147,31 @@ function uiSave(now = false) {
 addEventListener("pagehide", () => uiSave(true));
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") uiSave(true); });
 
+// text size inside the graphs follows the "Dimensione testo" setting (UIP.font); exported PNGs keep the standard size (EXPORTING)
+let EXPORTING = false;
+const fz = () => (EXPORTING ? 1 : UIP.font / 100);
+const fpx = (n, st = "") => `${st}${+(n * fz()).toFixed(1)}px system-ui`;
 // ------------------------------------------------------------------ dati (con cache)
 const CACHE = new Map();
 const memo = (key, fn) => { if (!CACHE.has(key)) CACHE.set(key, fn().catch(e => { CACHE.delete(key); throw e; })); return CACHE.get(key); };
 const J = u => fetch(u).then(async r => { const j = await r.json(); if (j.error) throw new Error(j.error); return j; });
 const getChrom = (k, kind, lv, mz0, mz1, prec) => memo(`c${k}|${kind}|${lv}|${mz0 ?? ""}|${mz1 ?? ""}|${prec ?? ""}`, () => J(`api/chrom?k=${k}&kind=${kind}&level=${lv}` + (mz0 != null ? `&mz0=${mz0}` : "") + (mz1 != null ? `&mz1=${mz1}` : "") + (prec ? `&prec=${prec}` : "")));
 const getXic = (k, mz, tol, lv) => memo(`x${k}|${mz}|${tol}|${lv}`, () => J(`api/xic?k=${k}&mz=${mz}&tol=${tol}&level=${lv}`).then(j => j.traces[0]));
-const getSpec = (k, a, b, lv, pr, bg) => memo(`s${k}|${a}|${b}|${lv}|${pr}|${bg ? bg.join(",") : ""}`, () => J(`api/spectrum?k=${k}&rt0=${a}&rt1=${b}&level=${lv}&precursor=${pr ?? ""}` + (bg ? `&bgk=${bg[0]}&bgrt0=${bg[1]}&bgrt1=${bg[2]}` : "")));
+const MERGE = () => UIP.merge ? "&merge=1" : "";
+const getSpec = (k, a, b, lv, pr, bg) => memo(`s${k}|${a}|${b}|${lv}|${pr}|${bg ? bg.join(",") : ""}|${UIP.merge ? 1 : 0}`, () => J(`api/spectrum?k=${k}&rt0=${a}&rt1=${b}&level=${lv}&precursor=${pr ?? ""}` + (bg ? `&bgk=${bg[0]}&bgrt0=${bg[1]}&bgrt1=${bg[2]}` : "") + MERGE()));
 const getFormula = (f, ad) => J(`api/formula?f=${encodeURIComponent(f)}&adduct=${encodeURIComponent(ad || "")}`);
 // default adduct from the polarity of the visible files
 // polarity of the files (read from the mzML): a small sign next to the name, the default adduct of a graph follows ITS files
 const POLS = { positive: ["+", "ESI positivo"], negative: ["−", "ESI negativo"], mixed: ["±", "ESI positivo e negativo nello stesso file"], unknown: ["?", "polarità non indicata nel file"] };
-const polSign = f => { const q = POLS[f && f.polarity] || POLS.unknown; return `<span class="pol" title="${q[1]}">${q[0]}</span>`; };
+// the polarity as a small readable badge "ESI+" / "ESI−" (never a bare sign); in lists it appears ONLY when the files of the session do not all have the same polarity
+const polKnown = list => new Set((list || []).map(f => f && f.polarity).filter(x => x && x !== "unknown"));
+const polAll = () => polKnown(E.files.filter(f => !f.gone));
+const polLabel = f => ({ positive: "ESI+", negative: "ESI\u2212", mixed: "ESI\u00b1" }[f && f.polarity] || "ESI?");
+const polSign = (f, list) => { const q = POLS[f && f.polarity] || POLS.unknown; if ((list ? polKnown(list) : polAll()).size < 2) return ""; return `<span class="pol" title="${q[1]}">${polLabel(f)}</span>`; };
+// the polarity written once in the heading of a group when all its files share it: " · ESI+"
+const polHead = list => { const s = polKnown(list); return s.size === 1 && list.every(f => f.polarity && f.polarity !== "unknown") ? " \u00b7 " + polLabel(list[0]) : ""; };
 const polMixed = () => new Set(shown().map(f => f.polarity).filter(x => x && x !== "unknown")).size > 1;
-const legPol = f => polMixed() && f ? " " + polSign(f) : "";                      // the legend shows the sign only when positive and negative files are drawn together
+const legPol = f => polMixed() && f ? " " + polSign(f, shown()) : "";                      // the legend shows the sign only when positive and negative files are drawn together
 const defAdduct = fs => { const l = fs || (shown().length ? shown() : E.files.filter(f => f.vis)); return l.some(f => f.polarity === "negative") && !l.some(f => f.polarity === "positive") ? "[M-H]-" : "[M+H]+"; };
 const getMrm = k => memo(`m${k}`, () => J(`api/mrm?k=${k}`).then(j => j.files[0].transitions));
 
@@ -282,7 +293,7 @@ function renderFileList() {
   const ghost = f => `<div class="fl ghost" data-go="${f.k}" title="Questo file è ${EH(kindOf(f))}: non si usa in questa scheda. Clic per aprire la scheda ${EH(TABS.find(x => x[0] === f.kind)[1])}."><input type="checkbox" disabled><i style="background:${f.color}"></i><div class="fi"><b class="nm">${EH(f.label)}</b><small>${sub(f)}</small></div></div>`;
   const pre = E.tab === "ms2" && window.ms2Exps && ms2Exps().length ? `<div class="fgh"><span>Precursori</span><em>${ms2Exps().length}</em></div>` + ms2Exps().map(x => `<div class="fl pr"><input type="checkbox" data-pr="${x.prec}" ${ms2PairOf(x.prec) ? "checked" : ""} title="Aggiunge (o chiude) una seconda coppia di grafici per confrontare questo precursore con quello mostrato"><div class="fi"><b class="pn" data-pg="${x.prec}" title="Clic: i grafici passano a questo precursore. Presente in ${x.files.size} file">${x.prec != null ? "<span style=\"font-style:italic\">m/z</span> " + EH(x.prec) : "?"}</b><small>${x.ce.size ? "CE " + [...x.ce].join(", ") + " V · " : ""}${x.n} scan</small></div></div>`).join("") : "";
   const others = TABS.filter(([t]) => t !== E.tab && tabFiles(t).length).map(([t, n]) => `<div class="fgh sep">${modeIcon(t, 18)}<span>${EH(n)}</span><em>${tabFiles(t).length}</em></div>` + tabFiles(t).map(ghost).join("")).join("");
-  const gh = (G, label, cls = "") => `<div class="fgh ${cls}"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="Mostra o nascondi tutto il gruppo">${cls ? "" : modeIcon(E.tab, 18)}<span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
+  const gh = (G, label, cls = "") => `<div class="fgh ${cls}"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="Mostra o nascondi tutto il gruppo">${cls ? "" : modeIcon(E.tab, 18)}<span>${EH(label)}${cls ? "" : polHead(G.fs)}</span><em>${G.fs.length}</em></div>`;
   // MRM tab: like the other tabs the header is the type of experiment («MRM»); standard / campioni / bianchi are smaller sub-groups, written only when there is more than one
   const body = E.tab === "mrm" && groups.length
     ? gh({ g: "__all", fs: tabFiles() }, "MRM") + groups.map(G => (groups.length > 1 ? gh(G, G.g.toLowerCase(), "sub") : "") + G.fs.map(row).join("")).join("")
@@ -450,7 +461,7 @@ function menu(ev, items) {
   m.style.top = Math.max(4, Math.min(ev.clientY, innerHeight - m.offsetHeight - 8)) + "px";
 }
 document.addEventListener("click", () => { Q("#ctx").hidden = true; });
-document.addEventListener("keydown", e => { if (e.key === "Escape") Q("#ctx").hidden = true; });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { e._ctxWas = !Q("#ctx").hidden; Q("#ctx").hidden = true; } });      // _ctxWas: this Esc only closed the menu (the full-screen handler below leaves the panel alone)
 function dl(name, text, type = "application/octet-stream") {
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
@@ -510,6 +521,7 @@ function numberPanels() {
 }
 document.addEventListener("keydown", e => {
   if (S.view !== "data" || e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key) || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || Q("dialog[open]")) return;
+  if (fsPanel()) return;
   const q = tabPanels().filter(x => x.el).sort((a, b) => a.y - b.y || a.id - b.id)[+e.key - 1]; if (!q) return;
   setActive(q); front(q.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + q.y - 70, behavior: "smooth" });
 });
@@ -573,7 +585,7 @@ function addPanel(type, o, after) {
   if (type === "chrom") p.ms2tri = !!o.ms2tri;                          // triangles of the MS2 scans on the survey chromatogram
   if (type === "xic") p.adduct = o.adduct || defAdduct();
   if (type === "spec") Object.assign(p, { bg: o.bg ?? "", bw0: o.bw0 ?? null, bw1: o.bw1 ?? null, lock: o.lock ? { pending: true } : null, si: null,
-    rel: typeof o.rel === "boolean" ? o.rel : null, thr: o.thr ?? 5, nlab: o.nlab ?? 10, dec: o.dec ?? 1, meas: o.meas && Array.isArray(o.meas.list) ? o.meas : null, rul: false });   // lock: only open/closed is saved, the values are measured again
+    rel: typeof o.rel === "boolean" ? o.rel : null, sticks: !!o.sticks, thr: o.thr ?? 5, nlab: o.nlab ?? 10, dec: o.dec ?? 1, meas: o.meas && Array.isArray(o.meas.list) ? o.meas : null, rul: false });   // lock: only open/closed is saved, the values are measured again
   if (type !== "xic") p.traces = p.traces || [];
   const g = (p.w && p.h) ? { x: p.x ?? 0, y: p.y ?? 0, w: p.w, h: p.h } : place();
   Object.assign(p, g);
@@ -622,6 +634,8 @@ function addPanel(type, o, after) {
   const fsB = el.querySelector('[data-a="max"]');
   p._setMax = on => {
     el.classList.toggle("max", on); fsB.innerHTML = on ? IC_FSX : IC_FS;
+    fsInert(on ? p : null);
+    if (on) setActive(p);
     fsB.title = on ? "Esci dallo schermo intero (Esc)" : "Schermo intero: ingrandisce questo pannello (Esc per uscire)";
     if (on) front(el);
     cancelAnimationFrame(p._raf); p._raf = requestAnimationFrame(() => { draw(p); setTimeout(() => draw(p), 120); });
@@ -636,8 +650,8 @@ function addPanel(type, o, after) {
   const ptB = el.querySelector('[data-a="ptab"]'); if (ptB) ptB.onclick = () => peakTable(p);
   const tlB = el.querySelector('[data-a="tlink"]'); if (tlB) tlB.onclick = () => toggleTl(p);
   el.querySelector('[data-a="png"]').onclick = async () => {
-    let cvs; p._exp = true;                             // the picture has no cursor line, no selection and no zoom bar; the spectrum says where it comes from
-    try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; draw(p); }
+    let cvs; p._exp = true; EXPORTING = true;                             // the picture has no cursor line, no selection and no zoom bar; the spectrum says where it comes from
+    try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; draw(p); }
     cvs.toBlob(async b => {
       let out = b; try { out = await pngWithMeta(b, plotMeta(p)); } catch (e) { /* the image is saved anyway, only without metadata */ }
       const a = document.createElement("a"); a.href = URL.createObjectURL(out); a.download = plotName(p) + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
@@ -649,11 +663,11 @@ function addPanel(type, o, after) {
     const setMode = m => { p.imode = p.imode === m ? null : m; Object.entries(btns).forEach(([k, b]) => b.classList.toggle("on", p.imode === k)); p.cv.style.cursor = p.imode === "zoom" ? "zoom-in" : p.imode ? "cell" : "crosshair"; refreshIntf(p); };
     if (p.imode && btns[p.imode]) { btns[p.imode].classList.add("on"); p.cv.style.cursor = "cell"; }      // MRM panels open with the manual integration tool ready
     bZ.onclick = () => setMode("zoom"); bA.onclick = () => setMode("auto"); bM.onclick = () => setMode("man"); bT.onclick = showInts;
-    el.querySelector('[data-a="iclr"]').onclick = () => { p.ints = []; draw(p); };
+    el.querySelector('[data-a="iclr"]').onclick = () => { if (p.ints.length) delInts(p, [...p.ints]); };
     el.querySelector('[data-a="intf"]').onchange = e => { p.intf = e.target.value; };
   }
   if (bX) bX.onclick = () => openXic(null);
-  el.querySelector(".x").onclick = () => { p._ro.disconnect(); if (p._up) removeEventListener("mouseup", p._up); el.remove(); E.panels = E.panels.filter(x => x !== p); relayout(); fitHost(); uiSave(); if (E.tab === "ms2") renderFileList(); };
+  el.querySelector(".x").onclick = () => { fsInert(null, p); p._ro.disconnect(); if (p._up) removeEventListener("mouseup", p._up); el.remove(); E.panels = E.panels.filter(x => x !== p); relayout(); fitHost(); uiSave(); if (E.tab === "ms2") renderFileList(); };
   el.querySelector(".ttl").ondblclick = async () => { const v = await ask("Nome del pannello", p.title); if (v) { p.title = v; ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
   return p;
@@ -661,9 +675,17 @@ function addPanel(type, o, after) {
 const redrawAll = () => tabPanels().forEach(draw);
 // Esc leaves the full screen of a panel (not when a dialog, a menu or a help box is open: they use Esc themselves)
 document.addEventListener("keydown", e => {
-  if (e.key !== "Escape" || Q("dialog[open]") || Q("#helppop:not([hidden])") || (Q("#ctx") && !Q("#ctx").hidden) || Q("#uipset")) return;
+  if (e.key !== "Escape" || e._ctxWas || Q("dialog[open]") || Q("#helppop:not([hidden])") || (Q("#ctx") && !Q("#ctx").hidden) || Q("#uipset")) return;
   const m = E.panels.find(q => q.el && q.el.classList.contains("max")); if (m && m._setMax) m._setMax(false);
 });
+// full screen: ONLY that panel exists. Everything else (header, file list, tabs, toolbar, the other panels) is inert: no click, wheel or key reaches it
+const fsPanel = () => E.panels.find(q => q.el && q.el.classList.contains("max"));
+function fsInert(on, closing) {
+  document.querySelectorAll("header,#dfiles,#dtabs,#tools,#dpanels>.pnl").forEach(e => {
+    if (on && e !== on.el) e.setAttribute("inert", ""); else if (!on) e.removeAttribute("inert");
+  });
+  if (!on && !closing) document.documentElement.classList.remove("fs-on"); else if (on) document.documentElement.classList.add("fs-on");
+}
 // copy of a plot on a white background (for PNG files and the report: a transparent PNG looks black in some viewers)
 function whiteCanvas(cv, caption = "") {
   const sc = cv.width / Math.max(cv.clientWidth, 1), top = caption ? Math.round(24 * sc) : 0;
@@ -763,7 +785,7 @@ function afterDraw(p) {
   if (!(p._a && (p.zoom || p.zoomY)) || p._exp) return;
   const a = p._a, g = p.cv.getContext("2d"), bw = 90, x = a.W - M.r - bw, y = 3, f0 = a.full[0], f1 = a.full[1], u = p.type === "spec" ? "m/z" : "RT";
   const txt = `${u} ${a.x0.toFixed(p.type === "spec" ? 1 : 2)}-${a.x1.toFixed(p.type === "spec" ? 1 : 2)}` + (p.type === "spec" ? "" : " min") + (a.map && p.zoomY ? ` · m/z ${a.y0.toFixed(0)}-${a.y1.toFixed(0)}` : "");
-  g.save(); g.font = "10px system-ui"; g.textAlign = "right"; g.fillStyle = css("--muted"); g.fillText("ingrandito: " + txt, x - 6, y + 7);
+  g.save(); g.font = fpx(10); g.textAlign = "right"; g.fillStyle = css("--muted"); g.fillText("ingrandito: " + txt, x - 6, y + 7);
   g.fillStyle = "rgba(120,120,120,.25)"; g.fillRect(x, y, bw, 6);
   g.fillStyle = css("--accent"); const l = x + (a.x0 - f0) / (f1 - f0) * bw, r = x + (a.x1 - f0) / (f1 - f0) * bw; g.fillRect(l, y, Math.max(2, r - l), 6);
   g.restore();
@@ -827,7 +849,7 @@ function ctl(p) {
   if (ms2c) { p.kind = "tic"; p.mz0 = p.mz1 = null; p.bk = ""; p.snip = false; p.log = false; }      // precursor chromatogram: only the MS2 scans of the precursor
   if (mrmP) { p.bk = ""; p.snip = false; }
   if (p.type === "spec" && T0 === "ms2") p.level = 2;
-  const NOMS2 = "Non si applica al cromatogramma dei precursori MS²: contiene solo gli scan MS² del precursore scelto.", NOMRM = "Non si applica agli MRM: ogni transizione è già selettiva.";
+  const NOMS2 = "Non si applica al cromatogramma dei precursori MS2: contiene solo gli scan MS2 del precursore scelto.", NOMRM = "Non si applica agli MRM: ogni transizione è già selettiva.";
   const off = (on, why) => on ? ` disabled title="${why}"` : "";
   const chk = (k, lab, dis, why, tip) => `<label class="muted${dis ? " dis" : ""}"${dis ? ` title="${why}"` : tip ? ` title="${tip}"` : ""}><input type="checkbox" data-o="${k}" ${p[k] ? "checked" : ""}${dis ? " disabled" : ""}> ${lab}</label>`;
   const ONEF = tabFiles(p.tab || E.tab).length <= 1, ONEWHY = "Con un solo file non c'è nulla da sovrapporre o impilare.";
@@ -842,7 +864,19 @@ function ctl(p) {
     const blanks = TF.filter(x => x.type === "blank"), bkOn = p.bk !== "" && p.bk != null && E.files[+p.bk];
   const bkList = blanks.concat(bkOn && !blanks.includes(E.files[+p.bk]) ? [E.files[+p.bk]] : []);          // an old notebook may point to a file that is not marked as blank: keep it
   const cval = bkOn ? "f" + p.bk : p.ibk || p._pickIbk ? "tract" : p.snip ? "snip" : "";
-  const corr = `<select data-o="corr"${off(ms2c || mrmP, ms2c ? NOMS2 : NOMRM)} title="Correzione del fondo (una sola alla volta). Nessuna: i dati come sono. File bianco: toglie il segnale del file bianco (utile se il fondo cambia nel tempo come nel campione). Fondo di un tratto: trascini un tratto senza picchi e se ne toglie la media (fondo piatto). Linea di base automatica: toglie la base che sale sotto i picchi (algoritmo SNIP)."><option value="" ${cval === "" ? "selected" : ""}>Correzione: nessuna</option><optgroup label="Sottrai un file bianco">${bkList.length ? bkList.map(x => `<option value="f${x.k}" ${cval === "f" + x.k ? "selected" : ""}>${EH(x.label)}</option>`).join("") : '<option disabled>nessun file indicato come bianco</option>'}</optgroup><option value="tract" ${cval === "tract" ? "selected" : ""}>Sottrai il fondo di un tratto</option><option value="snip" ${cval === "snip" ? "selected" : ""}>Linea di base automatica</option></select>${p.snip && !bkOn ? `<label class="muted" title="Larghezza della finestra: deve essere più larga dei picchi">&le;<input data-o="snipw" type="number" step="0.5" min="0.2" value="${p.snipw}" style="width:50px"> min</label>` : ""}`;
+  // "Correzione": a drop-down with an icon and a one-line label for every choice (same drop-down look as the "Parametri" of the spectrum)
+  const ICN = d => `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const CIC = { none: ICN('<circle cx="9" cy="9" r="6"/><path d="M4.8 13.2L13.2 4.8"/>'), blank: ICN('<path d="M5 2.5h5.5L13.5 5.5v10h-8.5z"/><path d="M10.5 2.5v3h3"/><path d="M7 11.5h4"/>'),
+    tract: ICN('<path d="M2 13c3 0 4-8 7-8s4 8 7 8"/><path d="M2 15.5h14" stroke-width="2.2"/><path d="M5 14v3M13 14v3"/>'), snip: ICN('<path d="M2 14c3 0 4-9 7-9s4 9 7 9"/><path d="M2 13c3-2 4-.5 7-.5s4-1.5 7 .5" stroke-dasharray="2 2"/>') };
+  const corrItems = [["", "none", "Nessuna", "i dati come sono"],
+    ...bkList.map(x => ["f" + x.k, "blank", "File bianco: " + x.label, "toglie il segnale del bianco (utile se il fondo cambia nel tempo come nel campione)"]),
+    ...(bkList.length ? [] : [["", "blank", "File bianco", "nessun file indicato come bianco"]]),
+    ["tract", "tract", "Fondo di un tratto", "trascini un tratto senza picchi e se ne toglie la media"],
+    ["snip", "snip", "Linea di base automatica", "toglie la base che sale sotto i picchi (SNIP)"]];
+  const corrNow = corrItems.find(i => i[0] === cval && !(i[0] === "" && i[1] === "blank")) || corrItems[0];
+  const corr = `<span class="corrw"><button type="button" data-o="corr" class="corrb"${off(ms2c || mrmP, ms2c ? NOMS2 : NOMRM)} title="Correzione del fondo (una sola alla volta)">${CIC[corrNow[1]]}<span>Correzione: <b>${EH(corrNow[2].replace(/^File bianco: /, "bianco "))}</b></span> &#9662;</button>
+    <span class="corrm" hidden>${corrItems.map(i => `<button type="button" class="corri${i === corrNow ? " on" : ""}" data-c="${EH(i[0])}"${i[0] === "" && i[1] === "blank" ? " disabled" : ""}>${CIC[i[1]]}<span><b>${EH(i[2])}</b><span class="sm muted">${EH(i[3])}</span></span></button>`).join("")}</span></span>`
+    + `${p.snip && !bkOn ? `<label class="muted" title="Larghezza della finestra: deve essere più larga dei picchi">&le;<input data-o="snipw" type="number" step="0.5" min="0.2" value="${p.snipw}" style="width:50px"> min</label>` : ""}`;
   const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, "Hai caricato un solo file in questa scheda.")} title="Scegli al volo quali file mostrare (vale per tutti i grafici, come la lista a sinistra)">File ${TF.filter(f => f.vis).length}/${TF.length} &#9662;</button>`;
   // "Parametri": the controls used less often live in a small popover (same look as the one of the spectrum); a chip next to the icon says what is not at its default value
   const chips = [];
@@ -851,8 +885,8 @@ function ctl(p) {
   if (p.log) chips.push("log");
   if (bkOn) chips.push("bianco: " + E.files[+p.bk].label); else if (p.ibk || p._pickIbk) chips.push("fondo di un tratto"); else if (p.snip) chips.push("linea di base");
   const parBox = inner => `<span class="cpar"><button class="bt" type="button" data-a="cpar" title="Parametri: intervallo di m/z, scala log, correzione del fondo${p.type === "chrom" ? ", precursore" : ""}">${IC_PARAM}</button>${chips.map(t => `<button class="chip" type="button" data-a="cparchip" title="Cambia questo parametro">${EH(t)}</button>`).join("")}<span class="sp-pop cpop" ${p._parOpen ? "" : "hidden"}>${inner}</span></span>`;
-  const kindSel = ms2c ? `<select disabled title="${NOMS2}"><option>scan MS² dei precursori</option></select>` : null;
-  if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind" class="ttlsel" title="Tipo di cromatogramma"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>TIC (somma)</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="Picco base: lo ione più intenso di ogni scan. Non esiste nei file MRM (si registrano solo le transizioni scelte)">BPC (picco base)</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="Segnale del rivelatore a serie di diodi (PDA/UV): non dipende dallo spettrometro di massa">PDA (UV, totale)</option></select>`}${chk("smooth", "smoothing")}${view}${parBox(`${p.kind === "pda" ? "" : precSel + (hasScan ? mzbar : "")}${logChk}${corr}${p.type === "chrom" && p.tab === "full" && E.files.some(x => x.ms2_events) ? chk("ms2tri", "mostra le MS2", false, "", "Un triangolino in alto ogni volta che è partita una scansione MS2 (file con survey e MS2 insieme). Clic su un triangolino: apre quello spettro MS2 nella scheda MS²") : ""}`)}`;
+  const kindSel = ms2c ? `<select disabled title="${NOMS2}"><option>scan MS2 dei precursori</option></select>` : null;
+  if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind" class="ttlsel" title="Tipo di cromatogramma"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>TIC (somma)</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="Picco base: lo ione più intenso di ogni scan. Non esiste nei file MRM (si registrano solo le transizioni scelte)">BPC (picco base)</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="Segnale del rivelatore a serie di diodi (PDA/UV): non dipende dallo spettrometro di massa">PDA (UV, totale)</option></select>`}${chk("smooth", "smoothing")}${view}${parBox(`${p.kind === "pda" ? "" : precSel + (hasScan ? mzbar : "")}${logChk}${corr}${p.type === "chrom" && p.tab === "full" && E.files.some(x => x.ms2_events) ? chk("ms2tri", "mostra le MS2", false, "", "Un triangolino in alto ogni volta che è partita una scansione MS2 (file con survey e MS2 insieme). Clic su un triangolino: apre quello spettro MS2 nella scheda MS2") : ""}`)}`;
   if (p.type === "xic") {
     p._xt = Math.min(p._xt || 0, Math.max(0, p.traces.length - 1));
     const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0;
@@ -873,7 +907,7 @@ function ctl(p) {
     const f = TF, hasMs2 = f.some(x => x.ms2);
     const fol = follow(T0), FW = "Hai scelto «Solo il selezionato» nella barra: questo grafico segue il file scelto lì. Con «Tutti sovrapposti» scegli qui il file.";
     c.innerHTML = `<select data-o="k"${off(fol, FW)}>${f.map(x => `<option value="${x.k}" ${x.k === (fol ? E.cur : p.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("")}</select>${chk("all", "sovrapponi i file", fol || ONEF, fol ? FW : "Hai caricato un solo file in questa scheda.")}` +
-            (hasMs2 ? `<select data-o="level"${off(T0 === "ms2", "Nella scheda MS² lo spettro è sempre quello degli ioni prodotto (livello MS2).")}><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="2" ${p.level === 2 ? "selected" : ""}>MS2</option></select>` : "") +
+            (hasMs2 ? `<select data-o="level"${off(T0 === "ms2", "Nella scheda MS2 lo spettro è sempre quello degli ioni prodotto (livello MS2).")}><option value="1" ${p.level === 1 ? "selected" : ""}>MS1</option><option value="2" ${p.level === 2 ? "selected" : ""}>MS2</option></select>` : "") +
       `<select data-o="bg" title="Sottrai lo spettro di fondo (come «Subtract spectrum» di Xcalibur): lo spettro medio di un tratto di tempo dello stesso file, oppure lo stesso intervallo in un file bianco. I valori negativi diventano zero">` +
       `<option value="">Fondo: nessuno</option><option value="w" ${p.bg === "w" ? "selected" : ""}>Fondo: un tratto di tempo</option><optgroup label="Fondo: un file bianco">${(() => { const bl = f.filter(x => x.kind !== "mrm" && (x.type === "blank" || String(p.bg) === String(x.k))); return bl.length ? bl.map(x => `<option value="${x.k}" ${String(p.bg) === String(x.k) ? "selected" : ""}>${EH(x.label)}</option>`).join("") : "<option disabled>nessun file indicato come bianco</option>"; })()}</optgroup></select>` +
       (p.bg === "w" ? `<label class="muted">da <input data-o="bw0" type="number" step="0.1" value="${p.bw0 ?? ""}" style="width:56px"> a <input data-o="bw1" type="number" step="0.1" value="${p.bw1 ?? ""}" style="width:56px"> min</label>` : "") +
@@ -895,7 +929,10 @@ function ctl(p) {
     };
     else if (k === "view") x.onclick = () => { setMapView(p, x.dataset.v); };
     else if (k === "split") x.onclick = () => splitPanel(p);
-    else if (k === "corr") x.onchange = () => setCorr(p, x.value);
+    else if (k === "corr") {
+      const m = x.parentNode.querySelector(".corrm"); x.onclick = () => { m.hidden = !m.hidden; };
+      m.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { m.hidden = true; setCorr(p, b.dataset.c); });
+    }
         else x.onchange = () => {
       p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
       if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" ? "w" : +x.value;
@@ -1116,27 +1153,27 @@ function axes(g, W, H, x0, x1, ymax, yfmt, o = {}) {
   const X = v => M.l + (v - x0) / (x1 - x0) * (W - M.l - M.r), ph = H - M.t - M.b, y0 = o.ymin || 0;   // y0 < 0: signals that go below zero (PDA baseline)
   const Y = o.log ? v => H - M.b - (Math.log10(Math.max(v, o.lo)) - Math.log10(o.lo)) / (Math.log10(ymax) - Math.log10(o.lo)) * ph : v => H - M.b - (v - y0) / (ymax - y0) * ph;
   g.clearRect(0, 0, W, H);
-  const yt = o.stack ? [] : o.log ? Array.from({ length: Math.max(0, Math.floor(Math.log10(ymax)) - Math.ceil(Math.log10(o.lo)) + 1) }, (_, i) => Math.pow(10, Math.ceil(Math.log10(o.lo)) + i)) : nice(y0, ymax, Math.max(5, Math.round(ph / 32)));
-  frame(g, W, H, nice(x0, x1, o.xn || Math.max(8, Math.round((W - M.l - M.r) / 75))).map(t => [X(t), +t.toFixed(2)]), yt.map(t => [Y(t), yfmt(t)]), o.xt, o.yt);
+  const yt = o.stack ? [] : o.log ? Array.from({ length: Math.max(0, Math.floor(Math.log10(ymax)) - Math.ceil(Math.log10(o.lo)) + 1) }, (_, i) => Math.pow(10, Math.ceil(Math.log10(o.lo)) + i)) : nice(y0, ymax, Math.max(5, Math.round(ph / (32 * fz()))));
+  frame(g, W, H, nice(x0, x1, o.xn || Math.max(8, Math.round((W - M.l - M.r) / (75 * fz())))).map(t => [X(t), +t.toFixed(2)]), yt.map(t => [Y(t), yfmt(t)]), o.xt, o.yt);
   if (y0 < 0) { g.save(); g.strokeStyle = css("--line"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(M.l, Math.round(Y(0)) + .5); g.lineTo(W - M.r, Math.round(Y(0)) + .5); g.stroke(); g.restore(); }   // zero line
   return { X, Y };
 }
 // axis lines, tick marks, tick labels and titles (shared by all the plots)
 function frame(g, W, H, xt, yt, xtitle, ytitle) {
-  const ink = css("--muted"); g.save(); g.lineWidth = 1; g.strokeStyle = ink; g.fillStyle = ink; g.font = "11px system-ui";
+  const ink = css("--muted"); g.save(); g.lineWidth = 1; g.strokeStyle = ink; g.fillStyle = ink; g.font = fpx(11);
   g.beginPath(); g.moveTo(M.l + .5, M.t); g.lineTo(M.l + .5, H - M.b + .5); g.lineTo(W - M.r, H - M.b + .5); g.stroke();
-  g.textAlign = "right"; for (const [y, lab] of yt) { g.beginPath(); g.moveTo(M.l - 4, Math.round(y) + .5); g.lineTo(M.l, Math.round(y) + .5); g.stroke(); g.fillText(lab, M.l - 6, y + 3.5); }
-  g.textAlign = "center"; for (const [x, lab] of xt) { if (x < M.l - 1 || x > W - M.r + 1) continue; g.beginPath(); g.moveTo(Math.round(x) + .5, H - M.b); g.lineTo(Math.round(x) + .5, H - M.b + 4); g.stroke(); g.fillText(lab, x, H - M.b + 15); }
-  g.fillStyle = css("--ink"); g.font = "12px system-ui";
-  const fnt = t => t === "m/z" ? "italic 12px system-ui" : "12px system-ui";           // m/z is always in italics
-  if (xtitle) { g.font = fnt(xtitle); g.fillText(xtitle, (M.l + W - M.r) / 2, H - 6); }
-  if (ytitle) { g.font = fnt(ytitle); g.translate(13, (M.t + H - M.b) / 2); g.rotate(-Math.PI / 2); g.fillText(ytitle, 0, 0); }
-  g.restore(); g.font = "11px system-ui"; g.lineWidth = 1;
+  g.textAlign = "right"; for (const [y, lab] of yt) { g.beginPath(); g.moveTo(M.l - 4, Math.round(y) + .5); g.lineTo(M.l, Math.round(y) + .5); g.stroke(); g.fillText(lab, M.l - 6, y + 3.5 * fz()); }
+  g.textAlign = "center"; for (const [x, lab] of xt) { if (x < M.l - 1 || x > W - M.r + 1) continue; g.beginPath(); g.moveTo(Math.round(x) + .5, H - M.b); g.lineTo(Math.round(x) + .5, H - M.b + 4); g.stroke(); g.fillText(lab, x, H - M.b + 4 + 11 * fz()); }
+  g.fillStyle = css("--ink"); g.font = fpx(12);
+  const fnt = t => t === "m/z" ? fpx(12, "italic ") : fpx(12);           // m/z is always in italics
+  if (xtitle) { g.font = fnt(xtitle); g.fillText(xtitle, (M.l + W - M.r) / 2, H - 6 * fz()); }
+  if (ytitle) { g.font = fnt(ytitle); g.translate(1 + 12 * fz(), (M.t + H - M.b) / 2); g.rotate(-Math.PI / 2); g.fillText(ytitle, 0, 0); }
+  g.restore(); g.font = fpx(11); g.lineWidth = 1;
 }
 // an annotation: a small framed label (panel background, accent border, 12 px text) joined to its point by a thin line; it stays inside the plot and goes to the side when there is no room above
 function drawAnn(p, g, a, px, py, W, gap) {
   if (a.x < p._a.x0 || a.x > p._a.x1) return;                       // the annotated point is outside the zoomed range: neither label nor line (they come back when it is in view)
-  g.save(); g.font = "12px system-ui"; const tw = g.measureText(a.text).width, w = tw + 12, h = 20;
+  g.save(); g.font = fpx(12); const tw = g.measureText(a.text).width, w = tw + 12, h = Math.round(20 * fz());
   let bx = px - w / 2, by = py - gap - h;
   if (by < M.t + 1) { by = Math.max(M.t + 1, Math.min(py - h / 2, p._a.H - M.b - h - 1)); bx = px + 14; if (bx + w > W - M.r) bx = px - 14 - w; }       // no room above: to the side
   bx = Math.max(M.l + 2, Math.min(W - M.r - w - 2, bx));
@@ -1267,12 +1304,12 @@ async function drawLines(p) {
   if (p.ibk && !p._exp) {                                    // grey band(s) of the internal blank, always visible
     const ib = p.ibk, bands = [ib.a].concat(ib.mode === "line" && ib.b ? [ib.b] : []), s0 = sr[0], l0 = s0 && s0.ibl;
     g.fillStyle = "rgba(120,120,120,.22)"; bands.forEach(b => { const xa = Math.max(X(b[0]), M.l), xb = Math.min(X(b[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); });
-    g.font = "11px system-ui"; g.textAlign = "left"; g.fillStyle = css("--muted");
+    g.font = fpx(11); g.textAlign = "left"; g.fillStyle = css("--muted");
     g.fillText(`bianco interno ${ibkRange(ib.a)}${ib.mode === "line" && ib.b ? " e " + ibkRange(ib.b) : ""}: ${l0 ? fmtA(l0.lvl) + (l0.lvl2 != null ? " e " + fmtA(l0.lvl2) : "") + " cps" : ""}${sr.length > 1 ? " (prima traccia)" : ""}`, Math.max(M.l + 6, X(ib.a[0]) + 4), H - M.b - 6);
   }
   if (p.sel && !p._exp) { g.fillStyle = "rgba(43,92,138,.10)"; g.fillRect(X(p.sel[0]), M.t, X(p.sel[1]) - X(p.sel[0]), H - M.t - M.b); }
   if (stk) {
-    g.font = "11px system-ui"; g.textAlign = "left";
+    g.font = fpx(11); g.textAlign = "left";
     sr.forEach(s => { const y = Y(s.off); g.strokeStyle = css("--line"); g.beginPath(); g.moveTo(M.l, y); g.lineTo(W - M.r, y); g.stroke(); const t = s.name.length > 34 ? s.name.slice(0, 33) + "…" : s.name; g.lineWidth = 3; g.lineJoin = "round"; g.strokeStyle = css("--panel"); g.strokeText(t, M.l + 4, y - 4); g.fillStyle = s.color; g.fillText(t, M.l + 4, y - 4); g.lineWidth = 1; });
   }
   g.save(); g.beginPath(); g.rect(M.l + 1.5, M.t - 1, W - M.l - M.r - 1.5, H - M.t - M.b + 2); g.clip();   // the line (1.8 px wide) must not overdraw the y axis
@@ -1284,9 +1321,9 @@ async function drawLines(p) {
       if (first == null) continue;
       g.lineTo(last, Y(0) + sy); g.closePath(); g.fillStyle = css("--panel"); g.fill();
       g.strokeStyle = s.color; g.lineWidth = 1.6 + LWX(); g.setLineDash(s.dash); g.stroke(); g.setLineDash([]);
-      g.fillStyle = s.color; g.font = "bold 11px system-ui"; g.textAlign = "left"; g.fillText(f.time != null ? `t = ${f.time} min` : s.name, first + 4, Y(0) + sy - 4);       // the time next to each trace
+      g.fillStyle = s.color; g.font = fpx(11, "bold "); g.textAlign = "left"; g.fillText(f.time != null ? `t = ${f.time} min` : s.name, first + 4, Y(0) + sy - 4);       // the time next to each trace
     }
-    g.font = "11px system-ui";
+    g.font = fpx(11);
   } else for (const s of sr) {
     g.strokeStyle = s.color; g.lineWidth = (s.dash.length ? 1.5 : 1.8) + LWX(); g.setLineDash(s.dash); g.beginPath(); let st = false;
     s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = X(r), py = Y(U(s, s.ys[i])); st ? g.lineTo(px, py) : g.moveTo(px, py); st = true; });
@@ -1315,16 +1352,18 @@ async function drawLines(p) {
     const r = integ(s, it.a, it.b); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, ibk: ibkText(p.ibk) });
     const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
     if (i1 > i0) {
-      g.globalAlpha = 0.28; g.fillStyle = s.color; g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0])));
+      const chosen = it.id === p.isel && !p._exp;                      // the selected peak: stronger fill and outline
+      g.globalAlpha = chosen ? 0.5 : 0.28; g.fillStyle = s.color; g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0])));
       for (let j = i0; j <= i1; j++) g.lineTo(X(s.x[j]), Y(U(s, s.ys[j])));
       g.lineTo(X(s.x[i1]), Y(U(s, s.ys[i1]))); g.closePath(); g.fill(); g.globalAlpha = 1;
+      if (chosen) { g.strokeStyle = s.color; g.lineWidth = 2.5; g.stroke(); }
       g.strokeStyle = s.color; g.lineWidth = 1; g.setLineDash([3, 2]); g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0]))); g.lineTo(X(s.x[i1]), Y(U(s, s.ys[i1]))); g.stroke(); g.setLineDash([]);
     }
     g.strokeStyle = s.color; g.lineWidth = 2.2;
     for (const e of ["a", "b"]) { const px = X(it[e]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
     const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + fmtA(r.area) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
-    g.font = "bold 11px system-ui"; g.textAlign = "center"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = css("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
-    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 13, w: lw + 6, h: 16, tip: `<b>Area</b> ${fmtFull(r.area)} <span class="sm">conteggi·s</span><div class="sm">Tasto destro: azioni</div>` }); g.font = "11px system-ui";
+    g.font = fpx(11, "bold "); g.textAlign = "center"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = css("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
+    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 11 * fz(), w: lw + 6, h: 5 + 11 * fz(), tip: `<b>Area</b> ${fmtFull(r.area)} <span class="sm">conteggi·s</span><div class="sm">Tasto destro: azioni</div>` }); g.font = fpx(11);
   }
   // the cursor line is not part of the canvas: it is a thin overlay (cursorLine), so the arrows move it without redrawing the chromatogram (and it never enters a PNG)
   for (const a of p.anns) {
@@ -1450,7 +1489,7 @@ function draw3d(p, g, W, H, A, B, im, f, rf, x0, x1, y0, y1, scaleTxt) {
   const ox = M.l + 14 + (pw - (bx1 - bx0) * sc) / 2 - bx0 * sc, oy = M.t + 6 + (ph - (by1 - by0) * sc) / 2 + by1 * sc;
   const P = (u, w, z) => { const r = pr(u, w, z); return [ox + r[0] * sc, oy - r[1] * sc, r[2]]; };
   g.clearRect(0, 0, W, H);
-  const ink = css("--muted"); g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = 1; g.font = "11px system-ui";
+  const ink = css("--muted"); g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = 1; g.font = fpx(11);
   // floor
   const fl = [[-.5, -.5], [.5, -.5], [.5, .5], [-.5, .5]].map(([u, w]) => P(u, w, 0));
   g.fillStyle = "rgba(120,120,120,.07)"; g.beginPath(); fl.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.fill(); g.stroke();
@@ -1610,23 +1649,67 @@ function guardInt(p) {
   yesno("<b>Da questo cromatogramma non si integra.</b><br>Il TIC, il BPC e il PDA sommano tutti gli ioni: l'area che ne esce non appartiene a nessun composto. Estrai prima lo ione che ti interessa (XIC) con una finestra di <i>m/z</i> stretta attorno all'analita, poi integra il picco nell'XIC.<br><br>Vuoi estrarre un XIC adesso?").then(v => { if (v) openXic(null); });
   return false;
 }
+// integrations never overlap (same trace and file): at most two peaks touch and share the border (drop line)
+const INT_EPS = 1e-6;
+let HSEQ = 0;                                                             // order of the undoable actions (zoom and integrations) of the session
+const iLo = it => Math.min(it.a, it.b), iHi = it => Math.max(it.a, it.b);
+const intClash = (p, key, a, b, skip) => p.ints.find(i => i !== skip && i.key === key && iLo(i) < b - INT_EPS && iHi(i) > a + INT_EPS) || null;
+function nearMsg(t) {                                                     // short notice next to the mouse
+  let d = Q("#qnote"); if (!d) { d = document.createElement("div"); d.id = "qnote"; d.style.cssText = "position:fixed;z-index:20000;max-width:300px;padding:6px 10px;border-radius:6px;background:#333;color:#fff;font:13px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.35);pointer-events:none"; document.body.appendChild(d); }
+  const m = window._mxy || { x: 200, y: 200 }; d.textContent = t; d.hidden = false;
+  d.style.left = Math.max(6, Math.min(innerWidth - 310, m.x + 14)) + "px"; d.style.top = Math.max(6, Math.min(innerHeight - 60, m.y + 18)) + "px";
+  clearTimeout(d._t); d._t = setTimeout(() => { d.hidden = true; }, 3200);
+}
+document.addEventListener("mousemove", e => { window._mxy = { x: e.clientX, y: e.clientY }; }, true);
+const intSnap = p => JSON.stringify(p.ints);
+function pushIh(p, snap) { const h = p.ih = p.ih || []; h.push({ n: ++HSEQ, s: snap || intSnap(p) }); if (h.length > 20) h.shift(); }
+function undoInt(p) { const e = p.ih && p.ih.pop(); if (!e) return; p.ints = JSON.parse(e.s); p.isel = null; draw(p); uiSave(); }
+function delInts(p, list) { pushIh(p); p.ints = p.ints.filter(i => !list.includes(i)); if (list.some(i => i.id === p.isel)) p.isel = null; draw(p); uiSave(); }
 function addInt(p, s, a, b, mirror = true) {
-  if (p.type === "mrm") p.ints = p.ints.filter(i => i.key !== s.key);       // calibration: one peak per transition and file, a new window replaces the old one
-  else if (p.ints.some(i => i.key === s.key && Math.abs(i.a - Math.min(a, b)) < 1e-6 && Math.abs(i.b - Math.max(a, b)) < 1e-6)) return;     // same peak clicked twice
+  const lo = Math.min(a, b), hi = Math.max(a, b);
+  if (p.type === "mrm") { if (p.ints.some(i => i.key === s.key)) pushIh(p); p.ints = p.ints.filter(i => i.key !== s.key); }       // calibration: one peak per transition and file, a new window replaces the old one
+  else {
+    if (p.ints.some(i => i.key === s.key && Math.abs(i.a - lo) < 1e-6 && Math.abs(i.b - hi) < 1e-6)) return false;     // same peak clicked twice
+    if (intClash(p, s.key, lo, hi)) { nearMsg("Qui c'è già un picco integrato: toglilo prima (clic destro → Elimina)"); return false; }
+  }
+  if (p.type !== "mrm") pushIh(p);
   const f = E.files[s.k];
-  p.ints.push({ id: E.seq++, k: s.k, key: s.key, a: Math.min(a, b), b: Math.max(a, b), name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title });
+  p.ints.push({ id: E.seq++, k: s.k, key: s.key, a: lo, b: hi, name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title });
   draw(p);
   // MRM: the same window goes to the other transition panels (quantifier and qualifier), where it can still be moved on its own
   if (p.type === "mrm" && mirror) tabPanels().filter(q => q !== p && q.type === "mrm" && q._a && q._a.sr).forEach(q => { const s2 = q._a.sr.find(x => x.k === s.k && x.ion !== s.ion); if (s2) addInt(q, s2, a, b, false); });
+  return true;
+}
+// automatic integration at time x: refused on an integrated peak; next to one it stops at its border (the two peaks touch)
+function autoInt(p, s, x) {
+  let [l, r] = autoEdges(s, x);
+  if (p.type !== "mrm") {
+    const c = p.ints.filter(i => i.key === s.key);
+    if (c.some(i => iLo(i) + INT_EPS < x && x < iHi(i) - INT_EPS)) { nearMsg("Qui c'è già un picco integrato: toglilo prima (clic destro → Elimina)"); return; }
+    c.forEach(i => { if (iHi(i) <= x + INT_EPS) l = Math.max(l, iHi(i)); if (iLo(i) >= x - INT_EPS) r = Math.min(r, iLo(i)); });
+    if (r - l < 1e-6) return;
+  }
+  addInt(p, s, l, r);
+}
+// integration whose filled area contains the pixel (used to select it with a click)
+function intAt(p, px, py) {
+  const a = p._a; if (!a || !a.sr || a.stk || a.cas || !a.Y || p.type === "spec" || p.type === "map") return null;
+  const x = a.x0 + (px - M.l) / (a.W - M.l - M.r) * (a.x1 - a.x0);
+  for (const it of [...p.ints].reverse()) {
+    if (x < iLo(it) || x > iHi(it)) continue; const s = a.sr.find(q => q.key === it.key); if (!s) continue;
+    if (py >= a.Y(a.U(s, s.ys[nearIdx(s.x, x)])) - 4 && py <= a.H - M.b + 3) return it;
+  }
+  return null;
 }
 function intMenuItems(p, x, near, py) {
   const items = [], a = p._a;
-  items.push({ label: "Integra il picco qui", fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach(s => { const [l, r] = autoEdges(s, x); addInt(p, s, l, r); }); } });
+  const nearInt = p.ints.find(it => x >= iLo(it) && x <= iHi(it));
+  if (nearInt) items.push({ label: "Elimina questa integrazione", fn: () => delInts(p, [nearInt]) });
+  if (p.ints.length) items.push({ label: "Elimina tutte le integrazioni di questo pannello", fn: async () => { if (await yesno(`Eliminare le ${p.ints.length} integrazioni di questo pannello?`)) delInts(p, [...p.ints]); } });
+  if (nearInt || p.ints.length) items.push("-");
+  items.push({ label: "Integra il picco qui", fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach(s => autoInt(p, s, x)); } });
   if (p.sel) items.push({ label: "Integra l'intervallo selezionato", fn: () => { if (guardInt(p)) a.sr.forEach(s => addInt(p, s, p.sel[0], p.sel[1])); } });
   if (p.sel && p.sel[1] > p.sel[0]) items.push({ label: "Ingrandisci l'intervallo selezionato", fn: () => { const [s0, s1] = p.sel; const w = (s1 - s0) * 0.1; zoomTo(p, s0 - w, s1 + w); } });
-  const nearInt = p.ints.find(it => x >= Math.min(it.a, it.b) && x <= Math.max(it.a, it.b));
-  if (nearInt) items.push({ label: "Elimina questa integrazione", fn: () => { p.ints = p.ints.filter(i => i !== nearInt); draw(p); } });
-  if (p.ints.length) items.push({ label: "Elimina tutte le integrazioni", fn: () => { p.ints = []; draw(p); } });
   return items;
 }
 function allInts() {
@@ -1644,24 +1727,25 @@ function showInts() {
   const fx = (v, d) => v == null || !isFinite(v) ? "" : String(+v.toFixed(d));
   const head = ["Pannello", "Traccia", "Campione", "Tempo (min)", "Conc.", "RT inizio", "RT fine", "RT apice", "Area (conteggi·s)", "Altezza"], num = [0, 0, 0, 1, 1, 1, 1, 1, 1, 1];
   const th = (t, n) => `<th${n ? ' class="num"' : ""}>${t}</th>`;
-  const hx = (INTOPT.sn ? th("S/N", 1) : "") + (INTOPT.par ? th("w<sub>½</sub> (min)", 1) + th("N (piatti)", 1) + th("Coda (USP, 5%)", 1) : "");
+  const hx = (INTOPT.sn ? th("S/N", 1) : "") + (INTOPT.par ? th("w<sub>1/2</sub> (min)", 1) + th("N (piatti)", 1) + th("Coda (USP, 5%)", 1) : "");
   big("Integrazioni dei picchi", rows.length ? `<div class="bar"><button id="ig-xlsx">${IC_DL}Excel</button>
     <label title="Altezza del picco (sopra la linea di base) diviso la deviazione standard del rumore, misurata in una zona senza picchi che scegli tu"><input type="checkbox" id="ig-sn" ${INTOPT.sn ? "checked" : ""}> S/N</label>
-    <label title="Larghezza a metà altezza, numero di piatti teorici N = 5.54 (tR / w½)² e fattore di coda USP a 5% dell'altezza (T = W₀.₀₅ / 2f)"><input type="checkbox" id="ig-par" ${INTOPT.par ? "checked" : ""}> Mostra parametri cromatografici</label></div>
-    <table><tr>${head.map((t, i) => th(t, num[i])).join("")}${hx}<th>Bianco interno applicato</th></tr>` +
+    <label title="Larghezza a metà altezza, numero di piatti teorici N = 5.54 (tR / w1/2)^2 e fattore di coda USP a 5% dell'altezza (T = W0.05 / 2f)"><input type="checkbox" id="ig-par" ${INTOPT.par ? "checked" : ""}> Mostra parametri cromatografici</label></div>
+    <table><tr>${head.map((t, i) => th(t, num[i])).join("")}${hx}<th>Bianco interno applicato</th><th></th></tr>` +
     rows.map((r, i) => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.conc != null ? r.conc + " " + EH(r.cunit) : ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num" title="${fmtFull(r.area ?? 0)}">${fmtA(r.area ?? 0)}</td><td class="num">${fmt(r.height ?? 0)}</td>` +
       (INTOPT.sn ? `<td class="num">${r.sn != null ? fx(r.sn, 1) : `<button data-nz="${i}" title="Trascina sul grafico una zona senza picchi vicino al picco: il rumore è la deviazione standard del segnale in quella zona (tolta la deriva)">scegli la zona di rumore</button>`}</td>` : "") +
-      (INTOPT.par ? `<td class="num">${fx(r.w50, 3)}</td><td class="num">${r.N != null ? Math.round(r.N) : ""}</td><td class="num">${fx(r.T, 2)}</td>` : "") + `<td>${EH(r.ibk || "no")}</td></tr>`).join("") +
+      (INTOPT.par ? `<td class="num">${fx(r.w50, 3)}</td><td class="num">${r.N != null ? Math.round(r.N) : ""}</td><td class="num">${fx(r.T, 2)}</td>` : "") + `<td>${EH(r.ibk || "no")}</td><td>${intClash(r._p, r.key, r.a, r.b, r._it) ? '<span class="warn" title="Quest\'integrazione si sovrappone a un\'altra della stessa traccia (taccuino vecchio): eliminane una">⚠ sovrapposto</span> ' : ""}<button data-del="${i}" title="Elimina questa integrazione (anche dal grafico)">×</button></td></tr>`).join("") +
     `</table><div class="muted sm">Area: regola dei trapezi con baseline lineare tra i due bordi. Trascina le barre nel pannello per correggere i bordi.</div>`
     : `<div class="muted">Nessuna integrazione. Clic destro su un picco di un cromatogramma, di un XIC o di una transizione MRM e scegli «Integra».</div>`, () => {
     if (!rows.length) return;
     Q("#ig-sn").onchange = e => { INTOPT.sn = e.target.checked; showInts(); };
     Q("#ig-par").onchange = e => { INTOPT.par = e.target.checked; showInts(); };
+    Q("#bigbody").querySelectorAll("button[data-del]").forEach(b => b.onclick = () => { const r = rows[+b.dataset.del]; delInts(r._p, [r._it]); showInts(); });
     Q("#bigbody").querySelectorAll("button[data-nz]").forEach(b => b.onclick = () => {
       const r = rows[+b.dataset.nz]; r._p._pickNoise = r._it; Q("#bigdlg").close(); reveal(r._p);
       stepMsg(r._p, "Trascina sul grafico una zona senza picchi, vicino al picco: ne uso la deviazione standard come rumore", true);
     });
-    Q("#ig-xlsx").onclick = () => dlx("integrazioni.xlsx", [{ name: "Integrazioni", head: [...INT_HEADS, ...(INTOPT.sn ? ["S/N (altezza / dev. st. del rumore)"] : []), ...(INTOPT.par ? ["w½ (min)", "N (piatti teorici)", "Coda USP (5%)"] : [])],
+    Q("#ig-xlsx").onclick = () => dlx("integrazioni.xlsx", [{ name: "Integrazioni", head: [...INT_HEADS, ...(INTOPT.sn ? ["S/N (altezza / dev. st. del rumore)"] : []), ...(INTOPT.par ? ["w1/2 (min)", "N (piatti teorici)", "Coda USP (5%)"] : [])],
       rows: rows.map(r => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : [])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14] }]);
   });
 }
@@ -1680,7 +1764,7 @@ async function drawSpec(p) {
   const one = files.length === 1 && p.si != null && !bgOf(files[0]) && !p._exp;
   if (one && p.lock && p.lock.fresh) await scFetch(files[0].k, p.level, p.prec, p.si - SC_AHEAD, p.si + SC_AHEAD).catch(() => {});   // the axes of the walk look at +-20 scans
   const rel = specRel(p);                                // y axis in % of the highest peak of each scan (default for MS2) or in cps
-  const relScale = d => { let mx = 1e-9; for (const v of d.y) if (v > mx) mx = v; const k = 100 / mx; return { ...d, y0: d.y, y: d.y.map(v => v * k) }; };
+  const relScale = d => { let mx = 1e-9; for (const v of d.y) if (v > mx) mx = v; const k = 100 / mx; return { ...d, y0: d.y, y: d.y.map(v => v * k), py: d.py ? d.py.map(v => v * k) : d.py }; };
   const data = await Promise.all(files.map(f => (one ? scData(p, f.k) : getSpec(f.k, p.r0, p.r1, p.level, p.prec, bgOf(f))).then(d => ({ f, d: rel ? relScale(d) : d }))));
   if (tok !== p._tok) return false;                      // a newer request is on its way: this one is dropped
   const mzs = data.flatMap(x => x.d.mz);
@@ -1688,7 +1772,8 @@ async function drawSpec(p) {
   // everything is known: only now the canvas is cleared and drawn again, in one go (until then the previous spectrum stays on the screen)
   const { g, W, H: HF } = setup(p.cv);
   const H = HF;
-  const inRange = (lo, hi) => Math.max(1e-9, ...data.flatMap(x => { let m = 0; x.d.y.forEach((v, i) => { if (x.d.mz[i] >= lo && x.d.mz[i] <= hi && v > m) m = v; }); return [m]; }));
+  const lineOf = x => x.d.pmz && !p.sticks;                  // a profile file is drawn as a line (the peaks are drawn as bars only if the student asks)
+  const inRange = (lo, hi) => Math.max(1e-9, ...data.flatMap(x => { let m = 0; const [mz, y] = lineOf(x) ? [x.d.pmz, x.d.py] : [x.d.mz, x.d.y]; y.forEach((v, i) => { if (mz[i] >= lo && mz[i] <= hi && v > m) m = v; }); return [m]; }));
   // the m/z axis is always the widest range of all the scans of the file(s) (level / precursor of the panel): it only changes with a zoom, another file or another precursor
   const wide = files.reduce((r, f) => { const a = p.level === 2 ? f.mz2_min : f.mz_min, b = p.level === 2 ? f.mz2_max : f.mz_max; return a != null && b != null ? [Math.min(r[0], a), Math.max(r[1], b)] : r; }, [Infinity, -Infinity]);
   const full = wide[0] < wide[1] ? [Math.max(0, wide[0] - 1), wide[1] + 1] : [Math.min(...mzs) - 2, Math.max(...mzs) + 2];
@@ -1699,7 +1784,7 @@ async function drawSpec(p) {
   if (lk) ymax = lk.ymax;
   let ymin = 0;
   if (p.zoomY) { ymin = p.zoomY[0]; ymax = p.zoomY[1]; }   // zoom of the intensity axis (drag on the numbers at the left of the axis, or box)
-  const { X, Y } = axes(g, W, H, x0, x1, ymax, fmt, { xt: "m/z", yt: rel ? "Intensità relativa (%)" : YT_I, xn: Math.max(10, Math.round((W - M.l - M.r) / 48)), ymin });
+  const { X, Y } = axes(g, W, H, x0, x1, ymax, fmt, { xt: "m/z", yt: rel ? "Intensità relativa (%)" : YT_I, xn: Math.max(10, Math.round((W - M.l - M.r) / (48 * fz()))), ymin });
   const ph = H - M.t - M.b;
   p._a = { x0, x1, X, Y, W, H, data, ymax, ymin, yfull: [0, yfull], yinv: py => ymin + (H - M.b - py) / ph * (ymax - ymin), full };
   p._a.snap = px => {                                      // the peak nearest to a pixel: the top bin around it and the centroid (intensity weighted) of that peak
@@ -1719,7 +1804,12 @@ async function drawSpec(p) {
   g.save(); g.beginPath(); g.rect(M.l, M.t - 1, W - M.l - M.r, H - M.t - M.b + 1); g.clip();     // bars taller than the (magnified) graph end at the top edge
   data.forEach(x => {
     g.strokeStyle = x.f.color; g.lineWidth = 1.4 + LWX(); g.beginPath();
-    x.d.mz.forEach((m, j) => { if (m < x0 || m > x1) return; g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); }); g.stroke();
+    if (lineOf(x)) {                                                     // profile: continuous line with a light fill under it
+      const pm = x.d.pmz, py = x.d.py; let on = false;
+      pm.forEach((m, j) => { if (m < x0 - 0.5 || m > x1 + 0.5) return; if (!on) { g.moveTo(X(m), Y(py[j])); on = true; } else g.lineTo(X(m), Y(py[j])); });
+      g.stroke(); if (on) { g.save(); g.lineTo(X(Math.min(x1 + 0.5, pm[pm.length - 1])), Y(0)); g.lineTo(X(Math.max(x0 - 0.5, pm[0])), Y(0)); g.closePath(); g.globalAlpha = 0.12; g.fillStyle = x.f.color; g.fill(); g.restore(); }
+      g.beginPath();
+    } else x.d.mz.forEach((m, j) => { if (m < x0 || m > x1) return; g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); }); g.stroke();
     g.fillStyle = x.f.color;                                          // a small triangle on every cut bar
     x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] <= ymax) return; g.beginPath(); g.moveTo(X(m) - 4, M.t + 7); g.lineTo(X(m) + 4, M.t + 7); g.lineTo(X(m), M.t); g.closePath(); g.fill(); });
   });
@@ -1728,15 +1818,15 @@ async function drawSpec(p) {
   const top0 = Math.max(...d0.y, 1e-9), thr = (p.thr ?? 5) / 100 * top0, NL = p.nlab ?? 10, DEC = p.dec ?? 1;       // labels: only the peaks above the threshold, at most NL
   d0.mz.forEach((m, j) => { if (m >= x0 && m <= x1 && d0.y[j] >= thr && d0.y[j] <= ymax) pk.push([m, d0.y[j]]); });
   pk.sort((a, b) => b[1] - a[1]); const used = [];
-  g.fillStyle = css("--ink"); g.textAlign = "center"; g.font = "10.5px system-ui";
+  g.fillStyle = css("--ink"); g.textAlign = "center"; g.font = fpx(10.5);
   const lbls = []; p._a.lbls = lbls;                      // clickable labels: hover draws a small box, right click opens the menu
-  for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= NL) continue; used.push(px); const t = m.toFixed(DEC), w = g.measureText(t).width; g.fillText(t, px, Y(y) - 4); lbls.push({ m, x: px - w / 2 - 3, y: Y(y) - 16, w: w + 6, h: 15, tip: `<b>m/z ${m.toFixed(2)}</b><div class="sm">Tasto destro: azioni</div>` }); }
-  g.font = "11px system-ui";
+  for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= NL) continue; used.push(px); const t = m.toFixed(DEC), w = g.measureText(t).width; g.fillText(t, px, Y(y) - 4); lbls.push({ m, x: px - w / 2 - 3, y: Y(y) - 4 - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: `<b>m/z ${m.toFixed(2)}</b><div class="sm">Tasto destro: azioni</div>` }); }
+  g.font = fpx(11);
   for (const a of p.anns) {                                        // the point is the top of the nearest observed peak
     let ay = 0, bd = 0.7; d0.mz.forEach((m, j) => { const dd = Math.abs(m - a.x); if (dd < bd) { bd = dd; ay = d0.y[j]; } });
     drawAnn(p, g, a, X(a.x), Math.max(M.t + 1, Math.min(H - M.b, Y(Math.min(ay, ymax)))), W, 28);
   }
-  g.font = "11px system-ui";
+  g.font = fpx(11);
   drawMeas(p, g, X, Y, W);                                 // ruler: reference and measured differences
   // theoretical isotope pattern of a formula chosen by the student (red circles), aligned on the nearest observed peak
   let isoNote = "";
@@ -1754,9 +1844,9 @@ async function drawSpec(p) {
         const px = X(r.mz + shift) + 3, py = Y(h * r.rel / 100); if (px < M.l || px > W - M.r) continue;
         g.setLineDash([3, 2]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, py); g.stroke(); g.setLineDash([]);
         g.beginPath(); g.arc(px, py, 3.5, 0, 7); g.stroke();
-        if (r.rel >= 1) { g.font = "10px system-ui"; g.textAlign = "left"; g.fillText((r.off ? "M+" + r.off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%", px + 5, py - 4); }
+        if (r.rel >= 1) { g.font = fpx(10); g.textAlign = "left"; g.fillText((r.off ? "M+" + r.off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%", px + 5, py - 4); }
       }
-      g.restore(); g.font = "11px system-ui";
+      g.restore(); g.font = fpx(11);
       isoNote = `<span><i style="background:#d62728"></i>profilo teorico ${fmtFormula(p.iso.formula)} ${fmtAdduct(p.iso.ad)}${obs ? ` (allineato al picco a m/z ${(obs.c ?? obs.m).toFixed(1)}${Math.abs(shift) >= 0.05 ? `, spostato di ${shift > 0 ? "+" : ""}${shift.toFixed(1)}` : ""})` : ` (nessun picco osservato vicino a m/z ${top.mz.toFixed(1)})`}</span>`;
     } catch (e) { isoNote = `<span class="sm">profilo isotopico: ${EH(e.message)}</span>`; }
   }
@@ -1778,7 +1868,22 @@ function attach(p) {
   const yAxisZone = (px, py) => canYZ(p._a) && px < M.l && inPlotY(py);               // the numbers at the left of the y axis
   const xAxisZone = (px, py) => p._a && !p._a.map && px >= M.l && px <= p._a.W - M.r && py > p._a.H - M.b;   // the numbers under the x axis
   const onCur = px => p.type !== "spec" && p.type !== "map" && p.cur != null && p._a && Math.abs(p._a.X(p.cur) - px) < 6;
-  const edgeAt = px => { if (!p._a || p.type === "spec") return null; for (const it of p.ints) for (const e of ["a", "b"]) if (Math.abs(p._a.X(it[e]) - px) < 6) return { it, e }; return null; };
+  const edgeAt = px => {
+    if (!p._a || p.type === "spec") return null;
+    for (const it of p.ints) for (const e of ["a", "b"]) if (Math.abs(p._a.X(it[e]) - px) < 6) {
+      let mate = null; for (const o of p.ints) if (o !== it && o.key === it.key) for (const f of ["a", "b"]) if (Math.abs(o[f] - it[e]) < INT_EPS) mate = { it: o, e: f };      // a border shared with the next peak moves both
+      return { it, e, mate, snap: intSnap(p) };
+    }
+    return null;
+  };
+  const edgeMove = (ed, x) => {                                              // the border stops at the neighbouring peak (touching is fine, overlapping is not)
+    const { it, e, mate } = ed, o = e === "a" ? it.b : it.a, v = it[e], oth = p.ints.filter(i => i !== it && (!mate || i !== mate.it) && i.key === it.key);
+    const mo = mate ? (mate.e === "a" ? mate.it.b : mate.it.a) : null;     // far border of the peak that shares this one
+    let nx;
+    if (v >= o) { let u = mo != null ? Math.max(mo, v) : Infinity; oth.forEach(i => { if (iLo(i) >= v - INT_EPS) u = Math.min(u, iLo(i)); }); nx = Math.max(o, Math.min(u, x)); }
+    else { let l = mo != null ? Math.min(mo, v) : -Infinity; oth.forEach(i => { if (iHi(i) <= v + INT_EPS) l = Math.max(l, iHi(i)); }); nx = Math.min(o, Math.max(l, x)); }
+    it[e] = nx; if (mate) mate.it[mate.e] = nx;
+  };
   cv.onmousemove = e => {
     const a = p._a; if (!a) return; const px = rect(e), py = recty(e), x = xd(px);
     if (drag && drag.rot) {                                   // 3D view: drag rotates (azimuth with x, elevation with y)
@@ -1794,7 +1899,7 @@ function attach(p) {
     } else if (drag && drag.cursor) {                         // dragging the vertical line: the linked spectrum follows
       p.cur = Math.max(a.full[0], Math.min(a.full[1], x)); p.sel = null; draw(p);
       if (!p._lm) { p._lm = true; requestAnimationFrame(() => { p._lm = false; const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, p.cur, 0) : null, dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k, true); else pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
-    } else if (drag && drag.edge) { drag.edge.it[drag.edge.e] = x; draw(p); }
+    } else if (drag && drag.edge) { edgeMove(drag.edge, x); draw(p); }
     else if (drag && drag.ya) {                               // line along the y axis: only the intensity axis is zoomed
       drag.y = Math.max(M.t, Math.min(a.H - M.b, py)); zl.hidden = false; zl.className = "zl v";
       zl.style.left = cv.offsetLeft + M.l - 20 + "px"; zl.style.width = ""; zl.style.top = cv.offsetTop + Math.min(drag.y, drag.y0) + "px"; zl.style.height = Math.abs(drag.y - drag.y0) + "px";
@@ -1844,7 +1949,8 @@ function attach(p) {
     if (d.rot) { p._rot = false; draw(p); return; }
     zl.hidden = true; p._hz = null;
     if (d.pan) { uiSave(); return; }
-    if (d.edge || d.cursor) { uiSave(); return; }
+    if (d.edge) { if (intSnap(p) !== d.edge.snap) pushIh(p, d.edge.snap); uiSave(); return; }
+    if (d.cursor) { uiSave(); return; }
     const a = p._a;
     if (a && (d.ya || d.xa) && Math.abs((d.ya ? d.y - d.y0 : d.x - d.x0)) > 4) pushZh(p);
     if (d.ya) { if (a && Math.abs(d.y - d.y0) > 4) zoomYTo(p, a.yinv(Math.max(d.y, d.y0)), a.yinv(Math.min(d.y, d.y0))); return; }
@@ -1857,13 +1963,18 @@ function attach(p) {
     if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Sottrai il fondo di un tratto": the stretch the student just dragged
       p._pickIbk = false; p.sel = null; p.bk = ""; p.snip = false; ibkSet(p, "mean", [Math.min(x0, x1), Math.max(x0, x1)]); ctl(p); return;
     }
+    if (p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) <= 4 && p.imode !== "auto") {      // a click on a filled peak selects it; elsewhere it deselects
+      const hit = intAt(p, d.x0, d.y0);
+      if (hit) { p.isel = hit.id; draw(p); return; }
+      if (p.isel != null) { p.isel = null; draw(p); }
+    }
     if (p.imode && p.type !== "spec" && p.type !== "map") {          // zoom and integration tools
       if (p.imode === "zoom") {                                        // box: x and y together
         p.sel = null; if (Math.abs(d.x - d.x0) > 4) pushZh(p);
         if (Math.abs(d.x - d.x0) > 4) { if (canYZ(a) && Math.abs(d.y - d.y0) > 4) zoomYTo(p, a.yinv(Math.max(d.y, d.y0)), a.yinv(Math.min(d.y, d.y0)), true); zoomTo(p, Math.min(x0, x1), Math.max(x0, x1)); } else draw(p);
         return;
       }
-      if (p.imode === "auto" && Math.abs(d.x - d.x0) <= 4) { if (guardInt(p)) intTargets(p, x0, d.y0).forEach(s => { const [l, r] = autoEdges(s, x0); addInt(p, s, l, r); }); return; }
+      if (p.imode === "auto" && Math.abs(d.x - d.x0) <= 4) { if (guardInt(p)) intTargets(p, x0, d.y0).forEach(s => autoInt(p, s, x0)); return; }
       if (p.imode === "man" && Math.abs(d.x - d.x0) > 4) { p.sel = null; if (!guardInt(p)) { draw(p); return; } const t = intTargets(p, (x0 + x1) / 2, d.y0); if (t.length) t.forEach(s => addInt(p, s, x0, x1)); else draw(p); return; }
     }
     if (Math.abs(d.x - d.x0) > 4) {
@@ -1872,7 +1983,7 @@ function attach(p) {
     } else if (p.type === "spec") { specClick(p, d.x0); }
     else if (p.type !== "spec") {
       const tt = p.ms2tri && p._a.tri && d.y0 < M.t + 14 ? p._a.tri.reduce((b, q) => (Math.abs(q.px - d.x0) < 6 && (!b || Math.abs(q.px - d.x0) < Math.abs(b.px - d.x0)) ? q : b), null) : null;
-      if (tt) { goMs2(tt); return; }                         // a triangle: that MS2 scan in the MS² tab
+      if (tt) { goMs2(tt); return; }                         // a triangle: that MS2 scan in the MS2 tab
       p.sel = null; p.cur = x0; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, x0, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, `scansione più vicina con dati · RT ${sn.rt.toFixed(2)} min`, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else pushLinked(p, x0 - dt / 2, x0 + dt / 2, nearestFile(p, x0));
     }
   };
@@ -1892,6 +2003,7 @@ function attach(p) {
     const hit = (p._a?.lbls || []).find(b => b.ann && rect(e) >= b.x && rect(e) <= b.x + b.w && recty(e) >= b.y && recty(e) <= b.y + b.h);
     if (hit) { const v = await ask("Annotazione", hit.ann.text); if (v) { hit.ann.text = v; draw(p); } return; }      // double click on a label: edit it
     if (p.type === "chrom" || p.type === "xic" || p.type === "mrm") {      // double click = mass spectrum at that retention time (also on the PDA trace)
+      if (p.el.classList.contains("max")) { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); return; }      // full screen: double click = whole view (a new spectrum would appear in a panel nobody sees)
       const x = xd(rect(e)), k = nearestFile(p, x), f = E.files[k];
       if (!p._a || !f || f.kind === "mrm") return;
       let dt = scanStep(), r0 = x - dt / 2, r1 = x + dt / 2, kk = k;
@@ -1913,6 +2025,7 @@ function nearestFile(p, x) {
   return best ? best.k : (scanFiles(tabFiles())[0]?.k ?? 0);
 }
 function pushLinked(p, r0, r1, k, keepZoom, o = {}) {
+  if (fsPanel()) return;                                      // full screen: the panels underneath stay exactly as they were
   if (!o.step) { p._msg = null; p._sk = null; }              // a click or a drag starts a new walk: the axes of the spectrum are free again
   E.panels.filter(s => s.type === "spec" && s.link === p.id).forEach(s => {
     s.r0 = r0; s.r1 = r1; s.k = k; s.si = o.i ?? null; if (o.dir) s._dir = o.dir;
@@ -2129,14 +2242,49 @@ function calcPlace() {
   const r = Q("#np-calc2").getBoundingClientRect(), w = Math.min(560, innerWidth - 16);
   calcBox.style.top = Math.round(r.bottom + 6) + "px"; calcBox.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + "px";
 }
-Q("#np-calc2").onclick = () => { if (!calcBox.hidden) return calcBox.close(); calcBox.hidden = false; calcPlace(); Q("#calcin").focus(); };
+Q("#np-calc2").onclick = () => { if (!calcBox.hidden) return calcBox.close(); calcBox.hidden = false; calcPlace(); Q("#calcin").focus(); calcRun(); };
 Q("#calcx").onclick = () => calcBox.close();
 addEventListener("resize", () => { if (!calcBox.hidden) calcPlace(); });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !calcBox.hidden) calcBox.close(); });
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape" || calcBox.hidden) return;
+  const i = Q("#calcin"); if (i.value) { i.value = ""; CALC.fresh = false; calcRun(); } else calcBox.close();      // Esc: first clear the field, then close
+});
+const CALC = { ans: 0, tape: [], fresh: false };       // fresh: the field holds a result; a digit typed now starts a new calculation
 let CALC_MORE = false;       // the calculator shows the adducts of the other polarity too
+// the field holds a CALCULATION (digits and + - x / ( )) -> big result, keypad and tape; or a chemical FORMULA -> table of the adducts
+function calcTape() {
+  const tp = Q("#calctape"); tp.hidden = !CALC.tape.length || !Q("#calcpad") || Q("#calcpad").hidden;
+  tp.innerHTML = CALC.tape.map((r, i) => `<div data-i="${i}" title="Rimette il risultato nel campo per continuare il conto">${EH(r.e)} = <b>${EH(r.r)}</b></div>`).join("");
+  tp.querySelectorAll("div").forEach(d => d.onclick = () => { const r = CALC.tape[+d.dataset.i]; Q("#calcin").value = r.r; CALC.ans = parseFloat(r.r); CALC.fresh = true; calcRun(); Q("#calcin").focus(); });
+}
+function calcEquals() {
+  const t = Q("#calcin").value.trim(), r = calcEval(t, CALC.ans); if (r.v == null) return;
+  const f = calcFmt(r.v); CALC.tape.unshift({ e: calcPretty(t.replace(/ans/gi, "Ans")), r: f }); CALC.tape.length = Math.min(CALC.tape.length, 10);
+  CALC.ans = r.v; Q("#calcin").value = f; CALC.fresh = true; calcRun();
+}
+function calcKey(k) {
+  const i = Q("#calcin");
+  if (k === "=") return calcEquals();
+  if (CALC.fresh && /[0-9(,.]/.test(k)) i.value = "";
+  CALC.fresh = false;
+  i.value = k === "C" ? "" : k === "\u2190" ? i.value.slice(0, -1) : i.value + k;
+  i.focus(); calcRun();
+}
+Q("#calcpad").querySelectorAll("button").forEach(b => { b.onmousedown = ev => ev.preventDefault(); b.onclick = () => calcKey(b.dataset.k); });      // the field keeps the focus
+Q("#calcin").onkeydown = ev => {
+  if (ev.key === "Enter" && calcIsExpr(ev.target.value)) { ev.preventDefault(); calcEquals(); return; }
+  if (CALC.fresh && /^[0-9(,.]$/.test(ev.key)) ev.target.value = "";
+  if (ev.key.length === 1 || ev.key === "Backspace") CALC.fresh = false;
+};
 async function calcRun() {
-  const t = Q("#calcin").value.trim(), out = Q("#calcout"), sum = Q("#calcsum");
-  if (!t) { out.innerHTML = ""; sum.innerHTML = ""; return; }
+  const t = Q("#calcin").value.trim(), out = Q("#calcout"), sum = Q("#calcsum"), res = Q("#calcres"), pad = Q("#calcpad");
+  const ex = !t || calcIsExpr(t);
+  pad.hidden = !ex; res.hidden = !ex || !t; calcTape();
+  if (!t) { out.innerHTML = ""; sum.innerHTML = ""; res.textContent = ""; return; }
+  if (ex) {
+    out.innerHTML = ""; const r = calcEval(t, CALC.ans); res.textContent = r.v != null ? calcFmt(r.v) : "";
+    sum.innerHTML = r.err ? EH(r.err) : ""; return;
+  }
   try {
     const r = await getFormula(t, "");
     const want = defAdduct();

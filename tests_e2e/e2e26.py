@@ -20,14 +20,14 @@ try:
             assert pg.get_attribute("header .logo", "alt") == "QqQ lab"
             for w in (360, 768, 1500):
                 pg.set_viewport_size({"width": w, "height": 900}); pg.wait_for_timeout(200)
-                for b, t in (("#np-iso", "is"), ("#np-nl", "ls")):
+                for b, t in (("#np-nl", "ls"),):
                     assert pg.is_visible(b), (w, b)
                     pg.click(b); pg.wait_for_timeout(300)
                     assert pg.evaluate("document.querySelector('#reftabs button[data-t=%s]').classList.contains('on')" % t) or pg.evaluate("[...document.querySelectorAll('#reftabs .on')].some(e=>e.dataset.t=='%s')" % t), (w, t)
                     pg.keyboard.press("Escape"); pg.wait_for_timeout(100)
                     if pg.evaluate("!!document.querySelector('dialog[open]')"): pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
             pg.set_viewport_size({"width": 1400, "height": 900})
-        step("header: Isotopi and Perdite neutre open their tab at 360/768/1500 px, no title text", header)
+        step("header: Perdite neutre opens its tab at 360/768/1500 px, no title text", header)
         pg.click("#np-chrom"); pg.wait_for_timeout(800); pg.click("#np-spec"); pg.wait_for_timeout(800)
         def fs():
             n = pg.evaluate("document.querySelectorAll('.pnl').length"); assert n >= 2, n

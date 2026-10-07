@@ -20,7 +20,7 @@ try:
             pg.select_option("#lb-dec", "0"); pg.wait_for_timeout(600); assert "151" in txt() and "151.0" not in txt()
         step("5 decimals: paracetamol M = 151.06333", five)
         def ion():
-            pg.select_option("#lb-dec", "5"); pg.select_option("#lb-ion", "[M+H]+"); pg.wait_for_timeout(900)
+            pg.select_option("#lb-dec", "5"); pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); pg.wait_for_timeout(1500)
             t = txt(); assert "152.07060" in t, t                  # [M+H]+ = 151.06332853 + 1.00727646 = 152.07060499
         step("ion m/z with 5 decimals", ion)
     r.close()

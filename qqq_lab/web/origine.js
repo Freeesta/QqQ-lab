@@ -141,8 +141,8 @@ function ogRender() {
 <section><h4>3. Area dello ione contro area del candidato (F contro P)</h4>
 <p class="why">Se uno ione è un frammento in sorgente di un candidato, la sua intensità segue quella del candidato scansione per scansione: i punti stanno su una retta per l'origine (pendenza = frazione di candidato che si frammenta). Un prodotto di trasformazione non ha questo vincolo.</p>
 <div class="oggrid"><canvas id="og-fp"></canvas><div>
-<div class="kv"><span>pendenza <b>${ogN(F.r_tls, 3)}</b> ±${ogN(F.r_se, 3)}</span><span>R² <b>${ogN(F.r2, 3)}</b></span><span>intercetta (relativa) <b>${ogN(F.intercept_rel, 3)}</b></span><span>punti <b>${ogN(F.n, 0)}</b></span><span>scarto relativo dei residui <b>${ogN(F.resid_rel, 3)}</b></span></div>
-<p class="why">R² vicino a 1 con intercetta vicina a 0 = proporzionalità. Con segnali molto intensi il rivelatore può saturare e la retta si piega: guarda anche la forma dei punti, non solo R².</p>
+<div class="kv"><span>pendenza <b>${ogN(F.r_tls, 3)}</b> ±${ogN(F.r_se, 3)}</span><span>R<sup>2</sup> <b>${ogN(F.r2, 3)}</b></span><span>intercetta (relativa) <b>${ogN(F.intercept_rel, 3)}</b></span><span>punti <b>${ogN(F.n, 0)}</b></span><span>scarto relativo dei residui <b>${ogN(F.resid_rel, 3)}</b></span></div>
+<p class="why">R<sup>2</sup> vicino a 1 con intercetta vicina a 0 = proporzionalità. Con segnali molto intensi il rivelatore può saturare e la retta si piega: guarda anche la forma dei punti, non solo R<sup>2</sup>.</p>
 <div class="kv"><span>rapporto F/P nei campioni: Q di Cochran <b>${ogN(C.q, 2)}</b> (p = <b>${ogN(C.p, 3)}</b>)</span><span>variazione relativa <b>${ogN(C.cv, 3)}</b></span></div>
 <p class="why">Un frammento in sorgente ha F/P costante da un campione all'altro (la frazione che si rompe dipende dallo strumento, non dalla chimica). Un p piccolo indica che il rapporto cambia fra campioni.</p></div></div></section>
 <section><h4>4. Comportamento nei campioni (cinetica)</h4>

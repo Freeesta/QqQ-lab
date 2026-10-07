@@ -48,6 +48,7 @@ class Scan:
     precursor: float | None
     collision_energy: float | None
     filter: str
+    profile: bool = False  # the scan is a profile spectrum (MS:1000128), not centroids (MS:1000127)
 
 
 @dataclass
@@ -121,7 +122,8 @@ class Run:
                 index=len(self.scans), native=m.group(1) if m else "", start=a, end=b,
                 level=int(float(lvl)) if lvl else 1, rt=rt, polarity=pol,
                 tic=_float(_cv(h, "MS:1000285")) or 0.0, precursor=prec,
-                collision_energy=_float(_cv(h, "MS:1000045")), filter=_cv(h, "MS:1000512") or ""))
+                collision_energy=_float(_cv(h, "MS:1000045")), filter=_cv(h, "MS:1000512") or "",
+                profile='accession="MS:1000128"' in h))
             pos = b
 
     # ------------------------------------------------------------------ arrays

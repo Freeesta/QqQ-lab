@@ -20,14 +20,14 @@ with sync_playwright() as p:
         rows = pg.evaluate("ST.files.map(f=>[f.name,f.kind])")
         d = {n: (k,) for n, k in rows}
         assert d["B_MRM-t0.mzML"][0] == "mrm" and d["B_MS2-t15.mzML"][0] == "ms2" and d["B_FullMass-t0.mzML"] == ("full",), d
-        assert "Esperimento" in pg.inner_text("#flist") and "MS\u00b2 (Product Ion)" in pg.inner_text("#flist") and "MRM" in pg.inner_text("#flist") and "Full Scan" in pg.inner_text("#flist") and "EMS" not in pg.inner_text("#flist")
+        assert "Esperimento" in pg.inner_text("#flist") and "MS2 (Product Ion)" in pg.inner_text("#flist") and "MRM" in pg.inner_text("#flist") and "Full Scan" in pg.inner_text("#flist") and "EMS" not in pg.inner_text("#flist")
     step("start screen detects the experiment from the content", column)
     pg.click("text=Carica dati"); pg.wait_for_timeout(5000)
     pg.screenshot(path=SH + "121_data.png")
     def side():
         t = flst_own(pg); assert "scan MS1" not in t and "RT 0.5" not in t and "Doppio clic" not in pg.inner_text("#dfiles"), t
-        assert "FULL SCAN" in t.upper() and "MS\u00b2" not in t and "MRM" not in t and "EMS" not in t, t
-        d = pg.inner_text("#dtabs"); assert "Full Scan" in d and "MS\u00b2 (Product Ion)" in d and "MRM" in d and "Tempi ed esperimenti" in d, d
+        assert "FULL SCAN" in t.upper() and "MS2" not in t and "MRM" not in t and "EMS" not in t, t
+        d = pg.inner_text("#dtabs"); assert "Full Scan" in d and "MS2 (Product Ion)" in d and "MRM" in d and "Tempi ed esperimenti" in d, d
         assert pg.locator("#flst .fgh").count() >= 1 and pg.locator("#flst .tag").count() == 0 and pg.locator('#dfiles .hq').count() == 0
         assert pg.locator("#np-export, #np-ints, #kindinfo").count() == 0
         assert pg.locator("#credits").count() == 0 and pg.locator('.pnl.chrom [data-o=norm]').count() == 0
@@ -78,7 +78,7 @@ with sync_playwright() as p:
         assert pg.locator("#expbar").count() == 0
         ch = pg.evaluate("tabPanels().filter(p=>p.type==='chrom').map(p=>[p.prec,p._a.sr[0].x.length])")
         assert len(ch) == 1 and ch[0][1] > 0, ch      # one pair of graphs (since 7/10); the precursor is chosen in the list
-        assert flst_own(pg).upper().count("MS\u00b2") == 1 and "MRM" not in flst_own(pg)
+        assert flst_own(pg).upper().count("MS2 (PRODUCT ION)") == 1 and "MRM" not in flst_own(pg)
         pg.evaluate("(()=>{const p=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom');p._parOpen=true;ctl(p)})()")      # the precursor lives in the Parametri popover
         sel = pg.locator('.pnl.chrom [data-o=prec]:visible').first; assert sel.count() == 1
         pg.screenshot(path=SH + "123_ms2.png")
