@@ -649,7 +649,7 @@ function addPanel(type, o, after) {
     const setMode = m => { p.imode = p.imode === m ? null : m; Object.entries(btns).forEach(([k, b]) => b.classList.toggle("on", p.imode === k)); p.cv.style.cursor = p.imode === "zoom" ? "zoom-in" : p.imode ? "cell" : "crosshair"; refreshIntf(p); };
     if (p.imode && btns[p.imode]) { btns[p.imode].classList.add("on"); p.cv.style.cursor = "cell"; }      // MRM panels open with the manual integration tool ready
     bZ.onclick = () => setMode("zoom"); bA.onclick = () => setMode("auto"); bM.onclick = () => setMode("man"); bT.onclick = showInts;
-    el.querySelector('[data-a="iclr"]').onclick = () => { p.ints = []; draw(p); };
+    el.querySelector('[data-a="iclr"]').onclick = () => { if (p.ints.length) delInts(p, [...p.ints]); };
     el.querySelector('[data-a="intf"]').onchange = e => { p.intf = e.target.value; };
   }
   if (bX) bX.onclick = () => openXic(null);
@@ -1315,9 +1315,11 @@ async function drawLines(p) {
     const r = integ(s, it.a, it.b); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, ibk: ibkText(p.ibk) });
     const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
     if (i1 > i0) {
-      g.globalAlpha = 0.28; g.fillStyle = s.color; g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0])));
+      const chosen = it.id === p.isel && !p._exp;                      // the selected peak: stronger fill and outline
+      g.globalAlpha = chosen ? 0.5 : 0.28; g.fillStyle = s.color; g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0])));
       for (let j = i0; j <= i1; j++) g.lineTo(X(s.x[j]), Y(U(s, s.ys[j])));
       g.lineTo(X(s.x[i1]), Y(U(s, s.ys[i1]))); g.closePath(); g.fill(); g.globalAlpha = 1;
+      if (chosen) { g.strokeStyle = s.color; g.lineWidth = 2.5; g.stroke(); }
       g.strokeStyle = s.color; g.lineWidth = 1; g.setLineDash([3, 2]); g.beginPath(); g.moveTo(X(s.x[i0]), Y(U(s, s.ys[i0]))); g.lineTo(X(s.x[i1]), Y(U(s, s.ys[i1]))); g.stroke(); g.setLineDash([]);
     }
     g.strokeStyle = s.color; g.lineWidth = 2.2;
@@ -1610,23 +1612,67 @@ function guardInt(p) {
   yesno("<b>Da questo cromatogramma non si integra.</b><br>Il TIC, il BPC e il PDA sommano tutti gli ioni: l'area che ne esce non appartiene a nessun composto. Estrai prima lo ione che ti interessa (XIC) con una finestra di <i>m/z</i> stretta attorno all'analita, poi integra il picco nell'XIC.<br><br>Vuoi estrarre un XIC adesso?").then(v => { if (v) openXic(null); });
   return false;
 }
+// integrations never overlap (same trace and file): at most two peaks touch and share the border (drop line)
+const INT_EPS = 1e-6;
+let HSEQ = 0;                                                             // order of the undoable actions (zoom and integrations) of the session
+const iLo = it => Math.min(it.a, it.b), iHi = it => Math.max(it.a, it.b);
+const intClash = (p, key, a, b, skip) => p.ints.find(i => i !== skip && i.key === key && iLo(i) < b - INT_EPS && iHi(i) > a + INT_EPS) || null;
+function nearMsg(t) {                                                     // short notice next to the mouse
+  let d = Q("#qnote"); if (!d) { d = document.createElement("div"); d.id = "qnote"; d.style.cssText = "position:fixed;z-index:20000;max-width:300px;padding:6px 10px;border-radius:6px;background:#333;color:#fff;font:13px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.35);pointer-events:none"; document.body.appendChild(d); }
+  const m = window._mxy || { x: 200, y: 200 }; d.textContent = t; d.hidden = false;
+  d.style.left = Math.max(6, Math.min(innerWidth - 310, m.x + 14)) + "px"; d.style.top = Math.max(6, Math.min(innerHeight - 60, m.y + 18)) + "px";
+  clearTimeout(d._t); d._t = setTimeout(() => { d.hidden = true; }, 3200);
+}
+document.addEventListener("mousemove", e => { window._mxy = { x: e.clientX, y: e.clientY }; }, true);
+const intSnap = p => JSON.stringify(p.ints);
+function pushIh(p, snap) { const h = p.ih = p.ih || []; h.push({ n: ++HSEQ, s: snap || intSnap(p) }); if (h.length > 20) h.shift(); }
+function undoInt(p) { const e = p.ih && p.ih.pop(); if (!e) return; p.ints = JSON.parse(e.s); p.isel = null; draw(p); uiSave(); }
+function delInts(p, list) { pushIh(p); p.ints = p.ints.filter(i => !list.includes(i)); if (list.some(i => i.id === p.isel)) p.isel = null; draw(p); uiSave(); }
 function addInt(p, s, a, b, mirror = true) {
-  if (p.type === "mrm") p.ints = p.ints.filter(i => i.key !== s.key);       // calibration: one peak per transition and file, a new window replaces the old one
-  else if (p.ints.some(i => i.key === s.key && Math.abs(i.a - Math.min(a, b)) < 1e-6 && Math.abs(i.b - Math.max(a, b)) < 1e-6)) return;     // same peak clicked twice
+  const lo = Math.min(a, b), hi = Math.max(a, b);
+  if (p.type === "mrm") { if (p.ints.some(i => i.key === s.key)) pushIh(p); p.ints = p.ints.filter(i => i.key !== s.key); }       // calibration: one peak per transition and file, a new window replaces the old one
+  else {
+    if (p.ints.some(i => i.key === s.key && Math.abs(i.a - lo) < 1e-6 && Math.abs(i.b - hi) < 1e-6)) return false;     // same peak clicked twice
+    if (intClash(p, s.key, lo, hi)) { nearMsg("Qui c'è già un picco integrato: toglilo prima (clic destro → Elimina)"); return false; }
+  }
+  if (p.type !== "mrm") pushIh(p);
   const f = E.files[s.k];
-  p.ints.push({ id: E.seq++, k: s.k, key: s.key, a: Math.min(a, b), b: Math.max(a, b), name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title });
+  p.ints.push({ id: E.seq++, k: s.k, key: s.key, a: lo, b: hi, name: s.name, ion: s.ion || s.name, file: f ? f.label : "", time: f ? f.time : null, panel: p.title });
   draw(p);
   // MRM: the same window goes to the other transition panels (quantifier and qualifier), where it can still be moved on its own
   if (p.type === "mrm" && mirror) tabPanels().filter(q => q !== p && q.type === "mrm" && q._a && q._a.sr).forEach(q => { const s2 = q._a.sr.find(x => x.k === s.k && x.ion !== s.ion); if (s2) addInt(q, s2, a, b, false); });
+  return true;
+}
+// automatic integration at time x: refused on an integrated peak; next to one it stops at its border (the two peaks touch)
+function autoInt(p, s, x) {
+  let [l, r] = autoEdges(s, x);
+  if (p.type !== "mrm") {
+    const c = p.ints.filter(i => i.key === s.key);
+    if (c.some(i => iLo(i) + INT_EPS < x && x < iHi(i) - INT_EPS)) { nearMsg("Qui c'è già un picco integrato: toglilo prima (clic destro → Elimina)"); return; }
+    c.forEach(i => { if (iHi(i) <= x + INT_EPS) l = Math.max(l, iHi(i)); if (iLo(i) >= x - INT_EPS) r = Math.min(r, iLo(i)); });
+    if (r - l < 1e-6) return;
+  }
+  addInt(p, s, l, r);
+}
+// integration whose filled area contains the pixel (used to select it with a click)
+function intAt(p, px, py) {
+  const a = p._a; if (!a || !a.sr || a.stk || a.cas || !a.Y || p.type === "spec" || p.type === "map") return null;
+  const x = a.x0 + (px - M.l) / (a.W - M.l - M.r) * (a.x1 - a.x0);
+  for (const it of [...p.ints].reverse()) {
+    if (x < iLo(it) || x > iHi(it)) continue; const s = a.sr.find(q => q.key === it.key); if (!s) continue;
+    if (py >= a.Y(a.U(s, s.ys[nearIdx(s.x, x)])) - 4 && py <= a.H - M.b + 3) return it;
+  }
+  return null;
 }
 function intMenuItems(p, x, near, py) {
   const items = [], a = p._a;
-  items.push({ label: "Integra il picco qui", fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach(s => { const [l, r] = autoEdges(s, x); addInt(p, s, l, r); }); } });
+  const nearInt = p.ints.find(it => x >= iLo(it) && x <= iHi(it));
+  if (nearInt) items.push({ label: "Elimina questa integrazione", fn: () => delInts(p, [nearInt]) });
+  if (p.ints.length) items.push({ label: "Elimina tutte le integrazioni di questo pannello", fn: async () => { if (await yesno(`Eliminare le ${p.ints.length} integrazioni di questo pannello?`)) delInts(p, [...p.ints]); } });
+  if (nearInt || p.ints.length) items.push("-");
+  items.push({ label: "Integra il picco qui", fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach(s => autoInt(p, s, x)); } });
   if (p.sel) items.push({ label: "Integra l'intervallo selezionato", fn: () => { if (guardInt(p)) a.sr.forEach(s => addInt(p, s, p.sel[0], p.sel[1])); } });
   if (p.sel && p.sel[1] > p.sel[0]) items.push({ label: "Ingrandisci l'intervallo selezionato", fn: () => { const [s0, s1] = p.sel; const w = (s1 - s0) * 0.1; zoomTo(p, s0 - w, s1 + w); } });
-  const nearInt = p.ints.find(it => x >= Math.min(it.a, it.b) && x <= Math.max(it.a, it.b));
-  if (nearInt) items.push({ label: "Elimina questa integrazione", fn: () => { p.ints = p.ints.filter(i => i !== nearInt); draw(p); } });
-  if (p.ints.length) items.push({ label: "Elimina tutte le integrazioni", fn: () => { p.ints = []; draw(p); } });
   return items;
 }
 function allInts() {
@@ -1648,15 +1694,16 @@ function showInts() {
   big("Integrazioni dei picchi", rows.length ? `<div class="bar"><button id="ig-xlsx">${IC_DL}Excel</button>
     <label title="Altezza del picco (sopra la linea di base) diviso la deviazione standard del rumore, misurata in una zona senza picchi che scegli tu"><input type="checkbox" id="ig-sn" ${INTOPT.sn ? "checked" : ""}> S/N</label>
     <label title="Larghezza a metà altezza, numero di piatti teorici N = 5.54 (tR / w½)² e fattore di coda USP a 5% dell'altezza (T = W₀.₀₅ / 2f)"><input type="checkbox" id="ig-par" ${INTOPT.par ? "checked" : ""}> Mostra parametri cromatografici</label></div>
-    <table><tr>${head.map((t, i) => th(t, num[i])).join("")}${hx}<th>Bianco interno applicato</th></tr>` +
+    <table><tr>${head.map((t, i) => th(t, num[i])).join("")}${hx}<th>Bianco interno applicato</th><th></th></tr>` +
     rows.map((r, i) => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.conc != null ? r.conc + " " + EH(r.cunit) : ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num" title="${fmtFull(r.area ?? 0)}">${fmtA(r.area ?? 0)}</td><td class="num">${fmt(r.height ?? 0)}</td>` +
       (INTOPT.sn ? `<td class="num">${r.sn != null ? fx(r.sn, 1) : `<button data-nz="${i}" title="Trascina sul grafico una zona senza picchi vicino al picco: il rumore è la deviazione standard del segnale in quella zona (tolta la deriva)">scegli la zona di rumore</button>`}</td>` : "") +
-      (INTOPT.par ? `<td class="num">${fx(r.w50, 3)}</td><td class="num">${r.N != null ? Math.round(r.N) : ""}</td><td class="num">${fx(r.T, 2)}</td>` : "") + `<td>${EH(r.ibk || "no")}</td></tr>`).join("") +
+      (INTOPT.par ? `<td class="num">${fx(r.w50, 3)}</td><td class="num">${r.N != null ? Math.round(r.N) : ""}</td><td class="num">${fx(r.T, 2)}</td>` : "") + `<td>${EH(r.ibk || "no")}</td><td>${intClash(r._p, r.key, r.a, r.b, r._it) ? '<span class="warn" title="Quest\'integrazione si sovrappone a un\'altra della stessa traccia (taccuino vecchio): eliminane una">⚠ sovrapposto</span> ' : ""}<button data-del="${i}" title="Elimina questa integrazione (anche dal grafico)">×</button></td></tr>`).join("") +
     `</table><div class="muted sm">Area: regola dei trapezi con baseline lineare tra i due bordi. Trascina le barre nel pannello per correggere i bordi.</div>`
     : `<div class="muted">Nessuna integrazione. Clic destro su un picco di un cromatogramma, di un XIC o di una transizione MRM e scegli «Integra».</div>`, () => {
     if (!rows.length) return;
     Q("#ig-sn").onchange = e => { INTOPT.sn = e.target.checked; showInts(); };
     Q("#ig-par").onchange = e => { INTOPT.par = e.target.checked; showInts(); };
+    Q("#bigbody").querySelectorAll("button[data-del]").forEach(b => b.onclick = () => { const r = rows[+b.dataset.del]; delInts(r._p, [r._it]); showInts(); });
     Q("#bigbody").querySelectorAll("button[data-nz]").forEach(b => b.onclick = () => {
       const r = rows[+b.dataset.nz]; r._p._pickNoise = r._it; Q("#bigdlg").close(); reveal(r._p);
       stepMsg(r._p, "Trascina sul grafico una zona senza picchi, vicino al picco: ne uso la deviazione standard come rumore", true);
@@ -1778,7 +1825,22 @@ function attach(p) {
   const yAxisZone = (px, py) => canYZ(p._a) && px < M.l && inPlotY(py);               // the numbers at the left of the y axis
   const xAxisZone = (px, py) => p._a && !p._a.map && px >= M.l && px <= p._a.W - M.r && py > p._a.H - M.b;   // the numbers under the x axis
   const onCur = px => p.type !== "spec" && p.type !== "map" && p.cur != null && p._a && Math.abs(p._a.X(p.cur) - px) < 6;
-  const edgeAt = px => { if (!p._a || p.type === "spec") return null; for (const it of p.ints) for (const e of ["a", "b"]) if (Math.abs(p._a.X(it[e]) - px) < 6) return { it, e }; return null; };
+  const edgeAt = px => {
+    if (!p._a || p.type === "spec") return null;
+    for (const it of p.ints) for (const e of ["a", "b"]) if (Math.abs(p._a.X(it[e]) - px) < 6) {
+      let mate = null; for (const o of p.ints) if (o !== it && o.key === it.key) for (const f of ["a", "b"]) if (Math.abs(o[f] - it[e]) < INT_EPS) mate = { it: o, e: f };      // a border shared with the next peak moves both
+      return { it, e, mate, snap: intSnap(p) };
+    }
+    return null;
+  };
+  const edgeMove = (ed, x) => {                                              // the border stops at the neighbouring peak (touching is fine, overlapping is not)
+    const { it, e, mate } = ed, o = e === "a" ? it.b : it.a, v = it[e], oth = p.ints.filter(i => i !== it && (!mate || i !== mate.it) && i.key === it.key);
+    const mo = mate ? (mate.e === "a" ? mate.it.b : mate.it.a) : null;     // far border of the peak that shares this one
+    let nx;
+    if (v >= o) { let u = mo != null ? Math.max(mo, v) : Infinity; oth.forEach(i => { if (iLo(i) >= v - INT_EPS) u = Math.min(u, iLo(i)); }); nx = Math.max(o, Math.min(u, x)); }
+    else { let l = mo != null ? Math.min(mo, v) : -Infinity; oth.forEach(i => { if (iHi(i) <= v + INT_EPS) l = Math.max(l, iHi(i)); }); nx = Math.min(o, Math.max(l, x)); }
+    it[e] = nx; if (mate) mate.it[mate.e] = nx;
+  };
   cv.onmousemove = e => {
     const a = p._a; if (!a) return; const px = rect(e), py = recty(e), x = xd(px);
     if (drag && drag.rot) {                                   // 3D view: drag rotates (azimuth with x, elevation with y)
@@ -1794,7 +1856,7 @@ function attach(p) {
     } else if (drag && drag.cursor) {                         // dragging the vertical line: the linked spectrum follows
       p.cur = Math.max(a.full[0], Math.min(a.full[1], x)); p.sel = null; draw(p);
       if (!p._lm) { p._lm = true; requestAnimationFrame(() => { p._lm = false; const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, p.cur, 0) : null, dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k, true); else pushLinked(p, p.cur - dt / 2, p.cur + dt / 2, nearestFile(p, p.cur), true); }); }
-    } else if (drag && drag.edge) { drag.edge.it[drag.edge.e] = x; draw(p); }
+    } else if (drag && drag.edge) { edgeMove(drag.edge, x); draw(p); }
     else if (drag && drag.ya) {                               // line along the y axis: only the intensity axis is zoomed
       drag.y = Math.max(M.t, Math.min(a.H - M.b, py)); zl.hidden = false; zl.className = "zl v";
       zl.style.left = cv.offsetLeft + M.l - 20 + "px"; zl.style.width = ""; zl.style.top = cv.offsetTop + Math.min(drag.y, drag.y0) + "px"; zl.style.height = Math.abs(drag.y - drag.y0) + "px";
@@ -1844,7 +1906,8 @@ function attach(p) {
     if (d.rot) { p._rot = false; draw(p); return; }
     zl.hidden = true; p._hz = null;
     if (d.pan) { uiSave(); return; }
-    if (d.edge || d.cursor) { uiSave(); return; }
+    if (d.edge) { if (intSnap(p) !== d.edge.snap) pushIh(p, d.edge.snap); uiSave(); return; }
+    if (d.cursor) { uiSave(); return; }
     const a = p._a;
     if (a && (d.ya || d.xa) && Math.abs((d.ya ? d.y - d.y0 : d.x - d.x0)) > 4) pushZh(p);
     if (d.ya) { if (a && Math.abs(d.y - d.y0) > 4) zoomYTo(p, a.yinv(Math.max(d.y, d.y0)), a.yinv(Math.min(d.y, d.y0))); return; }
@@ -1857,13 +1920,18 @@ function attach(p) {
     if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Sottrai il fondo di un tratto": the stretch the student just dragged
       p._pickIbk = false; p.sel = null; p.bk = ""; p.snip = false; ibkSet(p, "mean", [Math.min(x0, x1), Math.max(x0, x1)]); ctl(p); return;
     }
+    if (p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) <= 4 && p.imode !== "auto") {      // a click on a filled peak selects it; elsewhere it deselects
+      const hit = intAt(p, d.x0, d.y0);
+      if (hit) { p.isel = hit.id; draw(p); return; }
+      if (p.isel != null) { p.isel = null; draw(p); }
+    }
     if (p.imode && p.type !== "spec" && p.type !== "map") {          // zoom and integration tools
       if (p.imode === "zoom") {                                        // box: x and y together
         p.sel = null; if (Math.abs(d.x - d.x0) > 4) pushZh(p);
         if (Math.abs(d.x - d.x0) > 4) { if (canYZ(a) && Math.abs(d.y - d.y0) > 4) zoomYTo(p, a.yinv(Math.max(d.y, d.y0)), a.yinv(Math.min(d.y, d.y0)), true); zoomTo(p, Math.min(x0, x1), Math.max(x0, x1)); } else draw(p);
         return;
       }
-      if (p.imode === "auto" && Math.abs(d.x - d.x0) <= 4) { if (guardInt(p)) intTargets(p, x0, d.y0).forEach(s => { const [l, r] = autoEdges(s, x0); addInt(p, s, l, r); }); return; }
+      if (p.imode === "auto" && Math.abs(d.x - d.x0) <= 4) { if (guardInt(p)) intTargets(p, x0, d.y0).forEach(s => autoInt(p, s, x0)); return; }
       if (p.imode === "man" && Math.abs(d.x - d.x0) > 4) { p.sel = null; if (!guardInt(p)) { draw(p); return; } const t = intTargets(p, (x0 + x1) / 2, d.y0); if (t.length) t.forEach(s => addInt(p, s, x0, x1)); else draw(p); return; }
     }
     if (Math.abs(d.x - d.x0) > 4) {
