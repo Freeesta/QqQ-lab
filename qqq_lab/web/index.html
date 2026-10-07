@@ -77,9 +77,9 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 dialog{border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);padding:14px 16px;max-width:520px}dialog::backdrop{background:rgba(60,45,10,.35)}
 dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justify-content:flex-end}
 .hint{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:4px;padding:6px 10px;margin-bottom:10px;color:var(--muted)}
-#v-draw{display:grid;grid-template-columns:1fr 330px;gap:10px;padding:10px 14px}@media (max-width:1000px){#v-draw{grid-template-columns:1fr}}
+#v-draw{display:grid;grid-template-columns:1fr 330px;gap:10px;padding:10px 14px}@media (max-width:1000px){#v-draw{grid-template-columns:1fr}}@media (pointer:coarse) and (max-width:1500px){#v-draw{grid-template-columns:1fr}}   /* tablet: the editor takes the whole width (its top toolbar can be larger), the cards go below */
 #v-theory{padding:0}#tframe{display:block;width:100%;height:calc(100vh - 52px);border:0;background:#fff}
-#kframe{width:100%;height:calc(100vh - 110px);min-height:520px;border:1px solid var(--line);border-radius:6px;background:#fff}
+#kframe{width:100%;height:max(calc(100vh - 110px),940px);min-height:520px;border:1px solid var(--line);border-radius:6px;background:#fff}
 .sm{font-size:12px}
 #refdlg{max-width:min(1100px,96vw);width:96vw;max-height:92vh}#refbody{max-height:80vh;overflow:auto}#refdlg h4{margin:12px 0 4px}
 #reftabs{display:flex;gap:2px}#reftabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:6px 12px;font-weight:600;color:var(--muted)}#reftabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
