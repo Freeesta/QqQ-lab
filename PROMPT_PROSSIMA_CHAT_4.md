@@ -15,7 +15,7 @@
 2. Se in `main` esiste ancora `PROMPT_PROSSIMA_CHAT_3.md` o c'è una pull request aperta del prompt 3 (`gh pr list`): **fermati** e scrivi a Federico che il prompt 3 non è ancora unito (questo prompt parte dal suo lavoro).
 3. Leggi «Stato e ripresa» qui sotto: se la tua sessione ha già lavoro fatto, riparti da lì.
 
-Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati` per i dati del laboratorio). Leggi `AGENTS.md` sez. 1-2, 5, 12, la sezione dei file misti e le ultime sezioni; poi SOLO il codice che serve, con `grep -n`. Non leggere `vendor/`.
+Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati` per i dati del laboratorio). **Di questo file leggi solo**: Contesto, Prima di iniziare, Regole fisse, Stato e ripresa, Ordine di lavoro e sessioni, **le parti della tua sessione** e la Chiusura; salta le altre (sono di altre sessioni). Di `AGENTS.md` leggi sez. 1-2, 5, 12, la sezione dei file misti e le ultime sezioni; poi SOLO il codice che serve, con `grep -n`. Non leggere `vendor/`.
 
 ## Regole fisse
 - Interfaccia in italiano; codice e commenti in inglese; sempre «m/z». Non cancellare file (`_cestino/`). Il programma non dà risposte agli studenti (niente generatore di formule, niente identificazioni).
@@ -28,22 +28,27 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati
 - **Aggiorna Federico** alla fine di ogni blocco con 3-5 righe: fatto, non fatto, cosa provare a mano. Budget in esaurimento: fermati dopo un commit pulito e aggiorna questo file.
 
 ## Stato e ripresa
-**Stato** (aggiornalo e fai push a ogni punto finito: è quello che legge la chat successiva):
-- S1: —
-- S3: —
-- S4: —
-(per ogni sessione: punti fatti · punto in corso · ramo non ancora in `main`)
+**Stato** (aggiornalo e fai push a ogni punto finito: è quello che legge la chat successiva). Ogni sessione cambia **solo la riga sotto il suo titolo** (le righe vuote fra una sessione e l'altra evitano i conflitti di git: non toglierle). Formato: punti fatti · punto in corso · ramo non ancora in `main`.
+
+**S1**
+- —
+
+**S3**
+- —
+
+**S4**
+- —
 
 **Se riprendi dopo un'interruzione** (nuova sessione, stesso prompt): 1) `git fetch origin`; 2) guarda «Stato» qui sopra e le PR aperte (`gh pr list`) o i rami `claude/...` non uniti con commit «[in corso]» (`git branch -r --no-merged origin/main`); 3) se c'è lavoro non unito, portalo nel tuo ramo (`git merge origin/<quel ramo>`), lancia `python3 tools/verifica.py --solo <test del punto>` e **riparti dal punto in corso**, senza rifare ciò che è già fatto; 4) chiudi la vecchia PR dopo aver unito la tua. Non rileggere i blocchi già fatti.
 
 ## Ordine di lavoro e sessioni
-**Parte A** (ritocchi): A0 test su Windows · A1 barra dei file · A2 perdite neutre · A3 header fisso e niente scorrimento su «Dati» · A4 spettri e pannelli · A5 grafici nitidi e scritta dell'area · A6 pulsanti attivi.
+**Parte A** (ritocchi): A0 test su Windows · A1 barra dei file · A2 perdite neutre · A3 header fisso e niente scorrimento su «Dati» · A4 spettri e pannelli · A5 grafici nitidi e scritta dell'area · A6 pulsanti attivi · A7 nome nuovo.
 **Parte B** (alta risoluzione e DDA): nell'ordine della **scaletta di priorità** più sotto (B0 → B9).
 **Parte C** (scattante e compatibile con ogni browser, Windows e Mac) e **parte D** (confronto delle MS2 con le librerie): dopo, nelle sessioni indicate. La notte è lunga: finito il proprio elenco, una sessione **non** prende blocchi di un'altra; aggiorna «Stato», `AGENTS.md` e si ferma.
 **Sessioni** (stasera Federico ne lancia **tre insieme** nel cloud; ognuna fa SOLO i suoi blocchi, scritti nel primo messaggio, es. «Esegui `PROMPT_PROSSIMA_CHAT_4.md`, sessione S1»):
 | Sessione | Blocchi, in ordine | File principali |
 |---|---|---|
-| **S1** | A0 (CI su Windows), parte A, poi **parte D** (librerie) | `tests/`, `index.html`, `explore.js`, `tables.js`, `spettro.js`; poi `web/libreria*.js` (nuovi) |
+| **S1** | A0 (CI su Windows), A1-A7, poi **parte D** (librerie) | `tests/`, `index.html`, `explore.js`, `tables.js`, `spettro.js`; poi `web/libreria*.js` (nuovi) |
 | **S3** | B0 → B1 → B2 → B3 → B4 → B5 → B6, poi B8 e B9 se c'è budget | `dati_sintetici.py`, `reader/`, `explore.py`, `app.py`, `api.py`, `web/hr.js` e `web/dda.js` (nuovi), agganci in `explore.js` |
 | **S4** | B7 (file grandi), poi **parte C** (scattante e compatibile) | `reader/mzml.py` (solo la parte indicata in B7), `browser-worker.js`, schermata di carico; poi `web/perf.js` (nuovo), `tests_e2e/lib.py`, `.github/workflows/test.yml`, correzioni puntuali |
 Regole per lavorare in parallelo:
@@ -118,6 +123,9 @@ e2e: da Disegno clic su «Dati» → `scrollY` invariato (0 se la pagina era in 
 
 ## A6: pulsanti attivi riempiti fino al bordo
 Un pulsante a icona attivo (`.on`, es. integrazione automatica) è blu solo in parte: a destra resta una parte bianca arrotondata (immagine di Federico). In `index.html` ci sono **due regole `.tbg` in conflitto** (una con `border-radius:6px; overflow:hidden` e bordo del gruppo, una con `gap:4px` e separatori) e `.tbg button{border-radius:0}`: tienine una sola. Regola: ogni pulsante ha il **suo** bordo arrotondato e lo sfondo `.on` lo riempie tutto (`background-clip: border-box`, nessun margine interno bianco); niente bordo del gruppo che disegna una forma diversa dal pulsante. Controlla tutti i pulsanti con stato acceso (zoom, integrazione, righello, lucchetto, collegamento del tempo, ingranaggio, schede) in tema chiaro e scuro e con zoom del browser al 200%. e2e: screenshot di un pulsante `.on` e controllo che i pixel agli angoli interni del suo rettangolo siano del colore `--accent`.
+
+## A7: nome nuovo, solo quello visibile
+Con l'alta risoluzione «QqQ lab» non descrive più il programma. Nome scelto: **Traccia** (gli inquinanti in tracce e le tracce dei cromatogrammi; proposta di Claude Opus accettata da Federico il 7/10, che può cambiarla prima di lanciare: in tal caso questa riga dice un altro nome). Una sola costante `APP_NAME` (in `index.html`, letta da tutti gli script) e il nome sostituito **solo dove si vede**: `<title>`, schermata di caricamento, testo dei crediti nel «?» («Traccia è il programma didattico per il laboratorio di inquinanti della laurea magistrale in Chimica dell'ambiente. Suggerimenti e correzioni: federico.cristaudo@unito.it (Federico Cristaudo, Università di Torino).»), Teoria, manifest del sito (nome dell'app installata), metadati dei PNG (`plotMeta`), README (prima riga: «Traccia (già QqQ lab)»). **Non cambiare** i nomi interni: pacchetto `qqq_lab`, repository, cartelle, indirizzo del sito, chiavi salvate nel browser (`NB`, IndexedDB: cambiarle farebbe perdere il lavoro salvato degli studenti), file di test. Il logo resta. `AGENTS.md` sez. 1: «Il programma si chiama Traccia (nome visibile dal 7/10/2026); i nomi interni restano qqq_lab/QqQ-lab». e2e: il titolo della pagina e i crediti contengono il nome nuovo, nessun «QqQ lab» visibile nell'interfaccia (cerca nel DOM e nei testi dei menu).
 
 ---
 
@@ -271,4 +279,5 @@ Tolleranza HR 5 ppm (predefinito di FreeStyle; copre anche lo scostamento del Fu
 ---
 
 ## Lavori in coda (NON fare: decisioni di Federico)
-**Q1. Nome nuovo del progetto.** Con l'alta risoluzione «QqQ lab» non descrive più il programma. Quando Federico sceglie il nome: cambiare **solo il nome visibile** (titolo della pagina, logo/scritta, README, Teoria, manifest del sito) e lasciare per ora i nomi interni (pacchetto `qqq_lab`, repository, cartelle) che romperebbero link, sito e test; il cambio dei repository su GitHub (con redirect automatico) e dell'indirizzo del sito è un passo separato da decidere con lui.
+- Rinominare anche repository, pacchetto e indirizzo del sito con il nome nuovo (passo separato, da decidere con Federico: GitHub fa il redirect dei repository, ma l'indirizzo del sito cambia).
+- Coseno modificato e rete dei prodotti di trasformazione simili alla madre (vedi fine della parte D).
