@@ -71,6 +71,18 @@ Nella stessa finestra un menu **«File»**: «i file mostrati» (predefinito: se
 ### R10. Il sito deve mostrare subito la versione nuova
 Dopo un aggiornamento Federico non vedeva le modifiche: GitHub Pages manda i file con `cache-control: max-age=600` e il service worker (`web/sw.js`) per i file dell'app fa `fetch(req)`, che passa dalla cache HTTP del browser (fino a 10 minuti di file vecchi). Nel `fetch` dei file dell'app (non di Pyodide/Ketcher) usa `fetch(req, { cache: "no-cache" })`: il browser chiede sempre al server se il file è cambiato (risposta 304 leggera se non lo è), quindi la versione nuova arriva subito, e offline resta il ripiego sulla cache. Controlla anche `index.html` e `qqq_lab.zip` (il pacchetto Python caricato dal worker): devono seguire la stessa regola. Nessun test Pyodide: verifica la logica leggendo `sw.js` e con un test unitario leggero se possibile.
 
+### R11. Intestazione dei pannelli in UNA riga (meno spazio sprecato sopra il grafico)
+Oggi ogni pannello cromatogramma/XIC/MRM usa tre fasce oltre al grafico: riga del titolo (con molto spazio vuoto in mezzo), riga dei controlli (TIC/BPC, «m/z da … a …», smoothing, sovrapposti, scala log, Correzione) e, sotto il grafico, legenda + «RT 1.13 min». Obiettivo: **una sola riga sopra il grafico**, senza schiacciare il grafico e senza perdere funzioni:
+- **Nella riga del titolo**, subito dopo il numero del pannello: il menu del tipo (TIC / BPC / PDA) diventa il titolo stesso («TIC ▾»), poi i controlli usati più spesso come elementi compatti: «sovrapposti/impilati» (icona), smoothing (icona on/off).
+- **Icona «Parametri»** (stessa idea e stesso aspetto della tendina dei parametri dello spettro, Blocco G2) che apre una tendina con i controlli usati meno spesso: intervallo m/z del TIC, scala log, Correzione, altri. Se un parametro non è al valore predefinito, accanto all'icona compare un piccolo **chip** che lo dice (es. «m/z 150–300», «log», «bianco: t0») e cliccandolo si apre la tendina: così lo studente vede sempre cosa sta guardando.
+- **Legenda dentro il grafico**, in alto a destra (riquadro semitrasparente, compatto; se copre i dati si sposta in alto a sinistra; con molti file va su più colonne o si riduce a «7 file» con elenco al passaggio del mouse). Clic su una voce = nascondi/mostra come oggi.
+- **Togli la riga in basso «RT 1.13 min»**: il valore è già nel riquadro che segue il mouse.
+- Su schermi stretti (< 900 px) la riga può andare a capo, ma i pulsanti restano allineati a destra (come oggi con `.tbg`).
+- Vale anche per spettro (già una riga: controlla solo che legenda e didascalia non sprechino spazio) e mappa. Aggiorna gli e2e che cercano i controlli nella seconda riga (`.ctl`). Screenshot prima/dopo a 1280, 1440 e 1680 px nel messaggio a Federico.
+
+### R12. RT con 2 decimali
+Nell'interfaccia il tempo di ritenzione si mostra con **2 decimali** ovunque (riquadro che segue il mouse, cursore, didascalia/riga della scansione sotto lo spettro, titoli degli spettri congelati, menu del clic destro, etichette dei picchi, tabelle a video). Cerca `toFixed(3)` vicino a RT/`rt` in `explore.js`, `tabs.js`, `origine.js` (es. `stepScan`, `specCaption`). Nei file **Excel** resta il valore completo (numero vero, non arrotondato). Il m/z non cambia (segue le sue regole: 1 decimale nelle etichette, ecc.).
+
 ---
 
 ## BLOCCO N: perdite neutre (scheda «Perdite neutre» della finestra Tavola/Addotti/Isotopi, `web/tables.js`)
