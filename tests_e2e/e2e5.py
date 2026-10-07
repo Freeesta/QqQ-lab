@@ -50,13 +50,14 @@ try:
         def blank():
             pg.evaluate(f"(()=>{{const p=E.panels[{xi}]; p.traces=p.traces.slice(0,1); p.fk=''}})()"); pg.wait_for_timeout(100)
             base = pg.evaluate(f"seriesOf(E.panels[{xi}]).then(a=>a.map(s=>[s.name,Math.max(...s.y)]))"); print("before:", base)
-            pg.select_option(sel("bk"), index=3)   # third file = t60 as the 'blank'
+            pg.evaluate("E.files[2].type='blank'"); pg.evaluate(f"ctl(E.panels[{xi}])"); pg.wait_for_timeout(300)
+            pg.select_option(sel("corr"), value="f" + str(pg.evaluate("E.files[2].k")))   # third file = t60 marked as the 'blank'
             pg.wait_for_timeout(1500)
             after = pg.evaluate(f"seriesOf(E.panels[{xi}]).then(a=>a.map(s=>[s.name,Math.max(...s.y),s.corr]))"); print("after:", after)
             assert len(after) == len(base) - 1 and all(a[2] == "- bianco" for a in after)
             assert all(min(a[1] for a in after) >= 0 for _ in [0])
             pg.screenshot(path=SH + "50_blank.png")
-            pg.locator(sel("snip")).check(); pg.wait_for_timeout(1200)
+            pg.select_option(sel("corr"), value="snip"); pg.wait_for_timeout(1200)
             sn = pg.evaluate(f"seriesOf(E.panels[{xi}]).then(a=>a.map(s=>[s.corr,Math.max(...s.y)]))"); print("snip:", sn)
             assert all("baseline" in x[0] for x in sn)
             pg.screenshot(path=SH + "51_snip.png")

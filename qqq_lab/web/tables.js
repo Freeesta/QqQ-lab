@@ -95,7 +95,9 @@
     const rows = pol => { const l = ADD.filter(a => Math.sign(a.z) === pol);
       return l.filter(a => a.exp).map(a => row(a, pol)).join("") + `<tr><td colspan="6" class="muted sm" style="padding-top:8px"><i>Meno frequenti nelle condizioni del laboratorio</i></td></tr>` + l.filter(a => !a.exp).map(a => row(a, pol)).join(""); };
     const head = pol => `<tr><th>addotto</th><th>m/z =</th><th class="num">m/z esatto</th><th class="num"><i>m/z</i> nominale</th><th class="num">&Delta; da ${pol > 0 ? "[M+H]<sup>+</sup>" : "[M&minus;H]<sup>&minus;</sup>"}</th><th>quando si vede</th></tr>`;
-    return `<h4>ESI positivo</h4><table>${head(1)}${rows(1)}</table><h4>ESI negativo</h4><table>${head(-1)}${rows(-1)}</table>`;
+    const blk = pol => `<h4>${pol > 0 ? "ESI positivo" : "ESI negativo"}</h4><table>${head(pol)}${rows(pol)}</table>`;
+    const neg = typeof E !== "undefined" && E.files.some(f => f.polarity === "negative") && !E.files.some(f => f.polarity === "positive");      // the polarity of the loaded files first
+    return neg ? blk(-1) + blk(1) : blk(1) + blk(-1);
   }
   // two OBSERVED m/z: does their difference match a difference between two adducts of the list? (a hint, never a conclusion; calibration drift cancels in a difference)
   function pairs(m1, m2) {

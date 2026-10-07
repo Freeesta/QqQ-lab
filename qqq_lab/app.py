@@ -259,8 +259,9 @@ class App:
     def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None) -> dict:
         if bg is not None:
             bg = {**bg, "item": self._item(bg["k"])}
-        mz, y, n = self._item(k).spectrum(rt0, rt1, level, precursor, bin_da=bin_da, bg=bg)
-        return {"mz": [round(float(v), 3) for v in mz], "y": [round(float(v), 1) for v in y], "scans": n}
+        item = self._item(k)
+        mz, y, n = item.spectrum(rt0, rt1, level, precursor, bin_da=bin_da, bg=bg)
+        return {"mz": [round(float(v), 3) for v in mz], "y": [round(float(v), 1) for v in y], "scans": n, **item.window_scans(rt0, rt1, level, precursor)}
 
     MAX_SPECTRA = 60       # scans per /api/spectra request
 

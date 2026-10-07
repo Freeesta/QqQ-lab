@@ -25,7 +25,7 @@ try:
             assert all(abs((b["mx"] - a["mx"]) - a["lv"]) < 1e-6 * max(1, b["mx"]) for a, b in zip(after, before)), "max drops by the level"
             assert all(a["mn"] >= 0 for a in after), "TIC: negatives clipped by default"
             chip = pg.inner_text(f"#dpanels .pnl >> nth=0 >> .ibk"); print(chip)
-            assert "bianco interno" in chip and "0.3-2 min" in chip
+            assert "fondo del tratto" in chip and "0.3-2 min" in chip
         step("mean of 0.3-2 min subtracted, clipped, chip visible", mean)
         def noclip():
             pg.evaluate("%s.ibk.clip=false;draw(%s)" % (P, P)); pg.wait_for_timeout(1200)
@@ -56,7 +56,7 @@ try:
         def menu():
             box = pg.locator("#dpanels .pnl >> nth=0 >> canvas").bounding_box()
             pg.mouse.click(box["x"] + 400, box["y"] + 100, button="right"); pg.wait_for_timeout(300)
-            t = pg.inner_text("#ctx"); assert "Bianco interno" in t and "Togli il bianco interno" in t, t
+            t = pg.inner_text("#ctx"); assert "Sottrai il fondo di questo tratto" in t or "Togli il fondo del tratto" in t, t
             pg.keyboard.press("Escape")
         step("right-click menu offers the internal blank", menu)
         def spec():

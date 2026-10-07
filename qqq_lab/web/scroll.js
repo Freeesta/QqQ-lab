@@ -1,7 +1,7 @@
 "use strict";
 // Scan-by-scan walk with the arrow keys (chromatogram cursor -> linked spectrum), as smooth as possible:
 //  - a cache of single scans (api/spectra, blocks of at most 60) so a step never waits for the server;
-//  - frozen axes of the spectrum while walking (lock button), the y axis only grows;
+//  - frozen intensity axis of the spectrum while walking (lock button), the y axis only grows;
 //  - one spectrum redraw per frame (drawSoon), the cursor line is a thin overlay (cursorLine);
 //  - held key = about 15 scans/s, Maiusc = 5 scans, Space = play/pause. Classic script, loaded after explore.js.
 
@@ -37,7 +37,7 @@ async function scData(p, k) {
     await scFetch(k, p.level, p.prec, p.si - (back ? 40 : 2), p.si + (back ? 2 : 40)).catch(() => {});
     s = scGet(k, p.level, p.prec, p.si);
   }
-  if (s && s.mz.length && s.rt >= p.r0 - 1e-6 && s.rt <= p.r1 + 1e-6) return { mz: s.mz, y: s.y, scans: 1 };
+  if (s && s.mz.length && s.rt >= p.r0 - 1e-6 && s.rt <= p.r1 + 1e-6) return { mz: s.mz, y: s.y, scans: 1, i0: s.i, n: SC.n.get(scBase(k, p.level, p.prec)) };
   return getSpec(k, p.r0, p.r1, p.level, p.prec, null);
 }
 // keep the next scans in the cache before they are needed (nothing is waited for)
@@ -48,15 +48,15 @@ function scAhead(s) {
   (dir > 0 ? scFetch(s.k, s.level, s.prec, s.si + 1, s.si + 40) : scFetch(s.k, s.level, s.prec, s.si - 40, s.si - 1)).catch(() => {});
 }
 
-// ---- frozen axes while walking. s.lock = {x0, x1, ymax, z (zoom when locked), k (file), fresh}; {pending:true} = to be measured at the next draw
+// ---- frozen intensity axis while walking (the m/z axis is always fixed, see drawSpec). s.lock = {ymax, z (zoom when locked), k (file), fresh}; {pending:true} = to be measured at the next draw
 function lockStart(p, k) {
   E.panels.filter(s => s.type === "spec" && s.link === p.id && !s.lock && !s.noAuto).forEach(s => {
     const a = s._a;
-    s.lock = a ? { x0: a.x0, x1: a.x1, ymax: a.ymax, z: s.zoom ? s.zoom.join() : "", k, fresh: true } : { pending: true };
+    s.lock = a ? { ymax: a.ymax, z: s.zoom ? s.zoom.join() : "", k, fresh: true } : { pending: true };
     lockButton(s);
   });
 }
-// x = the m/z range visible when the walk began; y = the highest peak of +-20 scans in that range (from the cache) x 1.12, and it can only grow (no cut peaks)
+// y = the highest peak of +-20 scans in the visible m/z range (from the cache) x 1.12, and it can only grow (no cut peaks)
 function lockSync(p, k, x0a, x1a, ymaxA, inRange, one) {
   const lk = p.lock; if (!lk) return null;
   const zk = p.zoom ? p.zoom.join() : "";
@@ -65,25 +65,23 @@ function lockSync(p, k, x0a, x1a, ymaxA, inRange, one) {
     if (one) for (let j = p.si - SC_AHEAD; j <= p.si + SC_AHEAD; j++) { const c = SC.m.get(scBase(k, p.level, p.prec) + "|" + j); if (c) c.y.forEach((v, i) => { if (v > m && c.mz[i] >= lo && c.mz[i] <= hi) m = v; }); }
     return m * 1.12;
   };
-  if (lk.x0 == null) { Object.assign(lk, { x0: x0a, x1: x1a, z: zk, k, pending: false, ymax: Math.max(ymaxA, nb(x0a, x1a)) }); return lk; }
-  if (lk.k !== k) { p.lock = null; return null; }                  // another file: free axes
-  if (zk !== lk.z) {                                               // zoom changed by the student: new axes (back to the whole spectrum = unlocked)
-    if (!p.zoom) { p.lock = null; return null; }
-    Object.assign(lk, { x0: x0a, x1: x1a, z: zk, ymax: Math.max(ymaxA, nb(x0a, x1a)) }); return lk;
-  }
-  if (lk.fresh) { lk.fresh = false; lk.ymax = Math.max(lk.ymax, ymaxA, nb(lk.x0, lk.x1)); return lk; }
-  const need = inRange(lk.x0, lk.x1) * 1.12; if (need > lk.ymax) lk.ymax = need;
+  if (lk.ymax == null) { Object.assign(lk, { z: zk, k, pending: false, ymax: Math.max(ymaxA, nb(x0a, x1a)) }); return lk; }
+  if (lk.k !== k) { p.lock = null; return null; }                  // another file: free axis
+  if (zk !== lk.z) { Object.assign(lk, { z: zk, ymax: Math.max(ymaxA, nb(x0a, x1a)) }); return lk; }   // zoom changed by the student: new top for the new m/z range
+  if (lk.fresh) { lk.fresh = false; lk.ymax = Math.max(lk.ymax, ymaxA, nb(x0a, x1a)); return lk; }
+  const need = inRange(x0a, x1a) * 1.12; if (need > lk.ymax) lk.ymax = need;
   return lk;
 }
 function lockButton(p) {
   const b = p.el && p.el.querySelector('[data-a="lock"]'); if (!b) return;
   const on = !!p.lock;
   b.innerHTML = on ? IC_LOCK : IC_UNLOCK; b.classList.toggle("on", on);
-  b.title = on ? "Assi bloccati durante lo scorrimento: clic per sbloccare" : "Assi automatici: clic per bloccarli (si bloccano da soli quando scorri con ← →)";
+  b.style.left = p.cv.offsetLeft + 2 + "px"; b.style.top = p.cv.offsetTop + 1 + "px"; b.hidden = !!p._exp;       // small, at the top of the intensity axis
+  b.title = on ? "Asse delle intensità bloccato: clic per sbloccare" : "Blocca l'asse delle intensità: così vedi crescere e calare i picchi fra una scansione e l'altra";
 }
 function toggleLock(p) {
   if (p.lock) { p.lock = null; p.noAuto = true; }                   // unlocked by hand: the arrows do not lock it again until it is locked by hand
-  else { p.noAuto = false; const a = p._a; p.lock = a ? { x0: a.x0, x1: a.x1, ymax: a.ymax, z: p.zoom ? p.zoom.join() : "", k: a.data[0].f.k, fresh: p.si != null } : { pending: true }; }
+  else { p.noAuto = false; const a = p._a; p.zoomY = null; p.lock = a ? { ymax: a.ymax, z: p.zoom ? p.zoom.join() : "", k: a.data[0].f.k, fresh: p.si != null } : { pending: true }; }
   lockButton(p); draw(p); uiSave();
 }
 

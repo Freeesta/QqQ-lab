@@ -26,9 +26,9 @@ try:
             h = pg.evaluate("""()=>{const p=E.panels.find(q=>q.tab==='ms2'&&q.type==='chrom');const c=p.el.querySelector('.ctl');
               const d=[...c.querySelectorAll(':disabled')].map(x=>x.dataset.o||x.tagName);
               return {d, kinds:[...c.querySelectorAll('option')].map(o=>o.textContent).join('|'), tips:[...c.querySelectorAll('[title]')].filter(x=>x.disabled||x.closest('label.dis')).length}}""")
-            assert "mz0" in h["d"] and "bk" in h["d"] and "log" in h["d"] and "snip" in h["d"], h
+            assert "mz0" in h["d"] and "corr" in h["d"] and "log" in h["d"], h
             assert "TIC" not in h["kinds"] and "BPC" not in h["kinds"], h
-            assert h["tips"] >= 3, h
+            assert h["tips"] >= 2, h
             pg.screenshot(path=SH + "19_ms2.png")
         step("precursor chromatogram: kind/m-z/blank/baseline/log grey with tooltips, no TIC/BPC", dis)
         def side():
@@ -38,16 +38,21 @@ try:
         step("sidebar: precursors first, time to the right of the file name", side)
         def toggle():
             n = lambda: pg.evaluate("E.panels.filter(p=>p.tab==='ms2').length")
-            assert n() == 4, n()
-            pg.locator("#flst input[data-pr]").first.uncheck(); pg.wait_for_timeout(500); assert n() == 2, n()
-            assert pg.locator("#flst input[data-pr]:checked").count() == 1, pg.locator("#flst input[data-pr]:checked").count()
-            pg.locator("#flst input[data-pr]").first.check(); pg.wait_for_timeout(1500); assert n() == 4, n()
-            pg.locator("#pall").uncheck(); pg.wait_for_timeout(500); assert n() == 0, n()
-            pg.locator("#pall").check(); pg.wait_for_timeout(2000); assert n() == 4, n()
-            pg.locator("#flst [data-pg]").nth(1).click(); pg.wait_for_timeout(600)
-            assert pg.evaluate("E.active&&E.active.prec"), pg.evaluate("[E.active&&E.active.prec, E.active&&E.active.type]")
+            assert n() == 2, n()                                                     # ONE pair at the start (chromatogram + spectrum)
+            assert pg.locator("#pall").count() == 0
+            p0 = pg.evaluate("E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom').prec"); ids = pg.evaluate("E.panels.filter(p=>p.tab==='ms2').map(p=>p.id)")
+            others = pg.locator("#flst input[data-pr]:not(:checked)"); assert others.count() >= 1
+            name = pg.locator("#flst .fl.pr:has(input:not(:checked)) [data-pg]").first; pr1 = name.get_attribute("data-pg")
+            name.click(); pg.wait_for_timeout(2500)
+            assert n() == 2 and pg.evaluate("E.panels.filter(p=>p.tab==='ms2').map(p=>p.id)") == ids, "no new panel: the pair switches precursor"
+            assert str(pg.evaluate("E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom').prec")) == pr1 != str(p0)
+            assert str(pg.evaluate("E.panels.find(p=>p.tab==='ms2'&&p.type==='spec').prec")) == pr1
+            sp = pg.evaluate("(()=>{const s=E.panels.find(p=>p.tab==='ms2'&&p.type==='spec');return {r0:s.r0,lock:!!s.lock,zy:s.zoomY}})()"); assert sp["r0"] is not None and not sp["lock"] and sp["zy"] is None, sp
+            pg.locator("#flst input[data-pr]:not(:checked)").first.click(); pg.wait_for_timeout(1500); assert n() == 4, n()      # a second pair, to compare two precursors
+            pg.locator("#flst input[data-pr]:checked").nth(1).click(); pg.wait_for_timeout(500); assert n() == 2, n()
+            sel = pg.evaluate("(()=>{const c=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom').el.querySelector('[data-o=prec]');return c?c.getBoundingClientRect().width:0})()"); assert sel > 90, sel     # the precursor menu is wide enough to read
             pg.screenshot(path=SH + "19_ms2b.png")
-        step("sidebar precursors: tick = show/close the pair, all, click = go to it", toggle)
+        step("sidebar precursors: click switches the one pair, tick adds a second pair, readable menu", toggle)
         def steps_():
             pg.evaluate("setActive(null)")
             res = pg.evaluate("""async ()=>{

@@ -54,6 +54,20 @@ function ensureLayout() {
   defaultLayoutTab(E.tab);
 }
 
+// transitions of the MRM files and which one is the quantifier / qualifier (by the name in the method: Quant, Qual; otherwise the first and the second).
+// The calibration line itself is NOT made by the program: the students do it in Excel from the integration table.
+const CAL = { quant: null, qual: null, trs: [] };
+function calPick() {
+  const t = CAL.trs;
+  if (!t.some(x => x.key === CAL.quant)) CAL.quant = (t.find(x => /quant/i.test(x.name)) || t[0] || {}).key || null;
+  if (!t.some(x => x.key === CAL.qual) || CAL.qual === CAL.quant) CAL.qual = (t.find(x => /qual/i.test(x.name) && x.key !== CAL.quant) || t.find(x => x.key !== CAL.quant) || {}).key || null;
+}
+async function calLoad() {
+  const mf = E.files.filter(f => f.kind === "mrm"), seen = new Map();
+  (await Promise.all(mf.map(f => getMrm(f.k)))).forEach(tr => tr.forEach(t => { const key = `${t.q1}>${t.q3}`; if (!seen.has(key)) seen.set(key, { key, name: t.name || "" }); }));
+  CAL.trs = [...seen.values()]; calPick();
+}
+
 // MS2 experiments = one per precursor, over all the MS2 files: [{prec, ce: [..], n scans, files: n}]
 function ms2Exps() {
   const m = new Map();
@@ -86,7 +100,7 @@ function defaultLayoutTab(t) {
     requestAnimationFrame(fix);
   } else if (t === "ms2") {
     const exps = ms2Exps(), f0 = tabFiles("ms2")[0]; let y = 0;
-    const list = exps.length ? exps.slice(0, 4) : [{ prec: null, k: f0.k }];
+    const list = exps.length ? exps.slice(0, 1) : [{ prec: null, k: f0.k }];       // ONE pair (chromatogram + spectrum) for the first precursor; the list on the left switches it
     list.forEach(e => { addMs2Pair(e, y); y += 550; });
   } else if (t === "mrm") {
     if (E._mrmLoading) return; E._mrmLoading = true;
@@ -98,7 +112,7 @@ function defaultLayoutTab(t) {
         addPanel("mrm", { tab: "mrm", tr: key, title: key ? `${role} · ${key}${tr && tr.name ? " (" + tr.name + ")" : ""}` : "Transizioni MRM", x: 0, y, w: w2, h: keys.length > 1 ? 300 : 420, full: true, imode: "man", intf: "all" });
         y += 310;
       });
-      relayout(); fitHost(); calbar(); uiSave();
+      relayout(); fitHost(); uiSave();
       const made = tabPanels("mrm"); Promise.all(made.map(q => q.ready).filter(Boolean)).catch(() => {}).then(() => mrmFocus(made));
     });
   }
@@ -134,9 +148,20 @@ function ms2Toggle(prec, on) {
   if (!on && c) { [...E.panels.filter(q => q.link === c.id || q.src === c.id), c].forEach(q => q.el.querySelector(".x").click()); }
   renderFileList(); uiSave();
 }
+// click on a precursor in the list: if it already has its graphs, go there; otherwise the main pair (the top one) switches to it: no new panels
 function ms2Goto(prec) {
-  const c = ms2PairOf(prec); if (!c) return ms2Toggle(prec, true);
+  const c = ms2PairOf(prec); if (!c) return ms2Switch(prec);
   setActive(c); front(c.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + c.y - 70, behavior: "smooth" });
+}
+function ms2Switch(prec) {
+  const c = tabPanels("ms2").filter(q => q.type === "chrom").sort((a, b) => a.y - b.y)[0];
+  if (!c) return ms2Toggle(prec, true);
+  c.prec = prec; c.title = prec != null ? `MS² · precursore ${prec}` : "MS²"; c.sel = null;
+  const live = E.panels.filter(q => q.type === "spec" && q.link === c.id);
+  live.forEach(sp => { sp.prec = prec; sp.zoom = null; sp.zoomY = null; sp.lock = null; sp.title = `Spettro degli ioni prodotto${prec != null ? " · " + prec : ""}`; });
+  ctl(c); live.forEach(ctl);
+  Promise.resolve(draw(c)).then(() => live[0] ? apexSpectrum(c, live[0]) : null);       // the spectrum of the highest scan of the new precursor
+  renderFileList(); uiSave();
 }
 
 // which files exist for each time and each kind of experiment; a click opens the file in its tab

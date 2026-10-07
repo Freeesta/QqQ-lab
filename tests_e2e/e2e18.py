@@ -33,7 +33,7 @@ try:
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom')"); c = pt(pg, ci, 12.0)
             pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
             items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); print([i[0] for i in items])
-            assert ["Ripristina zoom", "dim"] in items and any(i[0] == "Estrai uno ione (XIC)..." for i in items), items          # no zoom yet: disabled
+            assert ["Ripristina zoom", "dim"] in items and any(i[0] == "Estrai uno ione (XIC)…" for i in items), items          # no zoom yet: disabled
             pg.locator("#ctx div", has_text="Estrai uno ione").first.click(); pg.wait_for_timeout(300)
             assert dlg() and not pg.evaluate("document.querySelector('#askdlg').open"); pg.click("#xic-no")      # the same window, not a separate question
             pg.locator("#dpanels .pnl.chrom [data-a=izoom]").click(); box = pg.locator("#dpanels .pnl.chrom canvas").bounding_box()
@@ -59,7 +59,7 @@ try:
             pg.click("#xic-no")
         step("right click on a peak of the spectrum opens the window already filled in", spec_menu)
         def groups():
-            for sel, expect in [(".pnl.chrom", ["izoom", "fit", "yz", "iauto", "iman", "xic", "up", "down", "png", "max"]), (".pnl.xic", ["izoom", "fit", "yz", "iauto", "iman", "up", "down", "png", "xlsx", "max"]), (".pnl.spec", ["fit", "yz", "lock", "up", "down", "png", "xlsx", "max"])]:
+            for sel, expect in [(".pnl.chrom", ["izoom", "fit", "tlink", "iauto", "iman", "xic", "up", "down", "png", "xlsx", "max"]), (".pnl.xic", ["izoom", "fit", "tlink", "iauto", "iman", "up", "down", "png", "xlsx", "max"]), (".pnl.spec", ["fit", "rul", "par", "ptab", "up", "down", "png", "xlsx", "max"])]:
                 got = pg.evaluate(f"[...document.querySelector('{sel}').querySelectorAll('.tbs [data-a]')].filter(b=>b.tagName==='BUTTON'&&!b.hidden).map(b=>b.dataset.a)"); assert got == expect, (sel, got)
             # hidden until needed
             assert pg.evaluate("[...document.querySelectorAll('.pnl.xic [data-a=intf], .pnl.xic [data-a=iclr], .pnl.xic [data-a=itab]')].every(b=>b.hidden)")

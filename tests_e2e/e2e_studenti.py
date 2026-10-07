@@ -21,7 +21,7 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1280, "height": 720}); pg.wait_for_timeout(500)
         pg.set_input_files("#pick", [mz(f) for f in SET]); pg.wait_for_timeout(2500)
         def table():
-            rows = pg.evaluate("[...document.querySelectorAll('#flist tr')].map(tr=>tr.classList.contains('grp')?'GRP '+tr.textContent.trim():tr.children[1].textContent.trim())")
+            rows = pg.evaluate("[...document.querySelectorAll('#flist tr')].map(tr=>tr.classList.contains('grp')?'GRP '+tr.textContent.trim():tr.children[1].textContent.replace(/\s*[+−±?]$/, '').trim())")
             gi = [i for i, t in enumerate(rows) if t.startswith("GRP")]; assert len(gi) == 3 and "Full Scan" in rows[gi[0]] and "MS²" in rows[gi[1]] and "MRM" in rows[gi[2]], rows
             full = rows[gi[0] + 1:gi[1]]; assert [x.replace(".mzML", "").split("-t")[-1] for x in full] == ["0", "5", "10", "15", "30 (2)", "45", "60"], full
             mrm = rows[gi[2] + 1:]; assert mrm == ["B_MRM-STD_0_6ppm.mzML", "B_MRM-STD_7_2ppm.mzML", "B_MRM-STD_18ppm.mzML", "B_MRM-t0.mzML", "B_MRM-t15.mzML", "B_MRM-t60.mzML"], mrm
@@ -53,18 +53,12 @@ try:
         step("B-18 calculator button in the header, one row at 1280", header)
         def yz():
             pg.evaluate("setActive(null)")
+            assert not pg.evaluate("!!document.querySelector('[data-a=yz]')"), "the y x10 button is gone (replaced by the drag on the y axis, see e2e_assi)"
             a0 = pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full')._a.ymax")
-            pg.click("#dpanels .pnl.chrom [data-a=yz]"); pg.wait_for_timeout(500)
-            a1 = pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full')._a.ymax"); assert abs(a0 / a1 - 10) < 0.01, (a0, a1)
-            assert pg.evaluate("!document.querySelector('#dpanels .pnl.chrom [data-a=fit]').disabled"), "the reset is active"
-            pg.click("#dpanels .pnl.chrom [data-a=fit]"); pg.wait_for_timeout(400); assert pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full').yz") == 1
             c = chrom(pg); pg.mouse.move(c["l"] + 30, c["t"] + c["h"] / 2); pg.keyboard.down("Control"); pg.mouse.wheel(0, -200); pg.keyboard.up("Control"); pg.wait_for_timeout(500)
-            y = pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full').yz"); assert y > 1.2, y
+            z = pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full').zoomY"); assert z and z[1] < a0, (z, a0)
             pg.click("#dpanels .pnl.chrom [data-a=fit]"); pg.wait_for_timeout(300)
-            s = pg.evaluate(f"(()=>{{const s={SPEC};return s._a.ymax}})()"); pg.click("#dpanels .pnl.spec [data-a=yz]"); pg.wait_for_timeout(500)
-            assert abs(s / pg.evaluate(f"{SPEC}._a.ymax") - 10) < 0.01
-            pg.screenshot(path=SH + "studenti_yz.png"); pg.click("#dpanels .pnl.spec [data-a=fit]")
-        step("B-7 y x10 button and Ctrl+wheel on the y axis, chromatogram and spectrum", yz)
+        step("B-7 Ctrl+wheel on the y axis zooms only y (the y x10 button is gone)", yz)
         def hover():
             c = chrom(pg); pg.mouse.move(c["l"] + c["w"] / 2, c["t"] + c["h"] / 2); pg.wait_for_timeout(200)
             assert "RT" in pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='full').rd.textContent")
@@ -143,14 +137,6 @@ try:
             assert "grezzo" in pg.evaluate(f"document.querySelector('.pnl.mrm [data-o=smooth]').closest('label').title")
             pg.evaluate(f"(()=>{{{P}.smooth=false;draw({P})}})()")
         step("B-14 areas do not depend on smoothing", smoothing)
-        def calib():
-            pg.evaluate("E.panels.filter(p=>p.tab==='mrm').forEach(p=>{p.ints=[];draw(p)})"); pg.wait_for_timeout(500)
-            pg.evaluate("openCalib()"); pg.wait_for_timeout(1200)
-            assert pg.is_visible("#cal-empty") and not pg.is_visible("#cal-cv"), "three steps instead of an empty frame"
-            pg.screenshot(path=SH + "studenti_calib_empty.png")
-            pg.click("#cal-goto"); pg.wait_for_timeout(800); assert not pg.evaluate("document.querySelector('#bigdlg').open")
-            assert pg.evaluate("E.active&&E.active.type")=="mrm" and pg.evaluate("E.active.imode") == "man"
-        step("B-17 empty calibration window: the 3 steps and a way to the MRM graph", calib)
 finally:
     r.close(); r.report()
 

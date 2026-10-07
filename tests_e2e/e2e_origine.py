@@ -16,10 +16,10 @@ try:
         pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(600)
         def entry():
             pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:194.3,w:0.5,label:'m/z 194'}]})"); pg.wait_for_timeout(1500)
-            btn = pg.locator("[data-o=orig]").first; assert btn.count() == 1
-            btn.click(); pg.wait_for_timeout(500)
+            assert pg.locator("[data-o=orig]").count() == 0, "the button is hidden (decision of 7/10: the window stays in the code, no entry point)"
+            pg.evaluate("openOrigin({mz:194.3,k:E.files.find(f=>f.kind==='full').k,rt:14.3})"); pg.wait_for_timeout(500)
             assert pg.evaluate("document.getElementById('ogdlg').open") and pg.input_value("#og-mz") == "194.3"
-        step("button in the XIC panel opens the window with the ion filled", entry)
+        step("no entry point in the interface; the window still opens from code with the ion filled", entry)
         def run():
             pg.fill("#og-par", "364.4"); pg.click("#og-go"); pg.wait_for_selector("#og-tb", timeout=60000); pg.wait_for_timeout(1500)
             assert pg.locator("#og-out section").count() == 5
@@ -49,9 +49,9 @@ try:
             pg.evaluate("addPanel('map',{k:E.files.find(f=>f.kind==='full').k})"); pg.wait_for_timeout(2500)
             pos = pg.evaluate("(()=>{const q=E.panels.find(x=>x.type==='map');q.el.scrollIntoView({block:'center'});const c=q.cv.getBoundingClientRect();return [c.left+c.width*0.4,c.top+c.height*0.5]})()")
             pg.mouse.click(pos[0], pos[1], button="right"); pg.wait_for_timeout(400)
-            it = pg.locator("#ctx div", has_text="Da dove viene"); assert it.count() == 1
-            it.click(); pg.wait_for_timeout(500); assert pg.evaluate("document.getElementById('ogdlg').open")
-        step("right click on the map offers the window", menus)
+            assert pg.locator("#ctx div", has_text="Da dove viene").count() == 0
+            pg.keyboard.press("Escape")
+        step("no «Da dove viene» in the right-click menu of the map", menus)
         def teoria():
             pg.evaluate("document.getElementById('ogdlg').close()")
             pg.evaluate("setView('teoria')") if False else None

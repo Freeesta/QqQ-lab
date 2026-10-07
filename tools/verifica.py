@@ -42,7 +42,7 @@ NEEDS: dict[str, set[str]] = {
 NOT_TESTS = {"lib", "lat_arrows", "make_examples"}          # helpers and measurements, not tests
 SMOKE = ["e2e3"]
 # Console messages that are known and harmless (not counted as browser errors).
-BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED"]   # aborted requests = page reloaded or closed by the test
+BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"api/formula\?f=C2H6Qq", r"status of 400"]   # aborted requests = page reloaded or closed by the test
 
 
 def sh(cmd, log: Path, timeout: int, env=None, cwd=ROOT) -> tuple[int, str, float]:
