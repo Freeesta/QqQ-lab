@@ -78,6 +78,8 @@ e2e: clic destro sull'etichetta di un picco con un isotopo vicino (364.4 con 365
 - Il margine inferiore (`M.b`) si adatta: niente spazio riservato a ciò che non c'è. Lo spazio guadagnato va al grafico (stessa altezza del pannello, area del grafico più alta).
 - Controlla con 1 file e con 7 file sovrapposti (cromatogramma, XIC, spettro) che niente si sovrapponga; vale anche nel PNG esportato (lì la riga della scansione può restare sotto, se serve per leggibilità).
 
+**2.5 Via le icone dei tre esperimenti dalle schede e dalla lista dei file (deciso da Federico).** Le piccole icone accanto a «Full Scan», «MS² (Product Ion)», «MRM» (`QICON`/`TABICON` in `tabs.js`, `icons-modi.js`; anche nelle intestazioni dei gruppi della lista file) restano incomprensibili anche dopo l'ingrandimento. **Toglile** da schede e lista: resta il testo con il numero di file. Al loro posto, **nell'etichetta che compare restando sulla scheda** (tooltip del programma, 2.3), mostra lo schema **in grande e con le parole**: tre riquadri «Q1 → q2 → Q3» con sotto cosa fa ciascuno (es. Full Scan: «Q1 scansiona tutti gli m/z · q2 lascia passare · Q3 lascia passare»; MS²: «Q1 fisso sul precursore · q2 frammenta · Q3 scansiona i frammenti»; MRM: «Q1 fisso · q2 frammenta · Q3 fisso su un frammento»), presi dai testi già in `modi.js` (`QMODI`). Le icone restano solo dove sono abbastanza grandi da leggersi (Teoria cap. 9). e2e: nessuna icona nelle schede; il tooltip della scheda contiene «Q1».
+
 ---
 
 ## BLOCCO 3: finestra «Estrai uno ione (XIC)» (`openXic`, `#xicdlg`)
