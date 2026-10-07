@@ -34,7 +34,7 @@ try:
             print("spec top m/z", top)
             c = pt(pg, 1, top["mz"])
             pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
-            click_menu(pg, "Estrai l'XIC"); pg.wait_for_timeout(300); pg.click("#xic-go"); pg.wait_for_timeout(2500)      # the window opens, already filled in
+            click_menu(pg, "Estrai l'XIC"); pg.wait_for_timeout(2500)      # the XIC appears at once, no window
             assert pg.evaluate("E.panels.some(p=>p.type==='xic')")
         step("spectrum right-click -> XIC panel", xic_from_spec)
         pg.screenshot(path=SH + "12_xic.png")

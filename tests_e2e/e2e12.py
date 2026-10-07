@@ -69,7 +69,7 @@ with sync_playwright() as p:
         pg.locator("#fpop input").first.uncheck(); pg.wait_for_timeout(1200); assert pg.evaluate("tabFiles().filter(f=>f.vis).length") == nv - 1
         pg.locator("#fpop .fn").nth(2).click(); pg.wait_for_timeout(1200); assert pg.evaluate("tabFiles().filter(f=>f.vis).length") == 1
         pg.locator("#fpop [data-all='1']").click(); pg.wait_for_timeout(800); pg.mouse.click(5, 5)
-        rb, pb = xp.locator(".rd").bounding_box(), xp.bounding_box(); assert rb["x"] > pb["x"] + pb["width"] / 2 and rb["y"] > pb["y"] + pb["height"] - 40, (rb, pb)
+        assert not xp.locator(".rd").is_visible(), "the line under the graph is gone (the info is in the mouse box)"
         assert xp.locator('[data-a=iclr]').is_visible(); xp.locator('[data-a=iclr]').click(); pg.wait_for_timeout(400)
         assert pg.evaluate(f"E.panels[{xi}].ints.length") == 0 and not xp.locator('[data-a=iclr]').is_visible()
     step("zoom tool, TIC refuses, XIC window da-a, integration of a chosen file", integ)
@@ -79,6 +79,7 @@ with sync_playwright() as p:
         ch = pg.evaluate("tabPanels().filter(p=>p.type==='chrom').map(p=>[p.prec,p._a.sr[0].x.length])")
         assert len(ch) == 1 and ch[0][1] > 0, ch      # one pair of graphs (since 7/10); the precursor is chosen in the list
         assert flst_own(pg).upper().count("MS\u00b2") == 1 and "MRM" not in flst_own(pg)
+        pg.evaluate("(()=>{const p=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom');p._parOpen=true;ctl(p)})()")      # the precursor lives in the Parametri popover
         sel = pg.locator('.pnl.chrom [data-o=prec]:visible').first; assert sel.count() == 1
         pg.screenshot(path=SH + "123_ms2.png")
     step("MS2 chromatogram: choose the precursor", ms2)

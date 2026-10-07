@@ -15,7 +15,7 @@ self.addEventListener("fetch", e => {
     const cache = await caches.open(big ? BIG : APP);
     if (big) { const hit = await cache.match(req); if (hit) return hit; }
     try {
-      const res = await fetch(req);
+      const res = await fetch(req, big ? undefined : { cache: "no-cache" }); // revalidate: GitHub Pages sends max-age=600
       if (res.status === 200) { try { await cache.put(req, res.clone()); } catch (_) { /* storage full: serve anyway */ } }
       return res;
     } catch (err) {

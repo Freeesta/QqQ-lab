@@ -64,7 +64,7 @@ try:
         step("G1: ruler button: first click = reference, second = measure", ruler_btn)
         def params():
             assert pg.evaluate(f"{SPEC}.level") == 1 and pg.evaluate(f"specRel({SPEC})") is False, "Full Scan: absolute"
-            pg.click(".pnl.spec [data-a=par]"); pg.wait_for_timeout(300); assert pg.locator(".sp-pop").count() == 1
+            pg.click(".pnl.spec [data-a=par]"); pg.wait_for_timeout(300); assert pg.locator(".pnl.spec .sp-pop").count() == 1
             n0 = pg.evaluate(f"{SPEC}._a.lbls.filter(l=>!l.ann).length")
             pg.fill(".sp-pop [data-s=thr]", "60"); pg.press(".sp-pop [data-s=thr]", "Tab"); pg.wait_for_timeout(500)
             n1 = pg.evaluate(f"{SPEC}._a.lbls.filter(l=>!l.ann).length"); assert n1 < n0 or n0 <= 1, (n0, n1)
@@ -76,7 +76,7 @@ try:
             pg.keyboard.press("Escape"); pg.mouse.click(5, 300) if False else None
         step("G2: parameters: Full Scan absolute, threshold changes the labels, % axis, reset", params)
         def table():
-            pg.evaluate("document.querySelectorAll('.sp-pop').forEach(x=>x.remove())")
+            pg.evaluate("document.querySelectorAll('.pnl.spec .sp-pop').forEach(x=>x.remove())")
             pg.click(".pnl.spec [data-a=ptab]"); pg.wait_for_timeout(500)
             assert pg.evaluate("document.querySelector('#bigdlg').open") and "Picchi dello spettro" in pg.inner_text("#bigtt")
             rows = pg.locator("#pk-tb tr").count(); assert rows >= 2, rows
@@ -118,7 +118,7 @@ try:
             pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(600)
             t = pg.inner_text(".pnl.spec .leg"); print(t)
             for w in ["scansione", "RT", "TIC", "picco base"]: assert w in t, (w, t)
-            import re; assert re.search(r"scansione \d+/\d+ · RT \d+\.\d{3} min", t), t
+            import re; assert re.search(r"scansione \d+/\d+ · RT \d+\.\d{2} min", t), t
         step("G6: one line: scansione i/N · RT · TIC · picco base", caption)
         def ms2():
             pg.evaluate("setTab('ms2',true)"); pg.wait_for_timeout(2500)

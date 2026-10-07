@@ -10,11 +10,18 @@ const TABICON = { full: "full", ms2: "prod", mrm: "mrm" }, TABHELP = { full: "mo
 function modeTip(t) {
   try { const m = QMODI.M[QMODI.tab2key[t]]; return [m.what, m.use].filter(Boolean).join(". ").replace(/<[^>]+>/g, "").replace(/&gt;/g, ">").replace(/&amp;/g, "&"); } catch (e) { return ""; }
 }
+// the label of a tab: the scheme Q1 -> q2 -> Q3 in big, with the words (texts from modi.js)
+function modeSchema(t) {
+  try {
+    const m = QMODI.M[QMODI.tab2key[t]], st = ["Q1", "q2", "Q3"].map((n, i) => `<div class="qb"><b>${n}</b><span>${m.q[i].replace(/^Q[123] /, "")}</span></div>`);
+    return `<div class="qs"><b>${m.name}</b><div class="qr">${st.join('<span class="qa">&rarr;</span>')}</div><div class="qw"><b>${m.what}.</b> ${m.use}</div></div>`;
+  } catch (e) { return ""; }
+}
 function renderTabs() {
   const el = Q("#dtabs"); if (!el) return;
   el.innerHTML = TABS.map(([t, n]) => {
-    const c = tabFiles(t).length, ic = typeof QICON !== "undefined" ? QICON.get(TABICON[t], 24) : "";
-    return `<span class="tw"><button data-t="${t}" title="${EH(modeTip(t))}" class="${t === E.tab ? "on" : ""}${c ? "" : " off"}">${ic ? `<span class="qi">${ic}</span>` : ""}${EH(n)}<i>${c}</i></button></span>`;
+    const c = tabFiles(t).length;
+    return `<span class="tw"><button data-t="${t}" data-tiph="${EH(modeSchema(t))}" class="${t === E.tab ? "on" : ""}${c ? "" : " off"}">${EH(n)}<i>${c}</i></button></span>`;
   }).join("") + `<span class="sp"></span><button id="ovbtn" title="Quali file ci sono per ogni tempo e per ogni tipo di esperimento">Tempi ed esperimenti</button>`;
   el.querySelectorAll("[data-t]").forEach(b => b.onclick = () => setTab(b.dataset.t));
   Q("#ovbtn").onclick = openOverview;
@@ -98,7 +105,7 @@ function defaultLayoutTab(t) {
     const f0 = tabFiles("full")[0];
     // chromatogram + linked spectrum must both fit in the window (a laptop at 1280x720 would push the spectrum below the fold and the arrows need both in view):
     // the usual 330 + 310 px when there is room, otherwise the height left in the window shared 50/50 (never below 190 px each)
-    const dp = Q("#dpanels"), top = dp.offsetParent ? dp.getBoundingClientRect().top + scrollY : Q("header").getBoundingClientRect().height + 98, avail = innerHeight - top - 14;   // (not laid out yet while the loading screen is up: header + tabs + toolbar)
+    const dp = Q("#dpanels"), top = dp.offsetParent ? dp.getBoundingClientRect().top + scrollY : Q("header").getBoundingClientRect().height + 126, avail = innerHeight - top - 42;   // (not laid out yet while the loading screen is up: header + tabs + toolbar)
     let hc = 330, hs = 310; if (avail < hc + hs + 10) { hc = Math.max(190, Math.round((avail - 10) * 0.5)); hs = Math.max(190, Math.round(avail - 10 - hc)); }
     const c = addPanel("chrom", { tab: "full", x: 0, y: 0, w, h: hc, full: true });
     const sp = addPanel("spec", { tab: "full", link: c.id, k: f0.k, level: 1, x: 0, y: hc + 10, w, h: hs, full: true });

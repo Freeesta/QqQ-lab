@@ -73,7 +73,7 @@ try:
             t = pg.inner_text("#ad-tbl"); assert "364.0737" in t and "386.0557" in t, t[:400]   # flufenacet [M+H]+ and [M+Na]+
             pg.fill("#ad-in", "100"); pg.wait_for_timeout(300); assert "101.0073" in pg.inner_text("#ad-tbl")
             pg.screenshot(path=SH + "66_adducts.png")
-            pg.click('#reftabs button[data-t="ls"]'); pg.wait_for_timeout(200); t = pg.inner_text("#refbody"); assert "H2O\t18" in t and "C2H2O\t42" in t, t[:300]
+            pg.click('#reftabs button[data-t="ls"]'); pg.wait_for_timeout(200); m = pg.evaluate("Object.fromEntries([...document.querySelectorAll('#nl-list .nlr')].map(r=>[r.dataset.f,r.querySelector('.nlm').textContent]))"); assert m.get("H2O") == "18" and m.get("C2H2O") == "42", m
             pg.click("#refx")
         step("adducts and neutral losses tables", adducts); print(steps[-2:])
         if pg.evaluate("Q(\"#refdlg\").open"): pg.evaluate("Q(\"#refdlg\").close()")
@@ -94,7 +94,7 @@ try:
         def overlay():
             sp = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')")
             pg.evaluate(f"(()=>{{const p=E.panels[{sp}];p.iso={{formula:'C14H13F4N3O2S',ad:'[M+H]+'}};p.zoom=[360,372];draw(p)}})()"); pg.wait_for_timeout(1500)
-            leg = pg.inner_text(".pnl.spec .leg"); print("ISO LEG:", leg.replace("\n", " | "))
+            leg = pg.evaluate("[...document.querySelectorAll('.pnl.spec .leg2')].map(e=>e.textContent).join(' ')"); print("ISO LEG:", leg.replace("\n", " | "))
             assert "profilo teorico" in leg and "allineato al picco" in leg, leg
             pg.screenshot(path=SH + "70_iso_overlay.png")
             pg.evaluate(f"(()=>{{const p=E.panels[{sp}];p.iso=null;draw(p)}})()")
@@ -154,8 +154,13 @@ try:
         def props_ion():
             pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1.Oc1ccc([NH3+])cc1')"); pg.wait_for_timeout(1500)
             rows = pg.evaluate("[...document.querySelectorAll('#prop-body tr')].slice(1).map(r=>[...r.cells].map(c=>c.textContent))"); print("PROPS:", rows)
-            assert len(rows) == 2 and rows[1][1] == "\u2013" and rows[0][1] != "\u2013", rows     # the ion has no logP
-        step("properties: ions are excluded (no logP for a charged species)", props_ion)
+            # default: charge excluded -> the ion is computed on its neutral form (4-aminophenol, C6H7NO)
+            assert len(rows) == 2 and rows[1][0] == "C6H7NO" and rows[1][1] != "\u2013" and rows[0][1] != "\u2013", rows
+            # untick "Escludi la carica": the charged species has no logP
+            pg.evaluate("(()=>{const c=document.querySelector('#prop-neut');c.checked=false;c.dispatchEvent(new Event('change',{bubbles:true}))})()"); pg.wait_for_timeout(1500)
+            rows = pg.evaluate("[...document.querySelectorAll('#prop-body tr')].slice(1).map(r=>[...r.cells].map(c=>c.textContent))"); print("PROPS (charge kept):", rows)
+            assert len(rows) == 2 and rows[1][1] == "\u2013" and rows[0][1] != "\u2013", rows
+        step("properties: ions on the neutral form by default, no logP with the charge kept", props_ion)
         def hires():
             w = pg.evaluate("""async()=>{const b=await TPDraw.image('png');const i=await createImageBitmap(b);return [i.width,i.height]}"""); print("PNG px:", w)
             assert w[0] >= 3000, w

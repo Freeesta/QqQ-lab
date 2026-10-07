@@ -1,0 +1,73 @@
+"""Prompt 2, block 4: the «Perdite neutre» tab: simple view, Dettagli, isobaric groups, Cerca Δm (62, 72), polarity filter, entry from the ruler."""
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib import *
+steps = []
+def step(name, fn):
+    try: fn(); steps.append((name, "ok"))
+    except Exception as e:
+        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_perdite.py")][-1]
+        steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
+SPEC = "E.panels.find(p=>p.type==='spec'&&p.tab==='full')"
+r = Run(port=8880, wd="/tmp/wd80")
+try:
+    with sync_playwright() as p:
+        pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
+        pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
+        def simple():
+            pg.click("#np-nl"); pg.wait_for_timeout(300)
+            n = pg.locator("#nl-list .nlr").count(); assert 18 <= n <= 24, n
+            ms = [int(x) for x in pg.locator("#nl-list .nlm").all_inner_texts()]; print(ms); assert ms == sorted(ms) and ms[0] == 15, ms
+            assert pg.locator("#nl-list .nldet:visible").count() == 0, "details closed by default"
+            assert pg.evaluate("document.querySelector('#nl-pol .on').dataset.p") == "+", "positive files -> the filter starts on +"
+            t = pg.inner_text("#nl-list"); assert "acqua" in t and "solfuro di idrogeno" in t and "idrossido" not in t and "%" not in t, t
+        step("4.1/4.6: simple view, sorted by Δm, polarity of the files", simple)
+        def details():
+            pg.locator('#nl-list [data-d="H2O"]').click(); pg.wait_for_timeout(200)
+            t = pg.inner_text('#nl-list [data-f="H2O"] .nldet'); print(t[:120]); assert "18.0106" in t and "meccanismo" in t and "Levsen" in t, t
+            pg.locator('#nl-list [data-d="H2O"]').click(); assert pg.locator('#nl-list [data-f="H2O"] .nldet:visible').count() == 0
+        step("4.2: Dettagli: exact mass (4 decimals), mechanism, source", details)
+        def groups():
+            g = pg.locator("#nl-list .nlg"); assert g.count() == 2, g.count()      # with + : 28 and 42 (46 and 80 need a negative-only loss)
+            t = pg.inner_text("#nl-list .nlg"); assert "risoluzione unitaria" in t
+            pg.locator("#nl-pol [data-p='']").click(); pg.wait_for_timeout(200)
+            g80 = pg.locator("#nl-list .nlg", has_text="(80)"); assert g80.count() == 1 and "M+2" in g80.inner_text()
+            assert pg.locator("#nl-list .nlg").count() == 4
+            g80.locator("[data-go=is]").click(); pg.wait_for_timeout(300)
+            assert pg.evaluate("document.querySelector('#reftabs .on').dataset.t") == "is"
+            pg.click("#reftabs [data-t=ls]"); pg.wait_for_timeout(200)
+        step("4.3: same nominal mass in a box; 80 links to Isotopi", groups)
+        def radicals():
+            t = pg.inner_text('#nl-list [data-f="CH3"]'); assert "•" in t and "radicale" in t and "elettroni pari" in t, t
+            assert "•" in pg.inner_text('#nl-list [data-f="NO2"]')
+        step("4.4: radical losses with the dot and the short label", radicals)
+        def search():
+            pg.fill("#nl-q", "62"); pg.wait_for_timeout(300)
+            t = pg.inner_text("#nl-res"); print(t.replace("\n", " | ")); assert "Possibili perdite (da verificare sullo spettro)" in t and "H2O + CO2" in t.replace("H₂O", "H2O").replace("CO₂", "CO2") or ("H" in t and "CO" in t and "+" in t), t
+            pg.fill("#nl-q", "72"); pg.wait_for_timeout(300); t = pg.inner_text("#nl-res"); assert "2 ×" in t and "HCl" in t, t
+            pg.fill("#nl-q", "28"); pg.wait_for_timeout(300); assert pg.locator("#nl-list .nlr.hit").count() == 2, pg.locator("#nl-list .nlr.hit").count()
+            pg.fill("#nl-q", "")
+        step("4.5: Cerca Δm: 62 = H2O + CO2, 72 = 2 x HCl, 28 highlights two rows", search)
+        def polarity():
+            pg.click("#nl-pol [data-p='-']"); pg.wait_for_timeout(200)
+            ids = pg.evaluate("[...document.querySelectorAll('#nl-list .nlr')].map(r=>r.dataset.f)"); assert "NO2" in ids and "SO3" in ids and "NH3" not in ids, ids
+            pg.click("#nl-pol [data-p='+']"); pg.wait_for_timeout(200)
+            ids = pg.evaluate("[...document.querySelectorAll('#nl-list .nlr')].map(r=>r.dataset.f)"); assert "NH3" in ids and "SO3" not in ids and "H2O" in ids, ids
+            pg.click("#refx")
+        step("4.6: +/-/tutte filter", polarity)
+        def ruler():
+            pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
+            pg.evaluate(f"(()=>{{const p={SPEC};p.meas={{ref:364.4,list:[{{a:364.4,b:194.2}}]}};draw(p)}})()"); pg.wait_for_timeout(500)
+            a = pg.evaluate(f"(()=>{{const p={SPEC},q=p.cv.getBoundingClientRect(),a=p._a;return [q.left+a.X(194.2),q.top+a.Y(a.ymax*0.1)]}})()")
+            pg.mouse.click(a[0], a[1], button="right"); pg.wait_for_timeout(300)
+            its = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>d.textContent)"); print(its)
+            assert "Cerca 170.2 nelle perdite neutre" in its, its
+            pg.locator("#ctx div", has_text="Cerca 170.2").click(); pg.wait_for_timeout(500)
+            assert pg.evaluate("document.querySelector('#refdlg').open") and pg.input_value("#nl-q") == "170.2"
+            pg.click("#refx")
+        step("4.7: from the ruler: «Cerca 170.2 nelle perdite neutre»", ruler)
+    r.close()
+except Exception as e:
+    steps.append(("run", "FAIL " + str(e)[:300])); r.close()
+for s_ in steps: print(" ", s_)
+r.report()

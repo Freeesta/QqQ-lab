@@ -23,8 +23,8 @@ try:
             pg.fill("#xic-mz", "364.37"); assert "363.8 - 364.8" in sm(), sm()
             pg.fill("#xic-mz", "364,6"); assert "364.8 - 365.8" in sm(), sm()
             pg.fill("#xic-mz", "364.15"); assert "363.8 - 364.8" in sm()
-            pg.fill("#xic-q", "C14H13F4N3O2S"); pg.press("#xic-q", "Enter"); pg.wait_for_timeout(1000)
-            assert pg.input_value("#xic-mz") == "" and "363.8 - 364.8" in sm(), sm()
+            pg.fill("#xic-mz", "C14H13F4N3O2S"); pg.wait_for_timeout(1300)
+            assert "363.8 - 364.8" in sm(), sm()
             pg.click("#xic-go"); pg.wait_for_timeout(2500)
             tr = pg.evaluate("E.panels.find(p=>p.type==='xic').traces[0]"); assert tr["mz"] == 364.3 and tr["w"] == 0.5 and "363.8-364.8" in tr["label"], tr
         step("dialog: text, one value or formula, unit window, one decimal", dialog)
