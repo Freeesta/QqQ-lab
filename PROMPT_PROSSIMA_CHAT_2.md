@@ -58,6 +58,16 @@ La linea che compare trascinando a sinistra dell'asse y o sotto l'asse x è trop
 - passando con il mouse sulla zona dei numeri, una **leggera evidenziazione** della striscia dell'asse e il cursore `ew-resize`/`ns-resize`, così si capisce che lì si può trascinare (etichetta: «Trascina qui per ingrandire solo quest'asse»).
 - Screenshot prima/dopo nel messaggio.
 
+### R8. Finestra XIC: più ioni in una volta
+La finestra «Estrai uno ione (XIC)» (`openXic`, `#xicdlg` in `explore.js`/`index.html`, già rifatta dalla chat del 6/10: un valore oppure formula + addotto) diventa una **lista di righe**:
+- **2 righe di default** («Ione 1», «Ione 2 (facoltativo)»); un pulsante **«+»** aggiunge righe fino a **10**; ogni riga ha una × per toglierla. Se la riga 2 resta vuota si estrae solo lo ione 1.
+- Ogni riga accetta **o un m/z o una formula neutra**: se il testo è un numero è un m/z, altrimenti è una formula e accanto compare il menu dell'addotto (stessa lettura in minuscolo del Blocco C). Sotto ogni riga, piccola, la finestra che verrà estratta («m/z 363.8–364.8»), con la regola unitaria in uso.
+- Tutti gli ioni finiscono **nello stesso pannello XIC** (una traccia per ione, come oggi «Aggiungi un altro ione»), con legenda per ione. Con più ioni **e** più file la legenda resta leggibile: colore per ione, tratteggio per file (o viceversa: scegli e motiva); con più di 3 ioni il pannello parte in «Solo il selezionato» per non avere decine di linee.
+- Invio nell'ultima riga = «Estrai». e2e: due ioni → un pannello con due tracce; riga 2 vuota → una traccia; limite 10; formula in una riga e m/z nell'altra.
+
+### R9. Finestra XIC: scegliere da quale file
+Nella stessa finestra un menu **«File»**: «i file mostrati» (predefinito: segue la modalità della barra, «Solo il selezionato» / «Tutti sovrapposti») oppure un file preciso della scheda. È solo il valore iniziale del pannello: dopo si cambia dal selettore «File n/N» dell'intestazione del pannello XIC, come oggi. Il clic destro sullo spettro (R2, XIC diretto senza finestra) usa il file dello spettro da cui parte. e2e: scelta di un file → il pannello mostra solo quello.
+
 ---
 
 ## BLOCCO N: perdite neutre (scheda «Perdite neutre» della finestra Tavola/Addotti/Isotopi, `web/tables.js`)
