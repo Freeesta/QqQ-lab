@@ -25,6 +25,8 @@ tests_e2e/shots/
 *.wiff.scan
 *.dam
 taccuino.json
+# ...except the four example files published with the site (decision of Federico, 7 Oct 2026)
+!qqq_lab/web/esempi/*.mzML
 
 # OS and editors
 .DS_Store

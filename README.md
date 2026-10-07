@@ -21,6 +21,8 @@ Come si pubblica: vedi `AGENTS.md`, sezione "Versione nel browser".
 
 ## Uso
 
+Non hai file? Nella pagina iniziale il pulsante **«Prova con i file di esempio»** apre quattro file Full Scan reali (flufenacet degradato per fotocatalisi, 0, 15, 30 e 60 min); si possono anche scaricare da `qqq_lab/web/esempi/` (con `LEGGIMI.txt`) e usare altrove.
+
 Apri il sito, trascina i file `.mzML` (o "clicca per sceglierli"), controlla tempi e tipi, premi **Carica dati**.
 Il taccuino (pannelli, XIC, integrazioni, annotazioni, disegni) si salva da solo nel browser e si ripristina alla riapertura.
 
