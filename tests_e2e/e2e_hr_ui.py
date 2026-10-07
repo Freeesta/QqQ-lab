@@ -53,6 +53,19 @@ try:
             pg.evaluate("(()=>{const f=E.files.find(f=>f.file.startsWith('B_Full'));E.cur=f.k;showMethod()})()"); pg.wait_for_timeout(1500)
             t = pg.inner_text("#bigdlg"); assert "Manca il metodo di acquisizione" in t and "Parametri delle scansioni" not in t, t       # the QqQ file: as before
         step("window «Metodo» of an Orbitrap file without .dam: the parameters of the scans; QqQ as before", method)
+        def losses():
+            pg.evaluate("QQQRef.open('ls',{q:'27.995'})"); pg.wait_for_timeout(800)
+            hit = pg.evaluate("[...document.querySelectorAll('#refdlg .nlr.hit')].map(r=>r.dataset.f)"); ex = pg.evaluate("document.querySelector('#refdlg .nlr[data-f=CO] .nlm small')?.textContent")
+            print(hit, ex)
+            assert hit == ["CO"] and ex == "27.9949", (hit, ex)                                  # 3 mDa: CO yes, C2H4 (28.0313) no
+            assert "Stessa massa nominale (28)" in pg.inner_text("#refdlg")      # the sentence about equal nominal masses stays
+            pg.evaluate("document.querySelector('#refdlg').close()")
+            pg.evaluate("UIP.hr=false"); pg.evaluate("QQQRef.open('ls',{q:'27.995'})"); pg.wait_for_timeout(800)
+            hit = pg.evaluate("[...document.querySelectorAll('#refdlg .nlr.hit')].map(r=>r.dataset.f)"); ex = pg.evaluate("document.querySelector('#refdlg .nlr[data-f=CO] .nlm small')")
+            print(hit, ex)
+            assert "CO" in hit and "C2H4" in hit and ex is None, (hit, ex)                       # off: ±0.5 Da and no exact masses
+            pg.evaluate("document.querySelector('#refdlg').close(); UIP.hr=true")
+        step("neutral losses with an Orbitrap file: exact masses and «Cerca Δm» within 3 mDa (±0.5 Da when off)", losses)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
