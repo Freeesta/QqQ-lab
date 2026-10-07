@@ -41,3 +41,6 @@ desktop.ini
 site/
 
 # TP Mine sources (TP_Mine/) are in the repo on purpose; they are only kept out of the built site (tools/build_site.py)
+
+# The bin is local: it never goes to GitHub
+_cestino/

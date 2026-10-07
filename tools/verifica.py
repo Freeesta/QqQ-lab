@@ -39,7 +39,7 @@ NEEDS: dict[str, set[str]] = {
     "e2e_studenti": {"veri"},          # needs the whole series B (7 times, 6 standards): the synthetic files are only a few
     "e2e13": {"sito"}, "e2e_tpmine1": {"sito", "crypto"}, "e2e_tpmine2": {"sito", "crypto"},
 }
-NOT_TESTS = {"lib", "lat_arrows", "make_examples"}          # helpers and measurements, not tests
+NOT_TESTS = {"lib", "synth", "lat_arrows", "make_examples"}          # helpers and measurements, not tests
 SMOKE = ["e2e3"]
 # Console messages that are known and harmless (not counted as browser errors).
 BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"api/formula\?f=C2H6Qq", r"status of 400"]   # aborted requests = page reloaded or closed by the test
