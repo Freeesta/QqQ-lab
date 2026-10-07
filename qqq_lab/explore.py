@@ -171,10 +171,14 @@ class Item:
         page switched high resolution off (hr=False)."""
         if not hr:
             return dict(LOW)
-        try:
-            return mass_profile([s for s in self.run.scans if (s.level == 1) == (level == 1)])
-        except Exception:  # noqa: BLE001
-            return dict(LOW)
+        cache = self.__dict__.setdefault("_profs", {})            # the scans never change: the profile of a level is worked out once (a block of 60 spectra asks for it 120 times)
+        key = level == 1
+        if key not in cache:
+            try:
+                cache[key] = mass_profile([s for s in self.run.scans if (s.level == 1) == key])
+            except Exception:  # noqa: BLE001
+                return dict(LOW)
+        return dict(cache[key])
 
     def hr_on(self, level: int, hr: bool = True) -> bool:
         """True when the centroids of this level are read as high resolution: nothing is merged into bins of 0.1 Da (profile-mode spectra keep their own grid)."""
