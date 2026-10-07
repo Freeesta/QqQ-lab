@@ -84,6 +84,7 @@ try:
             pg.evaluate("document.querySelectorAll('dialog[open]').forEach(d=>d.close())")
         step("BioTransformer popup", bt)
         def nav():
+            pg.evaluate("E.browse=true;renderNav();redrawAll()"); pg.wait_for_timeout(800)      # the file arrows work with "Solo il file selezionato" (with "Tutti sovrapposti" they are disabled)
             pg.click("#fnext"); pg.wait_for_timeout(1500); c1 = pg.evaluate("E.cur"); pg.click("#fnext"); pg.wait_for_timeout(1500)
             pg.keyboard.press("ArrowLeft"); pg.wait_for_timeout(1000)
             assert pg.evaluate("E.panels.some(p=>p.type==='xic'&&p.traces.length==2)")

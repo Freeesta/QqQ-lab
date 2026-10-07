@@ -13,6 +13,21 @@ def test_formula_and_mass():
     assert E.fmt({"C": 15, "H": 12, "N": 2, "O": 2}) == "C15H12N2O2"
 
 
+def test_guess_conc_underscore_decimals():
+    """The laboratory writes the decimal point as an underscore before the unit: STD_7_2ppm is 7.2 ppm, not 2 (B-1)."""
+    for name, want in [("B_MRM-STD_7_2ppm", (7.2, "ppm")), ("STD_0_6ppm", (0.6, "ppm")), ("STD_0_06ppm", (0.06, "ppm")),
+                       ("STD_2_4ppm", (2.4, "ppm")), ("STD_18ppm", (18.0, "ppm")), ("std_0.5ppm", (0.5, "ppm")),
+                       ("STD10mgL", (10.0, "mgl")), ("std_5", (5.0, None)), ("STD_2_4mgL.mzML", (2.4, "mgl"))]:
+        assert guess_conc(name) == want, name
+    assert guess_conc("B_FullMass-t30 (2)") is None
+
+
+def test_guess_sample_decimal_time():
+    """A decimal point in the time is not an extension: mrm-t7.5 is 7.5 min (B-2); '(2)' is not a time."""
+    for name, want in [("mrm-t7.5", 7.5), ("mrm-t7.5.mzML", 7.5), ("t7,5", 7.5), ("t30", 30), ("B_FullMass-t30 (2)", 30), ("2h", 120)]:
+        assert guess_sample(name)[1] == want, name
+
+
 def test_guess_sample():
     assert guess_sample("run_blank_01.mzML")[2] == "blank"
     assert guess_sample("CBZ_t30.mzML")[1] == 30

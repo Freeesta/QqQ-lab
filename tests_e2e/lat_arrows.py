@@ -1,7 +1,7 @@
 """Measurement (not a test): latency of scan-by-scan navigation with the arrow keys (local server)."""
 import sys, os, json; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
-r = Run(port=8821, wd="/tmp/wd21")
+r = Run(port=int(os.environ.get("LAT_PORT", 8821)), wd=os.environ.get("LAT_WD", "/tmp/wd21"))
 try:
     with sync_playwright() as p:
         pg = r.page(p)

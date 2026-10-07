@@ -29,18 +29,22 @@ function emptyTab() {
 }
 window.emptyTab = emptyTab;
 
+addEventListener("scroll", () => { if (S.view === "data" && scrollY > 100 && E.tab) (E.workY = E.workY || {})[E.tab] = scrollY; }, { passive: true });
 function setTab(t, quiet) {
   if (t === E.tab && !quiet) return;
-  E.curBy[E.tab] = E.cur; E.tab = t;
+  E.curBy[E.tab] = E.cur;
+  E.scrollBy = E.scrollBy || {}; E.activeBy = E.activeBy || {};      // coming back to a tab: same scroll position and same active graph as when the student left it
+  E.scrollBy[E.tab] = scrollY > 100 ? scrollY : (E.workY && E.workY[E.tab]) || 0; E.activeBy[E.tab] = E.active; E.tab = t;   // the tabs are at the top of the page: the student scrolls up to click them, so the last position where they were working is the one remembered
   E.panels.forEach(p => { if (p.el) p.el.style.display = p.tab === t ? "" : "none"; });
   const back = E.curBy[t]; E.cur = E.files[back]?.kind === t ? back : (tabFiles()[0] || { k: E.cur }).k;
-  setActive(null);
+  setActive(E.activeBy[t] && E.panels.includes(E.activeBy[t]) ? E.activeBy[t] : null); playStop();
+  E.panels.forEach(q => { if (q.type === "spec") q.lock = null; });      // changing tab: the axes of the spectra are free again
   const firstLayout = tabFiles().length && !tabPanels().length;
   if (firstLayout) loading(true);                       // same funny loading screen as everywhere else
   ensureLayout();
   if (firstLayout) Promise.all(tabPanels().map(p => p.ready).filter(Boolean)).catch(() => {}).then(() => loading(false));
   renderTabs(); fitWidth(); relayout(); fitHost(); renderFileList(); renderNav(); toolbar();
-  requestAnimationFrame(() => redrawAll());
+  requestAnimationFrame(() => { redrawAll(); requestAnimationFrame(() => scrollTo(0, E.scrollBy[t] || 0)); });
   uiSave();
 }
 
@@ -64,9 +68,22 @@ function defaultLayoutTab(t) {
   const w = hostWidth();
   if (t === "full") {
     const f0 = tabFiles("full")[0];
-    const c = addPanel("chrom", { tab: "full", x: 0, y: 0, w, h: 330, full: true });
-    const sp = addPanel("spec", { tab: "full", link: c.id, k: f0.k, level: 1, x: 0, y: 340, w, h: 310, full: true });
+    // chromatogram + linked spectrum must both fit in the window (a laptop at 1280x720 would push the spectrum below the fold and the arrows need both in view):
+    // the usual 330 + 310 px when there is room, otherwise the height left in the window shared 50/50 (never below 190 px each)
+    const dp = Q("#dpanels"), top = dp.offsetParent ? dp.getBoundingClientRect().top + scrollY : Q("header").getBoundingClientRect().height + 98, avail = innerHeight - top - 14;   // (not laid out yet while the loading screen is up: header + tabs + toolbar)
+    let hc = 330, hs = 310; if (avail < hc + hs + 10) { hc = Math.max(190, Math.round((avail - 10) * 0.5)); hs = Math.max(190, Math.round(avail - 10 - hc)); }
+    const c = addPanel("chrom", { tab: "full", x: 0, y: 0, w, h: hc, full: true });
+    const sp = addPanel("spec", { tab: "full", link: c.id, k: f0.k, level: 1, x: 0, y: hc + 10, w, h: hs, full: true });
     apexSpectrum(c, sp);
+    let tries = 0, h0 = [c.h, sp.h];       // once the graphs are on screen the real top of the page is known (a wrapped toolbar moves it): correct the heights then
+    const fix = () => {
+      if (!E.panels.includes(c) || !E.panels.includes(sp) || c.h !== h0[0] || sp.h !== h0[1]) return;      // the student already resized them
+      if (!dp.offsetParent) { if (++tries < 60) requestAnimationFrame(fix); return; }
+      const av = innerHeight - (dp.getBoundingClientRect().top + scrollY) - 14;
+      if (c.h + sp.h + 10 <= av) return;
+      c.h = Math.max(190, Math.round((av - 10) * 0.5)); sp.h = Math.max(190, Math.round(av - 10 - c.h)); sp.y = c.y + c.h + 10; apply(c); apply(sp); fitHost(); draw(c); draw(sp);
+    };
+    requestAnimationFrame(fix);
   } else if (t === "ms2") {
     const exps = ms2Exps(), f0 = tabFiles("ms2")[0]; let y = 0;
     const list = exps.length ? exps.slice(0, 4) : [{ prec: null, k: f0.k }];
@@ -82,8 +99,24 @@ function defaultLayoutTab(t) {
         y += 310;
       });
       relayout(); fitHost(); calbar(); uiSave();
+      const made = tabPanels("mrm"); Promise.all(made.map(q => q.ready).filter(Boolean)).catch(() => {}).then(() => mrmFocus(made));
     });
   }
+}
+
+// First view of the MRM graphs: the peak is ~0.5 min wide in a 20 min run, so the student would zoom every time. All graphs zoom on +-1.5 min around the
+// highest transition of all the visible files, only if that peak is clear (>= 10x the noise); otherwise the whole run stays. "Vista intera" is one click.
+function mrmFocus(ps) {
+  let best = null;
+  for (const q of ps) for (const s of (q._a && q._a.sr) || []) {
+    if (!s.y.length) continue;
+    let mx = -1, at = 0; s.y.forEach((v, i) => { if (v > mx) { mx = v; at = i; } });
+    const ys = Float64Array.from(s.y).sort(), med = ys[ys.length >> 1], dev = Float64Array.from(ys, v => Math.abs(v - med)).sort(), noise = 1.4826 * dev[dev.length >> 1];
+    if (mx >= 10 * Math.max(med + 3 * noise, 1) && (!best || mx > best.mx)) best = { mx, rt: s.x[at] };
+  }
+  if (!best) return;
+  ps.forEach(q => { const a = q._a; if (a && a.full && !q.zoom) { q.zoom = clampView(best.rt - 1.5, best.rt + 1.5, a.full[0], a.full[1]); draw(q); } });
+  uiSave();
 }
 
 // one MS2 experiment = precursor chromatogram (above) + product-ion spectrum (below, linked)

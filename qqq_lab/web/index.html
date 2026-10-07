@@ -10,13 +10,13 @@ sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline;fo
 sub{bottom:-0.22em}
 sup{top:-0.45em}
 header{display:flex;gap:12px;align-items:center;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
-header b{font-size:15px}header .ib{display:inline-flex;align-items:center;gap:6px}header .ib .ic{display:inline-flex;color:var(--accent)}header .logo{height:26px;width:auto;display:block}.sp{flex:1}
+header b{font-size:15px}header .ib{display:inline-flex;align-items:center;gap:6px}header .ib .ic{display:inline-flex;color:var(--accent)}header .sb{display:none}@media (max-width:1400px){header{gap:6px}header .lb{display:none}header .sb{display:inline}header button{padding-left:7px;padding-right:7px}}header .logo{height:26px;width:auto;display:block}.sp{flex:1}
 button,select,input{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:3px 9px}button{cursor:pointer}#ex-jpg:disabled{opacity:.4;cursor:not-allowed;text-decoration:line-through}button:hover{border-color:var(--accent)}
 main{display:grid;grid-template-columns:minmax(380px,34%) 1fr;gap:10px;padding:10px 14px}
 @media (max-width:900px){main{grid-template-columns:1fr}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-bottom:10px}
 .card h3{margin:0 0 6px;font-size:13px}.muted{color:var(--muted)}
-table{border-collapse:collapse;width:100%}th{position:sticky;top:0;background:var(--panel);text-align:left;font-weight:600;border-bottom:1px solid var(--line);padding:3px 6px}
+input.guess{background:rgba(255,214,0,.30)}.guess{background:rgba(255,214,0,.30)}tr.grp td{background:var(--bg);font-weight:600;border-bottom:1px solid var(--line);padding:6px 6px 3px;font-size:.9em}table{border-collapse:collapse;width:100%}th{position:sticky;top:0;background:var(--panel);text-align:left;font-weight:600;border-bottom:1px solid var(--line);padding:3px 6px}
 td{padding:3px 6px;border-bottom:1px solid var(--line);vertical-align:middle}tr.row{cursor:pointer}tr.row:hover{background:var(--sel)}tr.sel{background:var(--sel)}
 .num{text-align:right;font-variant-numeric:tabular-nums}
 canvas{display:block;width:100%}
@@ -60,12 +60,12 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 #dpanels{position:relative;min-height:520px}.pnl{position:absolute;display:flex;flex-direction:column;resize:both;overflow:hidden;min-width:300px;min-height:190px;margin:0;box-shadow:0 1px 4px rgba(60,50,20,.08)}.pnl .hd{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px;cursor:move;flex:none}.bt{font-size:11px;padding:1px 6px;color:var(--muted)}.xrow{margin:10px 0}.mzf{width:78px;text-align:center}header .hq:last-child{margin-left:auto}input.mzf::-webkit-inner-spin-button{display:none}.bt.on{background:var(--accent);color:#fff;border-color:var(--accent)}.bt svg{vertical-align:-2px}.pnl.max{position:fixed!important;left:12px!important;top:56px!important;right:12px!important;bottom:12px!important;width:auto!important;height:auto!important;z-index:9000!important;resize:none;box-shadow:0 8px 30px rgba(0,0,0,.25);transition:none}.pnl .hd b{cursor:text}.tbs{display:inline-flex;gap:4px;align-items:center;flex:none;margin-left:auto}.pnl.chrom .ctl,.pnl.xic .ctl,.pnl.mrm .ctl,.pnl.map .ctl{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;order:5;flex:1 1 100%;min-width:0}.tbg{display:inline-flex;gap:4px;align-items:center;flex:none}.tbg+.tbg{border-left:1px solid var(--line);padding-left:6px;margin-left:2px}.tbg.mv{border-left:0;padding-left:0}.tbg.mv+.tbg{border-left:1px solid var(--line);padding-left:6px}.xor{text-align:center;color:var(--muted);font-size:12px;margin:-2px 0}.bt:disabled{opacity:.4;cursor:default}
 .pnl .rd{position:absolute;right:12px;bottom:4px;z-index:1;color:var(--muted);font-variant-numeric:tabular-nums;pointer-events:none}.pnl .leg{padding-right:190px}#fpop{position:fixed;z-index:60;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(30,40,60,.22);padding:6px 8px;max-height:60vh;overflow:auto;min-width:210px}#fpop label{display:flex;gap:6px;align-items:center;padding:2px 0;cursor:default}#fpop i:empty{width:10px;height:10px;border-radius:2px;display:inline-block}#fpop .fn{cursor:pointer}#fpop .fn:hover{text-decoration:underline}#fpop .fpb{display:flex;gap:6px;margin-bottom:2px}.x{border:0;background:none;font-size:16px;color:var(--muted);padding:0 4px}.x:hover{color:var(--bad)}
 .pnl .ctl{display:contents}.pnl .ctl label{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}.pnl .ctl input[type=checkbox]{padding:0;margin:0}.pnl .ctl select{max-width:170px}
-.pnl{transition:top .38s cubic-bezier(.4,0,.2,1)}.pnl .bt:disabled{opacity:.3;cursor:default}.pnl .lk{font-size:11px;font-weight:600;color:var(--accent);margin-left:6px;cursor:help;white-space:nowrap}.pnl .rtl{font-weight:700;color:var(--accent);font-size:calc(1em + 1px);white-space:nowrap;margin:0 6px 0 -2px}.pnl.drag{transition:none;opacity:.94;box-shadow:0 6px 18px rgba(30,40,60,.25)}.pnl.act{outline:2px solid var(--accent);outline-offset:-2px}.pnl .zr{position:absolute;background:rgba(43,92,138,.16);border:1px solid #2b5c8a;pointer-events:none;z-index:2}.pnl .vl{position:absolute;width:0;border-left:1px dashed var(--muted);pointer-events:none;z-index:2}
+.pnl{transition:top .38s cubic-bezier(.4,0,.2,1)}.pnl .bt:disabled{opacity:.3;cursor:default}.pnl .lk{font-size:11px;font-weight:600;color:var(--accent);margin-left:6px;cursor:help;white-space:nowrap}.pnl .rtl{font-weight:700;color:var(--accent);font-size:calc(1em + 1px);white-space:nowrap;margin:0 6px 0 -2px}.pnl.drag{transition:none;opacity:.94;box-shadow:0 6px 18px rgba(30,40,60,.25)}.pnl.act{outline:2px solid var(--accent);outline-offset:-2px}.pnl .zr{position:absolute;background:rgba(43,92,138,.16);border:1px solid #2b5c8a;pointer-events:none;z-index:2}.pnl .vl,.pnl .cl{position:absolute;width:0;border-left:1px dashed var(--muted);pointer-events:none;z-index:2}#cal-empty{padding:18px 8px;text-align:center}#cal-empty .cal-steps{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;font-size:1.15em}#cal-empty .cal-steps>div{flex:1 1 200px;max-width:280px;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:10px}#cal-empty .cal-steps b:first-child{display:inline-grid;place-items:center;width:1.6em;height:1.6em;border-radius:50%;background:var(--accent);color:#fff;margin-right:6px}.pnl.flash{animation:pflash 1s ease-out}@keyframes pflash{0%{box-shadow:0 0 0 4px var(--accent)}100%{box-shadow:0 0 0 4px transparent}}.pnl .rd{min-width:17em;text-align:right;white-space:nowrap}.pnl .bt.on svg{color:var(--accent)}
 .pnl .tip{position:absolute;z-index:3;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 3px 10px rgba(40,30,10,.18);padding:4px 8px;font-size:12px;white-space:nowrap;color:var(--ink)}.tip div{display:flex;gap:5px;align-items:center}.tip i:empty{width:10px;height:3px;display:inline-block}
 .leg .tg{cursor:pointer}.leg .tg.off,.leg .tr.off{opacity:.38;text-decoration:line-through}.cbar{width:90px;height:9px;border-radius:2px;border:1px solid var(--line)}
 .pnl canvas{flex:1 1 0;min-height:60px;width:100%;cursor:crosshair;border-top:1px solid var(--line)}
 .leg{flex:none;max-height:58px;overflow:auto;display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;color:var(--muted)}.leg span{display:inline-flex;gap:4px;align-items:center}.leg i:empty{width:14px;height:3px;display:inline-block}
-.leg .tr b{color:var(--ink);cursor:text}.leg .tr button{border:0;background:none;color:var(--muted);padding:0 2px}
+.leg .lvl{display:flex;flex-wrap:wrap;gap:10px;flex-basis:100%}.leg .tr b{color:var(--ink);cursor:text}.leg .tr button{border:0;background:none;color:var(--muted);padding:0 2px}
 #ctx{position:fixed;z-index:10000;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(60,45,10,.18);padding:3px;min-width:220px}
 #ctx div{padding:4px 10px;border-radius:4px;cursor:pointer;white-space:nowrap}#ctx div:hover{background:var(--sel)}#ctx hr{border:0;border-top:1px solid var(--line);margin:3px 0}#ctx .dim{color:var(--muted);cursor:default}#ctx .dim:hover{background:none}
 dialog{border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);padding:14px 16px;max-width:520px}dialog::backdrop{background:rgba(60,45,10,.35)}
@@ -95,9 +95,9 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 </style></head><body>
 <header><img class="logo" src="static/logo.svg" alt="QqQ lab" title="QqQ lab">
   <nav id="nav"><button data-v="data" class="on">Dati</button><button data-v="draw">Disegno</button><button data-v="theory" title="Teoria: TP, fotocatalisi, LC, ESI, quadrupolo, triplo quadrupolo">Teoria</button></nav><span class="sp"></span>
-  <button id="newrun" class="ib" hidden title="Inizia una nuova sessione (la precedente resta nella cartella di lavoro)"><span class="ic" data-ic="newrun"></span>Nuova sessione</button>
-  <button id="np-pt" class="ib" title="Tavola periodica con masse esatte e abbondanze isotopiche"><span class="ic" data-ic="pt"></span>Tavola periodica</button><button id="np-ad" class="ib" title="Tabella degli addotti ESI e delle perdite neutre più comuni"><span class="ic" data-ic="adduct"></span>Addotti</button>
-  <button id="np-iso" class="ib" title="Profilo isotopico di una formula"><span class="ic" data-ic="iso"></span>Isotopi</button><button id="np-nl" class="ib" title="Perdite neutre più comuni"><span class="ic" data-ic="nl"></span>Perdite neutre</button>
+  <button id="newrun" class="ib" hidden title="Inizia una nuova sessione (la precedente resta nella cartella di lavoro)"><span class="ic" data-ic="newrun"></span><span class="lb">Nuova sessione</span><span class="sb">Nuova</span></button>
+  <button id="np-pt" class="ib" title="Tavola periodica con masse esatte e abbondanze isotopiche"><span class="ic" data-ic="pt"></span><span class="lb">Tavola periodica</span><span class="sb">Tavola</span></button><button id="np-ad" class="ib" title="Tabella degli addotti ESI e delle perdite neutre più comuni"><span class="ic" data-ic="adduct"></span>Addotti</button>
+  <button id="np-calc2" class="ib" title="Calcolatrice m/z: scrivi una formula bruta e ottieni l'm/z dello ione (anche arrotondato come lo vede lo strumento)"><span class="ic" data-ic="calc"></span><span class="lb">Calcolatrice m/z</span><span class="sb">Calcolatrice</span></button><button id="np-iso" class="ib" title="Profilo isotopico di una formula"><span class="ic" data-ic="iso"></span>Isotopi</button><button id="np-nl" class="ib" title="Perdite neutre più comuni"><span class="ic" data-ic="nl"></span><span class="lb">Perdite neutre</span><span class="sb">Perdite</span></button>
   <button id="np-pc" title="Apre PubChem in un'altra scheda: cerca il tuo composto per nome, formula o struttura">PubChem &#8599;</button>
   <button id="np-bt" title="Apre BioTransformer in un'altra scheda e spiega come usarlo">BioTransformer &#8599;</button><button class="hq" data-help="header" title="Che cos'è?">?</button></header>
 <div id="err"></div>
@@ -107,7 +107,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
   <div class="bar" id="tools"><button id="funfold" hidden title="Mostra l'elenco dei file">&#9654; File</button><button class="hq" data-help="toolbar" title="Che cos'è?">?</button>
    <span class="tbx" id="g-file"><span id="navfile"><button id="fprev" title="File precedente (freccia sinistra)">&#9664;</button> <select id="fsel"></select> <button id="fnext" title="File successivo (freccia destra)">&#9654;</button></span><span class="seg" id="fmode" title="Con «Solo il file selezionato» i grafici mostrano un file alla volta (gli XIC restano, cambia il campione: le frecce ◀ ▶ lo cambiano); con «Tutti i file sovrapposti» i file spuntati nell'elenco sono disegnati insieme."><button data-m="sel">Solo il selezionato</button><button data-m="all">Tutti sovrapposti</button></span><button class="hq" data-help="nav" title="Che cos'è?">?</button></span>
    <span class="tbx" id="g-add"><button id="np-chrom">+ Cromatogramma</button><button id="np-spec">+ Spettro</button><button id="np-map" title="Mappa di tutti gli ioni nel tempo: ogni pixel è un m/z a un certo RT">+ Mappa RT-m/z</button><button id="np-xic" title="Estrai il cromatogramma di uno ione (XIC): scegli tu la finestra di m/z">+ XIC</button><button id="np-mrm">+ Transizioni MRM</button><button id="np-cal" hidden title="Tabella delle aree dei file MRM e retta di taratura">Retta di taratura</button></span>
-   <span class="tbx" id="g-tools"><button id="np-calc" title="Scrivi una formula bruta e ottieni l'm/z dello ione (anche arrotondato come lo vede lo strumento)">Calcolatrice m/z</button><button id="np-merge" title="Porta tutti gli XIC in un solo pannello">Unisci gli XIC</button><button id="np-tile" title="Mette i pannelli uno sotto l'altro, larghi come la pagina">Ordina</button></span>
+   <span class="tbx" id="g-tools"><button id="np-merge" title="Porta tutti gli XIC in un solo pannello">Unisci gli XIC</button><button id="np-tile" title="Mette i pannelli uno sotto l'altro, larghi come la pagina">Ordina</button></span>
    <button id="np-more" hidden title="Altri strumenti">Altro &#9662;</button>
    <span class="sp"></span><button id="np-method" class="imp" title="Come sono stati acquisiti questi dati: tipo di esperimento, intervallo di massa, transizioni e parametri del metodo"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.8 2.5H4.6A1.6 1.6 0 0 0 3 4.1v8.8a1.6 1.6 0 0 0 1.6 1.6h6.8a1.6 1.6 0 0 0 1.6-1.6V4.1a1.6 1.6 0 0 0-1.6-1.6h-1.2"/><rect x="5.8" y="1" width="4.4" height="2.8" rx="1"/><path d="M5.4 6h5.2"/><path d="M5 12h1.7c.9 0 1-3 1.3-3s.4 3 1.3 3H11"/></svg>Metodo</button><button class="hq" data-help="tools" title="Che cos'è?">?</button></div>
   <div id="tabempty" class="card" hidden></div>
@@ -173,11 +173,12 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
   <div id="dropdam"><b>Trascina qui il metodo .dam</b><br>oppure <u>clicca per sceglierlo dal computer</u></div>
   <input type="file" id="pickdam" multiple accept=".dam,.DAM" hidden>
   <div id="mlist"></div></div>
- <div class="card"><button class="go" id="opbtn" disabled>Carica dati</button><button id="cancadd" hidden>Annulla</button><div id="gomsg" class="fail"></div></div>
+ <div class="card"><div id="guessnote" class="muted" hidden><span class="guess" style="padding:1px 6px;border-radius:4px">Controlla i valori in giallo (letti dal nome dei file).</span></div><button class="go" id="opbtn" disabled>Carica dati</button><button id="cancadd" hidden>Annulla</button><div id="gomsg" class="fail"></div></div>
 </section>
 <script src="static/icons-modi.js"></script>
 <script src="static/modi.js"></script>
 <script src="static/explore.js"></script>
+<script src="static/scroll.js"></script>
 <script src="static/xlsx.js"></script>
 <script src="static/origine.js"></script>
 <script src="static/elements.js"></script>
@@ -214,7 +215,8 @@ function applyView(){const v=S.view,d=v==="data";
   if(v==="theory"&&!$("#tframe").getAttribute("src"))$("#tframe").src="static/teoria/index.html"; // theory module, loaded on first open
   document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   document.dispatchEvent(new CustomEvent("tpview",{detail:{view:v}}))}
-function setView(v){S.view=v;applyView()}
+addEventListener("scroll",()=>{if(S.view==="data"&&scrollY>100)S.dataWork=scrollY},{passive:true});   // the header may be out of sight: the position where the student was working is the one remembered
+function setView(v){if(S.view==="data")S.dataScroll=scrollY>100?scrollY:(S.dataWork||0);const back=v==="data"&&S.view!=="data";S.view=v;applyView();if(back&&S.dataScroll)requestAnimationFrame(()=>requestAnimationFrame(()=>scrollTo(0,S.dataScroll)))}   // back to Data: same scroll (panels, zoom, cursor and the active graph are state, they stay)
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.dataset.v));
 
 // ------------------------------------------------------------------ start screen: upload, check times and types, open
@@ -228,9 +230,12 @@ const roundc=v=>v==null?null:+(+v).toPrecision(6);
 const isCal=f=>f.type==="standard"&&f.kind==="mrm";   // concentration exists only for the standards of an MRM experiment (they feed the calibration line)
 const concFrom=f=>f.conc==null||f.kind!=="mrm"?null:roundc(f.cunit&&CUF[f.cunit]?f.conc*CUF[f.cunit]/CU[ST.unit][1]:f.conc);   // value from the name, in the unit of the table
 function mergeFiles(list){const old=Object.fromEntries(ST.files.map(f=>[f.name,f]));
-  ST.files=list.map(f=>{const o=old[f.name];return {...f,time:o?o.time:f.time,type:o?o.type:f.type,conc:o?o.conc:concFrom(f),use:o?o.use:true}});
-  const ord={sample:0,standard:1,blank:2};
-  ST.files.sort((a,b)=>ord[a.type]-ord[b.type]||(a.type==="standard"?(a.conc??1e9)-(b.conc??1e9):(a.time??1e9)-(b.time??1e9))||a.name.localeCompare(b.name));renderFiles()}
+  ST.files=list.map(f=>{const o=old[f.name],conc=o?o.conc:concFrom(f);return {...f,time:o?o.time:f.time,type:o?o.type:f.type,conc,use:o?o.use:true,
+    gT:o?o.gT:f.time!=null&&f.type==="sample",gC:o?o.gC:conc!=null}});   // gT/gC: time and concentration read from the name (yellow in the table until the student edits or confirms them)
+  sortFiles();renderFiles()}
+// order of the table: experiment (Full Scan, MS², MRM, the rest), then blank, standards by growing concentration, samples by growing time, then name
+const EXPORD={full:0,ms2:1,mrm:2},TYPORD={blank:0,standard:1,sample:2};
+function sortFiles(){ST.files.sort((a,b)=>(EXPORD[a.kind]??3)-(EXPORD[b.kind]??3)||TYPORD[a.type]-TYPORD[b.type]||(a.type==="standard"?(a.conc??1e9)-(b.conc??1e9):(a.time??1e9)-(b.time??1e9))||a.name.localeCompare(b.name))}
 function renderMethods(){const el=$("#mlist");
   el.innerHTML=ST.methods.length?`<table><tr><th>File</th><th>Contenuto</th><th class="num">Dimensione</th><th></th></tr>`+ST.methods.map((m,i)=>`<tr><td>${esc(m.name)}</td><td class="muted">${esc(m.info||"")}</td><td class="num muted">${sz(m.size)}</td><td><button data-mrm="${i}" title="Rimuovi (va in _cestino)">&times;</button></td></tr>`).join("")+"</table>":"";
   el.querySelectorAll("[data-mrm]").forEach(b=>b.onclick=async()=>{try{const j=await post("api/remove",{name:ST.methods[+b.dataset.mrm].name});mergeFiles(j.files);ST.methods=j.methods||[];renderMethods()}catch(e){fail(e)}})}
@@ -238,17 +243,27 @@ const EXPN={full:"Full Scan",ms2:"MS² (Product Ion)",mrm:"MRM",empty:"nessun da
 const expCell=f=>f.kind?`<b>${EXPN[f.kind]||f.kind}</b>`:'<span class="muted">letto dopo la conversione</span>';
 function nameWarn(f){return f.kind&&f.hint&&f.hint!==f.kind?` <div class="fail sm">il nome fa pensare a ${EXPN[f.hint]}, ma nel file ci sono dati ${EXPN[f.kind]}</div>`:""}
 function renderFiles(){const F=ST.files,el=$("#flist");
-  const hasCal=F.some(f=>f.use&&isCal(f)),unitSel=`<select id="cunit" title="Unità delle concentrazioni">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
-  el.innerHTML=F.length?`<table style="margin-top:8px"><tr><th></th><th>File</th><th>Esperimento</th><th>Tipo</th><th class="num">Tempo (min)</th>${hasCal?`<th class="num">Conc. ${unitSel}</th>`:""}<th class="num">Dimensione</th><th></th></tr>`+F.map((f,i)=>
-   `<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)}${f.scan===false?' <span class="fail">manca il .wiff.scan</span>':""}${nameWarn(f)}</td><td>${expCell(f)}</td>`+
+  const hasCal=F.some(f=>f.use&&isCal(f)),unitSel=`<select id="cunit" title="Unità delle concentrazioni (1 ppm = 1 mg/L in acqua)">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
+  const ncol=6+(hasCal?1:0),GN={0:"Full Scan",1:"MS² (Product Ion)",2:"MRM",3:"Altri file (esperimento non ancora letto)"},GUESS=' title="Letto dal nome del file: controlla"';
+  let last=-1,rows="";
+  F.forEach((f,i)=>{const g=EXPORD[f.kind]??3;
+    if(g!==last){last=g;rows+=`<tr class="grp"><td colspan="${ncol}">${GN[g]} <span class="muted">· ${F.filter(x=>(EXPORD[x.kind]??3)===g).length} file</span></td></tr>`}
+    rows+=`<tr><td><input type="checkbox" data-i="${i}" data-k="use" ${f.use?"checked":""}></td><td>${esc(f.name)}${f.scan===false?' <span class="fail">manca il .wiff.scan</span>':""}${nameWarn(f)}</td><td>${expCell(f)}</td>`+
    `<td><select data-i="${i}" data-k="type"><option value="sample" ${f.type==="sample"?"selected":""}>campione</option><option value="blank" ${f.type==="blank"?"selected":""}>bianco</option><option value="standard" ${f.type==="standard"?"selected":""}>standard</option></select></td>`+
-   `<td class="num"><input type="number" step="any" style="width:80px" data-i="${i}" data-k="time" value="${f.time??""}" ${f.type!=="sample"?"disabled":""}></td>`+
-   (hasCal?(isCal(f)?`<td class="num"><input type="number" step="any" min="0" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" title="Concentrazione dello standard (indovinata dal nome: controllala)"></td>`:"<td></td>"):"")+
-   `<td class="num muted">${sz(f.size)}</td><td><button data-rm="${i}" title="Rimuovi (va in _cestino)">&times;</button></td></tr>`).join("")+`</table>`:"";
-  el.querySelectorAll("[data-k]").forEach(x=>x.onchange=()=>{const f=F[+x.dataset.i],k=x.dataset.k;f[k]=k==="use"?x.checked:(k==="time"||k==="conc")?(x.value===""?null:+x.value):x.value;
-    if(k==="type"){if(f.type!=="sample")f.time=null;if(isCal(f)&&f.conc==null)f.conc=concFrom(f);if(!isCal(f))f.conc=null;renderFiles()}else if(k==="use")renderFiles();checkGo()});
+   `<td class="num"><input type="number" step="any" style="width:80px" data-i="${i}" data-k="time" value="${f.time??""}" ${f.type!=="sample"?"disabled":""}${f.gT&&f.time!=null?` class="guess"${GUESS}`:""}></td>`+
+   (hasCal?(isCal(f)?`<td class="num"><input type="number" step="any" min="0" style="width:90px" data-i="${i}" data-k="conc" value="${f.conc??""}" ${f.gC&&f.conc!=null?`class="guess"${GUESS}`:'title="Concentrazione dello standard"'}> <span class="muted sm">${CU[ST.unit][0]}</span></td>`:"<td></td>"):"")+
+   `<td class="num muted">${sz(f.size)}</td><td><button data-rm="${i}" title="Rimuovi (va in _cestino)">&times;</button></td></tr>`});
+  el.innerHTML=F.length?`<table style="margin-top:8px"><tr><th></th><th>File</th><th>Esperimento</th><th>Tipo</th><th class="num">Tempo (min)</th>${hasCal?`<th class="num">Conc. ${unitSel}</th>`:""}<th class="num">Dimensione</th><th></th></tr>`+rows+`</table>`:"";
+  el.querySelectorAll("[data-k]").forEach(x=>{
+    x.onchange=()=>{const f=F[+x.dataset.i],k=x.dataset.k,keep=document.activeElement===x?{name:f.name,k}:null;f[k]=k==="use"?x.checked:(k==="time"||k==="conc")?(x.value===""?null:+x.value):x.value;
+      if(k==="time")f.gT=false;if(k==="conc")f.gC=false;
+      if(k==="type"){if(f.type!=="sample"){f.time=null;f.gT=false}if(isCal(f)&&f.conc==null){f.conc=concFrom(f);f.gC=f.conc!=null}if(!isCal(f)){f.conc=null;f.gC=false}}
+      sortFiles();renderFiles();                              // the table is sorted again when a value is committed (change/blur/Enter), never while typing
+      if(keep){const i=F.findIndex(q=>q.name===keep.name),b=el.querySelector(`[data-i="${i}"][data-k="${keep.k}"]`);if(b)b.focus()}};
+    if(x.dataset.k==="time"||x.dataset.k==="conc")x.addEventListener("keydown",e=>{if(e.key==="Enter"){const f=F[+x.dataset.i];f[x.dataset.k==="time"?"gT":"gC"]=false;x.classList.remove("guess");x.title="";guessNote()}})});
   const cu=$("#cunit");if(cu)cu.onchange=()=>{const k=cu.value,r=CU[ST.unit][1]/CU[k][1];F.forEach(f=>{if(f.conc!=null)f.conc=roundc(f.conc*r)});ST.unit=k;renderFiles()};
-  el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];const j=await post("api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});checkGo()}
+  el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];const j=await post("api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});checkGo();guessNote()}
+function guessNote(){const n=$("#guessnote");if(n)n.hidden=!ST.files.some(f=>f.use&&((f.gT&&f.time!=null&&f.type==="sample")||(f.gC&&f.conc!=null&&isCal(f))))}
 // the button is live only when at least one chosen file can be opened (a .wiff needs its .wiff.scan; an mzML with no data cannot)
 const usable=f=>f.use&&(["full","ms2","mrm"].includes(f.kind)||(/\.wiff$/i.test(f.name)&&f.scan!==false));
 function checkGo(){$("#opbtn").disabled=!ST.files.some(usable);$("#gomsg").textContent=""}

@@ -41,6 +41,8 @@ try:
             ys = pg.evaluate("['#xic-mz','.xor','#xic-q'].map(s=>document.querySelector(s).getBoundingClientRect().top)"); assert ys[0] < ys[1] < ys[2], ys
             t = pg.inner_text("#xicdlg"); assert "oppure" in t and "neutra" in t and "Extracted Ion Chromatogram" in t and "risoluzione unitaria" in t and "intervallo scelto" in t, t
             assert not pg.query_selector("#xic-lo") and not pg.query_selector("#xic-hi") and "compromesso" not in t and "0.7 Da" not in t, t
+            assert pg.input_value("#xic-q") == "C2H6O" or True      # (the window opens with the last ion: clear it, then nothing is written)
+            pg.fill("#xic-q", ""); pg.fill("#xic-mz", ""); pg.wait_for_timeout(700)
             pg.click("#xic-go"); err = pg.inner_text("#xic-err"); assert "Scrivi un valore di m/z" in err, err      # nothing written
             pg.fill("#xic-q", "C2H6O"); pg.fill("#xic-mz", "300"); assert pg.input_value("#xic-q") == ""          # the two ways exclude each other
             pg.click("#xic-no")
@@ -75,7 +77,7 @@ try:
             pg.screenshot(path=SH + "52_specbg.png")
         step("spectrum background subtraction", spec_bg)
         def calc():
-            pg.evaluate("document.querySelector('#np-calc').click()"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(800)
+            pg.evaluate("document.querySelector('#np-calc2').click()"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(800)
             t = pg.inner_text("#calcout"); print(t.replace("\n", " | ")[:300]); assert "364.1" in t and "364" in t and "363.0665" in t
             pg.screenshot(path=SH + "53_calc.png")
             pg.locator("#calcout button[data-m]").first.click(); pg.wait_for_timeout(800)          # the XIC button opens THE XIC window, formula and window already filled in

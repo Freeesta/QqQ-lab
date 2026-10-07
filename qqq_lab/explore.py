@@ -225,6 +225,37 @@ class Item:
         smz = np.bincount(inv, weights=y * mz) / np.maximum(sy, 1e-12)
         return u, smz, sy / n, n
 
+    def scan_count(self, level: int = 1, precursor: float | None = None, prec_tol: float = 0.6) -> int:
+        """Number of scans of that level (and precursor) = the length of the chromatogram of the same selection."""
+        return len(self._scan_ids(level, precursor, prec_tol)[0])
+
+    def _scan_ids(self, level, precursor, prec_tol):
+        t = self.run.table(level)
+        ids, rt = t.scan_ids, t.rt
+        if level > 1 and precursor is not None and len(ids):
+            pr = np.array([self.run.scans[i].precursor or -1.0 for i in ids])
+            sm = np.abs(pr - precursor) <= prec_tol
+            ids, rt = ids[sm], rt[sm]
+        return ids, rt
+
+    def scans(self, i0: int, i1: int, level: int = 1, precursor: float | None = None, prec_tol: float = 0.6, bin_da: float = 0.1) -> list[dict]:
+        """Binned spectra of scans i0..i1 (inclusive; position in the chromatogram of the same level/precursor), one by one.
+
+        Reads the arrays of those scans straight from the file (no filtering of the whole peak table) and bins them exactly as `spectrum`
+        does for a window holding that single scan: same bins of bin_da Da, same intensity-weighted m/z.
+        """
+        ids, rt = self._scan_ids(level, precursor, prec_tol)
+        out = []
+        for i in range(max(i0, 0), min(i1, len(ids) - 1) + 1):
+            mz, y = self.run.read(int(ids[i]))
+            if len(mz):
+                b = np.floor(mz / bin_da).astype(np.int64)
+                u, inv = np.unique(b, return_inverse=True)
+                sy = np.bincount(inv, weights=y)
+                mz, y = np.bincount(inv, weights=y * mz) / np.maximum(sy, 1e-12), sy
+            out.append({"i": i, "rt": float(rt[i]), "mz": mz, "y": y})
+        return out
+
     def spectrum(self, rt0: float, rt1: float, level: int = 1, precursor: float | None = None,
                  prec_tol: float = 0.6, bin_da: float = 0.1, min_rel: float = 0.0, bg: dict | None = None):
         """Mean spectrum of the scans in [rt0, rt1], peaks merged within bin_da.

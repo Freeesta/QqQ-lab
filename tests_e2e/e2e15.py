@@ -30,7 +30,7 @@ try:
             en = pg.evaluate("[...document.querySelectorAll('#flist input[data-k=conc]')].map(x=>[x.disabled,x.value])")
             assert any(not e[0] and e[1] == "5" for e in en), en
             # concentration only for the standards of an MRM experiment: no field on the other rows, Full Scan "standard" included
-            rows = pg.evaluate("[...document.querySelectorAll('#flist tr')].slice(1).map(r=>[r.children[1].childNodes[0].textContent.trim(), !!r.querySelector('[data-k=conc]')])")
+            rows = pg.evaluate("[...document.querySelectorAll('#flist tr:not(.grp)')].slice(1).map(r=>[r.children[1].childNodes[0].textContent.trim(), !!r.querySelector('[data-k=conc]')])")
             std = {n for n, has in rows if has}; assert std == {"Std_1ppm.mzML", "Std_5.mzML", "std_10mgL.mzML"}, rows
             assert pg.locator("#cunit").count() == 1
         step("columns, types and concentrations guessed from the name", layout)
