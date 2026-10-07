@@ -2088,6 +2088,7 @@ function ctxFor(p, e, x, px, py) {
       catch (e) { info("Non riesco a calcolare il profilo: " + EH(e.message)); }
     } });
     if (p.iso) items.push({ label: "Togli il profilo isotopico", fn: () => { p.iso = null; draw(p); } });
+    if (window.LIB && p.level === 2) items.push("-", { label: "Cerca nelle librerie…", fn: () => LIB.searchFrom(p) });
     const srcP = p.src && E.panels.find(q => q.id === p.src && q.el);
     if (p.link) items.push("-", { label: "Congela lo spettro", fn: () => { freezeSpec(p); uiSave(); } });
     else if (srcP) items.push("-", { label: "Ricollega al cromatogramma", fn: () => liveSpec(p, srcP) });

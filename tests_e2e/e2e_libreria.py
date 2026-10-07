@@ -57,7 +57,7 @@ try:
         step("mirror plot: common peaks in the accent colour, a click on a row redraws it", mirror)
         def export():
             with pg.expect_download() as d: pg.click("#lr-xlsx")
-            rows = xlsx_rows(d.value.path(), 3); assert any("Entropia" in str(c) for c in rows[0]), rows[0]
+            rows = xlsx_rows(d.value.path()); assert any("Entropia" in str(c) for c in rows[0]), rows[0]
             pg.click("#lr-copy"); pg.wait_for_timeout(400); assert "copiate" in pg.inner_text("#lr-msg") or "non permette" in pg.inner_text("#lr-msg")
         step("copy the table / Excel", export)
         def none():

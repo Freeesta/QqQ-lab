@@ -26,6 +26,7 @@ function uipOpen(btn) {
     <div class="sm muted" style="margin:-2px 0 4px">Vale anche dentro i grafici; le immagini esportate restano alla dimensione standard.</div>
     <div class="row">Tema <select id="uip-th"><option value="auto">Come il sistema</option><option value="light">Chiaro</option><option value="dark">Scuro</option></select></div>
     <div class="row">Colori dei grafici <select id="uip-pal" title="Per tempo: i file Full Scan con un tempo vanno dal viola scuro al verde in ordine di tempo. Accessibili: colori distinguibili anche con le forme comuni di daltonismo, più linee tratteggiate. Alto contrasto aggiunge anche lo stile della linea. Arcobaleno: tinte ben separate.">${Object.entries(PALS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join("")}</select></div>
+    <div class="row">Librerie di spettri <button id="uip-lib" title="Carica le librerie (MSP, MGF) con cui confrontare le MS2: clic destro su uno spettro MS2, «Cerca nelle librerie»">Librerie…</button></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>Unisci i centroidi della stessa massa nominale<br><span class="sm muted">Nei file convertiti con il centroiding, un picco largo può essere spezzato in due: questa opzione li riunisce (un picco per massa nominale, come lo vede uno strumento a risoluzione unitaria).</span></span></label>`;
   document.body.appendChild(d);
   d.querySelector("#uip-th").value = UIP.theme; d.querySelector("#uip-pal").value = UIP.pal;
@@ -36,6 +37,7 @@ function uipOpen(btn) {
     UIP.merge = e.target.checked; uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof redrawAll === "function") redrawAll();
   };
+  d.querySelector("#uip-lib").onclick = () => { d.remove(); if (window.LIB) LIB.open(); };
   d.querySelector("#uip-th").onchange = e => { UIP.theme = e.target.value; uipSave(); uipApply(); };
   d.querySelector("#uip-pal").onchange = e => {              // applied at once: file colours, lists, legends, every graph
     setPal(e.target.value); uipSave();

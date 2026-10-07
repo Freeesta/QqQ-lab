@@ -85,7 +85,7 @@ try:
         def rt2():
             c = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});return {{x:q.left+p._a.X(14.3),y:q.top+q.height/2}}}})()")
             pg.mouse.click(c["x"], c["y"]); pg.wait_for_timeout(700); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(500)
-            t = pg.inner_text(".pnl.spec .leg"); import re; assert re.search(r"RT \d+\.\d{2} min", t) and not re.search(r"RT \d+\.\d{3}", t), t
+            t = pg.inner_text(".pnl.spec .rtl"); import re; assert re.search(r"RT \d+\.\d{2} min", t) and not re.search(r"RT \d+\.\d{3}", t), t
         step("1.7: RT with 2 decimals", rt2)
     r.close()
 except Exception as e:

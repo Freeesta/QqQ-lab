@@ -69,7 +69,7 @@ try:
             c0 = pg.evaluate(f"E.panels[{ci}].cur")
             for _ in range(3): pg.keyboard.press("ArrowLeft"); pg.wait_for_timeout(350)
             c1 = pg.evaluate(f"E.panels[{ci}].cur"); assert c1 < c0
-            assert all("MS2" in x for x in seen), seen
+            assert all("precursore" in x for x in seen), seen
         step("MS2: arrows jump to the nearest scan with data (never an empty spectrum)", ms2)
         pg.screenshot(path=SH + "200_ms2.png", full_page=True)
     r.close()
