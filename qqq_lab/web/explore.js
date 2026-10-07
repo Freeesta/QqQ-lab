@@ -812,7 +812,7 @@ function ctl(p) {
   const off = (on, why) => on ? ` disabled title="${why}"` : "";
   const chk = (k, lab, dis, why, tip) => `<label class="muted${dis ? " dis" : ""}"${dis ? ` title="${why}"` : tip ? ` title="${tip}"` : ""}><input type="checkbox" data-o="${k}" ${p[k] ? "checked" : ""}${dis ? " disabled" : ""}> ${lab}</label>`;
   const ONEF = tabFiles(p.tab || E.tab).length <= 1, ONEWHY = "Con un solo file non c'è nulla da sovrapporre o impilare.";
-  const view = `<select data-o="mode"${p.type === "chrom" || (p.type === "xic" && p.traces.length <= 1) ? off(ONEF, ONEWHY) : ""} title="Come disegnare più tracce: una sopra l'altra, oppure una per riga (come in FreeStyle)"><option value="ovl" ${p.mode !== "stk" ? "selected" : ""}>sovrapposti</option><option value="stk" ${p.mode === "stk" ? "selected" : ""}>impilati</option></select>${chk("log", "scala log", ms2c, NOMS2)}`;
+  const view = `<select data-o="mode"${p.type === "chrom" || (p.type === "xic" && p.traces.length <= 1) ? off(ONEF, ONEWHY) : ""} title="Come disegnare più tracce: una sopra l'altra; una per riga (come in FreeStyle); a cascata, in ordine di tempo, la prima davanti (solo per guardare: senza integrazione né lettura dei valori)"><option value="ovl" ${p.mode !== "stk" && p.mode !== "cas" ? "selected" : ""}>sovrapposti</option><option value="stk" ${p.mode === "stk" ? "selected" : ""}>impilati</option><option value="cas" ${p.mode === "cas" ? "selected" : ""}>a cascata</option></select>${chk("log", "scala log", ms2c, NOMS2)}`;
   const T = p.tab || E.tab, TF = tabFiles(T), sfl = scanFiles(TF), mlo = Math.min(...sfl.map(x => x.mz_min ?? Infinity)), mhi = Math.max(...sfl.map(x => x.mz_max ?? -Infinity));
   const mzbar = `<label class="muted" title="Mostra il cromatogramma costruito solo con gli ioni in questo intervallo di m/z. Vuoto = tutti gli ioni. Serve per togliere dal TIC gli m/z che non ti interessano (solvente, fondo)"><i>m/z</i> da <input data-o="mz0" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz0 != null ? fmz(p.mz0) : ""}" placeholder="${isFinite(mlo) ? mlo.toFixed(1) : ""}"> a <input data-o="mz1" class="mzf" inputmode="decimal" autocomplete="off"${ms2c ? " disabled" : ""} value="${p.mz1 != null ? fmz(p.mz1) : ""}" placeholder="${isFinite(mhi) ? mhi.toFixed(1) : ""}"></label>`;
   const hasScan = sfl.length > 0, ms2s = TF.filter(x => x.kind === "ms2"), hasPda = TF.some(x => x.pda);
@@ -1156,7 +1156,7 @@ async function drawLines(p) {
   for (const s of sr) { lo = Math.min(lo, s.x[0]); hi = Math.max(hi, s.x[s.x.length - 1]); }
   const x0 = p.zoom ? p.zoom[0] : lo, x1 = p.zoom ? p.zoom[1] : hi;
   sr.forEach(s => { s.ys = smooth(s.y, p.smooth ? 3 : 0); let m = 1e-9; for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.ys[i] > m) m = s.ys[i]; s.mx = m; });
-  const stk = p.mode === "stk", logy = !!p.log && !stk && p.kind !== "pda", G = Math.max(...sr.map(s => s.mx));
+  const stk = p.mode === "stk", cas = p.mode === "cas" && sr.length > 1 && !p.log, logy = !!p.log && !stk && !cas && p.kind !== "pda", G = Math.max(...sr.map(s => s.mx));
   // unità del grafico: sovrapposti = intensità; impilati = riga i + frazione dell'altezza (scala comune)
   sr.forEach((s, i) => { s.off = stk ? i : 0; s.sc = stk ? G / 0.92 : 1; });
   const U = (s, v) => s.off + v / s.sc;
@@ -1170,9 +1170,15 @@ async function drawLines(p) {
   if (yzf) { ymin = p.zoomY[0]; ymax = p.zoomY[1]; }
   const lo10 = Math.pow(10, Math.max(0, Math.floor(Math.log10(ymax)) - 4));
   const yt = stk ? "Intensità (righe separate)" : logy ? YT_I + ", scala log" : p.kind === "pda" && p.type === "chrom" ? "Segnale PDA (unità del file)" : YT_I;
-  const { X, Y } = axes(g, W, H, x0, x1, ymax, fmt, { log: logy, lo: lo10, stack: stk, xt: XT_RT, yt, ymin });
+  // waterfall: the traces are ordered by time (the first one in front), each moved up and a little to the right; the room is taken from the axes
+  const pw0 = W - M.l - M.r, ph0 = H - M.t - M.b;
+  const cs = cas ? sr.slice().sort((a, b) => ((E.files[a.k] || {}).time ?? 1e9) - ((E.files[b.k] || {}).time ?? 1e9) || a.k - b.k) : null;
+  const dxs = cas ? Math.min(16, pw0 * 0.22 / cs.length) : 0, dys = cas ? Math.min(28, ph0 * 0.5 / cs.length) : 0;
+  const x1v = cas ? x0 + (x1 - x0) * pw0 / (pw0 - dxs * (cs.length - 1)) : x1;
+  if (cas) ymax = ymax * ph0 / (ph0 - dys * (cs.length - 1));
+  const { X, Y } = axes(g, W, H, x0, x1v, ymax, fmt, { log: logy, lo: lo10, stack: stk, xt: XT_RT, yt, ymin });
   const ph = H - M.t - M.b;
-  p._a = { x0, x1, X, Y, W, H, sr, ymax, ymin, yfull, U, stk, logy, full: [lo, hi], yinv: py => ymin + (H - M.b - py) / ph * (ymax - ymin) };
+  p._a = { x0, x1: x1v, cas, X, Y, W, H, sr, ymax, ymin, yfull, U, stk, logy, full: [lo, hi], yinv: py => ymin + (H - M.b - py) / ph * (ymax - ymin) };
   if (p.ibk && !p._exp) {                                    // grey band(s) of the internal blank, always visible
     const ib = p.ibk, bands = [ib.a].concat(ib.mode === "line" && ib.b ? [ib.b] : []), s0 = sr[0], l0 = s0 && s0.ibl;
     g.fillStyle = "rgba(120,120,120,.22)"; bands.forEach(b => { const xa = Math.max(X(b[0]), M.l), xb = Math.min(X(b[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); });
@@ -1185,7 +1191,18 @@ async function drawLines(p) {
     sr.forEach(s => { const y = Y(s.off); g.strokeStyle = css("--line"); g.beginPath(); g.moveTo(M.l, y); g.lineTo(W - M.r, y); g.stroke(); const t = s.name.length > 34 ? s.name.slice(0, 33) + "…" : s.name; g.lineWidth = 3; g.lineJoin = "round"; g.strokeStyle = css("--panel"); g.strokeText(t, M.l + 4, y - 4); g.fillStyle = s.color; g.fillText(t, M.l + 4, y - 4); g.lineWidth = 1; });
   }
   g.save(); g.beginPath(); g.rect(M.l + 1.5, M.t - 1, W - M.l - M.r - 1.5, H - M.t - M.b + 2); g.clip();   // the line (1.8 px wide) must not overdraw the y axis
-  for (const s of sr) {
+  if (cas) {                                                     // back to front: white under every trace, so the ones behind are covered
+    for (let k = cs.length - 1; k >= 0; k--) {
+      const s = cs[k], sx = k * dxs, sy = -k * dys, f = E.files[s.k] || {}; let first = null, last = null;
+      g.beginPath();
+      s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = X(r) + sx, py = Y(U(s, s.ys[i])) + sy; if (!first) { first = px; g.moveTo(px, Y(0) + sy); } g.lineTo(px, py); last = px; });
+      if (first == null) continue;
+      g.lineTo(last, Y(0) + sy); g.closePath(); g.fillStyle = css("--panel"); g.fill();
+      g.strokeStyle = s.color; g.lineWidth = 1.6 + LWX(); g.setLineDash(s.dash); g.stroke(); g.setLineDash([]);
+      g.fillStyle = s.color; g.font = "bold 11px system-ui"; g.textAlign = "left"; g.fillText(f.time != null ? `t = ${f.time} min` : s.name, first + 4, Y(0) + sy - 4);       // the time next to each trace
+    }
+    g.font = "11px system-ui";
+  } else for (const s of sr) {
     g.strokeStyle = s.color; g.lineWidth = (s.dash.length ? 1.5 : 1.8) + LWX(); g.setLineDash(s.dash); g.beginPath(); let st = false;
     s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = X(r), py = Y(U(s, s.ys[i])); st ? g.lineTo(px, py) : g.moveTo(px, py); st = true; });
     g.stroke();
@@ -1196,8 +1213,9 @@ async function drawLines(p) {
     s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const v = U(s, s.ys[i]); if (v > ymax) { if (!seg || v > seg.v) seg = { v, x: r }; } else if (seg) { tri(seg.x); seg = null; } });
     if (seg) tri(seg.x);
   }
-  for (const it of p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi
+  for (const it of cas ? [] : p.ints) {                          // integrazioni: area colorata + barre trascinabili ai bordi (not in the waterfall view)
     const s = sr.find(q => q.key === it.key); if (!s) continue;
+    if (it.noise && !p._exp) { g.fillStyle = "rgba(120,120,120,.18)"; const xa = Math.max(X(it.noise[0]), M.l), xb = Math.min(X(it.noise[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); }       // noise stretch (for S/N)
     const r = integ(s, it.a, it.b); Object.assign(it, { area: r.area, height: r.height, rt: r.rt, ibk: ibkText(p.ibk) });
     const i0 = nearIdx(s.x, Math.min(it.a, it.b)), i1 = nearIdx(s.x, Math.max(it.a, it.b));
     if (i1 > i0) {
@@ -1232,7 +1250,7 @@ function hideHover(p) {
   E.panels.forEach(q => { if (q.vl && q !== p) q.vl.hidden = true; });
 }
 function showHover(p, px, py) {
-  const a = p._a; if (!a || !a.hov || px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) return hideHover(p);
+  const a = p._a; if (!a || !a.hov || a.cas || px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) return hideHover(p);
   const h = a.hov(px, py); if (!h) return hideHover(p);
   const cv = p.cv, el = p.el;
   p.vl.hidden = !!h.novl; p.vl.style.left = cv.offsetLeft + h.px + "px"; p.vl.style.top = cv.offsetTop + M.t + "px"; p.vl.style.height = a.H - M.t - M.b + "px";
@@ -1516,17 +1534,39 @@ function intMenuItems(p, x, near, py) {
   return items;
 }
 function allInts() {
-  return E.panels.flatMap(p => p.ints.map(i => { const f = E.files[i.k], std = f && f.type === "standard" && f.conc != null; return { ...i, panel: p.title, conc: std ? f.conc : null, cunit: std ? f.cunit || "" : "" }; }));      // the concentration is only for standards: the calibration line is made by the student in Excel
+  return E.panels.flatMap(p => p.ints.map(i => { const f = E.files[i.k], std = f && f.type === "standard" && f.conc != null; return { ...i, _p: p, _it: i, panel: p.title, conc: std ? f.conc : null, cunit: std ? f.cunit || "" : "" }; }));      // the concentration is only for standards: the calibration line is made by the student in Excel
+}
+// optional columns of the integration table (off by default): S/N and the figures of the peak (width at half height, plates, tailing)
+const INTOPT = { sn: false, par: false };
+function intExtra(r) {
+  const p = r._p, it = r._it, s = p && p._a && p._a.sr && p._a.sr.find(q => q.key === it.key);
+  const pk = s ? chromPeak(s.x, s.y, r.a, r.b) : null, sd = s && it.noise ? noiseSD(s.x, s.y, it.noise[0], it.noise[1]) : null;
+  return { sn: pk && sd ? pk.height / sd : null, noise: !!it.noise, w50: pk ? pk.w50 : null, N: pk ? pk.N : null, T: pk ? pk.tailing : null };
 }
 function showInts() {
-  const rows = allInts();
-  big("Integrazioni dei picchi", rows.length ? `<div class="bar"><button id="ig-xlsx">${IC_DL}Excel</button></div>
-    <table><tr><th>Pannello</th><th>Traccia</th><th>Campione</th><th class="num">Tempo (min)</th><th class="num">Conc.</th><th class="num">RT inizio</th><th class="num">RT fine</th><th class="num">RT apice</th><th class="num">Area (conteggi·s)</th><th class="num">Altezza</th><th>Bianco interno applicato</th></tr>` +
-    rows.map(r => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.conc != null ? r.conc + " " + EH(r.cunit) : ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num" title="${fmtFull(r.area ?? 0)}">${fmtA(r.area ?? 0)}</td><td class="num">${fmt(r.height ?? 0)}</td><td>${EH(r.ibk || "no")}</td></tr>`).join("") +
+  const rows = allInts().map(r => ({ ...r, ...intExtra(r) }));
+  const fx = (v, d) => v == null || !isFinite(v) ? "" : String(+v.toFixed(d));
+  const head = ["Pannello", "Traccia", "Campione", "Tempo (min)", "Conc.", "RT inizio", "RT fine", "RT apice", "Area (conteggi·s)", "Altezza"], num = [0, 0, 0, 1, 1, 1, 1, 1, 1, 1];
+  const th = (t, n) => `<th${n ? ' class="num"' : ""}>${t}</th>`;
+  const hx = (INTOPT.sn ? th("S/N", 1) : "") + (INTOPT.par ? th("w<sub>½</sub> (min)", 1) + th("N (piatti)", 1) + th("Coda (USP, 5%)", 1) : "");
+  big("Integrazioni dei picchi", rows.length ? `<div class="bar"><button id="ig-xlsx">${IC_DL}Excel</button>
+    <label title="Altezza del picco (sopra la linea di base) diviso la deviazione standard del rumore, misurata in una zona senza picchi che scegli tu"><input type="checkbox" id="ig-sn" ${INTOPT.sn ? "checked" : ""}> S/N</label>
+    <label title="Larghezza a metà altezza, numero di piatti teorici N = 5.54 (tR / w½)² e fattore di coda USP a 5% dell'altezza (T = W₀.₀₅ / 2f)"><input type="checkbox" id="ig-par" ${INTOPT.par ? "checked" : ""}> Mostra parametri cromatografici</label></div>
+    <table><tr>${head.map((t, i) => th(t, num[i])).join("")}${hx}<th>Bianco interno applicato</th></tr>` +
+    rows.map((r, i) => `<tr><td>${EH(r.panel)}</td><td>${EH(r.ion)}</td><td>${EH(r.file)}</td><td class="num">${r.time ?? ""}</td><td class="num">${r.conc != null ? r.conc + " " + EH(r.cunit) : ""}</td><td class="num">${r.a.toFixed(2)}</td><td class="num">${r.b.toFixed(2)}</td><td class="num">${(r.rt ?? 0).toFixed(2)}</td><td class="num" title="${fmtFull(r.area ?? 0)}">${fmtA(r.area ?? 0)}</td><td class="num">${fmt(r.height ?? 0)}</td>` +
+      (INTOPT.sn ? `<td class="num">${r.sn != null ? fx(r.sn, 1) : `<button data-nz="${i}" title="Trascina sul grafico una zona senza picchi vicino al picco: il rumore è la deviazione standard del segnale in quella zona (tolta la deriva)">scegli la zona di rumore</button>`}</td>` : "") +
+      (INTOPT.par ? `<td class="num">${fx(r.w50, 3)}</td><td class="num">${r.N != null ? Math.round(r.N) : ""}</td><td class="num">${fx(r.T, 2)}</td>` : "") + `<td>${EH(r.ibk || "no")}</td></tr>`).join("") +
     `</table><div class="muted sm">Area: regola dei trapezi con baseline lineare tra i due bordi. Trascina le barre nel pannello per correggere i bordi.</div>`
     : `<div class="muted">Nessuna integrazione. Clic destro su un picco di un cromatogramma, di un XIC o di una transizione MRM e scegli «Integra».</div>`, () => {
     if (!rows.length) return;
-    Q("#ig-xlsx").onclick = () => dlx("integrazioni.xlsx", [{ name: "Integrazioni", head: INT_HEADS, rows: rows.map(r => INT_COLS.map(c => r[c])), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34] }]);
+    Q("#ig-sn").onchange = e => { INTOPT.sn = e.target.checked; showInts(); };
+    Q("#ig-par").onchange = e => { INTOPT.par = e.target.checked; showInts(); };
+    Q("#bigbody").querySelectorAll("button[data-nz]").forEach(b => b.onclick = () => {
+      const r = rows[+b.dataset.nz]; r._p._pickNoise = r._it; Q("#bigdlg").close(); reveal(r._p);
+      stepMsg(r._p, "Trascina sul grafico una zona senza picchi, vicino al picco: ne uso la deviazione standard come rumore", true);
+    });
+    Q("#ig-xlsx").onclick = () => dlx("integrazioni.xlsx", [{ name: "Integrazioni", head: [...INT_HEADS, ...(INTOPT.sn ? ["S/N (altezza / dev. st. del rumore)"] : []), ...(INTOPT.par ? ["w½ (min)", "N (piatti teorici)", "Coda USP (5%)"] : [])],
+      rows: rows.map(r => [...INT_COLS.map(c => r[c]), ...(INTOPT.sn ? [r.sn] : []), ...(INTOPT.par ? [r.w50, r.N, r.T] : [])]), widths: [16, 18, 22, 14, 16, 8, 14, 14, 14, 18, 14, 34, 18, 12, 14, 14] }]);
   });
 }
 
@@ -1635,7 +1675,7 @@ function attach(p) {
   const xd = px => { const a = p._a; if (!a) return null; const x = a.x0 + (px - M.l) / (a.W - M.l - M.r) * (a.x1 - a.x0); return a.full ? Math.max(a.full[0], Math.min(a.full[1], x)) : x; };
   const rect = e => { const r = cv.getBoundingClientRect(); return e.clientX - r.left; };
   const recty = e => e.clientY - cv.getBoundingClientRect().top;
-  const canYZ = a => a && !a.map && !a.stk && !a.logy && a.yinv;                      // y zoom exists for chromatograms, XIC, MRM and spectra (not stacked / log views)
+  const canYZ = a => a && !a.map && !a.stk && !a.logy && !a.cas && a.yinv;                      // y zoom exists for chromatograms, XIC, MRM and spectra (not stacked / log views)
   const inPlotY = py => py >= M.t && py <= p._a.H - M.b, inPlotX = px => px >= M.l && px <= p._a.W - M.r;
   const yAxisZone = (px, py) => canYZ(p._a) && px < M.l && inPlotY(py);               // the numbers at the left of the y axis
   const xAxisZone = (px, py) => p._a && !p._a.map && px >= M.l && px <= p._a.W - M.r && py > p._a.H - M.b;   // the numbers under the x axis
@@ -1698,6 +1738,9 @@ function attach(p) {
     if (d.xa) { if (a && Math.abs(d.x - d.x0) > 4) { const u = xd(d.x0), v = xd(d.x); zoomTo(p, Math.min(u, v), Math.max(u, v)); } return; }
     const x0 = xd(d.x0), x1 = xd(d.x);
     if (!a || x0 == null) return;
+    if (p._pickNoise && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {          // the noise stretch for S/N of an integration
+      const it = p._pickNoise; p._pickNoise = null; p.sel = null; it.noise = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); uiSave(); showInts(); return;
+    }
     if (p._pickIbk && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {            // "Sottrai il fondo di un tratto": the stretch the student just dragged
       p._pickIbk = false; p.sel = null; p.bk = ""; p.snip = false; ibkSet(p, "mean", [Math.min(x0, x1), Math.max(x0, x1)]); ctl(p); return;
     }

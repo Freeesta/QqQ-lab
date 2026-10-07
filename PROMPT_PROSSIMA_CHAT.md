@@ -16,26 +16,11 @@ Lavori in `~/QqQ_lab/QqQ_lab` (sul Mac) oppure nel clone GitHub (cloud). Leggi `
 - **Aggiorna Federico**: alla fine di OGNI blocco scrivigli un messaggio breve (3-5 righe): cosa hai fatto, cosa non hai potuto fare, cosa provare a mano. Se un punto richiede una scelta che cambia l'interfaccia in modo non descritto qui, fai la versione più semplice e segnalalo nel messaggio.
 
 ## Ordine di lavoro (per importanza)
-(I blocchi A, S, G, B, C e F sono fatti: vedi `AGENTS.md` sez. 17. Restano da rifinire: nel menu «Correzione» le voci non hanno ancora l'icona con etichetta (è un menu a tendina con `title`).)
-1. **Blocco H** strumenti per la cromatografia (più avanzati: S/N, parametri del picco, vista a cascata)
-2. **Blocco I** file misti (DDA, Full Scan + MS2, MRM + EPI, polarità alternate): non urgente, solo dopo gli altri
-3. **Blocco D** licenze
-4. **Blocco E** residui
+(I blocchi A, S, G, B, C, F e H sono fatti: vedi `AGENTS.md` sez. 17. Restano da rifinire: nel menu «Correzione» le voci non hanno ancora l'icona con etichetta (è un menu a tendina con `title`).)
+1. **Blocco I** file misti (DDA, Full Scan + MS2, MRM + EPI, polarità alternate): non urgente, solo dopo gli altri
+2. **Blocco D** licenze
+3. **Blocco E** residui
 Un commit per blocco e un messaggio a Federico per blocco. Se il tempo o i token finiscono, fermati dopo un commit pulito: è meglio finire bene i blocchi 1-2 che iniziare tutto.
-
----
-
-## BLOCCO H: strumenti per la cromatografia (più avanzati: fai dopo i blocchi A, G, B, C, F)
-Tutto opzionale nell'interfaccia: colonne o voci che compaiono solo se lo studente le chiede, con un'etichetta breve. Il programma calcola, lo studente interpreta.
-
-### H1. Rapporto segnale/rumore (S/N) di un picco integrato
-Nella tabella delle integrazioni (`explore.js` ~r.1463, `INT_COLS`/`INT_HEADS`) una colonna facoltativa **S/N**: altezza del picco (sopra la linea di base) diviso il rumore, con il rumore = deviazione standard (o picco-picco/5: scegli e scrivilo nell'etichetta) in una **zona di rumore scelta dallo studente** (trascinamento con un tasto «Scegli la zona di rumore» vicino al picco). Senza zona scelta: cella vuota con etichetta «scegli la zona di rumore». Utile per LOD/LOQ (collega la spiegazione in Teoria; la retta la fanno gli studenti in Excel). Esporta anche in xlsx.
-
-### H2. Parametri del picco (parte di cromatografia LC)
-Colonne facoltative nella stessa tabella: **larghezza a metà altezza (min)**, **piatti teorici N** (= 5.54 · (tR / w½)²), **fattore di coda** (USP, a 5% dell'altezza) o **asimmetria** (a 10%: scegli uno dei due e scrivilo). Interruttore «Mostra parametri cromatografici» sopra la tabella (spento di default). Formule nel «?» generale / Teoria cap. LC, una riga ciascuna. Test pytest/e2e con un picco gaussiano sintetico (N e coda noti).
-
-### H3. Vista «a cascata» dei cromatogrammi nel tempo
-Nel menu della vista dei cromatogrammi (oggi `select data-o="mode"`, ~r.789: sovrapposti / impilati) una voce **«a cascata»**: i file della scheda ordinati per tempo (t0 davanti), ognuno spostato in alto e un po' a destra, con i colori per tempo (sez. 16 di `AGENTS.md`), riempimento bianco sotto ogni traccia così le tracce dietro sono coperte. Asse x reale sotto la traccia di t0; etichetta del tempo accanto a ogni traccia. Zoom e PNG funzionano. Niente cursore di lettura dei valori in questa vista (dirlo nell'etichetta). e2e + screenshot con 7 file.
 
 ---
 
