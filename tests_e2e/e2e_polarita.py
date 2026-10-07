@@ -19,17 +19,30 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), str(NEGF)]); pg.wait_for_timeout(1500)
         def load_signs():
-            t = pg.inner_text("#flist"); assert "+" in t and "−" in t, t
+            t = pg.inner_text("#flist"); assert "ESI+" in t and "ESI−" in t, t
             assert pg.evaluate("[...document.querySelectorAll('#flist .pol')].map(x=>x.title)") == ["ESI negativo", "ESI positivo"] or set(pg.evaluate("[...document.querySelectorAll('#flist .pol')].map(x=>x.title)")) == {"ESI positivo", "ESI negativo"}
-        step("loading table: + and − next to the names", load_signs)
+        step("loading table: ESI+ / ESI− badges (mixed polarities) next to the names", load_signs)
         pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
         def list_signs():
-            assert pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.ghost) .pol')].map(x=>x.textContent).sort().join('')") == "+−"
+            assert pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.ghost) .pol')].map(x=>x.textContent).sort().join('')") == "ESI+ESI−"
         step("file list: signs", list_signs)
         def legend():
             pg.evaluate("E.files.forEach(f=>f.vis=true)"); pg.evaluate("redrawAll()"); pg.wait_for_timeout(1500)
-            leg = pg.inner_text(".pnl.chrom .leg"); assert "+" in leg and "−" in leg, leg                            # both polarities overlaid: the sign is in the legend
+            leg = pg.inner_text(".pnl.chrom .leg"); assert "ESI+" in leg and "ESI−" in leg, leg                            # both polarities overlaid: the sign is in the legend
         step("legend: sign when positive and negative are overlaid", legend)
+        def uniform():
+            pg.evaluate("E.files.filter(f=>f.polarity==='negative').forEach(f=>{f.gone=true})"); pg.evaluate("renderFileList()"); pg.wait_for_timeout(300)
+            assert pg.locator("#flst .pol").count() == 0, "all files ESI+: no badge per file"
+            assert "ESI+" in pg.inner_text("#flst .fgh"), pg.inner_text("#flst .fgh")
+            ov = pg.evaluate("(()=>{const l=document.querySelector('#flst');return [...l.querySelectorAll('.fl')].every(e=>e.getBoundingClientRect().right<=l.getBoundingClientRect().right+1)})()"); assert ov, "nothing sticks out of the list"
+            pg.evaluate("E.files.forEach(f=>{f.gone=false})"); pg.evaluate("renderFileList()")
+        def simboli():
+            pg.click("#dtabs [data-t=ms2]"); pg.wait_for_timeout(500)
+            assert pg.locator("#dtabs sup").count() >= 1 and pg.inner_text("#dtabs").count("\u00b2") == 0, "MS<sup>2</sup>: a real superscript on the tab"
+            t = pg.inner_text("body"); bad = [c for c in "\u00b2\u00b3\u207a\u207b\u2080\u2081\u2082\u2083\u2084\u00bd" if c in t]; assert not bad, bad
+            pg.click("#dtabs [data-t=full]"); pg.wait_for_timeout(300)
+        step("7.2 MS2 has a real superscript, no Unicode superscripts in the visible text of the Dati tab", simboli)
+        step("one polarity only: no badge per file, ESI+ once in the group heading, nothing out of the row", uniform)
         def adduct():
             neg = pg.evaluate("E.files.findIndex(f=>f.polarity==='negative')")
             pg.evaluate("(k)=>{E.files.forEach((f,i)=>f.vis=i===k);E.browse=false}", neg) if False else None

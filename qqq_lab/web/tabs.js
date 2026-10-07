@@ -89,7 +89,7 @@ function ms2Exps() {
   const l = [...m.values()];
   return l.length > 8 ? l.sort((a, b) => b.n - a.n) : l.sort((a, b) => (a.prec ?? 0) - (b.prec ?? 0));      // a data-dependent file has many precursors with few scans: the most scanned first
 }
-// a triangle on the survey chromatogram: open that product-ion scan in the MS² tab
+// a triangle on the survey chromatogram: open that product-ion scan in the MS2 tab
 async function goMs2(t) {
   setTab("ms2", true);
   await new Promise(r => setTimeout(r, 700));
@@ -156,7 +156,7 @@ function mrmFocus(ps) {
 
 // one MS2 experiment = precursor chromatogram (above) + product-ion spectrum (below, linked)
 function addMs2Pair(e, y) {
-  const w = hostWidth(), f0 = tabFiles("ms2")[0], k = e.k ?? f0.k, label = e.prec != null ? `MS² · precursore ${e.prec}` : "MS²";
+  const w = hostWidth(), f0 = tabFiles("ms2")[0], k = e.k ?? f0.k, label = e.prec != null ? `MS2 · precursore ${e.prec}` : "MS2";
   const c = addPanel("chrom", { tab: "ms2", prec: e.prec, title: label, x: 0, y, w, h: 250, full: true });
   const sp = addPanel("spec", { tab: "ms2", link: c.id, k, level: 2, prec: e.prec, title: `Spettro degli ioni prodotto${e.prec != null ? " · " + e.prec : ""}`, x: 0, y: y + 260, w, h: 280, full: true });
   apexSpectrum(c, sp); return c;
@@ -177,7 +177,7 @@ function ms2Goto(prec) {
 function ms2Switch(prec) {
   const c = tabPanels("ms2").filter(q => q.type === "chrom").sort((a, b) => a.y - b.y)[0];
   if (!c) return ms2Toggle(prec, true);
-  c.prec = prec; c.title = prec != null ? `MS² · precursore ${prec}` : "MS²"; c.sel = null;
+  c.prec = prec; c.title = prec != null ? `MS2 · precursore ${prec}` : "MS2"; c.sel = null;
   const live = E.panels.filter(q => q.type === "spec" && q.link === c.id);
   live.forEach(sp => { sp.prec = prec; sp.zoom = null; sp.zoomY = null; sp.lock = null; sp.title = `Spettro degli ioni prodotto${prec != null ? " · " + prec : ""}`; });
   ctl(c); live.forEach(ctl);

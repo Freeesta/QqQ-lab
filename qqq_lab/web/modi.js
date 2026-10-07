@@ -14,7 +14,7 @@ const QMODI = (() => {
     full: { name: "Full Scan", short: "Full Scan", ico: "full", q: ["Q1 scansiona tutto l'intervallo di <i>m/z</i>", "Q2 lascia passare gli ioni (nessuna frammentazione)", "Q3 lascia passare"],
       what: "Che cosa c'è nel campione", use: "Si guarda tutto ciò che esce dalla colonna: ogni ione intatto (lo ione precursore, ad esempio [M+H]<sup>+</sup>) con la sua intensità. È il punto di partenza per cercare candidati.",
       out: "Spettro di massa: un picco per ogni ione presente", sel: "nessuna (si vede tutto)", frag: "no", res: "uno spettro per ogni istante del cromatogramma" },
-    prod: { name: "MS² (Product Ion)", short: "MS²", ico: "prod", q: ["Q1 resta fisso sullo ione precursore scelto", "Q2 è la cella di collisione: rompe lo ione (energia di collisione, CE)", "Q3 scansiona i frammenti"],
+    prod: { name: "MS2 (Product Ion)", short: "MS2", ico: "prod", q: ["Q1 resta fisso sullo ione precursore scelto", "Q2 è la cella di collisione: rompe lo ione (energia di collisione, CE)", "Q3 scansiona i frammenti"],
       what: "Di che cosa è fatto uno ione", use: "Si sceglie un precursore e si guardano i suoi frammenti: le perdite di massa dicono quali gruppi ha perso e aiutano a proporre una struttura (ipotesi, non identificazione).",
       out: "Spettro degli ioni prodotto: i frammenti di un solo precursore", sel: "alta sul precursore", frag: "sì", res: "uno spettro per ogni precursore scelto" },
     mrm: { name: "MRM", short: "MRM", ico: "mrm", q: ["Q1 fisso sul precursore", "Q2 frammenta lo ione", "Q3 fisso su un solo frammento (la transizione Q1&gt;Q3)"],

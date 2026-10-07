@@ -20,24 +20,8 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 4. ~~Strumenti dell'header e schermata di caricamento~~ (fatto il 7/10, `AGENTS.md` sez. 19)
 5. ~~Rifiniture~~ (fatto il 7/10)
 6. ~~Disegno~~ (fatto il 7/10)
-7. **Simboli** (segno di polarità leggibile e senza sbordare, «MS2» con un vero apice)
+7. ~~Simboli~~ (fatto il 7/10)
 8. **Ordine di cartelle e file** (inventario, cartelle vuote, cestino fuori da git, test obsoleti): per ultimo
-
----
-
-## BLOCCO 7: simboli e piccoli difetti di testo
-
-**7.1 Il segno «+» accanto ai nomi dei file.** Nella schermata di caricamento e nella lista dei file a sinistra accanto a ogni nome c'è un «+» isolato (è il segno di polarità del Blocco S9: `polSign` in `explore.js` ~r.161, e la tabella in `index.html` ~r.252): da solo non si capisce e nella lista a sinistra **sborda** dalla riga. Correggi così:
-- se **tutti i file** della sessione hanno la stessa polarità, **nessun segno per file**: la polarità compare **una volta** nell'intestazione del gruppo («Full Scan · ESI+ · 4 file») e nella schermata di caricamento come intestazione di colonna o nota del riquadro;
-- solo se nella sessione ci sono **polarità diverse**, accanto a ogni file un piccolo **badge** leggibile «ESI+» / «ESI−» (pillola grigia, testo 10-11 px), non un «+» nudo;
-- nella lista a sinistra il nome si accorcia con «…» (con il nome intero nell'etichetta) prima che qualcosa esca dalla riga: niente deve sbordare a nessuna larghezza della lista.
-e2e: con i file della serie B (tutti ESI+) nessun segno per file e «ESI+» nell'intestazione; con un file negativo sintetico i badge compaiono; nessun elemento della riga oltre il bordo della lista.
-
-**7.2 «MS²» e gli altri apici/pedici: niente caratteri Unicode.** «MS²» (carattere Unicode «²») si vede male con alcuni font; Federico vuole un **vero apice** con un numero normale. Regola per tutta l'interfaccia:
-- nell'**HTML** apici e pedici con `<sup>`/`<sub>` (es. `MS<sup>2</sup>`, `NH<sub>4</sub><sup>+</sup>`, `R<sup>2</sup>`, `w<sub>½</sub>` → `w<sub>1/2</sub>`), con uno stile comune che non sposta la riga (`sup,sub{font-size:.72em;line-height:0;position:relative}`, `sup{top:-.45em}`, `sub{top:.25em}`) e font di sistema;
-- nei **canvas** (titoli e legende dei grafici) una piccola funzione che disegna la parte in apice/pedice più piccola e spostata (es. `drawRich(g, "MS^2", x, y)`), invece del carattere Unicode;
-- dove non si può formattare (nomi dei file scaricati, intestazioni Excel, `title`/etichette semplici, nomi dei fogli) si scrive **«MS2»**, «R2», «NH4+».
-Cerca i caratteri `²³⁺⁻₀-₉½` in `explore.js`, `help.js`, `modi.js`, `origine.js`, `tabs.js`, `index.html` (e negli altri file di `web/`, esclusa la Teoria se già usa `<sup>`) e sostituiscili. Non toccare le formule che Ketcher disegna da sé. e2e: nessun carattere `²⁺⁻₀-₉` nel testo visibile della scheda Dati; la scheda «MS<sup>2</sup>» ha un elemento `sup`.
 
 ---
 
