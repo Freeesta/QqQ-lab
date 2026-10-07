@@ -42,6 +42,24 @@ def check_sha256(path: Path, want: str) -> None:
 # The visible name of the program lives only in qqq_lab/web/appname.js
 APP_NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (ROOT / "qqq_lab" / "web" / "appname.js").read_text(encoding="utf-8")).group(1)
 
+# Address of the published site (GitHub Pages): link previews (WhatsApp, Telegram, Slack...) need ABSOLUTE addresses for the page and the picture
+SITE_URL = "https://freeesta.github.io/QqQ-lab/"
+TAGLINE = "Analisi di dati LC-MS/MS direttamente nel browser"
+DESCRIPTION = "Esplora cromatogrammi, spettri, XIC e MRM dei tuoi file LC-MS/MS nel browser. Nessuna installazione: i dati restano sul tuo computer."
+
+
+def preview_tags() -> str:
+    """Open Graph + Twitter card + description: what a chat app reads (without running any JavaScript) to build the preview of a shared link."""
+    a = lambda t: t.replace("&", "&amp;").replace('"', "&quot;")
+    title = f"{APP_NAME} · {TAGLINE}"
+    img = SITE_URL + "static/anteprima.png"
+    meta = [("name", "description", DESCRIPTION), ("property", "og:type", "website"), ("property", "og:site_name", APP_NAME), ("property", "og:locale", "it_IT"), ("property", "og:url", SITE_URL),
+            ("property", "og:title", title), ("property", "og:description", DESCRIPTION), ("property", "og:image", img), ("property", "og:image:type", "image/png"),
+            ("property", "og:image:width", "1200"), ("property", "og:image:height", "630"), ("property", "og:image:alt", f"{APP_NAME}: un cromatogramma e uno spettro di massa"),
+            ("name", "twitter:card", "summary_large_image"), ("name", "twitter:title", title), ("name", "twitter:description", DESCRIPTION), ("name", "twitter:image", img)]
+    return "\n".join(f'<meta {k}="{n}" content="{a(v)}">' for k, n, v in meta) + f'\n<link rel="canonical" href="{SITE_URL}">'
+
+
 # Web app manifest (PWA). Paths are relative to the manifest, which sits in the site root, so it works under /QqQ-lab/.
 MANIFEST = {
     "name": APP_NAME, "short_name": APP_NAME, "lang": "it", "dir": "ltr",
@@ -91,6 +109,9 @@ def main() -> None:
     # the page: same index.html, plus the bridge that answers api/... without a server
     html = (static / "index.html").read_text(encoding="utf-8")
     html = html.replace("<head>", '<head>\n<script src="static/browser.js"></script>', 1)
+    # the name in the title is written here, not by appname.js: the apps that build link previews do not run JavaScript
+    html = html.replace("<title>{APP}</title>", f"<title>{APP_NAME} · {TAGLINE}</title>", 1)
+    html = html.replace("</head>", preview_tags() + "\n</head>", 1)
     # installable app (PWA): manifest at the site root + theme colour; the local program does not use it
     html = html.replace("</head>", '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#ffffff"></head>', 1)
     (out / "manifest.webmanifest").write_text(json.dumps(MANIFEST, ensure_ascii=False, indent=2), encoding="utf-8")
