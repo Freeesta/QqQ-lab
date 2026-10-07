@@ -72,6 +72,12 @@ e2e: clic destro sull'etichetta di un picco con un isotopo vicino (364.4 con 365
 
 **2.3 Etichette dei pulsanti 250 ms prima (deciso da Federico).** Trova il ritardo attuale del tooltip (cerca la costante del ritardo), riducilo di 250 ms (es. 1.5 s → 1.25 s) con una **costante unica** `TIP_DELAY` valida ovunque; sparisce appena il mouse esce o si clicca. Usa il tooltip del programma, non il `title` nativo (ritardo non controllabile): testi in `data-tip`, `aria-label` per l'accessibilità. Scrivi nel messaggio valore vecchio e nuovo.
 
+**2.4 Meno spazio sotto l'asse x, grafico più alto.** Sotto l'asse x oggi ci sono due righe: titolo dell'asse («m/z» / «Tempo di ritenzione (min)») e, sotto, la legenda (cromatogrammi) o la riga della scansione (spettri: «scansione 127/1111 · RT 2.66 min · TIC 4.0e7 · picco base m/z 141.2 (3.0e6)»). Con un solo file (o tracce non sovrapposte) la legenda non serve e resta quasi solo spazio bianco.
+- **Un solo file / una sola traccia → nessuna legenda** (il nome del file è già nell'intestazione e nel riquadro del mouse); con più file la legenda va dentro il grafico (2.1).
+- **Spettri**: la riga della scansione va sulla **stessa riga del titolo dell'asse x**, allineata a destra (piccola, grigia), invece che su una riga a parte.
+- Il margine inferiore (`M.b`) si adatta: niente spazio riservato a ciò che non c'è. Lo spazio guadagnato va al grafico (stessa altezza del pannello, area del grafico più alta).
+- Controlla con 1 file e con 7 file sovrapposti (cromatogramma, XIC, spettro) che niente si sovrapponga; vale anche nel PNG esportato (lì la riga della scansione può restare sotto, se serve per leggibilità).
+
 ---
 
 ## BLOCCO 3: finestra «Estrai uno ione (XIC)» (`openXic`, `#xicdlg`)
