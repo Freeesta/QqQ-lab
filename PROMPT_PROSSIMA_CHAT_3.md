@@ -99,18 +99,18 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 
 ---
 
+## BLOCCO 5: rifiniture rimaste dai prompt precedenti (piccolo)
+**5.1 Menu «Correzione» con icone.** Il menu unico «Correzione» (`data-o="corr"`, `setCorr`, `AGENTS.md` sez. 17) è un `<select>` con `title`: trasformalo in una tendina come quella dei «Parametri», con una piccola icona e un'etichetta di 1-2 righe per ogni voce (nessuna / file bianco / fondo di un tratto / linea di base automatica). Se l'intestazione in una riga del prompt 2 l'ha già spostato nei «Parametri», basta aggiungere icone ed etichette lì.
+
+**5.2 Documenti per gli agenti.** `AGENTS.md` (riga «Documenti di supporto per agenti» e «Alla fine di ogni sessione aggiorna `PROMPT_PROSSIMA_CHAT.md`») cita ancora un solo prompt. Aggiornalo alla regola attuale: i prompt sono file numerati `PROMPT_PROSSIMA_CHAT_N.md`, uno per chat; ognuno si ripulisce da solo e, quando è vuoto, va in `_cestino/<data>_prompt_completati/`; i lavori in coda che aspettano il via libera di Federico stanno nell'ultimo prompt aperto (sezione «Lavori in coda»).
+
+---
+
 ## BLOCCO 6: scheda Disegno (`draw.js`, `index.html`)
 
 **6.1 «Disegna veloce»: il campo si svuota dopo il disegno.** Dopo che lo SMILES è stato disegnato con successo (`#ex-load` → struttura aggiunta alla tela), il campo `#ex-smi` si **svuota** (pronto per lo SMILES successivo). Se lo SMILES non è valido o la tela non cambia, il testo **resta** nel campo, con l'avviso sotto (`#smi-warn`) come oggi, così lo studente può correggerlo. e2e: SMILES valido → campo vuoto e struttura sulla tela; SMILES sbagliato → testo ancora nel campo e avviso visibile.
 
 **6.2 Via il menu «Ione» (decisione di Federico).** Il menu «Ione: nessuno (molecola neutra) / [M+H]+ / …» (`#lb-ion`, `IONS`, `withIon` in `draw.js` ~r.231-291, riga in `index.html` ~r.124, `NB.labIon`) crea troppa confusione: gli studenti disegnano molecole neutre o ioni con la carica messa da loro con gli strumenti di Ketcher, mai addotti con Na+ o simili. **Toglilo** del tutto (menu, codice, salvataggio). Le scritte sotto le strutture restano: formula e massa della struttura **così come è disegnata**; se lo studente ha messo una carica, la scritta usa quella e mostra «m/z» (comportamento già esistente per le cariche disegnate). Un taccuino vecchio con `labIon` si apre senza errori (valore ignorato). Aggiorna `e2e24.py` (oggi usa `#lb-ion`), Teoria cap. 12 se cita il menu, `AGENTS.md` sez. 3 (riga `draw.js`) e le immagini d'esempio solo se le generava con il menu (`tests_e2e/make_examples.py`).
-
----
-
-## BLOCCO 5: rifiniture rimaste dai prompt precedenti (piccolo)
-**5.1 Menu «Correzione» con icone.** Il menu unico «Correzione» (`data-o="corr"`, `setCorr`, `AGENTS.md` sez. 17) è un `<select>` con `title`: trasformalo in una tendina come quella dei «Parametri», con una piccola icona e un'etichetta di 1-2 righe per ogni voce (nessuna / file bianco / fondo di un tratto / linea di base automatica). Se l'intestazione in una riga del prompt 2 l'ha già spostato nei «Parametri», basta aggiungere icone ed etichette lì.
-
-**5.2 Documenti per gli agenti.** `AGENTS.md` (riga «Documenti di supporto per agenti» e «Alla fine di ogni sessione aggiorna `PROMPT_PROSSIMA_CHAT.md`») cita ancora un solo prompt. Aggiornalo alla regola attuale: i prompt sono file numerati `PROMPT_PROSSIMA_CHAT_N.md`, uno per chat; ognuno si ripulisce da solo e, quando è vuoto, va in `_cestino/<data>_prompt_completati/`; i lavori in coda che aspettano il via libera di Federico stanno nell'ultimo prompt aperto (sezione «Lavori in coda»).
 
 ---
 
