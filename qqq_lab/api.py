@@ -77,6 +77,15 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                                          float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), q.get("merge") == "1"))
             except (ValueError, KeyError) as e:
                 return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
+        if path in ("/api/dda", "/api/scan", "/api/scanavg"):       # DDA and single scans as stored in the file (high resolution, B2)
+            try:
+                if path == "/api/dda":
+                    return _json(app.dda(int(q["k"])))
+                if path == "/api/scan":
+                    return _json(app.scan(int(q["k"]), int(q["sid"])))
+                return _json(app.scanavg(int(q["k"]), [int(x) for x in q["sids"].split(",") if x]))
+            except (ValueError, KeyError) as e:
+                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
         if path == "/api/formula":
             try:
                 return _json(formula_mz(q.get("f", ""), q.get("adduct") or None))

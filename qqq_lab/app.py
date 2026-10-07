@@ -292,8 +292,20 @@ class App:
         n = item.scan_count(level, precursor)
         if i0 < 0 or i0 >= n:
             raise ValueError(f"scansione fuori dal file (il file ne ha {n})")
-        return {"n": n, "scans": [{"i": s["i"], "rt": round(s["rt"], 4), **self._spec_json(item, level, s["mz"], s["y"], merge)}
+        return {"n": n, "scans": [{"i": s["i"], "sid": s["sid"], "rt": round(s["rt"], 4), **self._spec_json(item, level, s["mz"], s["y"], merge)}
                                   for s in item.scans(i0, i1, level, precursor, bin_da=bin_da)]}
+
+    def dda(self, k: int) -> dict:
+        """The MS2 scans of the physical file of item k with parent / isolation / activation (see Item.dda)."""
+        return self._item(k).dda()
+
+    def scan(self, k: int, sid: int) -> dict:
+        return self._item(k).scan(sid)
+
+    def scanavg(self, k: int, sids: list[int]) -> dict:
+        if len(sids) > 200:
+            raise ValueError("al massimo 200 scansioni per media")
+        return self._item(k).scan_avg(sids)
 
     def ionmap(self, k: int, level: int) -> dict:
         """RT x m/z intensity matrix (float32, row = RT bin, column = m/z bin, base64) on the session-wide grid."""
