@@ -9,6 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
+from .bigfiles import hr_profile
 from .project import guess_sample
 from .reader.mzml import Run
 
@@ -434,6 +435,7 @@ def sniff(path: Path) -> dict:
     it = Item(path.name, None, None, "sample", path)
     try:
         i = it.info()
-        return {"kind": i["kind"], "scans": i["scans"], "srm": i["srm"], "polarity": i["polarity"], "mixed": mixed_text(it.run), "spectrum_mode": i["spectrum_mode"]}
+        return {"kind": i["kind"], "scans": i["scans"], "srm": i["srm"], "polarity": i["polarity"], "mixed": mixed_text(it.run), "spectrum_mode": i["spectrum_mode"],
+                "hr_profile": hr_profile(it.run)}
     finally:
         it.run.close()

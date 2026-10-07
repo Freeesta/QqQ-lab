@@ -17,7 +17,20 @@ const tx = async (store, mode, fn) => {
 };
 const safe = async f => { try { return await f(); } catch (_) { return undefined; } };   // private windows may refuse storage: the program still works, it just does not resume
 
-let py = null, handle = null;
+// Big files are not copied into the memory of the engine: the Blob is mounted read-only with WORKERFS (/big/N/data) and linked into the work folder.
+// Above KEEP the file is not saved in IndexedDB either (it has to be opened again after a reload).
+const BIG = 50 << 20, KEEP = 300 << 20, MAX = 4 * 1024 * 1024 * 1024;
+const RECIPE = 'msconvert file.raw --mzML --zlib --filter "peakPicking vendor msLevel=1-"  (per alleggerire: --filter "scanTime [600,1500]" in secondi, --filter "threshold count 300 most-intense")';
+let bigN = 0;
+const baseName = n => String(n || "").split(/[\\/]/).pop();
+function mountBig(blob) {
+  const dir = `/big/${++bigN}`;
+  py.FS.mkdirTree(dir);
+  py.FS.mount(py.FS.filesystems.WORKERFS, { blobs: [{ name: "data", data: blob }] }, dir);
+  return `${dir}/data`;
+}
+
+let py = null, handle = null, linkBig = null;
 async function start() {
   try {
     say("Carico Python...");
@@ -31,33 +44,50 @@ async function start() {
     py.FS.mkdirTree(WORK);
     say("Riapro i file della volta scorsa...");
     const names = await safe(() => tx("files", "readonly", s => s.getAllKeys()));
+    const bigs = [];
     for (const n of names || []) {
       const buf = await safe(() => tx("files", "readonly", s => s.get(n)));
-      if (buf) py.FS.writeFile(`${WORK}/${n}`, new Uint8Array(buf));
+      if (!buf) continue;
+      if (typeof Blob !== "undefined" && buf instanceof Blob) bigs.push([n, buf]);        // a big file: mounted below, once Python is up
+      else py.FS.writeFile(`${WORK}/${n}`, new Uint8Array(buf));
     }
     const nb = await safe(() => tx("kv", "readonly", s => s.get("notebook")));
     if (nb) py.FS.writeFile(`${WORK}/taccuino.json`, nb);
+    for (const [n, blob] of bigs) { try { py.FS.symlink(mountBig(blob), `${WORK}/${n}`); } catch (e) { console.debug("[QqQ lab] file grande non riaperto", n, e); } }
     py.runPython("import sys; sys.path.insert(0, '/qqq')\nfrom qqq_lab import browser\nbrowser.start()");
     handle = py.runPython("browser.handle");
+    linkBig = py.runPython("browser.link_big");
     postMessage({ type: "ready" });
   } catch (e) { postMessage({ type: "fatal", text: String(e && e.message || e) }); }
 }
 const started = start();
 
 onmessage = async ev => {
-  const { id, method, url, body } = ev.data;
+  const { id, method, url, body, blob } = ev.data;
   await started;
   if (!handle) return postMessage({ id, status: 500, text: JSON.stringify({ error: "motore di calcolo non avviato" }) });
   let status, text;
+  const t0 = performance.now();
   try {
-    const r = handle(method, url, body);
-    [status, text] = r.toJs(); r.destroy();
-  } catch (e) { status = 500; text = JSON.stringify({ error: String(e && e.message || e) }); }
-  postMessage({ id, status, text });
+    if (blob) {                                                                       // a big upload: mount the Blob, do not copy it
+      const name = new URL(url, "http://x/").searchParams.get("name");
+      if (blob.size > MAX) throw new Error("file oltre 4 GB: troppo grande. Riducilo con MSConvert: " + RECIPE);
+      const r = linkBig(name, mountBig(blob));
+      [status, text] = r.toJs(); r.destroy();
+      if (status === 200 && blob.size <= KEEP) await safe(() => tx("files", "readwrite", s => s.put(blob, baseName(name))));
+    } else {
+      const r = handle(method, url, body);
+      [status, text] = r.toJs(); r.destroy();
+    }
+  } catch (e) {
+    const m = String(e && e.message || e);
+    status = 500; text = JSON.stringify({ error: /memory|alloc|RangeError/i.test(m) ? "Questo file è troppo grande per la memoria del browser. Riducilo con MSConvert: " + RECIPE : m });
+  }
+  postMessage({ id, status, text, ms: performance.now() - t0 });
   if (method !== "POST" || status !== 200) return;
   // keep the browser's storage in step with the program
   const u = new URL(url, "http://x/");
-  if (u.pathname === "/api/upload") { const n = u.searchParams.get("name"); const base = n && n.split(/[\\/]/).pop(); if (base && body) await safe(() => tx("files", "readwrite", s => s.put(body.buffer.byteLength ? body.buffer : new ArrayBuffer(0), base))); }
+  if (u.pathname === "/api/upload") { const n = u.searchParams.get("name"); const base = n && baseName(n); if (base && body) await safe(() => tx("files", "readwrite", s => s.put(body.buffer.byteLength ? body.buffer : new ArrayBuffer(0), base))); }
   else if (u.pathname === "/api/remove") { try { const n = JSON.parse(new TextDecoder().decode(body)).name; if (n) await safe(() => tx("files", "readwrite", s => s.delete(n.split(/[\\/]/).pop()))); } catch (_) { /* ignore */ } }
   else if (u.pathname === "/api/notebook") await safe(() => tx("kv", "readwrite", s => s.put(new TextDecoder().decode(body), "notebook")));
   else if (u.pathname === "/api/new") { try { if (JSON.parse(new TextDecoder().decode(body)).fresh) { await safe(() => tx("files", "readwrite", s => s.clear())); await safe(() => tx("kv", "readwrite", s => s.clear())); } } catch (_) { /* ignore */ } }
