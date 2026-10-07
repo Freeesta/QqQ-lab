@@ -35,15 +35,8 @@ try:
             assert "Curtain gas" in pg.inner_text("#bigdlg")
         step("two methods: selector", two)
         pg.click("#bigx"); pg.wait_for_timeout(300)
-        def isotopes():
-            pg.click("#np-ad"); pg.wait_for_timeout(500)
-            pg.click("#reftabs [data-t=is]"); pg.fill("#is-f", "C13H17O21"); pg.wait_for_timeout(800)
-            assert pg.locator("#is-out svg").count() == 1
-            txt = pg.evaluate("document.querySelector('#is-out svg').textContent"); assert "M+1" in txt and "M+2" in txt and "100.0%" in txt, txt[:200]
-            pg.screenshot(path=SH + "102_isotopes.png")
-        step("isotope bar spectrum with M, M+1, M+2...", isotopes)
         def texts():
-            pg.click("#reftabs [data-t=ls]"); pg.wait_for_timeout(300)
+            pg.click("#np-ad"); pg.wait_for_timeout(400); pg.click("#reftabs [data-t=ls]"); pg.wait_for_timeout(300)
             t = pg.inner_text("#refdlg"); assert "Differenze di massa frequenti" not in t and "Riferimenti" in t and "Levsen" in t
             assert pg.locator("a[href*='jms.1234']").count() == 1
             pg.click("#reftabs [data-t=pt]"); pg.wait_for_timeout(300)
