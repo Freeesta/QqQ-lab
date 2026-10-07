@@ -54,10 +54,19 @@ Se nemmeno così il file entra: messaggio chiaro («file troppo grande per il br
 - **Numeri**: etichette, cursore, righello con 4 decimali; righello: Δm in Da (4 decimali) + mDa; accanto a una m/z teorica (calcolatrice, profilo isotopico) l'**errore in ppm**.
 - e2e: due ioni isobari a 0,03 Da distinti nello spettro; XIC a 5 ppm che esclude l'isobaro.
 
-## BLOCCO HR4: DDA (`explore.js`, `tabs.js`, `explore.py`)
-- Con DDA (molti precursori diversi) **niente menu del precursore**: al suo posto, da un picco dello spettro MS1 o da un XIC (clic destro) «Spettri MS2 di questo ione»: le MS2 con precursore entro ±10 ppm (o dentro la finestra di isolamento) e RT nel picco, in ordine di tempo, scorrevoli con ← →. I triangolini sul cromatogramma (`ms2tri`) ci sono già: colorarli/filtrarli per lo ione scelto.
-- Intestazione dello spettro MS2: «precursore 195.0877 · HCD · NCE 30 · isolamento ±0,75». Mai «eV» per i file Thermo.
-- **Spunto didattico** (Teoria, non risposta): con un isolamento largo e un precursore debole lo spettro MS2 è **chimerico** (frammenti di ioni co-isolati). Nei file provati si vede bene: nel file del Fusion lo spettro MS2 di un precursore debole ha come picchi più intensi ioni che non vengono da lui.
+## BLOCCO HR4: DDA = Full Scan + MS2 nello stesso pannello (`explore.js`, `spettro.js`, `explore.py`)
+Idea di Federico (7/10): nel DDA la MS2 si guarda **sempre insieme alla Full Scan**, perché spesso c'è una sola MS2 per picco cromatografico; vicine come in Xcalibur/FreeStyle (celle impilate). Niente menu del precursore.
+- **Collegamento**: ogni MS2 ha `<precursor spectrumRef="… scan=N">` = la Full Scan da cui è stato scelto il precursore (presente in entrambi i file provati). Leggerlo in `Scan.parent`; in mancanza, la MS1 precedente.
+- **Pannello «DDA»** (un solo pannello, tre righe, stessa larghezza):
+  1. **cromatogramma** (TIC o XIC in ppm dello ione scelto) con i punti delle scansioni MS1 e un triangolino ▼ dove è partita una MS2 di quello ione (o di tutti, se nessuno ione è scelto): lo studente vede **dove** sul picco è stata presa la MS2 (salita, apice, coda) e quante volte;
+  2. **Full Scan** della scansione madre, con la **finestra di isolamento** disegnata come banda attorno al precursore (larghezza dal file: ±0,75 o ±1,5) e uno zoom automatico lì attorno: se dentro la banda ci sono altri ioni, lo spettro MS2 sarà chimerico (lo si vede, non lo si dice);
+  3. **MS2**, con il precursore segnato sull'asse (linea tratteggiata) e intestazione «MS2 di 195.0877 · HCD · NCE 30 · isolamento ±0,75 · RT 12.77 (madre: scansione 568)».
+- **Navigazione**: ← → passa alla MS2 successiva/precedente **dello stesso ione** (le tre righe si aggiornano insieme); clic su un triangolino = quella MS2; clic destro su un picco della Full Scan = «MS2 di questo ione» (precursore entro ±10 ppm o dentro la finestra di isolamento; se non ce ne sono: «nessuna MS2: il DDA non l'ha scelto», dato didattico anch'esso).
+- Le altre righe: con un solo picco cromatografico, nessuna media di scansioni MS2 (sono spettri singoli); media solo se lo studente seleziona più triangolini dello stesso ione.
+- Intestazioni: mai «eV» per Thermo (NCE). `ms2_events` senza tetto di 20 000.
+- Da studiare prima di scrivere: Xcalibur Qual Browser (celle cromatogramma/spettro collegate, filtro di scansione, frecce per scorrere le scansioni) e FreeStyle; MS-DIAL e MZmine mostrano MS1 e MS2 affiancati per ogni feature. Prendere l'idea, non la complessità.
+- **Spunto didattico** (Teoria, non risposta): spettri chimerici (nel file del Fusion lo spettro MS2 di un precursore debole ha come picchi più intensi ioni co-isolati) e campionamento DDA (una sola MS2 per picco, a volte sul fianco).
+- e2e (sintetico HR): pannello DDA con 3 righe; ← → cambia la MS2 e la Full Scan madre insieme; la banda di isolamento contiene il precursore; un ione senza MS2 dà il messaggio.
 
 ## BLOCCO HR5: calcolatrice, perdite neutre, isotopi
 - Calcolatrice: massa esatta a 4-5 decimali con `hr`, errore in ppm rispetto a un valore incollato o cliccato.
