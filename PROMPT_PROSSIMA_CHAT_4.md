@@ -132,7 +132,7 @@ Tolleranza HR 5 ppm (predefinito di FreeStyle; copre anche lo scostamento del Fu
 - `AGENTS.md`: paragrafo «Prestazioni e compatibilità» (come si misura, browser provati, obiettivi e valori).
 
 # PARTE D: confronto delle MS2 con le librerie (S1)
-D1-D5 fatti (vedi `AGENTS.md` sez. 21). **D6** (solo se avanza tempo): «Cerca tutte le MS2 del file» (nel worker, comando `searchAll` già pronto; manca l'interfaccia e un modo di leggere tutte le MS2 del file: dopo B2/B5 di S3 si può usare `/api/dda` e `/api/scan`) → tabella precursore · RT · miglior risultato · punteggio, con barra di avanzamento.
+D1-D5 fatti (vedi `AGENTS.md` sez. 23). **D6** (solo se avanza tempo): «Cerca tutte le MS2 del file» (nel worker, comando `searchAll` già pronto; manca l'interfaccia e un modo di leggere tutte le MS2 del file: dopo B2/B5 di S3 si può usare `/api/dda` e `/api/scan`) → tabella precursore · RT · miglior risultato · punteggio, con barra di avanzamento.
 - Idea per dopo (NON ora): **coseno modificato** fra la MS2 di un candidato prodotto di trasformazione e quella della madre (frammenti spostati del Δm fra i precursori) → piccola rete dei prodotti simili alla madre (molecular networking di GNPS).
 
 ---
