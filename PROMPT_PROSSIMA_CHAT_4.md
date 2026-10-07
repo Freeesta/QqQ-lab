@@ -81,10 +81,4 @@ e2e: da Disegno clic su «Dati» → `scrollY` invariato (0 se la pagina era in 
 
 ## Lavori in coda (NON fare: idee da valutare con Federico)
 
-**Q1. Modalità «alta risoluzione» (Orbitrap, Q-TOF).** Federico ha caricato un mzML Thermo (Orbitrap, DDA, centroidato con il peak picking del vendor) e il programma lo apre già: lettura di scansioni, cromatogrammi e DDA. Però buona parte della logica è tarata sulla risoluzione unitaria del 3200 QTRAP. Proposta da discutere, senza toccare il comportamento per il 3200:
-- **riconoscimento automatico** dal file: `mzml.py` ~r.214 legge già il modello e i componenti dello strumento (analizzatore orbitrap/TOF → alta risoluzione); dai file Thermo arrivano anche la `filter string` (polarità, MS1/MS2, HCD/CID ed energia, finestra di isolamento), il tempo di iniezione e la finestra di scansione. Per i parametri di ogni scansione basta l'mzML; il metodo strumentale completo di solito non c'è (da verificare sul file di Federico);
-- **XIC in ppm** (es. 5-10 ppm) invece della finestra [n−0,2; n+0,8]; nessuno spostamento di +0,24 Da;
-- **4 decimali** in etichette, righello e calcolatrice, con l'errore in ppm accanto alla massa teorica;
-- **perdite neutre**: con le masse esatte le perdite isobare si distinguono (CO 27,9949 contro C₂H₄ 28,0313): bel confronto didattico con il QqQ;
-- **peso dei file**: in profilo un file Orbitrap può pesare centinaia di MB (memoria del browser); centroidato con il peak picking del vendor (per Thermo è affidabile) è molto più leggero.
-Prima di scrivere codice: provare il file di Federico con `tools/verifica.py`, elencare cosa funziona e cosa no, poi decidere con lui.
+**Q1. Modalità «alta risoluzione» (Orbitrap, Q-TOF).** Piano completo, con le prove sui file di Federico, in `PIANO_ALTA_RISOLUZIONE.md`: non eseguirlo da qui.
