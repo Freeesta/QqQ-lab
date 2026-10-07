@@ -1575,7 +1575,7 @@ async function drawSpec(p) {
   };
   p._a.hov = px => {                                       // peak nearest to the mouse
     const b = p._a.snap(px); if (!b) return null;
-    const rf = p.meas && p.meas.ref != null ? `<div>Δ<i>m/z</i> = <b>${sgn1(b.m - p.meas.ref)}</b> <span class="sm">da ${p.meas.ref.toFixed(1)}</span></div>` : "";
+    const rf = p.meas && p.meas.ref != null ? `<div>Δ<i>m/z</i> <b>${Math.abs(b.m - p.meas.ref).toFixed(1)}</b> <span class="sm">da ${p.meas.ref.toFixed(1)}</span></div>` : "";
     return { px: X(b.m), html: `<b>m/z ${b.m.toFixed(2)}</b><div>intensità <b>${rel ? b.y.toFixed(1) + " %" : fmt(b.y)}</b>${rel ? ` <span class="sm">(${fmt(b.y0)} cps)</span>` : ""}</div>${data.length > 1 ? `<div class="sm">${EH(b.f.label)}</div>` : ""}${rf}` };
   };
   g.save(); g.beginPath(); g.rect(M.l, M.t - 1, W - M.l - M.r, H - M.t - M.b + 1); g.clip();     // bars taller than the (magnified) graph end at the top edge
