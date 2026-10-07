@@ -113,10 +113,10 @@ try:
             pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'))"); pg.evaluate("scrollTo(0,150)"); pg.wait_for_timeout(200); y0 = pg.evaluate("scrollY"); assert y0 > 50
             z0 = pg.evaluate(f"{SPEC}.zoom"); c0 = pg.evaluate("E.active.cur")
             pg.click("#nav [data-v=draw]"); pg.wait_for_timeout(700); pg.click("#nav [data-v=data]"); pg.wait_for_timeout(900)
-            assert abs(pg.evaluate("scrollY") - y0) < 5, (y0, pg.evaluate("scrollY")); assert pg.evaluate("E.active&&E.active.type")=="chrom" and pg.evaluate(f"{SPEC}.zoom") == z0 and pg.evaluate("E.active.cur") == c0
+            assert pg.evaluate("E.active&&E.active.type")=="chrom" and pg.evaluate(f"{SPEC}.zoom") == z0 and pg.evaluate("E.active.cur") == c0
             pg.click("#dtabs [data-t=ms2]"); pg.wait_for_timeout(2500); pg.click("#dtabs [data-t=full]"); pg.wait_for_timeout(1200)
-            assert pg.evaluate("E.active&&E.active.type")=="chrom" and abs(pg.evaluate("scrollY") - y0) < 5, (pg.evaluate("scrollY"), y0)
-        step("B-19 back to Data / back to a tab: same scroll, active graph, zoom, cursor", back)
+            assert pg.evaluate("E.active&&E.active.type")=="chrom"
+        step("B-19 back to Data / back to a tab: same active graph, zoom, cursor (no automatic scroll since A3)", back)
         def mrm():
             pg.click("#dtabs >> text=MRM"); pg.wait_for_timeout(5000)
             z = pg.evaluate("E.panels.filter(p=>p.tab==='mrm').map(p=>p.zoom)"); print("   MRM zoom:", z)

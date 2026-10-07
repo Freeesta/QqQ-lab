@@ -20,7 +20,7 @@ def run(code):
     const mono=s=>EL[s].iso.reduce((a,b)=>b[2]>a[2]?b:a)[1];
     const mass=f=>{{let m=0;for(const [,s,n] of f.matchAll(/([A-Z][a-z]?)(\\d*)/g))m+=mono(s)*(n?+n:1);return m}};
     {code}"""
-    return json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, text=True).stdout)
+    return json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, encoding="utf-8").stdout)
 
 
 def neutral_mass(formula):
@@ -42,7 +42,7 @@ def test_nominal_groups_and_polarity_are_filled():
         nominal.setdefault(n, []).append(f)
     assert sorted(nominal[28]) == ["C2H4", "CO"] and sorted(nominal[42]) == ["C2H2O", "C3H6"]
     assert sorted(nominal[46]) == ["CH2O2", "NO2"] and sorted(nominal[80]) == ["HBr", "SO3"]
-    assert [f for f, *_ , rad in r if rad] == ["CH3", "NO2"]                    # the two radical losses
+    assert [f for f, *_ , rad in r if rad] == ["CH3", "Cl", "NO2"]              # the radical losses
 
 
 def test_search_62_is_water_plus_co2():

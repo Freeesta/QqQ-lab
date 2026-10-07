@@ -134,9 +134,9 @@
   }
   // «Perdite neutre»: one line per loss (Δm, formula, name, where it is seen, typical polarity); «Dettagli» opens exact mass, mechanism and source;
   // the losses with the same nominal mass sit in a box (unit resolution cannot tell them apart); «Cerca Δm» lists single, pair and repeated candidates.
-  const NL = { q: "", pol: "", open: new Set() };       // state kept while the window is open (the ruler of the spectrum can fill q)
-  const fl = f => sub(f.replace(/^(CH3|NO2)$/, "•$1")).replace(/^•/, "•");   // radicals are written with the dot
-  const polChip = p => (p === "±" ? "<i class='nlp'>+</i><i class='nlp'>&minus;</i>" : p === "+" ? "<i class='nlp'>+</i>" : "<i class='nlp'>&minus;</i>");
+  const NL = { q: "", pol: "", open: new Set(), more: false };       // state kept while the window is open (the ruler of the spectrum can fill q)
+  const fl = f => sub(f.replace(/^(CH3|NO2|Cl)$/, "•$1")).replace(/^•/, "•");   // radicals are written with the dot
+  const polChip = p => `<span class="pol" title="Polarità in cui la perdita si osserva di solito">${p === "±" ? "entrambe" : p === "+" ? "ESI+" : "ESI&minus;"}</span>`;
   const lossRow = (l, o) => {
     const m = massOf(l.f), id = l.f;
     return `<div class="nlr${o.hit.has(id) ? " hit" : ""}" data-f="${id}"><div class="nlm">${Math.round(m)}</div><div class="nlf"><b>${fl(l.f)}</b><span class="muted">${H(l.name)}</span></div>
@@ -158,8 +158,11 @@
     return `<div class="nlc"><b>Possibili perdite (da verificare sullo spettro)</b>${li.length ? `<ul>${li.join("")}</ul>` : `<div class="muted sm">Nessuna perdita o combinazione della lista entro &plusmn;0.5.</div>`}</div>`;
   }
   function lossTab() {
-    return `<div class="nlbar"><label>Cerca &Delta;m <input id="nl-q" inputmode="decimal" autocomplete="off" placeholder="es. 62" value="${H(NL.q)}" title="Scrivi la differenza di massa osservata: evidenzia le perdite con quel valore (±0.5) e mostra coppie e ripetizioni che la compongono"></label>
-      <span class="seg" id="nl-pol" title="Polarità tipica della perdita"><button data-p="+" class="${NL.pol === "+" ? "on" : ""}">+</button><button data-p="-" class="${NL.pol === "-" ? "on" : ""}">&minus;</button><button data-p="" class="${NL.pol === "" ? "on" : ""}">tutte</button></span></div>
+    return `<div class="nlintro"><p>Nella cella di collisione (q2) lo ione selezionato urta le molecole del gas: parte della sua energia di movimento diventa energia interna (vibrazioni). Lo ione la scarica <b>rompendo un legame</b>, spesso dopo un <b>riarrangiamento</b> in cui un atomo di idrogeno si sposta: si stacca una piccola molecola stabile e <b>neutra</b> (H<sub>2</sub>O, CO, NH<sub>3</sub>, CO<sub>2</sub>…), che il rivelatore non vede, mentre la carica resta sul frammento. Per questo nello spettro MS<sup>2</sup> si legge la perdita come differenza: <b>&Delta;m = <i>m/z</i> del precursore &minus; <i>m/z</i> del frammento</b>.</p>
+      <a href="#" id="nl-more-t" aria-expanded="${NL.more}">${NL.more ? "&#9662;" : "&#9656;"} Più dettagli</a>
+      <p id="nl-more"${NL.more ? "" : " hidden"}>Gli ioni dell'electrospray hanno quasi sempre un numero pari di elettroni ([M+H]<sup>+</sup>, [M&minus;H]<sup>&minus;</sup>) e tendono a perdere molecole intere a guscio chiuso, non radicali (regola degli elettroni pari): le perdite di radicali come &bull;CH<sub>3</sub>, &bull;NO<sub>2</sub> o &bull;Cl sono eccezioni, possibili quando il frammento è stabilizzato da un anello aromatico (gruppi metossilici, nitro o atomi di cloro legati all'anello). Le perdite più comuni passano per stati di transizione ciclici a quattro o sei atomi, che costano poca energia; aumentando l'energia di collisione (CE) compaiono rotture più difficili e <b>perdite in cascata</b> (per esempio &minus;18 e poi &minus;44, cioè &minus;62 in totale). A risoluzione unitaria alcune perdite hanno la stessa massa nominale (28 = CO oppure C<sub>2</sub>H<sub>4</sub>): servono altri indizi, come il profilo isotopico o le altre perdite dello stesso ione.</p></div>
+      <div class="nlbar"><label>Cerca &Delta;m <input id="nl-q" inputmode="decimal" autocomplete="off" placeholder="es. 62" value="${H(NL.q)}" title="Scrivi la differenza di massa osservata: evidenzia le perdite con quel valore (±0.5) e mostra coppie e ripetizioni che la compongono"></label>
+      <span class="seg" id="nl-pol" title="Polarità tipica della perdita"><button data-p="+" class="${NL.pol === "+" ? "on" : ""}">ESI+</button><button data-p="-" class="${NL.pol === "-" ? "on" : ""}">ESI&minus;</button><button data-p="" class="${NL.pol === "" ? "on" : ""}">tutte</button></span></div>
       <div id="nl-res">${lossCombosHtml()}</div><div id="nl-list">${lossList()}</div>` + lossRefs();
   }
   function bindLoss(root, show) {
@@ -169,6 +172,7 @@
       root.querySelectorAll("[data-go]").forEach(a => a.onclick = e => { e.preventDefault(); show(a.dataset.go); });
     };
     wire();
+    root.querySelector("#nl-more-t").onclick = e => { e.preventDefault(); NL.more = !NL.more; root.querySelector("#nl-more").hidden = !NL.more; e.currentTarget.setAttribute("aria-expanded", NL.more); e.currentTarget.innerHTML = (NL.more ? "&#9662;" : "&#9656;") + " Più dettagli"; };
     root.querySelector("#nl-q").oninput = e => { NL.q = e.target.value; list(); };
     root.querySelectorAll("#nl-pol button").forEach(b => b.onclick = () => { NL.pol = b.dataset.p; root.querySelectorAll("#nl-pol button").forEach(x => x.classList.toggle("on", x === b)); list(); });
   }

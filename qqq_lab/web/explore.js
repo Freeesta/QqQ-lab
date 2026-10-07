@@ -365,7 +365,11 @@ const scanFiles = l => l.filter(f => f.kind !== "mrm");
 // ------------------------------------------------------------------ barra: frecce tra i file, metodo, esporta
 function renderNav() {
   const s = Q("#fsel"); if (!s) return;
-  s.innerHTML = tabFiles().map(f => `<option value="${f.k}" ${f.k === E.cur ? "selected" : ""}>${EH(f.label)}</option>`).join("");
+  const shortName = n => n.length > 34 ? n.slice(0, 20) + "…" + n.slice(-13) : n;          // a very long name is cut in the middle, so the final time stays visible
+  s.innerHTML = tabFiles().map(f => `<option value="${f.k}" ${f.k === E.cur ? "selected" : ""} title="${EH(f.label)}">${EH(shortName(f.label))}</option>`).join("");
+  const cur = tabFiles().find(f => f.k === E.cur);
+  const g = document.createElement("canvas").getContext("2d"), cs = getComputedStyle(s); g.font = `${cs.fontSize} ${cs.fontFamily}`;
+  s.style.width = Math.ceil(Math.max(0, ...[...s.options].map(o => g.measureText(o.textContent).width)) + 36) + "px";   // as wide as the longest name (CSS sets the minimum and the maximum)
   const tf = tabFiles(), one = tf.length <= 1, why = "Serve più di un file in questa scheda: ne hai caricato uno solo.";   // with a single file nothing here has a meaning
   // a single file: "Solo il selezionato" is on and "Tutti sovrapposti" is off; with two or more files the choice the student had made comes back
   if (one && tf.length) { if (!E._forced) { E._forced = true; E._prev = !!E.browse; } E.browse = true; E.cur = tf[0].k; }
@@ -373,6 +377,7 @@ function renderNav() {
   Q("#fmode").querySelectorAll("button").forEach(b => b.classList.toggle("on", (b.dataset.m === "sel") === !!E.browse));
   const nowhy = "Si usa con «Solo il selezionato»: con «Tutti sovrapposti» i grafici mostrano tutti i file spuntati.";
   [Q("#fprev"), Q("#fnext"), Q("#fsel"), ...Q("#fmode").querySelectorAll("button")].forEach(b => { if (b.dataset.t0 == null) b.dataset.t0 = b.title; const nav = !b.closest("#fmode"), all = b.dataset.m === "all"; b.disabled = nav ? one || !E.browse : one && all; b.title = one ? (all ? "C'è un solo file" : nav ? why : b.dataset.t0) : nav && !E.browse ? nowhy : b.dataset.t0; });
+  if (cur && !s.disabled) s.title = cur.label;                       // the whole name, also when it had to be cut
   const sig = [E.browse, E.cur, tabFiles().length, E.tab].join("|"); if (renderNav._sig !== sig) { renderNav._sig = sig; E.panels.forEach(q => q.el && ctl(q)); }      // the graphs' own file choosers depend on the mode
   Q("#fmode").classList.toggle("dis", one);
 }
@@ -389,31 +394,11 @@ document.addEventListener("mousedown", e => { if (E.active && e.target.closest("
 function toolbar() {
   if (window.renderTabs) renderTabs();
   const t = E.tab, empty = !tabFiles().length, scan = t !== "mrm", mrm = t === "mrm";
-  Q("#np-chrom").hidden = !scan; Q("#np-spec").hidden = !scan; Q("#np-map").hidden = t !== "full"; Q("#np-xic").hidden = !scan; Q("#np-merge").hidden = !scan;
+  Q("#np-chrom").hidden = !scan; Q("#np-spec").hidden = !scan; Q("#np-map").hidden = t !== "full"; Q("#np-xic").hidden = !scan;
   Q("#np-mrm").hidden = !mrm; 
   Q("#g-add").hidden = empty; Q("#g-tools").hidden = empty; Q("#g-file").hidden = empty; Q("#dpanels").hidden = empty; Q("#tools .sp").hidden = empty; Q("#np-method").hidden = empty;
   if (window.emptyTab) emptyTab();
-  fitTools(); requestAnimationFrame(fitTools); setTimeout(fitTools, 400);
 }
-// the least used buttons go into "Altro" only when the row would wrap
-function fitTools() {
-  const bar = Q("#tools"), more = Q("#np-more"); if (!bar || !more || !bar.offsetParent) return;
-  const cand = ["np-tile", "np-merge"].map(id => Q("#" + id));
-  cand.forEach(b => { b._mv = false; b.classList.remove("ov"); }); more.hidden = true;
-  const vis = () => [...bar.children].filter(c => c.offsetParent && c.id !== "np-more" || (c.id === "np-more" && !c.hidden));
-  const wrapped = () => { const ks = vis(); const t0 = ks[0] ? ks[0].offsetTop : 0; return ks.some(c => c.offsetTop > t0 + 8); };
-  for (const b of cand) { if (!wrapped()) break; if (b.hidden) continue; b._mv = true; b.classList.add("ov"); more.hidden = false; }
-  more._items = cand.filter(b => b._mv);
-}
-Q("#np-more").onclick = e => {
-  e.stopPropagation(); Q("#morepop")?.remove();
-  const d = document.createElement("div"); d.id = "morepop";
-  (Q("#np-more")._items || []).forEach(b => { const c = document.createElement("button"); c.textContent = b.textContent; c.title = b.title; c.onclick = () => { d.remove(); b.click(); }; d.appendChild(c); });
-  document.body.appendChild(d); const r = Q("#np-more").getBoundingClientRect(); d.style.left = Math.min(r.left, innerWidth - 200) + "px"; d.style.top = r.bottom + 4 + "px";
-  setTimeout(() => document.addEventListener("mousedown", function h(ev) { if (!d.contains(ev.target)) { d.remove(); document.removeEventListener("mousedown", h); } }), 0);
-};
-addEventListener("resize", () => fitTools());
-
 // ------------------------------------------------------------------ piccole finestre e menu
 function ask(title, def = "") {
   return new Promise(res => {
@@ -523,7 +508,7 @@ document.addEventListener("keydown", e => {
   if (S.view !== "data" || e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key) || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || Q("dialog[open]")) return;
   if (fsPanel()) return;
   const q = tabPanels().filter(x => x.el).sort((a, b) => a.y - b.y || a.id - b.id)[+e.key - 1]; if (!q) return;
-  setActive(q); front(q.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + q.y - 70, behavior: "smooth" });
+  setActive(q); front(q.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + q.y - hdrH() - 12, behavior: "smooth" });
 });
 function fitHost() { numberPanels(); Q("#dpanels").style.height = Math.max(520, ...tabPanels().map(p => p.y + p.h + 16)) + "px"; arrows(); pairArrows(); }
 // MS2 tab: a short arrow between the precursor chromatogram (above) and the product-ion spectrum it feeds (below)
@@ -1055,13 +1040,6 @@ function openXic(panel, pre = {}) {
 function splitPanel(p) {
   const rest = p.traces.slice(1); p.traces = p.traces.slice(0, 1); ctl(p); draw(p);
   rest.forEach(t => reveal(addPanel("xic", { traces: [t], tol: p.tol, smooth: p.smooth, mode: p.mode, log: p.log })));
-}
-function mergeXics() {
-  const xs = tabPanels().filter(p => p.type === "xic");
-  if (xs.length < 2) return info("Servono almeno due pannelli XIC.");
-  const [a, ...rest] = xs;
-  rest.forEach(q => { q.traces.forEach(t => a.traces.push(t)); q.el.querySelector(".x").click(); });
-  ctl(a); draw(a);
 }
 
 // ------------------------------------------------------------------ disegno dei grafici
@@ -2228,7 +2206,6 @@ Q("#np-xic").onclick = () => openXic(null);
 Q("#np-map").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(addPanel("map", { k: f?.k ?? 0 })); };
 Q("#np-mrm").onclick = () => reveal(addPanel("mrm", { imode: "man", intf: "all" }));
 Q("#np-tile").onclick = tile;
-Q("#np-merge").onclick = mergeXics;
 Q("#addf").onclick = async () => { S.adding = true; try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
 addEventListener("resize", () => { fitWidth(); redrawAll(); });
 document.addEventListener("tpview", e => { if (e.detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });
