@@ -16,7 +16,7 @@ try:
         pg = r.page(p)
         def table():
             pg.click("#np-ad"); pg.wait_for_timeout(500)
-            t = pg.inner_text("#refbody"); assert "nominale" in t and "1 decimale" not in t and "monoisotopica" in t and "Cl-35" in t and "0.4 Da" in t and "Meno frequenti" in t, t[:600]
+            t = pg.inner_text("#refbody"); assert "nominale" in t and "1 decimale" not in t and "monoisotopica" in t and "Cl-35" in t and "Meno frequenti" in t, t[:600]
             assert "catione" in t and "neutra" in t
             pg.fill("#ad-in", "363.0665"); pg.wait_for_timeout(400)
             rows = pg.evaluate("[...document.querySelectorAll('#ad-tbl tr')].map(tr=>[tr.className,...[...tr.children].map(c=>c.textContent)])")

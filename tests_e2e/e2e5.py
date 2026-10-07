@@ -39,7 +39,7 @@ try:
         def xicdlg_layout():
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))")
             ys = pg.evaluate("['#xic-mz','.xor','#xic-q'].map(s=>document.querySelector(s).getBoundingClientRect().top)"); assert ys[0] < ys[1] < ys[2], ys
-            t = pg.inner_text("#xicdlg"); assert "oppure" in t and "neutra" in t and "Extracted Ion Chromatogram" in t and "risoluzione unitaria" in t and "intervallo scelto" in t, t
+            t = pg.inner_text("#xicdlg"); assert "oppure" in t and "neutra" in t and "Extracted Ion Chromatogram" in t and "1 Da" in t, t
             assert not pg.query_selector("#xic-lo") and not pg.query_selector("#xic-hi") and "compromesso" not in t and "0.7 Da" not in t, t
             assert pg.input_value("#xic-q") == "C2H6O" or True      # (the window opens with the last ion: clear it, then nothing is written)
             pg.fill("#xic-q", ""); pg.fill("#xic-mz", ""); pg.wait_for_timeout(700)
@@ -79,7 +79,7 @@ try:
         step("spectrum background subtraction", spec_bg)
         def calc():
             pg.evaluate("document.querySelector('#np-calc2').click()"); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(800)
-            t = pg.inner_text("#calcout"); print(t.replace("\n", " | ")[:300]); assert "364.1" in t and "364" in t and "363.0665" in t
+            t = pg.inner_text("#calcout"); print(t.replace("\n", " | ")[:300]); assert "364.07" in t and "363.0665" in t and "1 decimale" not in t
             pg.screenshot(path=SH + "53_calc.png")
             pg.locator("#calcout button[data-m]").first.click(); pg.wait_for_timeout(800)          # the XIC button opens THE XIC window, formula and window already filled in
             assert pg.evaluate("document.querySelector('#xicdlg').open") and pg.input_value("#xic-q") == "C14H13F4N3O2S" and "363.8 - 364.8" in pg.inner_text("#xic-sum"), (pg.input_value("#xic-q"), pg.inner_text("#xic-sum"))

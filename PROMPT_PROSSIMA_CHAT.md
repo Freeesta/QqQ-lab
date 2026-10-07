@@ -16,29 +16,12 @@ Lavori in `~/QqQ_lab/QqQ_lab` (sul Mac) oppure nel clone GitHub (cloud). Leggi `
 - **Aggiorna Federico**: alla fine di OGNI blocco scrivigli un messaggio breve (3-5 righe): cosa hai fatto, cosa non hai potuto fare, cosa provare a mano. Se un punto richiede una scelta che cambia l'interfaccia in modo non descritto qui, fai la versione più semplice e segnalalo nel messaggio.
 
 ## Ordine di lavoro (per importanza)
-(I blocchi A, S, G e B sono fatti: vedi `AGENTS.md` sez. 17. Restano da rifinire: nel menu «Correzione» le voci non hanno ancora l'icona con etichetta (è un menu a tendina con `title`).)
-1. **Blocco C** calcolatrice + **Blocco F** Disegno (piccoli, insieme)
-2. **Blocco H** strumenti per la cromatografia (più avanzati: S/N, parametri del picco, vista a cascata)
-3. **Blocco I** file misti (DDA, Full Scan + MS2, MRM + EPI, polarità alternate): non urgente, solo dopo gli altri
-4. **Blocco D** licenze
-5. **Blocco E** residui
+(I blocchi A, S, G, B, C e F sono fatti: vedi `AGENTS.md` sez. 17. Restano da rifinire: nel menu «Correzione» le voci non hanno ancora l'icona con etichetta (è un menu a tendina con `title`).)
+1. **Blocco H** strumenti per la cromatografia (più avanzati: S/N, parametri del picco, vista a cascata)
+2. **Blocco I** file misti (DDA, Full Scan + MS2, MRM + EPI, polarità alternate): non urgente, solo dopo gli altri
+3. **Blocco D** licenze
+4. **Blocco E** residui
 Un commit per blocco e un messaggio a Federico per blocco. Se il tempo o i token finiscono, fermati dopo un commit pulito: è meglio finire bene i blocchi 1-2 che iniziare tutto.
-
----
-
-## BLOCCO C: calcolatrice m/z
-
-1. **Non più finestra modale al centro** (`<dialog id="calcdlg">` in `index.html` ~r.148 aperta con `showModal()`, `explore.js` ~r.1902-1915): oggi è piccola, oscura tutto e copre i grafici. Deve diventare un **riquadro a tendina che si apre subito sotto il suo pulsante** nell'header (`#np-calc2`), **senza sfondo scuro**, lasciando visibili e usabili cromatogramma e pannelli; si chiude con lo stesso pulsante, con Esc o con la ×; resta aperta mentre lo studente lavora sui grafici. Più larga di oggi (almeno 520 px, testo leggibile). Su schermo stretto si allarga a tutta la larghezza sotto l'header.
-2. **Formula in minuscolo**: deve funzionare anche con `c9h10cl2n2o`, `C9h10Cl2n2O`, ecc. Regola: leggi da sinistra; una lettera seguita da una minuscola forma un simbolo di due lettere SOLO se esiste ed è un elemento comune in chimica organica/ambientale (Cl, Br, Si, Na, Se, ...); altrimenti sono due elementi (es. `co` = C + O, non Co; `cl` = Cl). Mostra sempre sotto il campo la formula interpretata in forma corretta («interpretata come C9H10Cl2N2O»), così lo studente vede cosa è stato calcolato. Stessa funzione anche nella finestra XIC (formula neutra) e negli altri campi formula (Addotti, Isotopi): una sola funzione condivisa, con test (pytest se il parsing è in Python `parse_formula`; altrimenti test JS in e2e).
-3. **Togli la colonna «1 decimale»** (calcolatrice ~r.1911 e tabella Isotopi in `tables.js` ~r.224) e **togli la frase** «L'asse m/z di questo strumento può essere spostato di qualche decimo di Da…» (~r.1913).
-4. e2e: apertura sotto il pulsante senza sfondo scuro, grafico cliccabile con la calcolatrice aperta, formula minuscola, assenza della colonna e della frase.
-
----
-
-## BLOCCO F: scheda Disegno
-
-### F1. Decimali della massa fino a 5
-Il menu «decimali» delle scritte sotto le strutture (`<select id="lb-dec">` in `index.html` ~r.124, opzioni 0-4; letto in `draw.js` ~r.240-290, salvato in `NB.labDec`) deve arrivare a **5**. Controlla che: la massa sotto le strutture, l'm/z degli ioni (menu «Ione») e le esportazioni PNG/SVG mostrino i decimali scelti; l'arrotondamento sia half-up anche con i decimali (oggi `toFixed(dec)` per dec > 0 e `roundHalfUp` solo per 0, ~r.248: usa la stessa funzione half-up dell'Addotti/`elements.py`, AGENTS.md sez. 16); un taccuino vecchio con `labDec` da 0 a 4 si ripristina senza errori. e2e: scelta 5 → scritta con 5 decimali (es. paracetamolo M = 151.06333).
 
 ---
 

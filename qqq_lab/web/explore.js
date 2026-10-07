@@ -904,14 +904,14 @@ function openXic(panel, pre = {}) {
   if (!pre.formula && pre.mz == null && XIC_LAST) pre = { ...XIC_LAST, ...pre };
   const d = Q("#xicdlg"), q = Q("#xic-q"), mzi = Q("#xic-mz"), sum = Q("#xic-sum"), err = Q("#xic-err"), ad = Q("#xic-ad");
   ad.innerHTML = ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+", "[M-H]-", "[M+Cl]-", "[M+HCOO]-"].map(a => `<option ${a === (pre.adduct || defAdduct(panel && E.panels.includes(panel) ? scanFiles(shown()) : undefined)) ? "selected" : ""}>${a}</option>`).join("");
-  let label = pre.label || "", pending = Promise.resolve(), tq = 0, edits = 0, win = null, obs = false;
-  const upd = () => { sum.innerHTML = win ? `Si estrae l'intervallo <i>m/z</i> ${fmz(win[0])} - ${fmz(win[1])}.` : ""; };
+  let interp = "", label = pre.label || "", pending = Promise.resolve(), tq = 0, edits = 0, win = null, obs = false;
+  const upd = () => { sum.innerHTML = (interp ? `Formula interpretata come <b>${fmtFormula(interp)}</b>. ` : "") + (win ? `Si estrae l'intervallo <i>m/z</i> ${fmz(win[0])} - ${fmz(win[1])}.` : ""); };
   const fromV = () => { const v = numMz1(mzi.value); win = v != null ? xicWin(v, obs) : null; label = ""; upd(); };
   const fromQ = (quiet) => pending = (async () => {
-    const t = q.value.trim(), ed = edits; if (!quiet) err.textContent = ""; if (!t) { if (!mzi.value.trim()) { win = null; label = ""; upd(); } return; }
+    const t = q.value.trim(), ed = edits; if (!quiet) err.textContent = ""; if (!t) { if (!mzi.value.trim()) { win = null; label = ""; interp = ""; upd(); } return; }
     try {
       const r = await getFormula(t, ad.value); err.textContent = "";
-      if (ed === edits) { label = `${r.formula} ${r.adduct}`; win = xicWin(r.mz, false); upd(); }
+      if (ed === edits) { label = `${r.formula} ${r.adduct}`; interp = t.replace(/\s+/g, "") !== r.formula ? r.formula : ""; win = xicWin(r.mz, false); upd(); }
     } catch (e) { if (!quiet) err.textContent = "Formula non valida: " + e.message; }
   })();
   q.value = pre.formula || ""; mzi.value = ""; err.textContent = ""; win = null; upd();
@@ -1953,23 +1953,33 @@ addEventListener("resize", () => { fitWidth(); redrawAll(); });
 document.addEventListener("tpview", e => { if (e.detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });
 
 // ------------------------------------------------------------------ calcolatrice formula -> m/z (come «mass from formula» di Xcalibur)
-Q("#np-calc2").onclick = () => { if (Q("#calcdlg").open) return; Q("#calcdlg").showModal(); Q("#calcin").focus(); };
-Q("#calcx").onclick = () => Q("#calcdlg").close();
+// the calculator is a drop-down under its button (no dark backdrop): the graphs stay visible and usable; it closes with the button, Esc or the ×
+const calcBox = Q("#calcdlg");
+Object.defineProperty(calcBox, "open", { get: () => !calcBox.hidden });
+calcBox.close = () => { calcBox.hidden = true; };
+function calcPlace() {
+  const r = Q("#np-calc2").getBoundingClientRect(), w = Math.min(560, innerWidth - 16);
+  calcBox.style.top = Math.round(r.bottom + 6) + "px"; calcBox.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + "px";
+}
+Q("#np-calc2").onclick = () => { if (!calcBox.hidden) return calcBox.close(); calcBox.hidden = false; calcPlace(); Q("#calcin").focus(); };
+Q("#calcx").onclick = () => calcBox.close();
+addEventListener("resize", () => { if (!calcBox.hidden) calcPlace(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !calcBox.hidden) calcBox.close(); });
 async function calcRun() {
-  const t = Q("#calcin").value.trim(), out = Q("#calcout");
-  if (!t) { out.innerHTML = ""; return; }
+  const t = Q("#calcin").value.trim(), out = Q("#calcout"), sum = Q("#calcsum");
+  if (!t) { out.innerHTML = ""; sum.innerHTML = ""; return; }
   try {
     const r = await getFormula(t, "");
     const want = defAdduct();
+    sum.innerHTML = t.replace(/\s+/g, "") !== r.formula ? `interpretata come <b>${fmtFormula(r.formula)}</b>` : "";      // what was calculated, when the capitals were fixed
     out.innerHTML = `<p><b>${fmtFormula(r.formula)}</b> · massa esatta neutra <b>${r.neutral.toFixed(4)}</b> · intera <b>${r.nominal_neutral}</b></p>
-      <table><tr><th>addotto</th><th>m/z esatto</th><th>1 decimale</th><th>all'unità</th><th></th></tr>${Object.entries(r.adducts).map(([a, v]) =>
-      `<tr${a === want ? ' style="font-weight:600"' : ""}><td>${fmtAdduct(a)}</td><td>${v.mz.toFixed(4)}</td><td>${v.mz1.toFixed(1)}</td><td>${v.nominal}</td><td><button data-a="${EH(a)}" data-m="${v.mz1}" title="Apre la finestra per estrarre questo ione (XIC)">XIC</button></td></tr>`).join("")}</table>
-      <p class="muted sm">L'asse m/z di questo strumento può essere spostato di qualche decimo di Da rispetto al valore teorico: se il picco non cade dove ti aspetti, sposta o allarga la finestra dell'XIC.</p>`;
+      <table><tr><th>addotto</th><th>m/z esatto</th><th>all'unità</th><th></th></tr>${Object.entries(r.adducts).map(([a, v]) =>
+      `<tr${a === want ? ' style="font-weight:600"' : ""}><td>${fmtAdduct(a)}</td><td>${v.mz.toFixed(4)}</td><td>${v.nominal}</td><td><button data-a="${EH(a)}" data-m="${v.mz1}" title="Apre la finestra per estrarre questo ione (XIC)">XIC</button></td></tr>`).join("")}</table>`;
     out.querySelectorAll("button[data-m]").forEach(b => b.onclick = () => {
       Q("#calcdlg").close();
       openXic([...tabPanels()].reverse().find(q => q.type === "xic") || null, { formula: r.formula, adduct: b.dataset.a });
     });
-  } catch (e) { out.innerHTML = `<p class="muted">${EH(e.message)}</p>`; }
+  } catch (e) { sum.innerHTML = ""; out.innerHTML = `<p class="muted">${EH(e.message)}</p>`; }
 }
 Q("#calcin").oninput = calcRun;
 

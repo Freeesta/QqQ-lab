@@ -222,8 +222,8 @@
     return g + `<text x="${(l + w - r) / 2}" y="${h - 4}" text-anchor="middle" fill="#1f2937">m/z</text><text transform="translate(12 ${(t + h - b) / 2}) rotate(-90)" text-anchor="middle" fill="#1f2937">Intensità relativa (%)</text></svg>`;
   }
   function isoHtml(rows) {
-    return isoSvg(rows) + `<table style="margin-top:6px;max-width:560px"><tr><th>picco</th><th class="num">m/z</th><th class="num">1 decimale</th><th class="num">intensità relativa %</th><th></th></tr>` +
-      rows.map(r => `<tr><td>${r.off ? "M+" + r.off : "M"}</td><td class="num">${r.mz.toFixed(4)}</td><td class="num">${r.mz.toFixed(1)}</td><td class="num"><b>${r.rel < 1 ? r.rel.toFixed(2) : r.rel.toFixed(1)}</b></td>` +
+    return isoSvg(rows) + `<table style="margin-top:6px;max-width:560px"><tr><th>picco</th><th class="num">m/z</th><th class="num">intensità relativa %</th><th></th></tr>` +
+      rows.map(r => `<tr><td>${r.off ? "M+" + r.off : "M"}</td><td class="num">${r.mz.toFixed(4)}</td><td class="num"><b>${r.rel < 1 ? r.rel.toFixed(2) : r.rel.toFixed(1)}</b></td>` +
       `<td><i class="pt-bar" style="width:${Math.max(1, Math.round(r.rel * 2))}px"></i></td></tr>`).join("") + "</table>";
   }
   function bindIso(root) {
