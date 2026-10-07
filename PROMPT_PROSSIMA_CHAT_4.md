@@ -4,6 +4,17 @@
 > **Come si usa**: contiene SOLO il lavoro da fare. Punto fatto e verificato → **cancellalo da qui**; ciò che resta utile va in `AGENTS.md`. File vuoto → spostalo in `_cestino/<data>_prompt_completati/`.
 > **Parte B scritta da Claude Opus** dopo prove sui file Orbitrap di Federico e lettura dei manuali FreeStyle e Xcalibur: le scelte di progetto sono fatte. Tu esegui; se il codice non torna con quanto scritto, scegli la soluzione più semplice coerente con lo scopo e scrivilo a Federico.
 
+## Contesto (per chi parte da zero: le chat non hanno memoria, conta solo ciò che è scritto qui e in `AGENTS.md`)
+- **QqQ lab** è il programma didattico di Federico Cristaudo (dottorando, Università di Torino) per il laboratorio di inquinanti della laurea magistrale in Chimica dell'ambiente: gli studenti cercano i prodotti di trasformazione di un contaminante (l'incognita: **non nominarla mai nell'interfaccia**) nei dati LC-MS di un triplo quadrupolo **3200 QTRAP**. Gli studenti usano solo il sito (GitHub Pages, Pyodide nel browser).
+- Repository: `Freeesta/QqQ-lab` (**pubblico**: codice, prompt, `AGENTS.md`) e `Freeesta/QqQ-lab-dati` (**privato**: mzML e .dam veri del laboratorio, per i test; `tools/verifica.py` lo trova da solo). Sul Mac di Federico il repository è in `~/QqQ_lab/QqQ_lab`, i dati in `~/QqQ_lab/Data`, il cestino in `~/QqQ_lab/QqQ_lab/_cestino/` (solo locale, ignorato da git).
+- La parte B aggiunge l'alta risoluzione (Orbitrap) per il lavoro di ricerca di Federico: gli studenti non hanno file ad alta risoluzione.
+- Chi scrive i prompt è Claude Opus in una chat con Federico; chi li esegue è Sonnet nel cloud, **senza memoria**: tutto ciò che la chat successiva deve sapere (decisioni, stato, trappole trovate) va in `AGENTS.md` o in questo file, non solo nel messaggio a Federico.
+
+## Prima di iniziare (ogni sessione)
+1. `git fetch origin`; lavora sopra `origin/main` aggiornato.
+2. Se in `main` esiste ancora `PROMPT_PROSSIMA_CHAT_3.md` o c'è una pull request aperta del prompt 3 (`gh pr list`): **fermati** e scrivi a Federico che il prompt 3 non è ancora unito (questo prompt parte dal suo lavoro).
+3. Leggi «Stato e ripresa» qui sotto: se la tua sessione ha già lavoro fatto, riparti da lì.
+
 Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati` per i dati del laboratorio). Leggi `AGENTS.md` sez. 1-2, 5, 12, la sezione dei file misti e le ultime sezioni; poi SOLO il codice che serve, con `grep -n`. Non leggere `vendor/`.
 
 ## Regole fisse
@@ -38,15 +49,8 @@ Regole per lavorare in parallelo:
 - Tocca solo i file del tuo blocco (se serve altro, il minimo indispensabile). Unisci in `main` alla fine di ogni blocco verde, dopo `git fetch origin && git merge origin/main` e una nuova verifica; conflitto non ovvio → non unire e scrivi a Federico.
 - **S3, prima di B3** (il primo blocco che tocca `explore.js` e `spettro.js`): `git fetch origin && git merge origin/main`, così lavori sopra la parte A di S1 (A4.1 e B5 toccano le stesse funzioni di impilamento: `relayout`, `stackAfter`).
 - **S4** non tocca `Run._index` né i campi di `Scan` (li cambia S3 in B2): vedi B7.
-- In «Stato» ogni sessione aggiorna solo la sua riga. `AGENTS.md`: solo la tua sezione (la sez. 2 la aggiorna S1).
-
----|---|---|---|---|
-| 1 | S1 | Parte A | `index.html`, `explore.js`, `tables.js`, `spettro.js` | S2 |
-| 1 | S2 | B0, B1, B2 | `dati_sintetici.py`, `reader/`, `explore.py`, `app.py`, `api.py`, `web/hr.js` (nuovo) | S1 |
-| 2 | S3 | B3, B4, B5, B6 | `explore.js`, `spettro.js`, `web/hr.js`, `web/dda.js` (nuovo) | da sola, dopo l'onda 1 |
-| 3 | S4 | B7 | `reader/mzml.py`, `browser-worker.js` | S5 |
-| 3 | S5 | B8, B9 | calcolatrice, `tables.js`, `perdite.js`, Teoria, `AGENTS.md` | S4 |
-Regole per le sessioni parallele: tocca solo i file del tuo blocco (se serve altro, il minimo indispensabile); prima di unire in `main` fai `git fetch origin && git merge origin/main`, risolvi i conflitti solo se ovvi e rilancia la verifica; conflitto non ovvio → non unire e scrivi a Federico. In «Stato» ogni sessione aggiorna solo la sua riga. `AGENTS.md`: solo la tua sezione (la sez. 2 la aggiorna S1).
+- In «Stato» ogni sessione aggiorna solo la sua riga.
+- **`AGENTS.md`** (letto da chat senza memoria: scrivi per chi non sa niente, frasi brevi, con nomi di file e funzioni): ognuna aggiorna solo la sua parte. **S1**: sez. 2 (regole di lavoro: push a ogni punto, unione in `main` a ogni blocco verde, sessioni parallele con un file di prompt condiviso e la sezione «Stato», ripresa dopo un'interruzione, causa e rimedio del guasto dei test su Windows) e le sezioni dei file della parte A. **S3**: nuova sezione «Alta risoluzione e DDA» (B9). **S4**: in quella sezione, un paragrafo «File grandi» (`_FileBuf`, WORKERFS, soglie 50/300 MB, ricetta msconvert). Se due sessioni toccano `AGENTS.md`, il merge di righe diverse va da sé; in caso di conflitto tieni entrambe le versioni.
 
 ---
 
