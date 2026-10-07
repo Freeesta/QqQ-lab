@@ -34,7 +34,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati
 - A0-A3 fatti e uniti in main (A0: CI Windows da ricontrollare) · in corso: A4 · ramo claude/upbeat-johnson-xted9o
 
 **S3**
-- B0-B6, B8, B9 fatti e unibili in `main` (verifica completa verde, vedi sotto) · B7 è di S4 · restano da Federico le prove a mano (HR sul sito con Pyodide, file Exploris/Fusion interi)
+- B0-B6, B8, B9 fatti e uniti in `main` (verifica completa verde, 7/10 17:10; ripetuta sui test toccati dopo l'ultima modifica) · nessun punto in corso · restano da Federico le prove a mano (HR sul sito con Pyodide, file Exploris/Fusion interi)
 
 **S4**
 - B7 fatto e unito in `main` · C1 (`perf.js`, `/api/perf`) fatto · C2 job CI e `--browser`/`--fumo` scritti, da provare su Firefox e WebKit (installati nel container) · in corso: C2 poi C3/C4
