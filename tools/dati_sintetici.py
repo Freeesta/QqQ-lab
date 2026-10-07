@@ -2,7 +2,7 @@
 (cloud sessions, CI). The real data never go into the repository: this script WRITES files with the same names and
 the same structure as the lab files, but every number is invented.
 
-    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_MS2-t15, B_MRM-*, B_MRM-STD_*
+    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_FullMass-neg-t0 (ESI-), B_MS2-t15, B_MRM-*, B_MRM-STD_*
 
 What is built in (so the e2e tests find what they expect):
 - Full Scan (7 times, RT 0.5-20 min, ~1100 scans, m/z 120-480, +0.3 Da offset like the instrument): parent 364.4 at
@@ -38,7 +38,7 @@ def _arr(acc, name, data, unit="") -> str:
             f'<cvParam cvRef="MS" accession="{acc}" name="{name}" value=""{unit}/><binary>{_b64(data) if len(data) else ""}</binary></binaryDataArray>')
 
 
-def _spec(i, rt, mz, it, level=1, prec=None, ce=None) -> str:
+def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False) -> str:
     p = ""
     if prec is not None:
         p = (f'<precursorList count="1"><precursor><selectedIonList count="1"><selectedIon>'
@@ -46,7 +46,7 @@ def _spec(i, rt, mz, it, level=1, prec=None, ce=None) -> str:
              f'<activation><cvParam cvRef="MS" accession="MS:1000045" name="collision energy" value="{ce}"/></activation></precursor></precursorList>')
     return (f'<spectrum index="{i}" id="sample=1 period=1 cycle={i + 1} experiment=1" defaultArrayLength="{len(mz)}">'
             f'<cvParam cvRef="MS" accession="MS:1000511" name="ms level" value="{level}"/>'
-            f'<cvParam cvRef="MS" accession="MS:1000130" name="positive scan" value=""/>'
+            + ('<cvParam cvRef="MS" accession="MS:1000129" name="negative scan" value=""/>' if neg else '<cvParam cvRef="MS" accession="MS:1000130" name="positive scan" value=""/>') +
             f'<cvParam cvRef="MS" accession="MS:1000285" name="total ion current" value="{float(np.sum(it)):.6g}"/>'
             f'<scanList count="1"><scan><cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="{rt:.6f}" '
             f'unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"/></scan></scanList>{p}<binaryDataArrayList count="2">'
@@ -83,7 +83,7 @@ def _pda(rng, total, rt_end=22.0):
     return t, y
 
 
-def full_scan(path: Path, t: float, rng) -> None:
+def full_scan(path: Path, t: float, rng, neg: bool = False) -> None:
     k = 0.035
     P = 2.0e7 * np.exp(-k * t)
     comps = [  # (m/z observed, RT, sigma, amplitude)
@@ -95,6 +95,8 @@ def full_scan(path: Path, t: float, rng) -> None:
         (224.2, 13.0, 0.06, 8e5 * (1 - np.exp(-0.03 * t)) ** 2),
         (391.3, 18.3, 0.08, 6e5), (279.2, 2.1, 0.1, 3e5),
     ]
+    if neg:                                           # negative mode: [M-H]- is 2.0146 lighter than [M+H]+ (everything else the same, only to test the sign and the default adduct)
+        comps = [(m - 2.0146, c, s, a) for m, c, s, a in comps]
     rts = np.linspace(0.5087, 20.0076, 1111)
     specs, tic, bpc = [], [], []
     for i, rt in enumerate(rts):
@@ -104,7 +106,7 @@ def full_scan(path: Path, t: float, rng) -> None:
             if v > 200:
                 mz.append(m + rng.normal(0, 0.03)); it.append(v)
         o = np.argsort(mz); mz = np.array(mz)[o]; it = np.array(it)[o]
-        specs.append(_spec(i, rt, mz, it)); tic.append(it.sum()); bpc.append(it.max())
+        specs.append(_spec(i, rt, mz, it, neg=neg)); tic.append(it.sum()); bpc.append(it.max())
     tp, yp = _pda(rng, np.exp(-k * t))
     _write(path, specs, [_chrom(0, "TIC", rts, tic), _chrom(1, "BPC", rts, bpc), _chrom(2, "TWC", tp, yp)])
 
@@ -153,6 +155,7 @@ def make(out: Path) -> Path:
         mrm(out / f"B_MRM-t{t}.mzML", 1.3e5 * np.exp(-0.035 * t), rng, 6 + i)
     for i, (name, c) in enumerate(STANDARDS.items()):
         mrm(out / f"B_MRM-STD_{name}ppm.mzML", 1.0e4 * c, rng, 1 + i)
+    full_scan(out / "B_FullMass-neg-t0.mzML", 0, np.random.default_rng(7), neg=True)      # one NEGATIVE Full Scan (written last: the other files do not change)
     (out / "SINTETICI.txt").write_text("Dati sintetici scritti da tools/dati_sintetici.py: NON sono misure del laboratorio.\n", encoding="utf-8")
     return out
 

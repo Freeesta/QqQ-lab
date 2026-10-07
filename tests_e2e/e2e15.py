@@ -68,10 +68,10 @@ try:
         pg.click("#dtabs [data-t=mrm]"); pg.wait_for_timeout(3500)
         pg.screenshot(path=SH + "152_mrm.png")
         def mrm_ui():
-            assert pg.locator("#calbar").is_visible() and pg.locator("#np-cal").is_visible()
+            assert pg.locator("#calbar").count() == 0 and pg.locator("#np-cal").count() == 0 and pg.locator("[data-o=cal]").count() == 0, "the calibration line is made in Excel: no strip, no button"
             assert pg.evaluate("E.panels.some(p=>p.type==='mrm'&&p.imode==='man'&&p.intf==='all')")
-            assert "standard" in pg.inner_text("#flst")
-        step("MRM session: calibration strip, integration tool ready", mrm_ui)
+            assert "standard" in pg.inner_text("#flst") and pg.locator("#flst .fgh", has_text="MRM").count() == 1, pg.inner_text("#flst")[:200]      # header = the experiment (MRM), standard / campioni as small sub-groups
+        step("MRM session: no calibration strip, integration tool ready", mrm_ui)
         def integrate():
             i = pg.evaluate("E.panels.findIndex(p=>p.type==='mrm'&&p.tr===CAL.quant)")
             ap = pg.evaluate("""(i)=>{const p=E.panels[i],s=p._a.sr[0];let m=0;s.y.forEach((v,j)=>{if(v>s.y[m])m=j});return s.x[m]}""", i)
@@ -85,29 +85,14 @@ try:
             # make the areas differ (as real standards do): the window of each standard scales with its concentration
             pg.evaluate(f"""()=>{{tabPanels().filter(p=>p.type==='mrm').forEach(p=>{{p.ints.forEach(it=>{{const f=E.files[it.k],c=f.type==='standard'?f.conc:3,h=0.12*Math.min(c,10)/10+0.03,ap={ap};it.a=ap-h;it.b=ap+h}});draw(p)}})}}""")
             pg.wait_for_timeout(1200)
-            assert "3/3 standard integrati" in pg.inner_text("#calbar"), pg.inner_text("#calbar").replace("\n", " | ")
-        step("drag integrates every file in one window; a new drag replaces", integrate)
-        def calib():
-            pg.click("#calopen"); pg.wait_for_timeout(1500)
-            pg.screenshot(path=SH + "153_cal.png")
-            eq = pg.inner_text("#cal-eq"); assert "R²" in eq and "n = 3" in eq, eq
-            assert pg.locator(".cal-t tr").count() == 1 + 5, pg.locator(".cal-t tr").count()
-            pg.locator('[data-use]').first.uncheck(); pg.wait_for_timeout(300)
-            assert "n = 2" in pg.inner_text("#cal-eq"); pg.locator('[data-use]').first.check()
-            pg.select_option("#cal-w", "x"); pg.wait_for_timeout(300); assert "R²" in pg.inner_text("#cal-eq")
-            with pg.expect_download() as d: pg.click("#cal-xlsx")
-            f = d.value.path(); assert d.value.suggested_filename == "retta_di_taratura.xlsx"
-            sh = xlsx_sheets(f); assert sh == ["Dati", "Retta"], sh
-            dat = xlsx_rows(f, 1); ret = xlsx_rows(f, 2); labels = [r[0][1] for r in ret if r and r[0]]
-            assert any(l.startswith("Pendenza") for l in labels) and "R²" in labels and any(l.startswith("LOD") for l in labels), labels
-            slope = [r[1][1] for r in ret if r and r[0] and r[0][1].startswith("Pendenza")][0]; assert slope > 0, slope
-            assert any(c and c[0] == "s" and "Std_5" in c[1] for r in dat for c in r[:1]), dat[:3]
-            assert all(c[0] == "n" for r in dat[1:] for c in r[3:5] if c), dat[1]
+            pg.locator(".pnl.mrm [data-a=itab]").first.click(); pg.wait_for_timeout(500)
+            tb = pg.inner_text("#bigbody"); assert "Conc." in tb and "ig-cv" not in pg.inner_html("#bigbody") and "Area contro tempo" not in tb, tb[:300]
+            rows = pg.evaluate("[...document.querySelectorAll('#bigbody table tr')].map(r=>[...r.children].map(c=>c.textContent))")
+            assert any("Std_5" in " ".join(r) and any("mg" in c or "ppm" in c or "ug" in c.lower() for c in r) for r in rows), rows[:4]      # the concentration of the standards is in the table
+            with pg.expect_download() as d: pg.click("#ig-xlsx")
+            xr = xlsx_rows(d.value.path()); head = [c[1] for c in xr[0] if c]; assert "Concentrazione (standard)" in head and "Unità" in head, head
             pg.click("#bigx")
-        step("calibration window: fit, exclude a point, weights, Excel (2 sheets)", calib)
-        def reopen():
-            pg.locator('.pnl.mrm [data-o=cal]').first.click(); pg.wait_for_timeout(800); assert pg.locator("#cal-cv").is_visible(); pg.click("#bigx")
-        step("panel button opens it too", reopen)
+        step("drag integrates every file in one window; a new drag replaces", integrate)
 finally:
     r.close()
 print("\nSTEPS"); [print(" ", s) for s in steps]

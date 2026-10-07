@@ -16,98 +16,14 @@ Lavori in `~/QqQ_lab/QqQ_lab` (sul Mac) oppure nel clone GitHub (cloud). Leggi `
 - **Aggiorna Federico**: alla fine di OGNI blocco scrivigli un messaggio breve (3-5 righe): cosa hai fatto, cosa non hai potuto fare, cosa provare a mano. Se un punto richiede una scelta che cambia l'interfaccia in modo non descritto qui, fai la versione più semplice e segnalalo nel messaggio.
 
 ## Ordine di lavoro (per importanza)
-1. **Blocco S** semplificare: menu del clic destro, bianchi, scheda MS², via la retta di taratura, lista MRM, polarità visibile
-2. **Blocco G** strumenti per lo spettro (misura Δm/z, %, parametri, tabella dei picchi, zoom e assi collegati)
-3. **Blocco B** aiuti e testi
-4. **Blocco C** calcolatrice + **Blocco F** Disegno (piccoli, insieme)
-5. **Blocco H** strumenti per la cromatografia (più avanzati: S/N, parametri del picco, vista a cascata)
-6. **Blocco I** file misti (DDA, Full Scan + MS2, MRM + EPI, polarità alternate): non urgente, solo dopo gli altri
-7. **Blocco D** licenze
-8. **Blocco E** residui
-Un commit per blocco e un messaggio a Federico per blocco. Se il tempo o i token finiscono, fermati dopo un commit pulito: è meglio finire bene i blocchi 1-3 che iniziare tutto.
-
----
-
-## BLOCCO S: semplificare (menu del clic destro, bianchi, MS2, MRM)
-Federico: troppe voci, troppe opzioni che non si capiscono. Obiettivo: meno voci, testi brevi, una sola strada per ogni cosa. Riferimenti in `explore.js` (righe indicative): menu del cromatogramma ~r.1451-1457 e ~r.1779-1797, menu della mappa ~r.1741-1750, menu dello spettro ~r.1755-1777, bianco interno ~r.1072-1075.
-
-### S1. Menu del clic destro sullo spettro: corto e chiaro
-Resta solo (in quest'ordine, testi brevi):
-1. riga grigia con «m/z 194.2» (non cliccabile);
-2. «Estrai l'XIC di m/z 194.2» (e, se ci sono pannelli XIC, «Aggiungi a «nome»» per ognuno);
-3. «Misura da questo picco» (righello, Blocco G1);
-4. «Annota questo picco…»;
-5. «Profilo isotopico di una formula…» (vedi S2) e, se attivo, «Togli il profilo isotopico»;
-6. «Congela lo spettro» / «Ricollega al cromatogramma».
-**Togli**: «Da dove viene m/z …? (evidenze)» (qui e ovunque: menu del cromatogramma/XIC ~r.1789, menu della mappa ~r.1750, pulsante «Da dove viene?» del pannello XIC ~r.806/830). La finestra `origine.js` resta nel codice ma senza ingressi (scrivilo in `AGENTS.md` sez. 15: «nascosta il 7/10, decisione di Federico»; il capitolo 13 della Teoria resta). **Togli** «Mostra la scansione precedente (sagoma)» (~r.1764) e il suo codice (`p.ghost`, disegno, taccuino: un vecchio `ghost` va ignorato).
-
-### S2. Un solo strumento per il profilo isotopico
-Oggi «Simula lo spettro isotopico di una formula…» (`simSpec`/`unsim`/`drawSim`, `p.sim`: pannello che si allarga con lo spettro teorico sotto) e «Confronta con il profilo isotopico di una formula…» (`p.iso`: cerchi rossi sopra i picchi osservati) fanno quasi la stessa cosa. Tieni **uno solo**: «Profilo isotopico di una formula…» = i **cerchi/barre rossi sopra lo spettro osservato** (l'attuale `p.iso`), allineati al picco osservato più vicino, con una legenda breve («teorico C14H13F4N3O2S [M+H]+»). Togli `simSpec` e il pannello che si allarga (e i test che lo usano; un vecchio `sim` nel taccuino va ignorato). La scheda Isotopi della tabella resta per vedere il profilo da solo.
-
-### S3. Annotazioni più leggibili
-«Annota questo picco» (spettro) e «Annota questo punto» (cromatogramma) servono, ma oggi il testo si legge male. Disegna ogni annotazione come una **piccola etichetta con bordo** (sfondo del pannello, bordo del colore d'accento, testo 12 px) collegata al punto con una **linea sottile**; posizionala sopra il picco senza coprire le etichette m/z e senza uscire dal grafico (se c'è poco spazio, spostala di lato). Doppio clic sull'etichetta = modifica; clic destro = Modifica / Elimina. Entra nel PNG. e2e + screenshot.
-
-### S4. Menu del clic destro sul cromatogramma
-**Togli** «Tabella delle integrazioni e cinetica…» (~r.1457): la tabella delle integrazioni si apre dall'icona «tabella» del gruppo integrazione nell'intestazione del pannello (resta). Nella tabella (`showInts` ~r.1461) **togli il grafico «Area contro tempo di irraggiamento»** (`#ig-cv`): la cinetica la fanno gli studenti in Excel (AGENTS.md sez. 3: niente calcoli che fanno la relazione al posto loro). La tabella resta con le aree, il tempo, la concentrazione (standard) e Excel, più le colonne facoltative del Blocco H. Accorcia anche le altre voci del menu (es. «Integra il picco qui», «Integra l'intervallo selezionato», «Elimina questa integrazione», «Spettro a questo RT», «Estrai uno ione (XIC)…»).
-
-### S5. Bianchi: una sola scelta comprensibile
-Oggi ci sono tre meccanismi che nessuno capisce: il menu «bianco: …» del pannello (sottrae un file bianco, `p.bk`), la spunta «baseline» (SNIP, `p.snip`) e il «bianco interno» del clic destro (media / mediana / retta fra due tratti, `p.ibk`, `ibkPick`); negli spettri c'è anche «fondo: …» (`p.bg`). Sostituisci nei cromatogrammi/XIC/MRM con **un solo menu «Correzione»** (icona + etichetta breve per ogni voce):
-- **Nessuna**;
-- **Sottrai un file bianco** (sottomenu con i file di tipo «bianco»; voce grigia con etichetta «nessun file indicato come bianco» se non ce ne sono);
-- **Sottrai il fondo di un tratto** (lo studente trascina sul cromatogramma un tratto senza picchi; si sottrae la media di quel tratto: tieni SOLO la media costante, togli mediana e retta fra due tratti);
-- **Linea di base automatica** (l'attuale SNIP).
-Ogni voce ha un'etichetta di 1-2 righe che dice cosa fa e quando usarla. Negli spettri il menu «fondo» diventa **«Sottrai lo spettro di fondo»** con le stesse due idee (un file bianco / un tratto di tempo). I taccuini vecchi con `bk`, `snip`, `ibk` mediana/retta si ripristinano nella voce più vicina senza errori. Aggiorna Teoria cap. 9 e il «?» generale con UNO schema chiaro delle tre correzioni. e2e: ognuna delle voci cambia il grafico; taccuino vecchio ripristinato.
-
-### S6. Scheda MS² da ripensare (più semplice e senza vuoti)
-Problemi visti da Federico: (a) cliccando sul cromatogramma a volte lo spettro sotto è **vuoto** (molte scansioni MS2 sono vuote: il doppio clic/clic deve agganciarsi alla **scansione con dati più vicina** dello stesso precursore, come già fanno le frecce con `ms2Near`, e dirlo nella riga della scansione); (b) lo spettro MS2 **non deve partire con il lucchetto/assi bloccati**: si deve vedere subito dove sono i picchi più intensi (asse y automatico, in % come da Blocco G2); (c) il **menu del precursore è troppo stretto** e non si legge («MS2: precursore 226.3» tagliato, `select data-o="prec"` ~r.795/826: larghezza minima sufficiente per il testo più lungo, testo più corto: «prec. 226.3»); (d) troppi pannelli: oggi un cromatogramma + spettro per ciascuno dei primi 4 precursori. **Nuovo layout predefinito**: UNA coppia cromatogramma + spettro per il precursore scelto nella lista a sinistra; cliccando un altro precursore nella lista, la coppia passa a quel precursore (nessun pannello nuovo); «+ Cromatogramma» resta per chi vuole confrontare due precursori. All'apertura lo spettro mostra la scansione con il massimo di segnale del precursore (`apexSpectrum`). e2e (`e2e17`, `e2e19`, `e2e20` da adattare): nessuno spettro vuoto dopo un clic sul cromatogramma MS2, precursore leggibile, una sola coppia di pannelli.
-
-### S7. MRM: via la retta di taratura
-Decisione di Federico (7/10): **la retta la fanno gli studenti in Excel**, il programma non la fa. Togli: la striscia «Retta di taratura» con i passi 1-2-3 e «Tabella e retta» (`#calbar`, `calbar()`), i pulsanti «Retta di taratura» della barra (`#np-cal`, ~r.361, ~r.1894) e dei pannelli MRM (`data-o="cal"`, ~r.840), `openCalib` e `web/calib.js` (spostalo in `_cestino/` e togli lo `<script>` in `index.html` ~r.188), la riga «nessun file è indicato come standard…». **Restano**: tipo «standard» e concentrazione nella schermata di caricamento e nella tabella delle integrazioni (servono a loro in Excel), l'integrazione MRM (Quantificatore/Qualificatore, stessa finestra su tutti i file) e l'Excel della tabella. Aggiorna `AGENTS.md` (sez. 3 `calib.js`, sez. 10 «Flusso MRM»), Teoria (se cita la retta del programma) ed e2e15 (togli le parti sulla retta, tieni caricamento e integrazione).
-
-### S8. Lista dei file nella scheda MRM: dire che sono MRM
-Nella scheda MRM la lista mostra i gruppi «STANDARD» / «CAMPIONI» senza dire che sono file MRM (`grpOf` ~r.59 e ordinamento ~r.267), mentre nelle altre schede l'intestazione è il tipo di esperimento. Usa la stessa struttura delle altre schede: intestazione **«MRM»** (con l'icona e il numero di file) e, sotto, sottogruppi più piccoli «standard», «campioni», «bianchi» solo se servono (se tutti i file sono campioni, niente sottogruppo). Le righe grigie delle altre schede restano raggruppate per tipo di esperimento come oggi. e2e: intestazione «MRM» presente.
-
-### S9. Polarità visibile (oggi è solo nella finestra Metodo)
-**Stato verificato il 7/10**: la polarità viene LETTA dal file (per scansione `MS:1000130`/`MS:1000129` in `reader/mzml.py`; per gli MRM dall'intestazione, `_header_polarity` in `explore.py`; `info()["polarity"]` = positive/negative/mixed/unknown) ed è usata solo per (a) la finestra Metodo e (b) l'addotto predefinito della finestra XIC (`defAdduct` ~r.156: [M-H]- solo se TUTTI i file visibili sono negativi). Tutti i dati del laboratorio sono ESI+, quindi finora nessuno se n'è accorto. Da fare (piccolo, niente avvisi lunghi):
-1. Nella lista dei file e nella schermata di caricamento un piccolo segno **«+» o «−»** accanto al nome (etichetta: «ESI positivo» / «ESI negativo»; «±» se misto, «?» se non indicata).
-2. Addotto predefinito **per pannello**, dal file del pannello (XIC, Calcolatrice, Disegno «Ione» resta «nessuno»): negativo → [M-H]-, positivo → [M+H]+. Nella tabella Addotti metti per primi quelli della polarità dei file caricati.
-3. Se nello stesso grafico si sovrappongono file positivi e negativi, la legenda mostra il segno accanto a ogni file (nessun blocco, nessun avviso).
-4. Un file con polarità alternate va diviso (Blocco I, punto 4); finché non è fatto, nella schermata di caricamento la colonna Esperimento dice «polarità mista».
-5. Test: aggiungi a `tools/dati_sintetici.py` un Full Scan **negativo** (es. `B_FullMass-neg-t0`) e prova segno e addotto predefinito (pytest + e2e).
-
----
-
-## BLOCCO G: strumenti per lo spettro di massa (Full Scan e MS2)
-Nella scheda MRM non ci sono spettri: questo blocco riguarda gli spettri di Full Scan e MS2. Tutti i controlli nuovi stanno in UN'icona «Parametri dello spettro» (G2) o nel menu del clic destro, non in righe nuove.
-
-### G1. Misura Δm/z fra due picchi (righello)
-Serve per perdite neutre e differenze fra ioni: il programma fa solo la sottrazione, l'interpretazione resta allo studente (niente nomi di perdite proposti).
-- **Come si usa** (una sola logica, semplice): clic destro su un picco → «Misura da questo picco»: il picco diventa il **riferimento** (segno verticale tratteggiato e etichetta «rif.»). Da quel momento, passando sugli altri picchi, l'etichetta di passaggio mostra anche «Δm/z = +42.0» rispetto al riferimento; **clic su un secondo picco** fissa la misura: una parentesi orizzontale fra i due picchi con il valore Δm/z sopra (1 decimale, coerente con la risoluzione unitaria; segno + verso destra). Si possono fissare più misure dallo stesso riferimento. Esc, doppio clic o clic destro → «Togli le misure» le cancella.
-- Aggancio al centroide del picco più vicino (come il tooltip `p._a.hov` di `drawSpec`), mai a un punto vuoto.
-- Icona righello anche nell'intestazione dello spettro (stesso comportamento: attiva → clic sul primo picco = riferimento, clic sul secondo = misura), con etichetta breve.
-- Le misure restano con lo zoom, entrano nel PNG, si salvano nel pannello (`p.meas`), si tolgono cambiando file o precursore. e2e: riferimento, misura fissata con il valore giusto (es. 364.4 → 194.2 = 170.2), Esc la toglie.
-
-### G2. Icona «Parametri dello spettro» (soglia, %, decimali, etichette)
-Un'icona (ingranaggio piccolo o «sliders») nell'intestazione di ogni spettro apre un riquadro a tendina sotto l'icona (stile della calcolatrice nuova del Blocco C: niente sfondo scuro), con pochi controlli:
-- **Asse y: assoluto (cps) / % del picco più alto** (negli MS2 il lucchetto parte aperto: vedi S6). Predefinito: **% negli spettri MS2** (prodotto: si confrontano le intensità relative dei frammenti), **assoluto negli spettri Full Scan**. Lo studente può cambiarlo in ogni pannello; la scelta resta nel pannello (`p.rel`, taccuino). In % l'etichetta dell'asse è «Intensità relativa (%)»; il cursore e la tabella dei picchi mostrano sia % sia cps. Con il lucchetto (lucchetto solo y: già fatto) in %, si blocca la scala % (100 = massimo della scansione del blocco).
-- **Soglia per le etichette dei picchi**: etichetta solo i picchi sopra X% del picco più alto (predefinito 5%) e al massimo N etichette (predefinito 10); i picchi sotto soglia restano disegnati.
-- **Decimali delle etichette m/z**: 0, 1 (predefinito), 2.
-- Ripristina predefiniti. Tutti i valori nel pannello e nel taccuino. e2e: MS2 parte in %, Full Scan in assoluto, soglia cambia il numero di etichette.
-
-### G3. Tabella dei picchi dello spettro, pronta per Excel
-- Pulsante con icona «tabella» nell'intestazione dello spettro → tabella dei picchi della scansione/intervallo mostrato: **m/z**, **intensità (cps)**, **% del picco più alto**; ordinabile per colonna (clic sull'intestazione); filtri sopra la tabella: **soglia minima %** (predefinito quella del G2), **intervallo m/z da/a** (predefinito quello visibile), **numero massimo di righe**.
-- **Copia per Excel**: pulsante «Copia» che mette negli appunti la tabella come testo separato da TAB con intestazione, numeri con il **punto** decimale o con la **virgola** a scelta (Excel italiano vuole la virgola: predefinito virgola se `navigator.language` inizia con «it»), niente separatori delle migliaia; incollata in una cella di Excel deve riempire righe e colonne giuste con numeri veri. Scrivi anche `text/html` (una `<table>`) negli appunti con `ClipboardItem` se disponibile, così Excel/Numbers/Word la incollano già formattata; ripiego `navigator.clipboard.writeText`. Più il pulsante Excel (`.xlsx`, come gli altri, `dlx`).
-- Intestazione con il contesto: file, RT o intervallo, scansione, precursore (MS2). e2e: copia (leggi gli appunti nel test con i permessi di Playwright), numero di righe con la soglia, xlsx.
-
-### G4. Zoom: annulla e vista intera da tastiera
-- **Backspace** (fuori dai campi di testo) = vista intera del pannello attivo; **Ctrl/Cmd+Z** = zoom precedente (storia degli ultimi 15 zoom per pannello, `p.zh`); se nella pagina c'è già un Ctrl+Z (Disegno/Ketcher) non interferire: vale solo nella vista Dati con un pannello attivo.
-- Aggiungi le due scorciatoie all'elenco delle scorciatoie e alle etichette dei pulsanti di zoom. e2e.
-
-### G5. Assi del tempo collegati
-Interruttore (icona «catena») nell'intestazione dei pannelli cromatogramma/XIC/MRM: i pannelli collegati della stessa scheda condividono l'intervallo di tempo (zoom su uno = zoom su tutti, anche il reset). Spento di default; la scelta resta nel taccuino. Non collegare l'asse y. e2e: zoom sul TIC → XIC collegato con lo stesso intervallo.
-
-### G6. Intestazione della scansione mostrata
-Sotto ogni spettro una sola riga fissa (estendi `specCaption`, ~r.643): «scansione 812/1100 · RT 14.320 min · TIC 2.1e8 · picco base m/z 194.2 (4.2e6)»; per MS2 anche precursore e CE. Cifre a larghezza fissa (`tabular-nums`). Per un intervallo: «media di N scansioni, RT 14.27-14.34 min».
+(I blocchi A, S e G sono fatti: vedi `AGENTS.md` sez. 17. Restano da rifinire: nel menu «Correzione» le voci non hanno ancora l'icona con etichetta (è un menu a tendina con `title`).)
+1. **Blocco B** aiuti e testi
+2. **Blocco C** calcolatrice + **Blocco F** Disegno (piccoli, insieme)
+3. **Blocco H** strumenti per la cromatografia (più avanzati: S/N, parametri del picco, vista a cascata)
+4. **Blocco I** file misti (DDA, Full Scan + MS2, MRM + EPI, polarità alternate): non urgente, solo dopo gli altri
+5. **Blocco D** licenze
+6. **Blocco E** residui
+Un commit per blocco e un messaggio a Federico per blocco. Se il tempo o i token finiscono, fermati dopo un commit pulito: è meglio finire bene i blocchi 1-2 che iniziare tutto.
 
 ---
 

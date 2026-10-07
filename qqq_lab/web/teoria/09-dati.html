@@ -71,6 +71,7 @@
 
 <h2>MRM e quantificazione</h2>
 <h3>La retta di taratura</h3>
+<p class="sm">In QqQ lab si integrano i picchi MRM e si esporta la tabella delle integrazioni (aree e concentrazioni degli standard) in Excel: la retta la costruisci tu, lì.</p>
 <p>Si iniettano standard a concentrazione nota (nell'esperienza, una serie dal decimo di mg/L a decine di mg/L) e si costruisce area contro concentrazione. Per una retta affidabile:</p>
 <ul>
 <li>almeno 5–6 livelli che coprano l'intervallo dei campioni (non estrapolare);</li>
@@ -85,7 +86,7 @@
 <h3>Dalla quantificazione alla cinetica</h3>
 <p>Con le concentrazioni del parent si traccia <i>C</i>/<i>C</i><sub>0</sub> e ln(<i>C</i><sub>0</sub>/<i>C</i>) in funzione del tempo (capitolo 2). Per i TP, senza standard, si tracciano le aree degli XIC (dal full scan) o delle transizioni MRM, eventualmente normalizzate al loro massimo: si confronta la forma della curva, non l'altezza tra TP diversi.</p>
 <div class="box lab"><b>In QqQ lab</b>
-<p>La tabella delle integrazioni raccoglie le aree di ogni traccia in tutti i file e le ordina per tempo di irraggiamento: è il punto di partenza per i grafici della relazione e si esporta in CSV. Le opzioni di sottrazione del bianco e di linea di base (SNIP) aiutano sui picchi piccoli, ma vanno usate con lo stesso criterio su tutti i tempi, altrimenti l'andamento è un artefatto.</p></div>
+<p>La tabella delle integrazioni raccoglie le aree di ogni traccia in tutti i file e le ordina per tempo di irraggiamento: è il punto di partenza per i grafici della relazione e si esporta in Excel. Il menu «Correzione» offre tre modi (uno alla volta): sottrarre un <b>file bianco</b> (segue il tempo: utile quando il fondo cambia lungo la corsa), sottrarre il <b>fondo di un tratto</b> (un solo numero, la media di un tratto senza picchi: utile se il fondo è piatto) oppure la <b>linea di base automatica</b> (SNIP: toglie la base che sale sotto i picchi). Aiutano sui picchi piccoli, ma vanno usate con lo stesso criterio su tutti i tempi, altrimenti l'andamento è un artefatto.</p></div>
 
 <p class="note"><b>I tuoi file non lasciano il tuo computer.</b> Nella versione online i dati vengono letti dal browser e non sono inviati a nessun server; nella versione locale il programma risponde solo a questo computer.</p>
 

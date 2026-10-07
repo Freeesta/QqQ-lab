@@ -37,7 +37,7 @@ async function scData(p, k) {
     await scFetch(k, p.level, p.prec, p.si - (back ? 40 : 2), p.si + (back ? 2 : 40)).catch(() => {});
     s = scGet(k, p.level, p.prec, p.si);
   }
-  if (s && s.mz.length && s.rt >= p.r0 - 1e-6 && s.rt <= p.r1 + 1e-6) return { mz: s.mz, y: s.y, scans: 1 };
+  if (s && s.mz.length && s.rt >= p.r0 - 1e-6 && s.rt <= p.r1 + 1e-6) return { mz: s.mz, y: s.y, scans: 1, i0: s.i, n: SC.n.get(scBase(k, p.level, p.prec)) };
   return getSpec(k, p.r0, p.r1, p.level, p.prec, null);
 }
 // keep the next scans in the cache before they are needed (nothing is waited for)

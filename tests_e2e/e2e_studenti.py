@@ -21,7 +21,7 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1280, "height": 720}); pg.wait_for_timeout(500)
         pg.set_input_files("#pick", [mz(f) for f in SET]); pg.wait_for_timeout(2500)
         def table():
-            rows = pg.evaluate("[...document.querySelectorAll('#flist tr')].map(tr=>tr.classList.contains('grp')?'GRP '+tr.textContent.trim():tr.children[1].textContent.trim())")
+            rows = pg.evaluate("[...document.querySelectorAll('#flist tr')].map(tr=>tr.classList.contains('grp')?'GRP '+tr.textContent.trim():tr.children[1].textContent.replace(/\s*[+−±?]$/, '').trim())")
             gi = [i for i, t in enumerate(rows) if t.startswith("GRP")]; assert len(gi) == 3 and "Full Scan" in rows[gi[0]] and "MS²" in rows[gi[1]] and "MRM" in rows[gi[2]], rows
             full = rows[gi[0] + 1:gi[1]]; assert [x.replace(".mzML", "").split("-t")[-1] for x in full] == ["0", "5", "10", "15", "30 (2)", "45", "60"], full
             mrm = rows[gi[2] + 1:]; assert mrm == ["B_MRM-STD_0_6ppm.mzML", "B_MRM-STD_7_2ppm.mzML", "B_MRM-STD_18ppm.mzML", "B_MRM-t0.mzML", "B_MRM-t15.mzML", "B_MRM-t60.mzML"], mrm
@@ -137,14 +137,6 @@ try:
             assert "grezzo" in pg.evaluate(f"document.querySelector('.pnl.mrm [data-o=smooth]').closest('label').title")
             pg.evaluate(f"(()=>{{{P}.smooth=false;draw({P})}})()")
         step("B-14 areas do not depend on smoothing", smoothing)
-        def calib():
-            pg.evaluate("E.panels.filter(p=>p.tab==='mrm').forEach(p=>{p.ints=[];draw(p)})"); pg.wait_for_timeout(500)
-            pg.evaluate("openCalib()"); pg.wait_for_timeout(1200)
-            assert pg.is_visible("#cal-empty") and not pg.is_visible("#cal-cv"), "three steps instead of an empty frame"
-            pg.screenshot(path=SH + "studenti_calib_empty.png")
-            pg.click("#cal-goto"); pg.wait_for_timeout(800); assert not pg.evaluate("document.querySelector('#bigdlg').open")
-            assert pg.evaluate("E.active&&E.active.type")=="mrm" and pg.evaluate("E.active.imode") == "man"
-        step("B-17 empty calibration window: the 3 steps and a way to the MRM graph", calib)
 finally:
     r.close(); r.report()
 

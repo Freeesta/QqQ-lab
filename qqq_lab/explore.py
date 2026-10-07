@@ -240,6 +240,12 @@ class Item:
             ids, rt = ids[sm], rt[sm]
         return ids, rt
 
+    def window_scans(self, rt0: float, rt1: float, level: int = 1, precursor: float | None = None, prec_tol: float = 0.6) -> dict:
+        """Which scans a time window holds: positions (in the chromatogram of the same level / precursor) of the first and the last one, and the total."""
+        ids, rt = self._scan_ids(level, precursor, prec_tol)
+        ok = np.where((rt >= min(rt0, rt1)) & (rt <= max(rt0, rt1)))[0]
+        return {"i0": int(ok[0]) if len(ok) else None, "i1": int(ok[-1]) if len(ok) else None, "n": int(len(ids))}
+
     def scans(self, i0: int, i1: int, level: int = 1, precursor: float | None = None, prec_tol: float = 0.6, bin_da: float = 0.1) -> list[dict]:
         """Binned spectra of scans i0..i1 (inclusive; position in the chromatogram of the same level/precursor), one by one.
 

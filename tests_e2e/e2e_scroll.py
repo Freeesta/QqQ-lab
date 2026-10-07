@@ -1,4 +1,4 @@
-"""Scan-by-scan walk with the arrow keys: frozen axes (lock), no blank frames, last key wins, Maiusc = 5 scans, Space = play, ghost, MS2 skips empty scans."""
+"""Scan-by-scan walk with the arrow keys: frozen axes (lock), no blank frames, last key wins, Maiusc = 5 scans, Space = play, MS2 skips empty scans."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 steps = []
@@ -93,12 +93,6 @@ try:
             for i in range(60): pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(33)
             pg.wait_for_timeout(500); b = pg.evaluate("BL"); print("   blank frames:", b); assert b["blank"] == 0, b
         step("no blank frame while walking 60 scans at 30/s", blanks)
-        def ghost():
-            put_cursor(14.0); pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(500)
-            pg.evaluate(f"()=>{{const s={SPEC};s.ghost=true;draw(s)}}"); pg.wait_for_timeout(500); assert "scansione precedente" in st()["leg"], st()["leg"]
-            ok = pg.evaluate(f"(async()=>{{const s={SPEC};s._exp=true;await draw(s);const t=s.leg.textContent;s._exp=false;await draw(s);return t}})()"); assert "scansione precedente" not in ok, ok
-            pg.evaluate(f"()=>{{const s={SPEC};s.ghost=false;draw(s)}}"); pg.wait_for_timeout(300); assert "scansione precedente" not in st()["leg"]
-        step("ghost of the previous scan: shown, not in the PNG picture", ghost)
         def cursor_overlay():
             ok = pg.evaluate("(()=>{const p=E.active,c=p.cl;return !c.hidden&&Math.abs(parseFloat(c.style.left)-(p.cv.offsetLeft+p._a.X(p.cur)))<1})()"); assert ok
         step("cursor line is an overlay following the cursor", cursor_overlay)
