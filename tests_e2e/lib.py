@@ -29,7 +29,7 @@ class Run:
     def __init__(s, port=8811, wd="/tmp/wd1", fresh=True, extra=()):
         s.port, s.wd, s.errs = port, wd, []
         if fresh: shutil.rmtree(wd, ignore_errors=True)
-        s.srv = subprocess.Popen([sys.executable, "-m", "qqq_lab", "app", "--workdir", wd, "--port", str(port), "--no-open", *extra],
+        s.srv = subprocess.Popen([sys.executable, str(ROOT / "tools" / "dev_server.py"), "--workdir", wd, "--port", str(port), *extra],
                                  cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         time.sleep(2)
     def page(s, p):

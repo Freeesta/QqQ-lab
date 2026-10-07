@@ -1,4 +1,4 @@
-"""Local server (127.0.0.1 only): JSON API for the page and the session export."""
+"""The engine behind the page: the files the student opened, the session and the notebook. Runs inside Pyodide in the browser (see browser.py)."""
 from __future__ import annotations
 
 import base64
@@ -8,22 +8,16 @@ import re
 import shutil
 import threading
 import time
-import webbrowser
-from datetime import datetime
 from pathlib import Path
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from importlib import resources
-from urllib.parse import parse_qs, urlparse
 
 import numpy as np
 
-from .api import dispatch
 from .explore import Session, sniff
 from .reader.methodinfo import check_against, read_methods
 from .project import guess_conc, guess_sample
 
 
-UPLOAD_SUFFIXES = (".mzml", ".wiff", ".scan", ".dam")
+UPLOAD_SUFFIXES = (".mzml", ".dam")
 
 
 def _method_summary(m: dict | None) -> str:
@@ -41,7 +35,7 @@ def _method_summary(m: dict | None) -> str:
     return txt + (f", m/z {rng[0][0]:g}-{rng[0][1]:g}" if rng and len(ex) == 1 else "")
 
 
-MAX_UPLOAD = 4 << 30  # bytes: one mzML/wiff upload
+MAX_UPLOAD = 4 << 30  # bytes: one mzML upload
 
 
 class App:
@@ -66,17 +60,16 @@ class App:
         except Exception:  # noqa: BLE001 -- a broken notebook must never stop the program
             self.session = None
 
-    # ------------------------------------------------------------------ app mode: files and start
+    # ------------------------------------------------------------------ files and start
     def files(self) -> list[dict]:
         if not self.workdir:
             return []
         out = []
         for p in sorted(self.workdir.iterdir()):
-            if p.suffix.lower() in (".mzml", ".wiff") and p.is_file():
+            if p.suffix.lower() == ".mzml" and p.is_file():
                 label, t, typ = guess_sample(p.name)
                 c = guess_conc(p.name) if typ == "standard" else None
-                out.append({"name": p.name, "size": p.stat().st_size, "time": t, "type": typ, "conc": c[0] if c else None, "cunit": c[1] if c else None, **self._sniff(p),
-                            "scan": (p.parent / (p.name + ".scan")).exists() if p.suffix.lower() == ".wiff" else None})
+                out.append({"name": p.name, "size": p.stat().st_size, "time": t, "type": typ, "conc": c[0] if c else None, "cunit": c[1] if c else None, **self._sniff(p)})
         return out
 
     def _sniff(self, p: Path) -> dict:
@@ -123,12 +116,12 @@ class App:
     def safe_name(name: str) -> str:
         n = Path(name.replace("\\", "/")).name.strip()
         if not n or n.startswith(".") or Path(n).suffix.lower() not in UPLOAD_SUFFIXES:
-            raise ValueError(f"file type not accepted: {name!r} (use .mzML, or .wiff together with its .wiff.scan, or a method .dam)")
+            raise ValueError(f"file type not accepted: {name!r} (use .mzML, or a method .dam; convert a .wiff to .mzML first)")
         return re.sub(r"[\x00-\x1f<>:\"|?*]", "_", n)
 
     def save_upload(self, name: str, stream, length: int) -> str:
         if not self.workdir:
-            raise ValueError("uploads are only available in app mode")
+            raise ValueError("no work folder")
         n = self.safe_name(name)
         if length > MAX_UPLOAD:
             raise ValueError("file too large")
@@ -166,7 +159,7 @@ class App:
                     except Exception:  # noqa: BLE001 -- already closed or never opened
                         pass
                     self.session.items.remove(it)
-        for f in (src, self.workdir / (n + ".scan")):
+        for f in (src,):
             if f.exists():
                 os.replace(f, trash / f.name)
 
@@ -295,124 +288,18 @@ class App:
 
     def reset(self, fresh: bool = False):
         with self.lock:
-            if fresh and self.workdir:
-                self.workdir = default_workdir(new=True)
-                self.workdir.mkdir(parents=True, exist_ok=True)
+            if self.session:
+                for it in list(self.session.items):      # release the memory-mapped files before they go
+                    try:
+                        it.run.close()
+                    except Exception:  # noqa: BLE001
+                        pass
+            if fresh and self.workdir:                   # "Nuova sessione": the files and the notebook of the page are dropped
+                for f in self.workdir.iterdir():
+                    if f.is_file():
+                        f.unlink(missing_ok=True)
             self.session = None
 
     def state(self):
         return {"error": None, "phase": "start", "app": bool(self.workdir), "workdir": str(self.workdir) if self.workdir else None,
                 "files": self.files(), "methods": self.methods(), "version": __import__("qqq_lab").__version__}
-
-
-STATIC_TYPES = {".html": "text/html", ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf",
-                ".wasm": "application/wasm", ".ico": "image/x-icon", ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json",
-                ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".txt": "text/plain"}
-
-
-def _static(rel: str):
-    """A file under qqq_lab/web (never outside it)."""
-    base = resources.files("qqq_lab") / "web"
-    parts = [p for p in rel.split("/") if p]
-    if not parts or any(p in (".", "..") or "\\" in p for p in parts):
-        return None
-    f = base.joinpath(*parts)
-    suffix = "." + parts[-1].rsplit(".", 1)[-1].lower() if "." in parts[-1] else ""
-    if suffix not in STATIC_TYPES or not f.is_file():
-        return None
-    return f.read_bytes(), STATIC_TYPES[suffix]
-
-
-def _page() -> bytes:
-    return (resources.files("qqq_lab") / "web" / "index.html").read_bytes()
-
-
-def make_handler(app: App):
-    class H(BaseHTTPRequestHandler):
-        def log_message(self, *a):
-            pass
-
-        def _send(self, code, body: bytes, ctype="application/json", extra=None):
-            self.send_response(code)
-            self.send_header("Content-Type", ctype + "; charset=utf-8")
-            self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "no-store")
-            for k, v in (extra or {}).items():
-                self.send_header(k, v)
-            self.end_headers()
-            self.wfile.write(body)
-
-        def _json(self, obj, code=200):
-            self._send(code, json.dumps(obj).encode("utf-8"))
-
-        def _local_only(self) -> bool:
-            """Refuse requests that do not come from a page served by this very server."""
-            host = (self.headers.get("Host") or "").split(":")[0]
-            if host not in ("127.0.0.1", "localhost"):
-                return False
-            origin = self.headers.get("Origin")
-            return not origin or urlparse(origin).hostname in ("127.0.0.1", "localhost")
-
-        def _answer(self, res):
-            code, ctype, body, extra = res
-            self._send(code, body, ctype, extra)
-
-        def do_POST(self):
-            u = urlparse(self.path)
-            q = {k: v[0] for k, v in parse_qs(u.query).items()}
-            if not self._local_only():
-                return self._json({"error": "forbidden"}, 403)
-            return self._answer(dispatch(app, "POST", u.path, q, self.rfile, int(self.headers.get("Content-Length") or 0)))
-
-        def do_GET(self):
-            u = urlparse(self.path)
-            if not self._local_only():
-                return self._json({"error": "forbidden"}, 403)
-            q = {k: v[0] for k, v in parse_qs(u.query).items()}
-            if u.path in ("/", "/index.html"):
-                return self._send(200, _page(), "text/html")
-            if u.path.startswith("/static/"):
-                got = _static(u.path[len("/static/"):])
-                if got is None:
-                    return self._json({"error": "not found"}, 404)
-                return self._send(200, got[0], got[1], {"Cache-Control": "no-cache"})
-            return self._answer(dispatch(app, "GET", u.path, q))
-
-    return H
-
-
-def default_workdir(new: bool = False) -> Path:
-    """The most recent work folder (so closing and reopening the program resumes), or a new one."""
-    root = Path.home() / "QqQ_lab_lavoro"
-    if not new and root.is_dir():
-        old = sorted(p for p in root.glob("sessione_*") if p.is_dir())
-        if old:
-            return old[-1]
-    return root / datetime.now().strftime("sessione_%Y%m%d_%H%M%S")
-
-
-def serve(workdir, port: int = 8790, open_browser: bool = True):
-    """Local server, used only for development and the tests (the students use the site). Ctrl+C stops it."""
-    from . import __version__
-    app = App(workdir)
-    httpd = None
-    for p in range(port, port + 20):
-        try:
-            httpd = ThreadingHTTPServer(("127.0.0.1", p), make_handler(app))
-            break
-        except OSError:
-            continue
-    if httpd is None:
-        print(f"QqQ lab: no free port in {port}-{port + 19}")
-        raise SystemExit(1)
-    url = f"http://127.0.0.1:{httpd.server_address[1]}/"
-    print(f"QqQ lab v{__version__}  {url}  ready" + (f" (previous session reopened, {len(app.session.items)} files)" if app.session and app.session.items else ""))
-    print("  Ctrl+C to stop.")
-    if open_browser:
-        webbrowser.open(url)
-    try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        print("  QqQ lab closed. The work is saved.")
-    finally:
-        httpd.server_close()

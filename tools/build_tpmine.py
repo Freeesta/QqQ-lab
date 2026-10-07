@@ -2,7 +2,7 @@
 
     TPMINE_PASSWORD=... python tools/build_tpmine.py [--src DIR] [--out FILE]      # or type the password when asked
 
-Sources (plain text, in this repository under QqQ_lab_privato/tpmine/; never copied into the site):
+Sources (plain text, in this repository under TP_Mine/; never copied into the site):
     js/*.js        run in file-name order after the unlock; they register their tools with window.QTOOLS.register(...)
     files/*        extra text files given to the scripts as QTOOLS.ctx.files[name] (the Web Worker source)
     py/**/*.py     the Python of the tools, zipped and handed to Pyodide at run time (any other file in py/ is included as is)
@@ -66,7 +66,7 @@ def encrypt(payload: dict, password: str, iterations: int = ITER) -> bytes:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--src", type=Path, default=ROOT / "QqQ_lab_privato" / "tpmine")
+    ap.add_argument("--src", type=Path, default=ROOT / "TP_Mine")
     ap.add_argument("--out", type=Path, default=ROOT / "qqq_lab" / "web" / "tpmine.enc")
     ap.add_argument("--iterations", type=int, default=ITER)
     a = ap.parse_args()

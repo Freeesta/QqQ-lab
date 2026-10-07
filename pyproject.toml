@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "qqq_lab"
 version = "0.1.0"
-description = "QqQ lab: offline viewer for triple quadrupole mzML data (teaching lab, environmental pollutants)"
+description = "QqQ lab: viewer for triple quadrupole mzML data, runs in the browser (teaching lab, environmental pollutants)"
 requires-python = ">=3.11"
 dependencies = ["numpy>=1.24"]
 license = { text = "MIT" }
@@ -13,14 +13,8 @@ license = { text = "MIT" }
 [project.optional-dependencies]
 test = ["pytest"]
 
-[project.scripts]
-qqq_lab = "qqq_lab.cli:main"
-
 [tool.setuptools.packages.find]
 include = ["qqq_lab*"]
-
-[tool.setuptools.package-data]
-qqq_lab = ["web/*", "web/teoria/*", "web/vendor/*", "web/vendor/ketcher/*", "web/vendor/ketcher/assets/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

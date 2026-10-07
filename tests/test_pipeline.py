@@ -62,11 +62,11 @@ def test_explore_session(demo):
     assert it.info()["polarity"] == "positive"
 
 
-def test_app_mode_upload_and_open(tmp_path, demo):
+def test_upload_and_open(tmp_path, demo):
     import io
     import shutil
 
-    from qqq_lab.server import App
+    from qqq_lab.app import App
     app = App(tmp_path / "w")
     src = demo[1][0]
     app.save_upload("../evil/" + src.name, io.BytesIO(src.read_bytes()), src.stat().st_size)   # path parts are dropped
@@ -187,8 +187,12 @@ def test_theory_module_is_served_and_self_contained():
     """The Teoria pages are static: every local link, script and stylesheet must exist, no external scripts."""
     import re
     from importlib import resources
-    from qqq_lab.server import _static
-    base = resources.files("qqq_lab") / "web" / "teoria"
+    web = resources.files("qqq_lab") / "web"
+
+    def _static(rel):          # (bytes, type) of a file of the site, None if it does not exist
+        f = web.joinpath(*[p for p in rel.split("/") if p])
+        return (f.read_bytes(), "text/html" if rel.endswith(".html") else "other") if f.is_file() else None
+    base = web / "teoria"
     pages = sorted(p.name for p in base.iterdir() if p.name.endswith(".html"))
     assert "index.html" in pages and len(pages) >= 10
     body, ctype = _static("teoria/index.html")
@@ -251,8 +255,8 @@ def test_lc_method_xml_is_decoded():
 
 def test_method_dam_upload_is_listed_and_unknown_is_empty(tmp_path):
     """A .dam is accepted as an upload, listed as a method and never replaced by a built-in method; with none, the list is empty."""
-    from qqq_lab import server
-    app = server.App(tmp_path / "w")
+    from qqq_lab.app import App
+    app = App(tmp_path / "w")
     (tmp_path / "w").mkdir(exist_ok=True)
     assert app.methods() == [] and app.lab_methods() == []
     import io
@@ -339,7 +343,7 @@ def test_experiment_type_is_read_from_the_file_and_ms2_can_be_filtered_by_precur
     it.run.close()
 
 
-def test_browser_entry_answers_like_the_server(tmp_path, demo, monkeypatch):
+def test_browser_entry_answers_like_the_api(tmp_path, demo, monkeypatch):
     """qqq_lab.browser (run inside Pyodide by the site) goes through the same dispatch as the local server."""
     import json
     from qqq_lab import browser

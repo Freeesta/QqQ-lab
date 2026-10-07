@@ -1,5 +1,5 @@
 # TPMINE-PRIVATE
-"""Tests of the ISF classifier (tpmine.isf). Run: PYTHONPATH=<repo>:<privato>/tpmine/py QQQ_MZML=<Data/mzML> python3 -m pytest -q <privato>/tpmine/tests
+"""Tests of the ISF classifier (tpmine.isf). Run: PYTHONPATH=<repo>:TP_Mine/py QQQ_MZML=<Data/mzML> python3 -m pytest -q TP_Mine/tests
 Synthetic scenes with known truth (qqq_lab.demo.isf_series); the real-data test is skipped without QQQ_MZML."""
 import json, os
 from pathlib import Path
