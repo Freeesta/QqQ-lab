@@ -18,7 +18,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 0. **Manutenzione** (test rossi, cache del sito): breve
 1. **Spettro e menu del clic destro** (`explore.js`: disegno dello spettro, menu, annotazioni)
 2. **Intestazioni, zoom sugli assi, etichette** (`explore.js` `addPanel`/`ctl`/assi + CSS in `index.html`)
-3. **Finestra XIC** (`openXic`, `#xicdlg`)
+3. **Finestra XIC e calcolatrice** (`openXic`, `#xicdlg`, `#calcdlg`)
 4. **Perdite neutre** (`web/tables.js`, Teoria cap. 8)
 
 ---
@@ -91,6 +91,8 @@ e2e: clic destro sull'etichetta di un picco con un isotopo vicino (364.4 con 365
 **3.2 Scegliere il file.** Nella stessa finestra un menu **«File»**: «i file mostrati» (predefinito, segue «Solo il selezionato»/«Tutti sovrapposti» della barra) oppure un file preciso della scheda. È solo il valore iniziale: dopo si cambia dal selettore «File n/N» del pannello.
 
 **3.3 e2e**: due ioni → un pannello con due tracce; riga 2 vuota → una traccia; limite 10; formula + m/z; scelta di un file → il pannello mostra solo quello; XIC dal clic destro (1.3) senza finestra.
+
+**3.4 Calcolatrice m/z: solo gli addotti della polarità dei file.** Oggi la calcolatrice (tendina dell'header, `#calcdlg`/`#calcin`) elenca sempre addotti positivi e negativi insieme. Deve mostrare **solo quelli della polarità dei file mostrati** nella scheda attiva (segni +/− del Blocco S9, `info().polarity`): file positivi → solo [M+H]+, [M+NH4]+, [M+Na]+, [M+K]+…; negativi → solo [M-H]-, [M+Cl]-, [M+HCOO]-…; nessun file caricato, polarità mista o sconosciuta → entrambi, separati da una riga «ESI+» / «ESI−». Sotto la tabella un collegamento piccolo «mostra anche ESI−» (o ESI+) per chi vuole l'altra polarità. Stessa regola per l'ordine degli addotti nella scheda Addotti (già prevista: prima quelli della polarità dei file). e2e: con i file della serie B (ESI+) la calcolatrice non mostra [M-H]-; con un file negativo sintetico mostra solo i negativi.
 
 ---
 
