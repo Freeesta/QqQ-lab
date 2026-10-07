@@ -147,6 +147,24 @@ def data_dir() -> tuple[Path, str]:
     return syn, "sintetici"
 
 
+def hrms_dirs() -> list[Path]:
+    """Folders with high-resolution Orbitrap files: the two cuttings of the private data repository (HRMS/) and, on Federico's Mac, the whole files."""
+    repo = dati_repo()
+    c = [repo / "HRMS" if repo else None, Path(os.environ["QQQ_HRMS"]) if os.environ.get("QQQ_HRMS") else None, ROOT.parent / "Data" / "HRMS"]
+    return [d for d in c if d and d.is_dir() and any(d.glob("*.mzML"))]
+
+
+def prova_hr(results) -> None:
+    """Technical numbers of the real Orbitrap files (tools/prova_hr.py); nothing to check, only information."""
+    dirs = hrms_dirs()
+    if not dirs:
+        results.append(("prova_hr", "SKIP", 0, ["nessuna cartella HRMS (QqQ-lab-dati/HRMS o ../Data/HRMS)"])); return
+    for d in dirs:
+        rc, out, dt = sh([sys.executable, str(ROOT / "tools" / "prova_hr.py"), str(d)], LOG / "prova_hr.log", 900)
+        results.append((f"prova_hr {d.parent.name}/{d.name}", "OK" if rc == 0 and "ERRORE" not in out else "FAIL", dt,
+                        [l[:200] for l in out.strip().splitlines()]))
+
+
 def dam_file() -> Path | None:
     repo = dati_repo()
     name = "Lab_inq_FullMass_pos_max480.dam"            # e2e15 also wants Lab_inq_MRM_Flufe.dam in the same folder
@@ -214,6 +232,8 @@ def main() -> None:
     t0 = time.time()
     js_syntax(results)
     pytest(results, 1200)
+    if not a.rapida:
+        prova_hr(results)
     if not a.senza_e2e:
         only = {s.strip().removesuffix(".py") for s in a.solo.split(",") if s.strip()} or (set(SMOKE) if a.rapida else set())
         e2e(results, only, a.timeout, "")
@@ -221,7 +241,7 @@ def main() -> None:
     lines = [f"# Verifica QqQ lab ({time.strftime('%Y-%m-%d %H:%M')}, {time.time() - t0:.0f} s): "
              + ("TUTTO OK" if not fails else f"{len(fails)} FAIL"), ""]
     for name, st, dt, notes in results:
-        lines.append(f"- {st:4} {name}" + (f" ({dt:.0f} s)" if dt else "") + (": " + " | ".join(notes) if notes and st != "OK" else ""))
+        lines.append(f"- {st:4} {name}" + (f" ({dt:.0f} s)" if dt else "") + (": " + " | ".join(notes) if notes and (st != "OK" or name.startswith("prova_hr")) else ""))
     lines += ["", "Log completi: .verifica/log/<nome>.log (leggili solo per i FAIL)."]
     text = "\n".join(lines)
     (OUT / "ultimo.md").write_text(text + "\n", encoding="utf-8")

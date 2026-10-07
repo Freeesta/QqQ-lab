@@ -34,7 +34,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati
 - —
 
 **S3**
-- —
+- B0 fatto (dati sintetici HR `hr_dda`, `tools/prova_hr.py`, `tests/test_hr_synth.py`) · in corso: B1 · ramo `claude/intelligent-bell-omu954` non ancora in `main`
 
 **S4**
 - —
