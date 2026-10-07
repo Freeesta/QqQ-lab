@@ -140,7 +140,7 @@ try:
             names = {f: d.suggested_filename for f, d in ds.items()}; print(names)
             assert all(pat.match(n) for n in names.values()), names
             bases = {re.sub(r"\.\w+$", "", n) for n in names.values()}; assert len(bases) == 1, ("one base name per moment", names)
-            png = open(ds["png"].path(), "rb").read(); assert png[:8] == b"\x89PNG\r\n\x1a\n" and b"tEXt" in png[:600] and b"QqQ lab" in png[:900], "PNG metadata"
+            png = open(ds["png"].path(), "rb").read(); assert png[:8] == b"\x89PNG\r\n\x1a\n" and b"tEXt" in png[:600] and b"mzLab" in png[:900], "PNG metadata"
             svg = open(ds["svg"].path(), encoding="utf-8").read(); assert "<title>" in svg
             assert open(ds["jpg"].path(), "rb").read(2) == b"\xff\xd8"
             assert open(ds["ket"].path(), encoding="utf-8").read().lstrip().startswith("{")

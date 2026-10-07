@@ -28,7 +28,7 @@ function drawMeas(p, g, X, Y, W) {
   const m = p.meas; if (!m || p._exp && false) return;
   const ac = css("--accent"), x0 = M.l, x1 = W - M.r;
   g.save(); g.beginPath(); g.rect(x0, M.t - 1, x1 - x0, 400); g.clip();
-  g.strokeStyle = g.fillStyle = ac; g.lineWidth = 1; g.font = fpx(11); g.textAlign = "center";
+  g.strokeStyle = g.fillStyle = ac; g.lineWidth = 1; g.font = fpx(12); g.textAlign = "center";
   if (m.ref != null && X(m.ref) >= x0 && X(m.ref) <= x1) {
     g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(m.ref), Y(0)); g.lineTo(X(m.ref), M.t + 2); g.stroke(); g.setLineDash([]);
     g.textAlign = "left"; g.fillText("rif.", X(m.ref) + 3, M.t + 10);

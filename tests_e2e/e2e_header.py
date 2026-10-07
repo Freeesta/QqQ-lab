@@ -16,7 +16,7 @@ try:
             assert pg.locator("#guessnote").count() == 0
         step("no Isotopi in the header, no yellow-cells sentence", start)
         def info():
-            b = pg.locator("button.hq[data-help=header]"); assert b.count() == 1 and b.get_attribute("title") == "Informazioni su QqQ lab" and b.locator("svg").count() == 1 and b.inner_text().strip() == ""
+            b = pg.locator("button.hq[data-help=header]"); assert b.count() == 1 and b.get_attribute("title") == "Informazioni su mzLab" and b.locator("svg").count() == 1 and b.inner_text().strip() == ""
             b.click(); pg.wait_for_timeout(300)
             assert pg.is_visible("#helppop") and pg.locator("#helppop .hp-t b").inner_text().strip() == "", "no title"
             ps = pg.locator("#helppop p"); assert ps.count() == 2, ps.count()
@@ -27,7 +27,7 @@ try:
         step("(i) opens the two-paragraph box with the mailto link", info)
         def chapter():
             t = r.teoria(pg)
-            assert "Come si usa QqQ lab" in t and "Aprire i dati" in t and "Backspace" in t and "Ctrl/Cmd + Z" in t and "Crediti e licenze" in t, t[:300]
+            assert "Come si usa mzLab" in t and "Aprire i dati" in t and "Backspace" in t and "Ctrl/Cmd + Z" in t and "Crediti e licenze" in t, t[:300]
             q = r.b.new_page(); q.goto(f"http://127.0.0.1:{r.port}/static/teoria/index.html"); q.wait_for_timeout(600)
             first = q.evaluate("document.querySelector('#side a, nav a').textContent"); assert "Come si usa" in first, first
             q.close()

@@ -2,7 +2,7 @@
    Classic script, no modules, no network: the pages work from file:// and from the local server. */
 "use strict";
 const CHAPTERS = [
-  ["00-uso.html", "A", "Come si usa QqQ lab"],
+  ["00-uso.html", "A", "Come si usa {APP}"],
   ["index.html", "0", "Introduzione e mappa del percorso"],
   ["01-tp.html", "1", "Prodotti di trasformazione"],
   ["02-fotocatalisi.html", "2", "Fotocatalisi con TiO₂"],
@@ -18,6 +18,16 @@ const CHAPTERS = [
   ["12-disegno.html", "12", "Disegnare le molecole"],
   ["13-origine.html", "13", "Da dove viene questo ione?"],
 ];
+const APP = typeof APP_NAME === "string" ? APP_NAME : "mzLab";        // appname.js is loaded first by every page
+CHAPTERS.forEach(c => { c[2] = c[2].split("{APP}").join(APP); });
+// the chapters were written before the name changed: the old name in the text of the page is shown as the current one
+function renameApp(root = document.body) {
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => /^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName) || !n.nodeValue.includes("QqQ lab") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT }), l = [];
+  while (w.nextNode()) l.push(w.currentNode);
+  l.forEach(n => { n.nodeValue = n.nodeValue.split("QqQ lab").join(APP); });
+  root.querySelectorAll("[title*='QqQ lab'],[alt*='QqQ lab']").forEach(e => ["title", "alt"].forEach(a => { const v = e.getAttribute(a); if (v && v.includes("QqQ lab")) e.setAttribute(a, v.split("QqQ lab").join(APP)); }));
+}
+addEventListener("load", () => renameApp());
 
 const TP = (() => {
   const $ = (q, el = document) => el.querySelector(q);
@@ -36,7 +46,7 @@ const TP = (() => {
     // inside the program the main bar already has the logo and the tabs: no second header there (only the index button on narrow screens)
     if (embedded) document.body.classList.add("emb");
     top.innerHTML = `<button id="menu" aria-label="Indice">&#9776;</button>` + (embedded ? "" : `<a href="index.html"><img src="../logo.png" alt=""></a>
-      <span class="t">QqQ lab <small>· Teoria</small></span><span class="sp"></span>`);
+      <span class="t">${APP} <small>· Teoria</small></span><span class="sp"></span>`);
     document.body.prepend(top);
     const side = $("#side");
     const list = CHAPTERS.map((c, i) => `<li><a href="${c[0]}" class="${i === idx ? "on" : ""}"><b>${c[1]}</b><span>${c[2]}</span></a></li>`).join("");
@@ -60,7 +70,8 @@ const TP = (() => {
       }, { rootMargin: "-70px 0px -70% 0px" });
       hs.forEach(h => io.observe(h));
     }
-    document.title = `${CHAPTERS[idx][1] === "0" ? "" : CHAPTERS[idx][1] + ". "}${CHAPTERS[idx][2]} · Teoria QqQ lab`;
+    document.title = `${CHAPTERS[idx][1] === "0" ? "" : CHAPTERS[idx][1] + ". "}${CHAPTERS[idx][2]} · Teoria ${APP}`;
+    renameApp();
   }
 
   // ---------------------------------------------------------------- controls
@@ -109,13 +120,15 @@ const TP = (() => {
     const cv = document.createElement("canvas"); el.appendChild(cv);
     const o = { cv, ctx: cv.getContext("2d"), W: 0, H: h, onresize: null };
     o.resize = () => {
-      const w = Math.max(280, cv.clientWidth || el.clientWidth || 600), d = window.devicePixelRatio || 1;
+      const w = Math.max(280, cv.clientWidth || el.clientWidth || 600), d = Math.min(4, (window.devicePixelRatio || 1) * ((window.visualViewport && visualViewport.scale) || 1));
       cv.style.height = h + "px"; cv.width = Math.round(w * d); cv.height = Math.round(h * d);
       o.ctx.setTransform(d, 0, 0, d, 0, 0); o.W = w; o.H = h;
     };
     o.resize();
     let t = null;
-    window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => { o.resize(); o.onresize && o.onresize(); }, 120); });
+    const again = ms => { clearTimeout(t); t = setTimeout(() => { o.resize(); o.onresize && o.onresize(); }, ms); };
+    window.addEventListener("resize", () => again(120));
+    if (window.visualViewport) visualViewport.addEventListener("resize", () => again(150));
     return o;
   }
 

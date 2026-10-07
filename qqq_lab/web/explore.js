@@ -769,7 +769,7 @@ function afterDraw(p) {
   if (!(p._a && (p.zoom || p.zoomY)) || p._exp) return;
   const a = p._a, g = p.cv.getContext("2d"), bw = 90, x = a.W - M.r - bw, y = 3, f0 = a.full[0], f1 = a.full[1], u = p.type === "spec" ? "m/z" : "RT";
   const txt = `${u} ${a.x0.toFixed(p.type === "spec" ? 1 : 2)}-${a.x1.toFixed(p.type === "spec" ? 1 : 2)}` + (p.type === "spec" ? "" : " min") + (a.map && p.zoomY ? ` · m/z ${a.y0.toFixed(0)}-${a.y1.toFixed(0)}` : "");
-  g.save(); g.font = fpx(10); g.textAlign = "right"; g.fillStyle = css("--muted"); g.fillText("ingrandito: " + txt, x - 6, y + 7);
+  g.save(); g.font = fpx(12); g.textAlign = "right"; g.fillStyle = css("--muted"); g.fillText("ingrandito: " + txt, x - 6, y + 7);
   g.fillStyle = "rgba(120,120,120,.25)"; g.fillRect(x, y, bw, 6);
   g.fillStyle = css("--accent"); const l = x + (a.x0 - f0) / (f1 - f0) * bw, r = x + (a.x1 - f0) / (f1 - f0) * bw; g.fillRect(l, y, Math.max(2, r - l), 6);
   g.restore();
@@ -806,7 +806,7 @@ function plotMeta(p) {
   if (p.type === "spec" && p.r0 != null) d.push(`RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min`);
   if (p.ibk) d.push("bianco interno applicato: " + ibkText(p.ibk) + " (livello di fondo tolto a tutta la traccia, non è la sottrazione di un file bianco)");
   if (a.x0 != null) d.push(`asse visibile ${a.x0.toFixed(p.type === "spec" ? 1 : 2)}-${a.x1.toFixed(p.type === "spec" ? 1 : 2)}`);
-  return [["Title", p.title || "Grafico"], ["Description", d.join("; ")], ["Source", fs.map(f => f.label).join(", ")], ["Software", "QqQ lab"], ["Creation Time", new Date().toISOString()]];
+  return [["Title", p.title || "Grafico"], ["Description", d.join("; ")], ["Source", fs.map(f => f.label).join(", ")], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]];
 }
 // writes tEXt chunks (Latin-1) right after the IHDR of a PNG
 const CRCT = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
@@ -881,7 +881,7 @@ function ctl(p) {
   if (p.type === "mrm") c.innerHTML = `<select data-o="tr" title="Transizione"><option value="">tutte le transizioni</option>${p._trs.map(t => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${fsel}${chk("smooth", "smoothing", false, "", "Spento: le aree si calcolano sul segnale grezzo. Lo smoothing cambia solo il disegno, mai le aree integrate (nell'MRM si integra, per questo parte spento)")}${view}${parBox(logChk + corr)}`;
   if (p.type === "map") {
     const rf0 = p.ref !== "" && p.ref != null, sf = TF, opt = (v, cur, lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
-    c.innerHTML = `<span class="tbg" role="group" title="Vista della mappa: 2D = colori sul piano RT-m/z; 3D = superficie con l'intensità in altezza (trascina per ruotarla)"><button data-o="view" data-v="2d" class="${p.view !== "3d" ? "on" : ""}">2D</button><button data-o="view" data-v="3d" class="${p.view === "3d" ? "on" : ""}">3D</button></span>` +
+    c.innerHTML = `<span class="seg" role="group" title="Vista della mappa: 2D = colori sul piano RT-m/z; 3D = superficie con l'intensità in altezza (trascina per ruotarla)"><button data-o="view" data-v="2d" class="${p.view !== "3d" ? "on" : ""}">2D</button><button data-o="view" data-v="3d" class="${p.view === "3d" ? "on" : ""}">3D</button></span>` +
       `<select data-o="k"${follow(p.tab || E.tab) ? ' disabled title="Hai scelto «Solo il selezionato» nella barra: la mappa segue il file scelto lì."' : ' title="File da mostrare"'}>${sf.map(x => opt(x.k, follow(p.tab || E.tab) ? E.cur : p.k, x.label)).join("")}</select>` +
       `<select data-o="scale" title="Scala dei colori: la radice quadrata fa emergere i segnali deboli">${opt("sqrt", p.scale, "colori: radice")}${opt("lin", p.scale, "colori: lineare")}${opt("log", p.scale, "colori: log")}</select>` +
       `<label class="muted" title="Sottrae un altro file: in rosso ciò che è più intenso nel file mostrato, in blu ciò che è più intenso nel riferimento">differenza con <select data-o="ref"${off(sf.length <= 1, "Serve un secondo file full scan da sottrarre.")}><option value="">nessuno</option>${sf.map(x => opt(x.k, p.ref, x.label)).join("")}</select></label>` +
@@ -1139,7 +1139,7 @@ function axes(g, W, H, x0, x1, ymax, yfmt, o = {}) {
 }
 // axis lines, tick marks, tick labels and titles (shared by all the plots)
 function frame(g, W, H, xt, yt, xtitle, ytitle) {
-  const ink = css("--muted"); g.save(); g.lineWidth = 1; g.strokeStyle = ink; g.fillStyle = ink; g.font = fpx(11);
+  const ink = css("--muted"); g.save(); g.lineWidth = 1; g.strokeStyle = ink; g.fillStyle = ink; g.font = fpx(12);
   g.beginPath(); g.moveTo(M.l + .5, M.t); g.lineTo(M.l + .5, H - M.b + .5); g.lineTo(W - M.r, H - M.b + .5); g.stroke();
   g.textAlign = "right"; for (const [y, lab] of yt) { g.beginPath(); g.moveTo(M.l - 4, Math.round(y) + .5); g.lineTo(M.l, Math.round(y) + .5); g.stroke(); g.fillText(lab, M.l - 6, y + 3.5 * fz()); }
   g.textAlign = "center"; for (const [x, lab] of xt) { if (x < M.l - 1 || x > W - M.r + 1) continue; g.beginPath(); g.moveTo(Math.round(x) + .5, H - M.b); g.lineTo(Math.round(x) + .5, H - M.b + 4); g.stroke(); g.fillText(lab, x, H - M.b + 4 + 11 * fz()); }
@@ -1147,7 +1147,7 @@ function frame(g, W, H, xt, yt, xtitle, ytitle) {
   const fnt = t => t === "m/z" ? fpx(12, "italic ") : fpx(12);           // m/z is always in italics
   if (xtitle) { g.font = fnt(xtitle); g.fillText(xtitle, (M.l + W - M.r) / 2, H - 6 * fz()); }
   if (ytitle) { g.font = fnt(ytitle); g.translate(1 + 12 * fz(), (M.t + H - M.b) / 2); g.rotate(-Math.PI / 2); g.fillText(ytitle, 0, 0); }
-  g.restore(); g.font = fpx(11); g.lineWidth = 1;
+  g.restore(); g.font = fpx(12); g.lineWidth = 1;
 }
 // an annotation: a small framed label (panel background, accent border, 12 px text) joined to its point by a thin line; it stays inside the plot and goes to the side when there is no room above
 function drawAnn(p, g, a, px, py, W, gap) {
@@ -1283,12 +1283,12 @@ async function drawLines(p) {
   if (p.ibk && !p._exp) {                                    // grey band(s) of the internal blank, always visible
     const ib = p.ibk, bands = [ib.a].concat(ib.mode === "line" && ib.b ? [ib.b] : []), s0 = sr[0], l0 = s0 && s0.ibl;
     g.fillStyle = "rgba(120,120,120,.22)"; bands.forEach(b => { const xa = Math.max(X(b[0]), M.l), xb = Math.min(X(b[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); });
-    g.font = fpx(11); g.textAlign = "left"; g.fillStyle = css("--muted");
+    g.font = fpx(12); g.textAlign = "left"; g.fillStyle = css("--muted");
     g.fillText(`bianco interno ${ibkRange(ib.a)}${ib.mode === "line" && ib.b ? " e " + ibkRange(ib.b) : ""}: ${l0 ? fmtA(l0.lvl) + (l0.lvl2 != null ? " e " + fmtA(l0.lvl2) : "") + " cps" : ""}${sr.length > 1 ? " (prima traccia)" : ""}`, Math.max(M.l + 6, X(ib.a[0]) + 4), H - M.b - 6);
   }
   if (p.sel && !p._exp) { g.fillStyle = "rgba(43,92,138,.10)"; g.fillRect(X(p.sel[0]), M.t, X(p.sel[1]) - X(p.sel[0]), H - M.t - M.b); }
   if (stk) {
-    g.font = fpx(11); g.textAlign = "left";
+    g.font = fpx(12); g.textAlign = "left";
     sr.forEach(s => { const y = Y(s.off); g.strokeStyle = css("--line"); g.beginPath(); g.moveTo(M.l, y); g.lineTo(W - M.r, y); g.stroke(); const t = s.name.length > 34 ? s.name.slice(0, 33) + "…" : s.name; g.lineWidth = 3; g.lineJoin = "round"; g.strokeStyle = css("--panel"); g.strokeText(t, M.l + 4, y - 4); g.fillStyle = s.color; g.fillText(t, M.l + 4, y - 4); g.lineWidth = 1; });
   }
   g.save(); g.beginPath(); g.rect(M.l + 1.5, M.t - 1, W - M.l - M.r - 1.5, H - M.t - M.b + 2); g.clip();   // the line (1.8 px wide) must not overdraw the y axis
@@ -1300,9 +1300,9 @@ async function drawLines(p) {
       if (first == null) continue;
       g.lineTo(last, Y(0) + sy); g.closePath(); g.fillStyle = css("--panel"); g.fill();
       g.strokeStyle = s.color; g.lineWidth = 1.6 + LWX(); g.setLineDash(s.dash); g.stroke(); g.setLineDash([]);
-      g.fillStyle = s.color; g.font = fpx(11, "bold "); g.textAlign = "left"; g.fillText(f.time != null ? `t = ${f.time} min` : s.name, first + 4, Y(0) + sy - 4);       // the time next to each trace
+      g.fillStyle = s.color; g.font = fpx(12, "bold "); g.textAlign = "left"; g.fillText(f.time != null ? `t = ${f.time} min` : s.name, first + 4, Y(0) + sy - 4);       // the time next to each trace
     }
-    g.font = fpx(11);
+    g.font = fpx(12);
   } else for (const s of sr) {
     g.strokeStyle = s.color; g.lineWidth = (s.dash.length ? 1.5 : 1.8) + LWX(); g.setLineDash(s.dash); g.beginPath(); let st = false;
     s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = X(r), py = Y(U(s, s.ys[i])); st ? g.lineTo(px, py) : g.moveTo(px, py); st = true; });
@@ -1341,8 +1341,8 @@ async function drawLines(p) {
     g.strokeStyle = s.color; g.lineWidth = 2.2;
     for (const e of ["a", "b"]) { const px = X(it[e]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
     const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + fmtA(r.area) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
-    g.font = fpx(11, "bold "); g.textAlign = "center"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = css("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
-    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 11 * fz(), w: lw + 6, h: 5 + 11 * fz(), tip: `<b>Area</b> ${fmtFull(r.area)} <span class="sm">conteggi·s</span><div class="sm">Tasto destro: azioni</div>` }); g.font = fpx(11);
+    g.font = fpx(13, "bold "); g.textAlign = "center"; g.lineWidth = 4; g.lineJoin = "round"; g.strokeStyle = css("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = css("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
+    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 13 * fz(), w: lw + 6, h: 5 + 13 * fz(), tip: `<b>Area</b> ${fmtFull(r.area)} <span class="sm">conteggi·s</span><div class="sm">Tasto destro: azioni</div>` }); g.font = fpx(12);
   }
   // the cursor line is not part of the canvas: it is a thin overlay (cursorLine), so the arrows move it without redrawing the chromatogram (and it never enters a PNG)
   for (const a of p.anns) {
@@ -1468,7 +1468,7 @@ function draw3d(p, g, W, H, A, B, im, f, rf, x0, x1, y0, y1, scaleTxt) {
   const ox = M.l + 14 + (pw - (bx1 - bx0) * sc) / 2 - bx0 * sc, oy = M.t + 6 + (ph - (by1 - by0) * sc) / 2 + by1 * sc;
   const P = (u, w, z) => { const r = pr(u, w, z); return [ox + r[0] * sc, oy - r[1] * sc, r[2]]; };
   g.clearRect(0, 0, W, H);
-  const ink = css("--muted"); g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = 1; g.font = fpx(11);
+  const ink = css("--muted"); g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = 1; g.font = fpx(12);
   // floor
   const fl = [[-.5, -.5], [.5, -.5], [.5, .5], [-.5, .5]].map(([u, w]) => P(u, w, 0));
   g.fillStyle = "rgba(120,120,120,.07)"; g.beginPath(); fl.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.fill(); g.stroke();
@@ -1797,15 +1797,15 @@ async function drawSpec(p) {
   const top0 = Math.max(...d0.y, 1e-9), thr = (p.thr ?? 5) / 100 * top0, NL = p.nlab ?? 10, DEC = p.dec ?? 1;       // labels: only the peaks above the threshold, at most NL
   d0.mz.forEach((m, j) => { if (m >= x0 && m <= x1 && d0.y[j] >= thr && d0.y[j] <= ymax) pk.push([m, d0.y[j]]); });
   pk.sort((a, b) => b[1] - a[1]); const used = [];
-  g.fillStyle = css("--ink"); g.textAlign = "center"; g.font = fpx(10.5);
+  g.fillStyle = css("--ink"); g.textAlign = "center"; g.font = fpx(12);
   const lbls = []; p._a.lbls = lbls;                      // clickable labels: hover draws a small box, right click opens the menu
   for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= NL) continue; used.push(px); const t = m.toFixed(DEC), w = g.measureText(t).width; g.fillText(t, px, Y(y) - 4); lbls.push({ m, x: px - w / 2 - 3, y: Y(y) - 4 - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: `<b>m/z ${m.toFixed(2)}</b><div class="sm">Tasto destro: azioni</div>` }); }
-  g.font = fpx(11);
+  g.font = fpx(12);
   for (const a of p.anns) {                                        // the point is the top of the nearest observed peak
     let ay = 0, bd = 0.7; d0.mz.forEach((m, j) => { const dd = Math.abs(m - a.x); if (dd < bd) { bd = dd; ay = d0.y[j]; } });
     drawAnn(p, g, a, X(a.x), Math.max(M.t + 1, Math.min(H - M.b, Y(Math.min(ay, ymax)))), W, 28);
   }
-  g.font = fpx(11);
+  g.font = fpx(12);
   drawMeas(p, g, X, Y, W);                                 // ruler: reference and measured differences
   // theoretical isotope pattern of a formula chosen by the student (red circles), aligned on the nearest observed peak
   let isoNote = "";
@@ -1823,9 +1823,9 @@ async function drawSpec(p) {
         const px = X(r.mz + shift) + 3, py = Y(h * r.rel / 100); if (px < M.l || px > W - M.r) continue;
         g.setLineDash([3, 2]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, py); g.stroke(); g.setLineDash([]);
         g.beginPath(); g.arc(px, py, 3.5, 0, 7); g.stroke();
-        if (r.rel >= 1) { g.font = fpx(10); g.textAlign = "left"; g.fillText((r.off ? "M+" + r.off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%", px + 5, py - 4); }
+        if (r.rel >= 1) { g.font = fpx(12); g.textAlign = "left"; g.fillText((r.off ? "M+" + r.off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%", px + 5, py - 4); }
       }
-      g.restore(); g.font = fpx(11);
+      g.restore(); g.font = fpx(12);
       isoNote = `<span><i style="background:#d62728"></i>profilo teorico ${fmtFormula(p.iso.formula)} ${fmtAdduct(p.iso.ad)}${obs ? ` (allineato al picco a m/z ${(obs.c ?? obs.m).toFixed(1)}${Math.abs(shift) >= 0.05 ? `, spostato di ${shift > 0 ? "+" : ""}${shift.toFixed(1)}` : ""})` : ` (nessun picco osservato vicino a m/z ${top.mz.toFixed(1)})`}</span>`;
     } catch (e) { isoNote = `<span class="sm">profilo isotopico: ${EH(e.message)}</span>`; }
   }

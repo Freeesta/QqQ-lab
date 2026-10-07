@@ -398,7 +398,7 @@ async function image(format) {
   svgText = padSvg(svgText, 16);
   const clear = Q("#ex-nobg").checked && format !== "jpg";       // transparent background: PNG and SVG only (JPEG has no transparency)
   if (clear) svgText = noBackground(svgText);
-  svgText = svgText.replace(/<svg\b([^>]*)>/, (m, at) => `<svg${at}><title>Disegno QqQ lab, ${stamp().slice(8, 18)}, sfondo ${clear ? "trasparente" : "bianco"}</title>`);
+  svgText = svgText.replace(/<svg\b([^>]*)>/, (m, at) => `<svg${at}><title>Disegno ${APP_NAME}, ${stamp().slice(8, 18)}, sfondo ${clear ? "trasparente" : "bianco"}</title>`);
   const svg = new Blob([svgText], { type: "image/svg+xml" });
   if (format === "svg") return svg;
   // PNG / JPEG: rasterise the vector at high resolution (Ketcher's own PNG is small): at least 3x, about 3600 px wide, never more than 12000 px on a side
@@ -411,7 +411,7 @@ async function image(format) {
   URL.revokeObjectURL(url);
   const out = await new Promise(r => c.toBlob(r, format === "jpg" ? "image/jpeg" : "image/png", 0.95));
   if (format === "png" && window.pngWithMeta) {                    // tEXt chunks, like the plots of the Dati tab (no personal data)
-    try { return await window.pngWithMeta(out, [["Title", "Disegno"], ["Description", `scala ${sc.toFixed(1)}x; sfondo ${clear ? "trasparente" : "bianco"}`], ["Software", "QqQ lab"], ["Creation Time", new Date().toISOString()]]); } catch (_) { /* saved without metadata */ }
+    try { return await window.pngWithMeta(out, [["Title", "Disegno"], ["Description", `scala ${sc.toFixed(1)}x; sfondo ${clear ? "trasparente" : "bianco"}`], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]]); } catch (_) { /* saved without metadata */ }
   }
   return out;
 }

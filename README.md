@@ -1,4 +1,4 @@
-# QqQ lab
+# mzLab (già QqQ lab)
 
 Programma didattico per esplorare dati LC-MS di un triplo quadrupolo (risoluzione unitaria) e cercare
 i **prodotti di trasformazione (TP)** di un inquinante degradato nel tempo. Lo studente sceglie cosa
