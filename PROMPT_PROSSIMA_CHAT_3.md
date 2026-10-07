@@ -1,6 +1,6 @@
 # PROSSIMA CHAT 3 (QqQ lab): integrazione dei picchi, schermo intero, testo dei grafici, strumenti dell'header
 
-> **Quando usarlo**: DOPO che il lavoro di `PROMPT_PROSSIMA_CHAT_2.md` è stato unito in `main` (una chat lo sta eseguendo ora). Alcuni punti toccano cose cambiate da quella chat (calcolatrice, Addotti, intestazioni, tooltip): parti dal codice attuale e adatta, non rifare.
+> **Quando usarlo**: DOPO che il lavoro di `PROMPT_PROSSIMA_CHAT_2.md` (pull request #5) è stato unito in `main`. Alcuni punti toccano cose cambiate da quella chat (calcolatrice, Addotti, intestazioni, tooltip): parti dal codice attuale e adatta, non rifare.
 > **Come si usa questo file**: contiene SOLO il lavoro da fare. Quando un punto è fatto e verificato, **cancellalo da qui**; ciò che resta utile (nomi di funzioni, decisioni) va in `AGENTS.md`. Se alla fine il file è vuoto, spostalo in `_cestino/<data>_prompt_completati/`.
 
 Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository `QqQ-lab-dati` per i dati veri). Leggi `AGENTS.md` sez. 1-2, 5 e le ultime sezioni; poi SOLO il codice che serve, con `grep -n` (i nomi qui sotto sono indicativi: cercali). Non leggere `vendor/`.
@@ -10,7 +10,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 - Interfaccia **pulita e semplice**: di default poco, i dettagli per chi li vuole. Icone con etichetta breve al passaggio del mouse.
 - **Risparmio token**: un blocco alla volta; file letti una volta; prove mirate; screenshot in `tests_e2e/shots/`, guardane al massimo uno per punto.
 - **Verifica**: `python3 tools/verifica.py --solo <e2e che tocchi>` durante il lavoro, completa alla fine. **Non lanciare** nulla che usi Pyodide (e2e13, e2e_tpmine*, `tools/build_site.py`).
-- Un commit per blocco (titolo in italiano, righe Co-Authored-By e Claude-Session del messaggio di sistema); sul Mac su `main`, nel cloud sul ramo della sessione e **una sola pull request alla fine**.
+- Un commit per blocco (titolo in italiano, righe Co-Authored-By e Claude-Session del messaggio di sistema). Sul Mac: su `main`. **Nel cloud** (decisione di Federico, 7/10): lavora sul ramo della sessione, push dopo ogni blocco; **alla fine, se la verifica completa è verde, unisci tu la pull request in `main`** senza aspettare Federico (`gh pr create` se non c'è ancora, poi `gh pr merge <numero> --merge --delete-branch`), e cancella anche gli altri rami `claude/...` già uniti in `main` (`git branch -r --merged origin/main`). Se qualcosa è rosso, se c'è un conflitto o una decisione da prendere, **non unire**: lascia la PR aperta e spiega a Federico perché. Se `gh` non ha il permesso di unire, scrivilo e lascia la PR aperta. Riporta questa regola in `AGENTS.md` sez. 2 (al posto di «il push lo fa Federico» per le sessioni cloud).
 - **Aggiorna Federico** alla fine di ogni blocco con 3-5 righe: fatto, non fatto, cosa provare a mano. Se il budget sta finendo: fermati dopo un commit pulito e aggiorna questo file.
 
 ## Ordine di lavoro (per importanza)
