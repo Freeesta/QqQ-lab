@@ -16,6 +16,12 @@ def _wff(self, expression, arg=None, polling=None, timeout=30000):
         self.wait_for_timeout(100)
 from playwright.sync_api import Page as _Page
 _Page.wait_for_function = _wff
+# Browser of the tests: QQQ_BROWSER=chromium (default) | firefox | webkit (the engine of Safari); tools/verifica.py --browser sets it.
+# Every script asks for `p.chromium`: here it is pointed at the chosen browser, so no test has to change.
+BROWSER = os.environ.get("QQQ_BROWSER", "chromium")
+if BROWSER != "chromium":
+    from playwright.sync_api import Playwright as _PW
+    _PW.chromium = property(lambda self: getattr(self, BROWSER))
 FILES = ["B_FullMass-t0", "B_FullMass-t15", "B_FullMass-t60", "B_MS2-t15", "B_MRM-t0"]
 # Paths are relative to this folder: code = parent of tests_e2e, mzML = ../esempio_conversione/mzml (or $QQQ_MZML)
 HERE = Path(__file__).resolve().parent

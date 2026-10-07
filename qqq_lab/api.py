@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 
+from .bigfiles import TOO_BIG
 from .chem.elements import formula_mz
 
 
@@ -40,6 +41,8 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                 app.reset(bool(body.get("fresh")))
                 return _json(app.state())
             return _json({"error": "unknown endpoint"}, 404)
+        except MemoryError:
+            return _json({"error": TOO_BIG}, 507)
         except Exception as e:  # noqa: BLE001
             return _json({"error": f"{type(e).__name__}: {e}" if not isinstance(e, ValueError) else str(e)}, 400)
     try:
@@ -47,6 +50,8 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             return _json(app.state())
         if path == "/api/notebook":
             return _json(app.notebook())
+        if path == "/api/perf":
+            return _json(app.perf())
         if path == "/api/session":
             return _json(app.session_state())
         if path == "/api/chrom":
@@ -94,5 +99,7 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
         if path == "/api/map":
             return _json(app.ionmap(int(q["k"]), int(q.get("level", 1))))
         return _json({"error": "unknown endpoint"}, 404)
+    except MemoryError:   # a file too big for the browser's memory: say what to do, not a bare exception name
+        return _json({"error": TOO_BIG}, 507)
     except Exception as e:  # noqa: BLE001
         return _json({"error": f"{type(e).__name__}: {e}"}, 500)

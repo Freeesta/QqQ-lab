@@ -12,6 +12,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .api import dispatch
 from .app import App
+from .bigfiles import TOO_BIG
 
 WORK = Path("/work/sessione")
 app: App | None = None
@@ -21,6 +22,20 @@ def start() -> None:
     global app
     WORK.mkdir(parents=True, exist_ok=True)
     app = App(WORK)
+
+
+def link_big(name: str, target: str):
+    """(status, JSON text) after the worker mounted a big file (WORKERFS, no copy in memory) at `target`: link it into the work folder like an upload."""
+    try:
+        dest = WORK / app.safe_name(name)
+        if dest.is_symlink() or dest.exists():
+            dest.unlink()
+        dest.symlink_to(target)
+        return 200, json.dumps({"files": app.files(), "methods": app.methods()})
+    except MemoryError:
+        return 507, json.dumps({"error": TOO_BIG})
+    except Exception as e:  # noqa: BLE001
+        return 400, json.dumps({"error": str(e) if isinstance(e, ValueError) else f"{type(e).__name__}: {e}"})
 
 
 def handle(method: str, url: str, body=None):

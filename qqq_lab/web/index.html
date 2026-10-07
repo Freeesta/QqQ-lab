@@ -191,7 +191,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
   <div id="dropdam"><b>Trascina qui il metodo .dam</b><br>oppure <u>clicca per sceglierlo dal computer</u></div>
   <input type="file" id="pickdam" multiple accept=".dam,.DAM" hidden>
   <div id="mlist"></div></div>
- <div class="card"><div id="modenote" class="muted sm" hidden>Alcuni file sono in profilo e altri centroidi: le intensità dei due gruppi non sono confrontabili.</div><button class="go" id="opbtn" disabled>Carica dati</button><button id="cancadd" hidden>Annulla</button><div id="gomsg" class="fail"></div></div>
+ <div class="card"><div id="hrnote" class="muted sm" hidden>File in profilo ad alta risoluzione: molto pesante. Convertilo con il peak picking del vendor, per esempio <code>msconvert file.raw --mzML --zlib --filter "peakPicking vendor msLevel=1-"</code> (ricetta completa nella guida, «File ad alta risoluzione e file grandi»).</div><div id="modenote" class="muted sm" hidden>Alcuni file sono in profilo e altri centroidi: le intensità dei due gruppi non sono confrontabili.</div><button class="go" id="opbtn" disabled>Carica dati</button><button id="cancadd" hidden>Annulla</button><div id="gomsg" class="fail"></div></div>
 </section>
 <script src="static/icons-modi.js"></script>
 <script src="static/modi.js"></script>
@@ -211,6 +211,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 <script>document.getElementById("np-pc").addEventListener("click",()=>window.open("https://pubchem.ncbi.nlm.nih.gov/","_blank","noopener"));</script>
 <script src="static/tables.js"></script>
 <script src="static/help.js"></script>
+<script src="static/perf.js"></script>
 <script src="static/tpmine-loader.js"></script>
 <script>
 // Page shell: helpers shared with explore.js (classic scripts share globals), start screen, views.
@@ -286,7 +287,7 @@ function renderFiles(){const F=ST.files,el=$("#flist");
     if(x.dataset.k==="time"||x.dataset.k==="conc")x.addEventListener("keydown",e=>{if(e.key==="Enter"){const f=F[+x.dataset.i];f[x.dataset.k==="time"?"gT":"gC"]=false;x.classList.remove("guess");x.title="";guessNote()}})});
   const cu=$("#cunit");if(cu)cu.onchange=()=>{const k=cu.value,r=CU[ST.unit][1]/CU[k][1];F.forEach(f=>{if(f.conc!=null)f.conc=roundc(f.conc*r)});ST.unit=k;renderFiles()};
   el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];const j=await post("api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});checkGo();guessNote()}
-function modeNote(){const m=$("#modenote");if(!m)return;const u=ST.files.filter(f=>f.use&&["full","ms2"].includes(f.kind)),has=x=>u.some(f=>f.spectrum_mode===x||f.spectrum_mode==="mixed");m.hidden=!(has("profile")&&has("centroid"))}
+function modeNote(){const h=$("#hrnote");if(h)h.hidden=!ST.files.some(f=>f.use&&f.hr_profile);const m=$("#modenote");if(!m)return;const u=ST.files.filter(f=>f.use&&["full","ms2"].includes(f.kind)),has=x=>u.some(f=>f.spectrum_mode===x||f.spectrum_mode==="mixed");m.hidden=!(has("profile")&&has("centroid"))}
 function guessNote(){modeNote()}
 // the button is live only when at least one chosen file can be opened (an mzML with no data cannot)
 const usable=f=>f.use&&["full","ms2","mrm"].includes(f.kind);
@@ -302,7 +303,8 @@ async function upload(files,into){const box=$("#up");fail();
     if(into&&isDam!==(into==="dam")){const n=document.createElement("div");n.className="note";n.textContent=`${f.name} è ${isDam?"un metodo: l'ho messo nel riquadro 2":"un file di dati: l'ho messo nel riquadro 1"}.`;box.appendChild(n);setTimeout(()=>n.remove(),6000)}
     const row=document.createElement("div");row.innerHTML=`${esc(f.name)} <span class="muted">${sz(f.size)}</span><div class="prog"><i></i></div>`;box.appendChild(row);
     try{const j=await sendFile("api/upload?name="+encodeURIComponent(f.name),f,(a,b)=>{row.querySelector("i").style.width=(100*a/b)+"%"});
-      if(j.error)throw new Error(j.error);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove()}
+      if(j.error)throw new Error(j.error);mergeFiles(j.files);ST.methods=j.methods||ST.methods;renderMethods();row.remove();
+      if(window.QQQ_BROWSER&&f.size>300*1048576){const n=document.createElement("div");n.className="note";n.textContent=`${f.name} è un file grande: il browser non lo conserva, dopo aver ricaricato la pagina va caricato di nuovo.`;box.appendChild(n);setTimeout(()=>n.remove(),20000)}}
     catch(e){row.innerHTML=`<span class="fail">${esc(f.name)}: ${esc(e.message)}</span>`}}}
 function showStart(d){mergeFiles(d.files||[]);ST.methods=d.methods||[];renderMethods();applyView()}
 $("#dropdam").onclick=()=>$("#pickdam").click();$("#pickdam").onchange=e=>{upload([...e.target.files],"dam");e.target.value=""};
