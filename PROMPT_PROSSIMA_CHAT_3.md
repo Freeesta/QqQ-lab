@@ -18,17 +18,10 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 2. ~~Schermo intero~~ (fatto il 7/10, `AGENTS.md` sez. 19)
 3. ~~Dimensione del testo anche dentro i grafici~~ (fatto il 7/10, `AGENTS.md` sez. 19)
 4. ~~Strumenti dell'header e schermata di caricamento~~ (fatto il 7/10, `AGENTS.md` sez. 19)
-5. **Rifiniture** (menu «Correzione» con icone, documenti per gli agenti)
+5. ~~Rifiniture~~ (fatto il 7/10)
 6. **Disegno** (campo SMILES che si svuota, via il menu «Ione»)
 7. **Simboli** (segno di polarità leggibile e senza sbordare, «MS2» con un vero apice)
 8. **Ordine di cartelle e file** (inventario, cartelle vuote, cestino fuori da git, test obsoleti): per ultimo
-
----
-
-## BLOCCO 5: rifiniture rimaste dai prompt precedenti (piccolo)
-**5.1 Menu «Correzione» con icone.** Il menu unico «Correzione» (`data-o="corr"`, `setCorr`, `AGENTS.md` sez. 17) è un `<select>` con `title`: trasformalo in una tendina come quella dei «Parametri», con una piccola icona e un'etichetta di 1-2 righe per ogni voce (nessuna / file bianco / fondo di un tratto / linea di base automatica). Se l'intestazione in una riga del prompt 2 l'ha già spostato nei «Parametri», basta aggiungere icone ed etichette lì.
-
-**5.2 Documenti per gli agenti.** `AGENTS.md` (riga «Documenti di supporto per agenti» e «Alla fine di ogni sessione aggiorna `PROMPT_PROSSIMA_CHAT.md`») cita ancora un solo prompt. Aggiornalo alla regola attuale: i prompt sono file numerati `PROMPT_PROSSIMA_CHAT_N.md`, uno per chat; ognuno si ripulisce da solo e, quando è vuoto, va in `_cestino/<data>_prompt_completati/`; i lavori in coda che aspettano il via libera di Federico stanno nell'ultimo prompt aperto (sezione «Lavori in coda»).
 
 ---
 

@@ -32,6 +32,20 @@ try:
             first = q.evaluate("document.querySelector('#side a, nav a').textContent"); assert "Come si usa" in first, first
             q.close()
         step("the guide is the first chapter of the Teoria", chapter)
+        def correzione():
+            pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t60")]); pg.wait_for_timeout(1000)
+            pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
+            pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_timeout(2000)
+            pg.evaluate("document.querySelector('.pnl.xic [data-a=cpar]').click()"); pg.wait_for_timeout(200)
+            b = pg.locator('.pnl.xic [data-o="corr"]'); assert b.locator("svg").count() == 1 and "Correzione" in b.inner_text()
+            assert pg.locator(".pnl.xic select[data-o=corr]").count() == 0, "no longer a plain select"
+            b.click(); pg.wait_for_timeout(150)
+            items = pg.locator(".pnl.xic .corri"); assert items.count() >= 3 and all(items.nth(i).locator("svg").count() == 1 for i in range(items.count()))
+            t = pg.inner_text(".pnl.xic .corrm"); assert "Nessuna" in t and "Fondo di un tratto" in t and "Linea di base automatica" in t, t
+            pg.click('.pnl.xic .corri[data-c="snip"]'); pg.wait_for_timeout(800)
+            assert pg.evaluate("E.panels.find(p=>p.type==='xic').snip") is True and "Linea di base automatica" in pg.inner_text('.pnl.xic [data-o="corr"]')
+            pg.screenshot(path=SH + "correzione.png")
+        step("Correzione: a drop-down with an icon and a short label for every choice", correzione)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()
