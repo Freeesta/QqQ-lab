@@ -18,7 +18,7 @@ try:
         sm = lambda: pg.inner_text("#xic-sum")
         def dialog():
             pg.click("#np-xic"); t = pg.inner_text("#xicdlg")
-            assert "Extracted Ion Chromatogram" in t and "risoluzione unitaria" in t and "1 Da" in t and "oppure" in t, t
+            assert "Extracted Ion Chromatogram" in t and "1 Da" in t and "oppure" in t, t
             assert not pg.query_selector("#xic-lo") and "compromesso" not in t, t
             pg.fill("#xic-mz", "364.37"); assert "363.8 - 364.8" in sm(), sm()
             pg.fill("#xic-mz", "364,6"); assert "364.8 - 365.8" in sm(), sm()

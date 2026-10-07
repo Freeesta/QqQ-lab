@@ -16,23 +16,15 @@ Lavori in `~/QqQ_lab/QqQ_lab` (sul Mac) oppure nel clone GitHub (cloud). Leggi `
 - **Aggiorna Federico**: alla fine di OGNI blocco scrivigli un messaggio breve (3-5 righe): cosa hai fatto, cosa non hai potuto fare, cosa provare a mano. Se un punto richiede una scelta che cambia l'interfaccia in modo non descritto qui, fai la versione più semplice e segnalalo nel messaggio.
 
 ## Ordine di lavoro (per importanza)
-(I blocchi A, S, G, B, C, F, H, I e D sono fatti (il blocco I solo su dati SINTETICI: serve un vero file IDA / MRM-IDA-EPI del 3200 QTRAP per confermare il formato): vedi `AGENTS.md` sez. 17. Restano da rifinire: nel menu «Correzione» le voci non hanno ancora l'icona con etichetta (è un menu a tendina con `title`).)
-1. **Blocco E** residui
+(Tutti i blocchi del vecchio elenco (A, S, G, B, C, F, H, I, D, E) sono fatti (il blocco I solo su dati SINTETICI: serve un vero file IDA / MRM-IDA-EPI del 3200 QTRAP per confermare il formato): vedi `AGENTS.md` sez. 17. Restano da rifinire: nel menu «Correzione» le voci non hanno ancora l'icona con etichetta (è un menu a tendina con `title`).)
 Un commit per blocco e un messaggio a Federico per blocco. Se il tempo o i token finiscono, fermati dopo un commit pulito: è meglio finire bene i blocchi 1-2 che iniziare tutto.
-
----
-
-## BLOCCO E: residui da verificare
-1. **Finestra XIC [n-0.2, n+0.8]** (`XIC_BELOW`, `XIC_DRIFT` in `explore.js`): misura con i dati veri la parte frazionaria (centroide osservato meno nominale del calcolato) sugli ioni forti di TUTTI i file Full Scan; conferma o cambia le costanti e scrivi i numeri in `AGENTS.md` sez. 12.
-2. **e2e con i dati veri**: `python3 tools/verifica.py` completo; correggi ciò che fallisce (in particolare e2e12, che non trovava `#pick`, ed e2e13, 17, 19, 20, 21, 23 non eseguiti dopo la finestra XIC nuova).
-3. **e2e26 (limiti RT)**: la selezione non si crea, la prova non prova nulla: rendila effettiva o testa direttamente la funzione di limite.
 
 ---
 
 ## Lavori in coda (NON farli senza il via libera di Federico)
 1. **Dati dello studente**: `navigator.storage.persist()` + spazio usato; Esporta/Importa sessione (.zip con file, `taccuino.json`, `LEGGIMI.txt`; la scrittura zip c'è in `xlsx.js`). Dove mettere i pulsanti: da decidere con Federico (l'ingranaggio ha 3 controlli).
 2. **Origine degli ioni**: Pyodide lento (`/api/origin` 19-38 s, obiettivo < 10 s); standard puro = t0 (eccesso F_t - r0*P_t); TP Mine: `isf.isf_classify` → flag `insource` (verifica se già fatto).
-3. **Da provare a mano (Federico)**: Windows, Safari, file grandi, retta di taratura contro Analyst.
+3. **Da provare a mano (Federico)**: Windows, Safari, file grandi, un vero file IDA / MRM-IDA-EPI, la vista a cascata con 7 file.
 4. **Limiti noti** (non nasconderli): PDA solo TWC (niente spettri UV); file misti provati solo su dati sintetici.
 
 ## Chiusura
