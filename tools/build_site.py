@@ -81,6 +81,9 @@ def main() -> None:
         shutil.rmtree(out)
     static = out / "static"
     shutil.copytree(ROOT / "qqq_lab" / "web", static)
+    for lic in ("LICENSE", "LICENZE-TERZI.md"):            # the licences travel with the site (Apache-2.0, BSD-3, MPL-2.0 ask for the notices)
+        if (ROOT / lic).exists():
+            shutil.copy2(ROOT / lic, out / lic)
     # the page: same index.html, plus the bridge that answers api/... without a server
     html = (static / "index.html").read_text(encoding="utf-8")
     html = html.replace("<head>", '<head>\n<script src="static/browser.js"></script>', 1)

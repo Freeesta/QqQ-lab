@@ -16,17 +16,9 @@ Lavori in `~/QqQ_lab/QqQ_lab` (sul Mac) oppure nel clone GitHub (cloud). Leggi `
 - **Aggiorna Federico**: alla fine di OGNI blocco scrivigli un messaggio breve (3-5 righe): cosa hai fatto, cosa non hai potuto fare, cosa provare a mano. Se un punto richiede una scelta che cambia l'interfaccia in modo non descritto qui, fai la versione più semplice e segnalalo nel messaggio.
 
 ## Ordine di lavoro (per importanza)
-(I blocchi A, S, G, B, C, F, H e I sono fatti (il blocco I solo su dati SINTETICI: serve un vero file IDA / MRM-IDA-EPI del 3200 QTRAP per confermare il formato): vedi `AGENTS.md` sez. 17. Restano da rifinire: nel menu «Correzione» le voci non hanno ancora l'icona con etichetta (è un menu a tendina con `title`).)
-1. **Blocco D** licenze
-2. **Blocco E** residui
+(I blocchi A, S, G, B, C, F, H, I e D sono fatti (il blocco I solo su dati SINTETICI: serve un vero file IDA / MRM-IDA-EPI del 3200 QTRAP per confermare il formato): vedi `AGENTS.md` sez. 17. Restano da rifinire: nel menu «Correzione» le voci non hanno ancora l'icona con etichetta (è un menu a tendina con `title`).)
+1. **Blocco E** residui
 Un commit per blocco e un messaggio a Federico per blocco. Se il tempo o i token finiscono, fermati dopo un commit pulito: è meglio finire bene i blocchi 1-2 che iniziare tutto.
-
----
-
-## BLOCCO D: licenze nel README (fallo per bene)
-1. Elenca TUTTO il materiale di terzi presente nel repository e nel sito: Ketcher (`vendor/ketcher`, licenza in `vendor/ketcher/LICENSE.txt`), OpenChemLib (`vendor/openchemlib.LICENSE`), Pyodide (scaricato da `tools/build_site.py`), numpy, eventuali font, dati di masse/abbondanze (`tools/genera_elementi.py`: masse da OpenChemLib, pesi da Ketcher, abbondanze IUPAC), immagini della Teoria, **il logo** (`tools/logo_sorgente.jpg`: secondo `AGENTS.md` sez. 3 deriva da `QuadrupoleContour.svg` di **Wikimedia Commons**, passato in un generatore di immagini Gemini). Leggi le licenze dai file in `vendor/` (solo il file di licenza, non il codice).
-2. Per il logo: verifica la licenza della pagina Commons di `QuadrupoleContour.svg` (WebFetch su `commons.wikimedia.org/wiki/File:QuadrupoleContour.svg`). Se è CC BY-SA o simile: attribuzione (autore, link, licenza) nel README e in `qqq_lab/web/teoria` o nel «?» generale, e nota sul fatto che il logo derivato va distribuito con la stessa licenza; se il sito non è raggiungibile, scrivilo e lascia il punto aperto qui. Non decidere tu di cambiare logo: segnalalo a Federico se la licenza è un problema.
-3. Nel `README.md` una sezione **«Licenze e crediti»**: licenza del programma (MIT, `LICENSE`), poi una riga per componente (nome, versione se nota, licenza, link, dove si trova). Se serve, un file `LICENZE-TERZI.md` con i testi o i link completi. Controlla che `tools/build_site.py` copi nel sito i file di licenza di Ketcher/OpenChemLib/Pyodide richiesti dalle loro licenze; se no, aggiungilo.
 
 ---
 
