@@ -508,7 +508,7 @@ document.addEventListener("keydown", e => {
   if (S.view !== "data" || e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key) || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || "") || Q("dialog[open]")) return;
   if (fsPanel()) return;
   const q = tabPanels().filter(x => x.el).sort((a, b) => a.y - b.y || a.id - b.id)[+e.key - 1]; if (!q) return;
-  setActive(q); front(q.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + q.y - 70, behavior: "smooth" });
+  setActive(q); front(q.el); window.scrollTo({ top: Q("#dpanels").getBoundingClientRect().top + scrollY + q.y - hdrH() - 12, behavior: "smooth" });
 });
 function fitHost() { numberPanels(); Q("#dpanels").style.height = Math.max(520, ...tabPanels().map(p => p.y + p.h + 16)) + "px"; arrows(); pairArrows(); }
 // MS2 tab: a short arrow between the precursor chromatogram (above) and the product-ion spectrum it feeds (below)
