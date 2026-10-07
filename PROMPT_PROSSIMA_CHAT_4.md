@@ -31,7 +31,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati
 **Stato** (aggiornalo e fai push a ogni punto finito: è quello che legge la chat successiva). Ogni sessione cambia **solo la riga sotto il suo titolo** (le righe vuote fra una sessione e l'altra evitano i conflitti di git: non toglierle). Formato: punti fatti · punto in corso · ramo non ancora in `main`.
 
 **S1**
-- A0 fatto (encoding utf-8 nei test con node; CI Windows da ricontrollare) · in corso: A1 · ramo claude/upbeat-johnson-xted9o
+- A0 e A1 fatti (A0: CI Windows da ricontrollare) · in corso: A2 · ramo claude/upbeat-johnson-xted9o
 
 **S3**
 - —
@@ -65,20 +65,6 @@ Regole per lavorare in parallelo:
 
 ## A0: test su Windows (sessione S1, per primo)
 Da quando è entrato `tests/test_perdite.py` (PR #5, 7/10) la CI fallisce **solo su Windows** (`pytest (windows-latest, 3.11 e 3.14)`); Linux e macOS sono verdi. Causa probabile (i log non li ha visti nessuno): `subprocess.run([...node...], capture_output=True, text=True)` su Windows decodifica l'output di node con cp1252 e i caratteri Δ • − si rompono. Prima leggi il log (`gh run list -R Freeesta/QqQ-lab`, `gh run view <id> --log-failed`; serve `add_repo` in lettura). Se è questo: in `tests/test_perdite.py`, `test_calcola.py`, `test_cromato.py` (e ogni altro test che legge l'output di node) sostituisci `text=True` con `encoding="utf-8"`. Push e controlla che la CI sia verde anche su Windows (`gh run watch`). Se la causa è un'altra, correggi quella e scrivila in `AGENTS.md` (sez. 2, accanto alla nota sui file mmap su Windows).
-
-## A1: barra sopra i pannelli (`#tools`)
-
-**A1.1 Il nome del file selezionato si deve leggere.** Nella barra (`#g-file`: ◀ `#fsel` ▶, poi «Solo il selezionato / Tutti sovrapposti») il menu `#fsel` è troppo stretto: si vede solo «Flufenacet_Fu…». Deve mostrare il **nome intero** del file visualizzato: larghezza automatica sul nome più lungo dei file della scheda, minimo ~220 px, massimo ~40% della barra; se il nome è ancora più lungo si accorcia **al centro** («B_FullMa…t30 (2)», così il tempo finale resta visibile) con il nome intero nell'etichetta al passaggio del mouse. A schermo stretto la barra va a capo invece di schiacciare il menu. e2e: a 1280 px il testo visibile di `#fsel` contiene il nome intero di «B_FullMass-t30 (2)».
-
-**A1.2 Via «Altro ▾» e «Unisci gli XIC».** Il menu «Altro» (`#np-more`, che raccoglie `#np-tile` «Ordina» e `#np-merge` «Unisci gli XIC» quando la barra è stretta: `explore.js` ~r.381-400) non serve:
-- **togli «Unisci gli XIC»** (pulsante, codice e test: con la finestra XIC a più ioni e «Sovrapponi all'XIC…» non serve più);
-- **togli «Ordina»** se i pannelli sono già sempre impilati a tutta larghezza (controlla `defaultLayout`/`relayout`/`fitHost`: se «Ordina» non cambia più niente, toglilo; se serve ancora, diventa un'icona piccola con etichetta, non una voce di menu);
-- **togli il menu «Altro»** e la logica che sposta i pulsanti dentro (`np-more`).
-Aggiorna `AGENTS.md` sez. 3 e gli e2e che usano `#np-merge`, `#np-tile`, `#np-more`.
-
-**A1.3 Icona diversa per «Nascondi l'elenco dei file».** Il pulsante `#ffold` (◀ nella testata della lista dei file, `index.html` ~r.117) è identico alle frecce ◀ ▶ che passano da un file all'altro (`#g-file`): si confondono. Usa un'**icona da pannello laterale** (rettangolo con la colonna di sinistra e una freccetta «chiudi», SVG piccolo nello stile delle altre icone; quando la lista è nascosta, l'icona per riaprirla è la stessa con la freccetta verso destra). Etichetta: «Nascondi l'elenco dei file» / «Mostra l'elenco dei file». Nessuna freccia ◀ ▶ da sola fuori da `#g-file`.
-
----
 
 ## A2: scheda «Perdite neutre» (`web/tables.js`)
 
