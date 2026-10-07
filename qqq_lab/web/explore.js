@@ -147,6 +147,10 @@ function uiSave(now = false) {
 addEventListener("pagehide", () => uiSave(true));
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") uiSave(true); });
 
+// text size inside the graphs follows the "Dimensione testo" setting (UIP.font); exported PNGs keep the standard size (EXPORTING)
+let EXPORTING = false;
+const fz = () => (EXPORTING ? 1 : UIP.font / 100);
+const fpx = (n, st = "") => `${st}${+(n * fz()).toFixed(1)}px system-ui`;
 // ------------------------------------------------------------------ dati (con cache)
 const CACHE = new Map();
 const memo = (key, fn) => { if (!CACHE.has(key)) CACHE.set(key, fn().catch(e => { CACHE.delete(key); throw e; })); return CACHE.get(key); };
@@ -640,8 +644,8 @@ function addPanel(type, o, after) {
   const ptB = el.querySelector('[data-a="ptab"]'); if (ptB) ptB.onclick = () => peakTable(p);
   const tlB = el.querySelector('[data-a="tlink"]'); if (tlB) tlB.onclick = () => toggleTl(p);
   el.querySelector('[data-a="png"]').onclick = async () => {
-    let cvs; p._exp = true;                             // the picture has no cursor line, no selection and no zoom bar; the spectrum says where it comes from
-    try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; draw(p); }
+    let cvs; p._exp = true; EXPORTING = true;                             // the picture has no cursor line, no selection and no zoom bar; the spectrum says where it comes from
+    try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; draw(p); }
     cvs.toBlob(async b => {
       let out = b; try { out = await pngWithMeta(b, plotMeta(p)); } catch (e) { /* the image is saved anyway, only without metadata */ }
       const a = document.createElement("a"); a.href = URL.createObjectURL(out); a.download = plotName(p) + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
@@ -775,7 +779,7 @@ function afterDraw(p) {
   if (!(p._a && (p.zoom || p.zoomY)) || p._exp) return;
   const a = p._a, g = p.cv.getContext("2d"), bw = 90, x = a.W - M.r - bw, y = 3, f0 = a.full[0], f1 = a.full[1], u = p.type === "spec" ? "m/z" : "RT";
   const txt = `${u} ${a.x0.toFixed(p.type === "spec" ? 1 : 2)}-${a.x1.toFixed(p.type === "spec" ? 1 : 2)}` + (p.type === "spec" ? "" : " min") + (a.map && p.zoomY ? ` · m/z ${a.y0.toFixed(0)}-${a.y1.toFixed(0)}` : "");
-  g.save(); g.font = "10px system-ui"; g.textAlign = "right"; g.fillStyle = css("--muted"); g.fillText("ingrandito: " + txt, x - 6, y + 7);
+  g.save(); g.font = fpx(10); g.textAlign = "right"; g.fillStyle = css("--muted"); g.fillText("ingrandito: " + txt, x - 6, y + 7);
   g.fillStyle = "rgba(120,120,120,.25)"; g.fillRect(x, y, bw, 6);
   g.fillStyle = css("--accent"); const l = x + (a.x0 - f0) / (f1 - f0) * bw, r = x + (a.x1 - f0) / (f1 - f0) * bw; g.fillRect(l, y, Math.max(2, r - l), 6);
   g.restore();
@@ -1128,27 +1132,27 @@ function axes(g, W, H, x0, x1, ymax, yfmt, o = {}) {
   const X = v => M.l + (v - x0) / (x1 - x0) * (W - M.l - M.r), ph = H - M.t - M.b, y0 = o.ymin || 0;   // y0 < 0: signals that go below zero (PDA baseline)
   const Y = o.log ? v => H - M.b - (Math.log10(Math.max(v, o.lo)) - Math.log10(o.lo)) / (Math.log10(ymax) - Math.log10(o.lo)) * ph : v => H - M.b - (v - y0) / (ymax - y0) * ph;
   g.clearRect(0, 0, W, H);
-  const yt = o.stack ? [] : o.log ? Array.from({ length: Math.max(0, Math.floor(Math.log10(ymax)) - Math.ceil(Math.log10(o.lo)) + 1) }, (_, i) => Math.pow(10, Math.ceil(Math.log10(o.lo)) + i)) : nice(y0, ymax, Math.max(5, Math.round(ph / 32)));
-  frame(g, W, H, nice(x0, x1, o.xn || Math.max(8, Math.round((W - M.l - M.r) / 75))).map(t => [X(t), +t.toFixed(2)]), yt.map(t => [Y(t), yfmt(t)]), o.xt, o.yt);
+  const yt = o.stack ? [] : o.log ? Array.from({ length: Math.max(0, Math.floor(Math.log10(ymax)) - Math.ceil(Math.log10(o.lo)) + 1) }, (_, i) => Math.pow(10, Math.ceil(Math.log10(o.lo)) + i)) : nice(y0, ymax, Math.max(5, Math.round(ph / (32 * fz()))));
+  frame(g, W, H, nice(x0, x1, o.xn || Math.max(8, Math.round((W - M.l - M.r) / (75 * fz())))).map(t => [X(t), +t.toFixed(2)]), yt.map(t => [Y(t), yfmt(t)]), o.xt, o.yt);
   if (y0 < 0) { g.save(); g.strokeStyle = css("--line"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(M.l, Math.round(Y(0)) + .5); g.lineTo(W - M.r, Math.round(Y(0)) + .5); g.stroke(); g.restore(); }   // zero line
   return { X, Y };
 }
 // axis lines, tick marks, tick labels and titles (shared by all the plots)
 function frame(g, W, H, xt, yt, xtitle, ytitle) {
-  const ink = css("--muted"); g.save(); g.lineWidth = 1; g.strokeStyle = ink; g.fillStyle = ink; g.font = "11px system-ui";
+  const ink = css("--muted"); g.save(); g.lineWidth = 1; g.strokeStyle = ink; g.fillStyle = ink; g.font = fpx(11);
   g.beginPath(); g.moveTo(M.l + .5, M.t); g.lineTo(M.l + .5, H - M.b + .5); g.lineTo(W - M.r, H - M.b + .5); g.stroke();
-  g.textAlign = "right"; for (const [y, lab] of yt) { g.beginPath(); g.moveTo(M.l - 4, Math.round(y) + .5); g.lineTo(M.l, Math.round(y) + .5); g.stroke(); g.fillText(lab, M.l - 6, y + 3.5); }
-  g.textAlign = "center"; for (const [x, lab] of xt) { if (x < M.l - 1 || x > W - M.r + 1) continue; g.beginPath(); g.moveTo(Math.round(x) + .5, H - M.b); g.lineTo(Math.round(x) + .5, H - M.b + 4); g.stroke(); g.fillText(lab, x, H - M.b + 15); }
-  g.fillStyle = css("--ink"); g.font = "12px system-ui";
-  const fnt = t => t === "m/z" ? "italic 12px system-ui" : "12px system-ui";           // m/z is always in italics
-  if (xtitle) { g.font = fnt(xtitle); g.fillText(xtitle, (M.l + W - M.r) / 2, H - 6); }
-  if (ytitle) { g.font = fnt(ytitle); g.translate(13, (M.t + H - M.b) / 2); g.rotate(-Math.PI / 2); g.fillText(ytitle, 0, 0); }
-  g.restore(); g.font = "11px system-ui"; g.lineWidth = 1;
+  g.textAlign = "right"; for (const [y, lab] of yt) { g.beginPath(); g.moveTo(M.l - 4, Math.round(y) + .5); g.lineTo(M.l, Math.round(y) + .5); g.stroke(); g.fillText(lab, M.l - 6, y + 3.5 * fz()); }
+  g.textAlign = "center"; for (const [x, lab] of xt) { if (x < M.l - 1 || x > W - M.r + 1) continue; g.beginPath(); g.moveTo(Math.round(x) + .5, H - M.b); g.lineTo(Math.round(x) + .5, H - M.b + 4); g.stroke(); g.fillText(lab, x, H - M.b + 4 + 11 * fz()); }
+  g.fillStyle = css("--ink"); g.font = fpx(12);
+  const fnt = t => t === "m/z" ? fpx(12, "italic ") : fpx(12);           // m/z is always in italics
+  if (xtitle) { g.font = fnt(xtitle); g.fillText(xtitle, (M.l + W - M.r) / 2, H - 6 * fz()); }
+  if (ytitle) { g.font = fnt(ytitle); g.translate(1 + 12 * fz(), (M.t + H - M.b) / 2); g.rotate(-Math.PI / 2); g.fillText(ytitle, 0, 0); }
+  g.restore(); g.font = fpx(11); g.lineWidth = 1;
 }
 // an annotation: a small framed label (panel background, accent border, 12 px text) joined to its point by a thin line; it stays inside the plot and goes to the side when there is no room above
 function drawAnn(p, g, a, px, py, W, gap) {
   if (a.x < p._a.x0 || a.x > p._a.x1) return;                       // the annotated point is outside the zoomed range: neither label nor line (they come back when it is in view)
-  g.save(); g.font = "12px system-ui"; const tw = g.measureText(a.text).width, w = tw + 12, h = 20;
+  g.save(); g.font = fpx(12); const tw = g.measureText(a.text).width, w = tw + 12, h = Math.round(20 * fz());
   let bx = px - w / 2, by = py - gap - h;
   if (by < M.t + 1) { by = Math.max(M.t + 1, Math.min(py - h / 2, p._a.H - M.b - h - 1)); bx = px + 14; if (bx + w > W - M.r) bx = px - 14 - w; }       // no room above: to the side
   bx = Math.max(M.l + 2, Math.min(W - M.r - w - 2, bx));
@@ -1279,12 +1283,12 @@ async function drawLines(p) {
   if (p.ibk && !p._exp) {                                    // grey band(s) of the internal blank, always visible
     const ib = p.ibk, bands = [ib.a].concat(ib.mode === "line" && ib.b ? [ib.b] : []), s0 = sr[0], l0 = s0 && s0.ibl;
     g.fillStyle = "rgba(120,120,120,.22)"; bands.forEach(b => { const xa = Math.max(X(b[0]), M.l), xb = Math.min(X(b[1]), W - M.r); if (xb > xa) g.fillRect(xa, M.t, xb - xa, H - M.t - M.b); });
-    g.font = "11px system-ui"; g.textAlign = "left"; g.fillStyle = css("--muted");
+    g.font = fpx(11); g.textAlign = "left"; g.fillStyle = css("--muted");
     g.fillText(`bianco interno ${ibkRange(ib.a)}${ib.mode === "line" && ib.b ? " e " + ibkRange(ib.b) : ""}: ${l0 ? fmtA(l0.lvl) + (l0.lvl2 != null ? " e " + fmtA(l0.lvl2) : "") + " cps" : ""}${sr.length > 1 ? " (prima traccia)" : ""}`, Math.max(M.l + 6, X(ib.a[0]) + 4), H - M.b - 6);
   }
   if (p.sel && !p._exp) { g.fillStyle = "rgba(43,92,138,.10)"; g.fillRect(X(p.sel[0]), M.t, X(p.sel[1]) - X(p.sel[0]), H - M.t - M.b); }
   if (stk) {
-    g.font = "11px system-ui"; g.textAlign = "left";
+    g.font = fpx(11); g.textAlign = "left";
     sr.forEach(s => { const y = Y(s.off); g.strokeStyle = css("--line"); g.beginPath(); g.moveTo(M.l, y); g.lineTo(W - M.r, y); g.stroke(); const t = s.name.length > 34 ? s.name.slice(0, 33) + "…" : s.name; g.lineWidth = 3; g.lineJoin = "round"; g.strokeStyle = css("--panel"); g.strokeText(t, M.l + 4, y - 4); g.fillStyle = s.color; g.fillText(t, M.l + 4, y - 4); g.lineWidth = 1; });
   }
   g.save(); g.beginPath(); g.rect(M.l + 1.5, M.t - 1, W - M.l - M.r - 1.5, H - M.t - M.b + 2); g.clip();   // the line (1.8 px wide) must not overdraw the y axis
@@ -1296,9 +1300,9 @@ async function drawLines(p) {
       if (first == null) continue;
       g.lineTo(last, Y(0) + sy); g.closePath(); g.fillStyle = css("--panel"); g.fill();
       g.strokeStyle = s.color; g.lineWidth = 1.6 + LWX(); g.setLineDash(s.dash); g.stroke(); g.setLineDash([]);
-      g.fillStyle = s.color; g.font = "bold 11px system-ui"; g.textAlign = "left"; g.fillText(f.time != null ? `t = ${f.time} min` : s.name, first + 4, Y(0) + sy - 4);       // the time next to each trace
+      g.fillStyle = s.color; g.font = fpx(11, "bold "); g.textAlign = "left"; g.fillText(f.time != null ? `t = ${f.time} min` : s.name, first + 4, Y(0) + sy - 4);       // the time next to each trace
     }
-    g.font = "11px system-ui";
+    g.font = fpx(11);
   } else for (const s of sr) {
     g.strokeStyle = s.color; g.lineWidth = (s.dash.length ? 1.5 : 1.8) + LWX(); g.setLineDash(s.dash); g.beginPath(); let st = false;
     s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = X(r), py = Y(U(s, s.ys[i])); st ? g.lineTo(px, py) : g.moveTo(px, py); st = true; });
@@ -1337,8 +1341,8 @@ async function drawLines(p) {
     g.strokeStyle = s.color; g.lineWidth = 2.2;
     for (const e of ["a", "b"]) { const px = X(it[e]); g.beginPath(); g.moveTo(px, M.t + 10); g.lineTo(px, H - M.b); g.stroke(); g.fillStyle = s.color; g.fillRect(px - 4, M.t, 8, 12); }
     const ay = Math.max(M.t + 28, Y(U(s, s.ys[nearIdx(s.x, r.rt)])) - 20), lab = "A = " + fmtA(r.area) + (sr.length > 1 ? " · " + s.name : "");   // clearly above the apex, never on the peak
-    g.font = "bold 11px system-ui"; g.textAlign = "center"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = css("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
-    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 13, w: lw + 6, h: 16, tip: `<b>Area</b> ${fmtFull(r.area)} <span class="sm">conteggi·s</span><div class="sm">Tasto destro: azioni</div>` }); g.font = "11px system-ui";
+    g.font = fpx(11, "bold "); g.textAlign = "center"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.strokeText(lab, X(r.rt), ay); g.fillStyle = css("--ink"); g.fillText(lab, X(r.rt), ay); g.lineWidth = 1;
+    const lw = g.measureText(lab).width; (p._a.lbls = p._a.lbls || []).push({ x: X(r.rt) - lw / 2 - 3, y: ay - 2 - 11 * fz(), w: lw + 6, h: 5 + 11 * fz(), tip: `<b>Area</b> ${fmtFull(r.area)} <span class="sm">conteggi·s</span><div class="sm">Tasto destro: azioni</div>` }); g.font = fpx(11);
   }
   // the cursor line is not part of the canvas: it is a thin overlay (cursorLine), so the arrows move it without redrawing the chromatogram (and it never enters a PNG)
   for (const a of p.anns) {
@@ -1464,7 +1468,7 @@ function draw3d(p, g, W, H, A, B, im, f, rf, x0, x1, y0, y1, scaleTxt) {
   const ox = M.l + 14 + (pw - (bx1 - bx0) * sc) / 2 - bx0 * sc, oy = M.t + 6 + (ph - (by1 - by0) * sc) / 2 + by1 * sc;
   const P = (u, w, z) => { const r = pr(u, w, z); return [ox + r[0] * sc, oy - r[1] * sc, r[2]]; };
   g.clearRect(0, 0, W, H);
-  const ink = css("--muted"); g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = 1; g.font = "11px system-ui";
+  const ink = css("--muted"); g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = 1; g.font = fpx(11);
   // floor
   const fl = [[-.5, -.5], [.5, -.5], [.5, .5], [-.5, .5]].map(([u, w]) => P(u, w, 0));
   g.fillStyle = "rgba(120,120,120,.07)"; g.beginPath(); fl.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.fill(); g.stroke();
@@ -1759,7 +1763,7 @@ async function drawSpec(p) {
   if (lk) ymax = lk.ymax;
   let ymin = 0;
   if (p.zoomY) { ymin = p.zoomY[0]; ymax = p.zoomY[1]; }   // zoom of the intensity axis (drag on the numbers at the left of the axis, or box)
-  const { X, Y } = axes(g, W, H, x0, x1, ymax, fmt, { xt: "m/z", yt: rel ? "Intensità relativa (%)" : YT_I, xn: Math.max(10, Math.round((W - M.l - M.r) / 48)), ymin });
+  const { X, Y } = axes(g, W, H, x0, x1, ymax, fmt, { xt: "m/z", yt: rel ? "Intensità relativa (%)" : YT_I, xn: Math.max(10, Math.round((W - M.l - M.r) / (48 * fz()))), ymin });
   const ph = H - M.t - M.b;
   p._a = { x0, x1, X, Y, W, H, data, ymax, ymin, yfull: [0, yfull], yinv: py => ymin + (H - M.b - py) / ph * (ymax - ymin), full };
   p._a.snap = px => {                                      // the peak nearest to a pixel: the top bin around it and the centroid (intensity weighted) of that peak
@@ -1793,15 +1797,15 @@ async function drawSpec(p) {
   const top0 = Math.max(...d0.y, 1e-9), thr = (p.thr ?? 5) / 100 * top0, NL = p.nlab ?? 10, DEC = p.dec ?? 1;       // labels: only the peaks above the threshold, at most NL
   d0.mz.forEach((m, j) => { if (m >= x0 && m <= x1 && d0.y[j] >= thr && d0.y[j] <= ymax) pk.push([m, d0.y[j]]); });
   pk.sort((a, b) => b[1] - a[1]); const used = [];
-  g.fillStyle = css("--ink"); g.textAlign = "center"; g.font = "10.5px system-ui";
+  g.fillStyle = css("--ink"); g.textAlign = "center"; g.font = fpx(10.5);
   const lbls = []; p._a.lbls = lbls;                      // clickable labels: hover draws a small box, right click opens the menu
-  for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= NL) continue; used.push(px); const t = m.toFixed(DEC), w = g.measureText(t).width; g.fillText(t, px, Y(y) - 4); lbls.push({ m, x: px - w / 2 - 3, y: Y(y) - 16, w: w + 6, h: 15, tip: `<b>m/z ${m.toFixed(2)}</b><div class="sm">Tasto destro: azioni</div>` }); }
-  g.font = "11px system-ui";
+  for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= NL) continue; used.push(px); const t = m.toFixed(DEC), w = g.measureText(t).width; g.fillText(t, px, Y(y) - 4); lbls.push({ m, x: px - w / 2 - 3, y: Y(y) - 4 - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: `<b>m/z ${m.toFixed(2)}</b><div class="sm">Tasto destro: azioni</div>` }); }
+  g.font = fpx(11);
   for (const a of p.anns) {                                        // the point is the top of the nearest observed peak
     let ay = 0, bd = 0.7; d0.mz.forEach((m, j) => { const dd = Math.abs(m - a.x); if (dd < bd) { bd = dd; ay = d0.y[j]; } });
     drawAnn(p, g, a, X(a.x), Math.max(M.t + 1, Math.min(H - M.b, Y(Math.min(ay, ymax)))), W, 28);
   }
-  g.font = "11px system-ui";
+  g.font = fpx(11);
   drawMeas(p, g, X, Y, W);                                 // ruler: reference and measured differences
   // theoretical isotope pattern of a formula chosen by the student (red circles), aligned on the nearest observed peak
   let isoNote = "";
@@ -1819,9 +1823,9 @@ async function drawSpec(p) {
         const px = X(r.mz + shift) + 3, py = Y(h * r.rel / 100); if (px < M.l || px > W - M.r) continue;
         g.setLineDash([3, 2]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, py); g.stroke(); g.setLineDash([]);
         g.beginPath(); g.arc(px, py, 3.5, 0, 7); g.stroke();
-        if (r.rel >= 1) { g.font = "10px system-ui"; g.textAlign = "left"; g.fillText((r.off ? "M+" + r.off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%", px + 5, py - 4); }
+        if (r.rel >= 1) { g.font = fpx(10); g.textAlign = "left"; g.fillText((r.off ? "M+" + r.off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%", px + 5, py - 4); }
       }
-      g.restore(); g.font = "11px system-ui";
+      g.restore(); g.font = fpx(11);
       isoNote = `<span><i style="background:#d62728"></i>profilo teorico ${fmtFormula(p.iso.formula)} ${fmtAdduct(p.iso.ad)}${obs ? ` (allineato al picco a m/z ${(obs.c ?? obs.m).toFixed(1)}${Math.abs(shift) >= 0.05 ? `, spostato di ${shift > 0 ? "+" : ""}${shift.toFixed(1)}` : ""})` : ` (nessun picco osservato vicino a m/z ${top.mz.toFixed(1)})`}</span>`;
     } catch (e) { isoNote = `<span class="sm">profilo isotopico: ${EH(e.message)}</span>`; }
   }

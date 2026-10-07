@@ -24,6 +24,7 @@ function uipOpen(btn) {
   const d = document.createElement("div"); d.id = "uipset";
   d.innerHTML = `<div class="sm" style="font-weight:600;margin-bottom:6px">Impostazioni</div>
     <div class="row">Dimensione testo <span class="fz"><button data-f="-1" title="Più piccolo">A&minus;</button><b>${UIP.font}%</b><button data-f="1" title="Più grande">A+</button></span></div>
+    <div class="sm muted" style="margin:-2px 0 4px">Vale anche dentro i grafici; le immagini esportate restano alla dimensione standard.</div>
     <div class="row">Tema <select id="uip-th"><option value="auto">Come il sistema</option><option value="light">Chiaro</option><option value="dark">Scuro</option></select></div>
     <div class="row">Colori dei grafici <select id="uip-pal" title="Per tempo: i file Full Scan con un tempo vanno dal viola scuro al verde in ordine di tempo. Accessibili: colori distinguibili anche con le forme comuni di daltonismo, più linee tratteggiate. Alto contrasto aggiunge anche lo stile della linea. Arcobaleno: tinte ben separate.">${Object.entries(PALS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join("")}</select></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>Unisci i centroidi della stessa massa nominale<br><span class="sm muted">Nei file convertiti con il centroiding, un picco largo può essere spezzato in due: questa opzione li riunisce (un picco per massa nominale, come lo vede uno strumento a risoluzione unitaria).</span></span></label>`;

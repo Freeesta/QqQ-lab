@@ -213,7 +213,7 @@ const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 // fmtFormula / fmtAdduct (subscripts, superscripts) are defined in explore.js, loaded before this script
 async function api(u){const r=await fetch(u);const j=await r.json();if(j.error)throw new Error(j.error);return j}
 function fail(e){$("#err").textContent=e?(e.message||e):""}
-function setup(c){const r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);const g=c.getContext("2d");g.setTransform(d,0,0,d,0,0);return{g,W:r.width,H:r.height}}
+function setup(c){const z=typeof fz==="function"?fz():1;M.l=Math.round(66*z);M.t=Math.round(14*z);M.b=Math.round(40*z);const r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);const g=c.getContext("2d");g.setTransform(d,0,0,d,0,0);return{g,W:r.width,H:r.height}}
 function nice(a,b,n){const s=(b-a)/n,p=Math.pow(10,Math.floor(Math.log10(s))),m=s/p,st=(m<1.5?1:m<3?2:m<7?5:10)*p,o=[];for(let t=Math.ceil(a/st)*st;t<=b+1e-9;t+=st)o.push(+t.toFixed(10));return o}
 function smooth(y,k){if(!k)return y;return y.map((_,i)=>{const a=y[i-1]??y[i],c=y[i+1]??y[i];return(a+2*y[i]+c)/4})}
 const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles

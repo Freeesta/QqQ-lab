@@ -16,23 +16,12 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 ## Ordine di lavoro (per importanza)
 1. ~~Integrazione dei picchi e file in profilo~~ (fatto il 7/10, vedi `AGENTS.md` sez. 19)
 2. ~~Schermo intero~~ (fatto il 7/10, `AGENTS.md` sez. 19)
-3. **Dimensione del testo anche dentro i grafici**
+3. ~~Dimensione del testo anche dentro i grafici~~ (fatto il 7/10, `AGENTS.md` sez. 19)
 4. **Strumenti dell'header e schermata di caricamento**: via Isotopi, calcolatrice vera, Addotti più semplici, pulsante dei file di esempio, «Informazioni» al posto del «?»
 5. **Rifiniture** (menu «Correzione» con icone, documenti per gli agenti)
 6. **Disegno** (campo SMILES che si svuota, via il menu «Ione»)
 7. **Simboli** (segno di polarità leggibile e senza sbordare, «MS2» con un vero apice)
 8. **Ordine di cartelle e file** (inventario, cartelle vuote, cestino fuori da git, test obsoleti): per ultimo
-
----
-
-## BLOCCO 3: «Dimensione testo» anche dentro i grafici
-
-**Problema**: l'impostazione «Dimensione testo» (ingranaggio, `settings.js`: `UIP.font` = 90/100/115/130, applicata come variabile CSS `--z`) ingrandisce menu e liste ma non i testi dentro cromatogrammi e spettri, perché il canvas usa dimensioni fisse (circa 20 punti con `"…px system-ui"` nei file di `web/`).
-- Una funzione unica (es. `fpx(n)` = `n * UIP.font / 100`) per **tutti** i testi disegnati nei canvas: numeri e titoli degli assi, etichette dei picchi, legenda, riquadro del mouse, annotazioni, righello, intestazioni dei pannelli disegnate.
-- I **margini** dei grafici (`M.l`, `M.b`, …) e la distanza fra le tacche degli assi si adattano alla dimensione del testo (niente numeri tagliati o sovrapposti a 130%).
-- Cambiando la dimensione nell'ingranaggio, i grafici si ridisegnano subito.
-- **PNG esportati**: usano la dimensione standard (100%), così le immagini per la relazione sono sempre uguali (scrivilo nell'etichetta dell'impostazione: «vale anche dentro i grafici; le immagini esportate restano alla dimensione standard»).
-- e2e: a 130% il font del canvas è più grande (leggi il valore usato) e i numeri dell'asse y non escono dal margine (screenshot).
 
 ---
 

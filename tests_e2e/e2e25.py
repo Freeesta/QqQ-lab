@@ -28,11 +28,11 @@ try:
         def gear():
             pg.click("#np-set"); pg.wait_for_timeout(200)
             t = pg.inner_text("#uipset"); print(repr(t))
-            assert pg.locator("#uipset .row").count() == 3, pg.locator("#uipset .row").count()
+            assert pg.locator("#uipset .row").count() == 4, pg.locator("#uipset .row").count()      # text size, theme, colours and the merge of the centroids (1.3)
             assert "Dimensione testo" in t and "Tema" in t and "Colori dei grafici" in t
             for bad in ("Dimensione del testo dell", "Vale per menu", "tutorial", "Installare", "Numera", "suggerimenti", "Mostra"):
                 assert bad.lower() not in t.lower(), bad
-            assert pg.locator("#uipset input[type=checkbox]").count() == 0
+            assert pg.locator("#uipset input[type=checkbox]").count() == 1 and pg.locator("#uip-merge").count() == 1      # only the merge of the centroids
             assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["Per tempo (predefinito)", "Accessibili", "Alto contrasto", "Arcobaleno"]
             assert pg.input_value("#uip-pal") == "time"
             pg.click("#uipset [data-f='1']"); pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(400)
@@ -94,7 +94,7 @@ try:
         step("4 palettes: colours change at once, hc >= 4.5:1 and +1 px, cb has line styles, order by time kept", palettes)
         def persists():
             pg.select_option("#uip-pal", "cb"); pg.wait_for_timeout(300)
-            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.prefs'))") == {"font": 100, "theme": "auto", "pal": "cb"}
+            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.prefs'))") == {"font": 100, "theme": "auto", "pal": "cb", "merge": True}
             pg.reload(); pg.wait_for_timeout(3500)
             assert pg.evaluate("UIP.pal") == "cb"
             c = [hexof(x[1]) for x in pg.evaluate(COLORS)]; assert c and c[0] == "#00204d", c       # cividis start: colours recomputed with the saved palette
