@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import base64
 import mmap
+import os
 import re
+import time
 import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -33,6 +35,70 @@ def _float(s):
         return float(s)
     except (TypeError, ValueError):
         return None
+
+
+# Files above this size, or mounted from a browser Blob (WORKERFS, which cannot be memory-mapped), are read with _FileBuf
+FILE_MODE_BYTES = 300 << 20
+WORKERFS_ROOT = "/big"
+
+
+class _FileBuf:
+    """The small part of the mmap interface the reader uses (find, slicing, len, close), over a plain file.
+
+    A Blob mounted with WORKERFS in the browser cannot be mapped, and a very large file is better not mapped at all.
+    Searches run inside a read-ahead window (CACHE bytes), so walking through the spectra reads the file about once.
+    """
+    CACHE = 16 << 20
+
+    def __init__(self, path):
+        self._fh = open(path, "rb")
+        self._fh.seek(0, os.SEEK_END)
+        self._n = self._fh.tell()
+        self._off, self._buf = 0, b""
+
+    def __len__(self):
+        return self._n
+
+    def _read(self, a, b):
+        self._fh.seek(a)
+        return self._fh.read(b - a)
+
+    def _window(self, pos, need):
+        """Make the read-ahead window cover [pos, pos + need) (or reach the end of the file)."""
+        end = self._off + len(self._buf)
+        if self._off <= pos and (pos + need <= end or end >= self._n):
+            return
+        self._off = pos
+        self._buf = self._read(pos, min(self._n, pos + max(self.CACHE, need)))
+
+    def find(self, pat, start=0, end=None):
+        end = self._n if end is None else min(end, self._n)
+        pos, keep = max(start, 0), len(pat) - 1
+        while pos + len(pat) <= end:
+            self._window(pos, len(pat))
+            stop = self._off + len(self._buf)
+            i = self._buf.find(pat, pos - self._off, min(end, stop) - self._off)
+            if i >= 0:
+                return self._off + i
+            if stop >= end or stop >= self._n:
+                return -1
+            pos = stop - keep            # overlap, so a pattern across two windows is found
+        return -1
+
+    def __getitem__(self, key):
+        if not isinstance(key, slice):
+            return self._read(key, key + 1)[0]
+        a, b, _ = key.indices(self._n)
+        if b <= a:
+            return b""
+        end = self._off + len(self._buf)
+        if self._off <= a and b <= end:
+            return self._buf[a - self._off:b - self._off]
+        return self._read(a, b)
+
+    def close(self):
+        self._fh.close()
+        self._buf = b""
 
 
 @dataclass
@@ -63,23 +129,37 @@ class PeakTable:
 
     def xic(self, mz: float, tol_da: float) -> np.ndarray:
         """Summed intensity within mz +- tol_da in every scan (zeros where nothing is there)."""
-        a = np.searchsorted(self.mz, mz - tol_da, side="left")
-        b = np.searchsorted(self.mz, mz + tol_da, side="right")
+        lo, hi = mz - tol_da, mz + tol_da
+        if self.mz.dtype == np.float32:      # keep the limits float32 too, otherwise numpy would convert the whole table to float64
+            lo, hi = np.float32(lo), np.float32(hi)
+        a = np.searchsorted(self.mz, lo, side="left")
+        b = np.searchsorted(self.mz, hi, side="right")
         if b <= a:
             return np.zeros(len(self.rt))
         return np.bincount(self.pos[a:b], weights=self.inten[a:b], minlength=len(self.rt))
 
 
 class Run:
-    def __init__(self, path):
+    def __init__(self, path, mode="auto"):
+        """mode: "mmap", "file" (plain reads: Blobs mounted in the browser, very large files) or "auto"."""
         self.path = Path(path)
-        with open(self.path, "rb") as fh:
-            self._mm = mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ)
+        if mode == "auto":
+            big = self.path.stat().st_size > FILE_MODE_BYTES or os.path.realpath(self.path).startswith(WORKERFS_ROOT + "/")
+            mode = "file" if big else "mmap"
+        self.mode = mode
+        if mode == "file":
+            self._mm = _FileBuf(self.path)
+        else:
+            with open(self.path, "rb") as fh:
+                self._mm = mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ)
         head = self._mm[:4096]
         if b"mzML" not in head:
             raise ValueError(f"{self.path.name} does not look like an mzML file")
         self.scans: list[Scan] = []
+        self.timing: dict = {}                       # seconds spent reading the file ("indice", "tabella MS1"...), shown by the ?perf meter
+        t0 = time.perf_counter()
         self._index()
+        self.timing["indice"] = round(time.perf_counter() - t0, 3)
         self.n_chromatograms = self._count(b"<chromatogram ")
         self._tables: dict = {}
 
@@ -254,19 +334,28 @@ class Run:
         key = (level, polarity)
         if key in self._tables:
             return self._tables[key]
+        t0 = time.perf_counter()
         ids = [s.index for s in self.scans if s.level == level and (polarity in (None, 0) or s.polarity in (polarity, 0))]
         rt = np.array([self.scans[i].rt for i in ids])
         tic = np.array([self.scans[i].tic for i in ids])
+        # high-resolution MS1 (Run.hr1): float32 is enough for m/z (0.06 ppm at m/z 500) and intensity, and takes 12 bytes per peak instead of 20
+        f32 = level == 1 and bool(getattr(self, "hr1", False))
+        dt = np.float32 if f32 else np.float64
         mzs, its, poss = [], [], []
         for p, i in enumerate(ids):
             mz, it = self.read(i)
-            mzs.append(mz)
-            its.append(it)
+            mzs.append(mz.astype(dt, copy=False))
+            its.append(it.astype(dt, copy=False))
             poss.append(np.full(len(mz), p, dtype=np.int32))
-        mz = np.concatenate(mzs) if mzs else np.zeros(0)
+        mz = np.concatenate(mzs) if mzs else np.zeros(0, dtype=dt)
+        del mzs
         order = np.argsort(mz, kind="stable")
-        t = PeakTable(rt=rt, scan_ids=np.array(ids), mz=mz[order],
-                      inten=(np.concatenate(its) if its else np.zeros(0))[order],
-                      pos=(np.concatenate(poss) if poss else np.zeros(0, dtype=np.int32))[order], tic=tic)
+        mz = mz[order]
+        inten = (np.concatenate(its) if its else np.zeros(0, dtype=dt))[order]
+        del its
+        pos = (np.concatenate(poss) if poss else np.zeros(0, dtype=np.int32))[order]
+        del order, poss
+        t = PeakTable(rt=rt, scan_ids=np.array(ids), mz=mz, inten=inten, pos=pos, tic=tic)
         self._tables[key] = t
+        self.timing[f"tabella MS{level}" + (f" ({'pos' if polarity == 1 else 'neg'})" if polarity in (1, -1) else "")] = round(time.perf_counter() - t0, 3)
         return t

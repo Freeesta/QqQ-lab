@@ -201,6 +201,16 @@ class App:
                 "workdir": str(self.workdir) if self.workdir else None, "files": self.files(), "methods": self.methods(),
                 "version": __import__("qqq_lab").__version__}
 
+    def perf(self) -> dict:
+        """How each open file was read (mode, size, seconds per step): for the ?perf meter of the page."""
+        seen, out = set(), []
+        for it in (self.session.items if self.session else []):
+            if id(it.run) in seen:
+                continue
+            seen.add(id(it.run))
+            out.append({"file": Path(it.file).name.partition("#")[0], "mode": it.run.mode, "size": it.path.stat().st_size, "timing": dict(it.run.timing)})
+        return {"files": out}
+
     def _item(self, k: int):
         if not self.session or not 0 <= k < len(self.session.items):
             raise ValueError("no such file in the session")

@@ -5,6 +5,9 @@ const HELP = {
   "start": ["Caricare i dati", `Trascina qui i file <b>.mzML</b> (o clicca per sceglierli). Puoi caricarne molti insieme: un file per ogni tempo di trattamento, il bianco, gli standard.
     <br>Il tipo di esperimento (Full Scan, MS<sup>2</sup> Product Ion, MRM) è letto dal contenuto del file. Dal nome il programma indovina il <b>tipo</b> (campione, bianco, standard), il <b>tempo</b> (es. <i>t15</i> = 15 min) e, per gli standard, la <b>concentrazione</b> (es. <i>std_0.5ppm</i>): controllali nella tabella prima di premere <b>Carica dati</b>. Il metodo <b>.dam</b> va nel secondo riquadro (se lo trascini nel primo, ci pensa il programma).
     <br>I file <b>.wiff</b> dello strumento vanno prima convertiti in .mzML con MSConvert (vedi il riquadro qui sotto).`],
+  "filegrandi": ["File ad alta risoluzione e file grandi", `I file ad alta risoluzione (Orbitrap, Q-TOF) sono molto più pesanti di quelli del laboratorio. Nel sito i file sopra 50 MB non vengono copiati nella memoria del programma: restano sul disco e si leggono a blocchi; sopra 300 MB il browser non li conserva, e dopo aver ricaricato la pagina vanno caricati di nuovo.
+    <br>Il formato giusto sono i <b>centroidi</b> (peak picking del produttore), non il profilo. Con MSConvert (ProteoWizard) da un file Thermo: <code>msconvert file.raw --mzML --zlib --filter "peakPicking vendor msLevel=1-"</code>.
+    <br>Per alleggerire un file: <code>--filter "scanTime [600,1500]"</code> (secondi: tiene solo quell'intervallo di tempo) e <code>--filter "threshold count 300 most-intense"</code> (tiene i 300 picchi più intensi di ogni scansione).`],
   "files": ["Elenco dei file", `Ogni riga è un file aperto, con il suo colore nei grafici. La <b>casella</b> mostra o nasconde la traccia; <b>clic sul nome</b> = file corrente (quello usato da spettro e mappa), <b>doppio clic</b> = rinomina.
     <br>Sotto il nome: tipo di esperimento (Full Scan, MS<sup>2</sup>, MRM) e tempo.
     <br>In <b>Dati</b> ci sono tre schede, una per tipo di esperimento (Full Scan, MS<sup>2</sup>, MRM): non si mescolano mai nello stesso grafico. <b>Tempi ed esperimenti</b> mostra quali file hai per ogni tempo e tipo.
@@ -82,5 +85,5 @@ function guideHtml() {
   let modes = "";
   try { modes = `<details><summary><b>I tre tipi di esperimento (Full Scan, MS<sup>2</sup>, MRM)</b></summary>${["full", "ms2", "mrm"].map(t => QMODI.html(QMODI.tab2key[t])).join("")}</details>`; } catch (e) { /* the modes text is optional */ }
   const credits = `<details><summary><b>Crediti e licenze</b></summary><div class="hp-s">Ketcher (EPAM, Apache-2.0), OpenChemLib (BSD-3), Pyodide (MPL-2.0) e NumPy (BSD-3); il logo deriva da <i>QuadrupoleContour.svg</i> di Geek3 (Wikimedia Commons, CC BY-SA 4.0). I file mzML restano sul tuo computer. Dettagli in <code>LICENZE-TERZI.md</code>.</div></details>`;
-  return sec("Aprire i dati", ["start", "files"]) + sec("Lavorare con i grafici", ["toolbar", "nav", "scorrimento", "pnl-chrom", "pnl-spec", "pnl-xic", "pnl-mrm", "pnl-map"]) + sec("Metodo, immagini e proprietà", ["tools", "prop"]) + modes + credits;
+  return sec("Aprire i dati", ["start", "filegrandi", "files"]) + sec("Lavorare con i grafici", ["toolbar", "nav", "scorrimento", "pnl-chrom", "pnl-spec", "pnl-xic", "pnl-mrm", "pnl-map"]) + sec("Metodo, immagini e proprietà", ["tools", "prop"]) + modes + credits;
 }
