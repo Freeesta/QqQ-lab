@@ -14,7 +14,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (sul Mac) oppure nel clone GitHub (cloud). Leggi `
 - Federico vuole un'interfaccia **pulita**: meno testi di avviso, meno «?», meno pulsanti. Nel dubbio, togli.
 
 ## Ordine di lavoro
-Blocco A (grafici, `explore.js` + CSS in `index.html`) → Blocco B (aiuti e testi) → Blocco C (calcolatrice) → Blocco D (licenze) → Blocco E (residui). Un commit per blocco.
+Blocco A (grafici, `explore.js` + CSS in `index.html`) → Blocco B (aiuti e testi) → Blocco C (calcolatrice) → Blocco F (Disegno, piccolo: puoi farlo insieme a C) → Blocco D (licenze) → Blocco E (residui). Un commit per blocco.
 
 ---
 
@@ -86,11 +86,17 @@ Le icone nelle schede (`tabs.js` ~r.12: `QICON.get(TABICON[t], 16)`) e nelle int
 
 ---
 
+## BLOCCO F: scheda Disegno
+
+### F1. Decimali della massa fino a 5
+Il menu «decimali» delle scritte sotto le strutture (`<select id="lb-dec">` in `index.html` ~r.124, opzioni 0-4; letto in `draw.js` ~r.240-290, salvato in `NB.labDec`) deve arrivare a **5**. Controlla che: la massa sotto le strutture, l'm/z degli ioni (menu «Ione») e le esportazioni PNG/SVG mostrino i decimali scelti; l'arrotondamento sia half-up anche con i decimali (oggi `toFixed(dec)` per dec > 0 e `roundHalfUp` solo per 0, ~r.248: usa la stessa funzione half-up dell'Addotti/`elements.py`, AGENTS.md sez. 16); un taccuino vecchio con `labDec` da 0 a 4 si ripristina senza errori. e2e: scelta 5 → scritta con 5 decimali (es. paracetamolo M = 151.06333).
+
+---
+
 ## BLOCCO E: residui da verificare
 1. **Finestra XIC [n-0.2, n+0.8]** (`XIC_BELOW`, `XIC_DRIFT` in `explore.js`): misura con i dati veri la parte frazionaria (centroide osservato meno nominale del calcolato) sugli ioni forti di TUTTI i file Full Scan; conferma o cambia le costanti e scrivi i numeri in `AGENTS.md` sez. 12.
 2. **e2e con i dati veri**: `python3 tools/verifica.py` completo; correggi ciò che fallisce (in particolare e2e12, che non trovava `#pick`, ed e2e13, 17, 19, 20, 21, 23 non eseguiti dopo la finestra XIC nuova).
 3. **e2e26 (limiti RT)**: la selezione non si crea, la prova non prova nulla: rendila effettiva o testa direttamente la funzione di limite.
-4. **`Teoria QqQ lab.html` nella radice**: chiedi a Federico se serve ancora (sul Mac); nel cloud lasciala e riporta la domanda nel report.
 
 ---
 
