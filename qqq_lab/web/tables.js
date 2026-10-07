@@ -137,11 +137,6 @@
   }
 
   // ---------------------------------------------------------------- common neutral losses (MS/MS and in-source)
-  const LOSS = [["H2O", "acqua: alcoli, acidi carbossilici"], ["NH3", "ammine primarie, ammidi"], ["CO", "chetoni, aldeidi, fenoli"], ["CO2", "acidi carbossilici"],
-    ["CH2O", "formaldeide: alcoli benzilici, metossi"], ["CH4O", "metanolo: esteri metilici, metossi"], ["C2H2O", "chetene: acetammidi, acetati"], ["HCOOH", "acido formico: acidi"],
-    ["C2H4", "etilene: catene etiliche, eteri etilici"], ["C3H6", "propene: gruppi isopropilici"], ["HCN", "acido cianidrico: nitrili, eterocicli azotati"],
-    ["HF", "composti fluorurati"], ["HCl", "composti clorurati"], ["HBr", "composti bromurati"], ["SO2", "sulfonammidi, solfoni"], ["SO3", "solfati, sulfonati"],
-    ["H2S", "tioli, tioeteri"], ["CH3", "radicale metile (perdita dispari, poco comune in ESI)"], ["NO2", "radicale NO2: nitroderivati"], ["C6H6", "benzene: anelli aromatici"]];
   // The masses are computed from the formulas (exact mass rounded to the integer); the "typical of" column summarises what the reviews below
   // describe for even-electron ions in ESI-MS/MS. A loss is only a hypothesis: it must be checked against the structure.
   function lossRefs() {
@@ -152,9 +147,49 @@
       <li>Demarque D. P., Crotti A. E. M., Vessecchi R., Lopes J. L. C., Lopes N. P. <i>Fragmentation reactions using electrospray ionization mass spectrometry: an important tool for the structural elucidation and characterization of synthetic and natural products.</i> Nat. Prod. Rep. 2016, 33, 432-455. ${L("https://pubs.rsc.org/en/content/articlelanding/2016/np/c5np00073d", "link")}</li>
       <li>Hol&ccaron;apek M., Jir&aacute;sko R., L&iacute;sa M. <i>Basic rules for the interpretation of atmospheric pressure ionization mass spectra of small molecules.</i> J. Chromatogr. A 2010, 1217, 3908-3921. ${L("https://pubmed.ncbi.nlm.nih.gov/20303090/", "link")}</li></ol></div>`;
   }
+  // «Perdite neutre»: one line per loss (Δm, formula, name, where it is seen, typical polarity); «Dettagli» opens exact mass, mechanism and source;
+  // the losses with the same nominal mass sit in a box (unit resolution cannot tell them apart); «Cerca Δm» lists single, pair and repeated candidates.
+  const NL = { q: "", pol: "", open: new Set() };       // state kept while the window is open (the ruler of the spectrum can fill q)
+  const fl = f => sub(f.replace(/^(CH3|NO2)$/, "•$1")).replace(/^•/, "•");   // radicals are written with the dot
+  const polChip = p => (p === "±" ? "<i class='nlp'>+</i><i class='nlp'>&minus;</i>" : p === "+" ? "<i class='nlp'>+</i>" : "<i class='nlp'>&minus;</i>");
+  const lossRow = (l, o) => {
+    const m = massOf(l.f), id = l.f;
+    return `<div class="nlr${o.hit.has(id) ? " hit" : ""}" data-f="${id}"><div class="nlm">${Math.round(m)}</div><div class="nlf"><b>${fl(l.f)}</b><span class="muted">${H(l.name)}</span></div>
+      <div class="nls">${H(l.seen)}</div><div class="nlpp">${polChip(l.pol)}</div><button class="nld" type="button" data-d="${id}" aria-expanded="${NL.open.has(id)}">Dettagli</button>
+      ${l.rad ? `<div class="nlrad">• ${H(LOSS_RAD)}</div>` : ""}
+      <div class="nldet"${NL.open.has(id) ? "" : " hidden"}><div>massa esatta <b>${m.toFixed(4)}</b> · <span class="muted">meccanismo:</span> ${H(l.mech)}</div><div class="muted sm">Fonti: ${H(LOSS_REFS)}${l.rad ? "; regola degli elettroni pari: Holčapek 2010" : ""}</div></div></div>`;
+  };
+  function lossList() {
+    const hit = new Set(), q = parseFloat(String(NL.q).replace(",", "."));
+    const vis = LOSSES.filter(l => !NL.pol || l.pol === "±" || l.pol === NL.pol).sort((a, b) => massOf(a.f) - massOf(b.f));
+    if (isFinite(q)) vis.forEach(l => { if (Math.abs(massOf(l.f) - q) <= 0.5) hit.add(l.f); });
+    const groups = []; vis.forEach(l => { const n = Math.round(massOf(l.f)), g = groups[groups.length - 1]; if (g && g.n === n) g.ls.push(l); else groups.push({ n, ls: [l] }); });
+    return groups.map(g => g.ls.length < 2 ? lossRow(g.ls[0], { hit }) : `<div class="nlg"><div class="nlgn">Stessa massa nominale (${g.n}): a risoluzione unitaria non si distinguono, servono altri indizi.${g.n === 80 ? ` Guarda <i>M+2</i> nella scheda <a href="#" data-go="is">Isotopi</a> (Br: M e M+2 quasi uguali).` : ""}</div>${g.ls.map(l => lossRow(l, { hit })).join("")}</div>`).join("");
+  }
+  function lossCombosHtml() {
+    const q = parseFloat(String(NL.q).replace(",", ".")); if (!isFinite(q) || q <= 0) return "";
+    const c = lossCombos(q, massOf), nm = l => `<b>${fl(l.f)}</b>`;
+    const li = [...c.single.map(x => `<li>${nm(x[0])} <span class="muted">(${massOf(x[0].f).toFixed(1)})</span></li>`), ...c.pairs.map(p => `<li>${nm(p[0])} + ${nm(p[1])} <span class="muted">(${(massOf(p[0].f) + massOf(p[1].f)).toFixed(1)})</span></li>`), ...c.reps.map(r => `<li>${r.n} &times; ${nm(r.l)} <span class="muted">(${(r.n * massOf(r.l.f)).toFixed(1)})</span></li>`)];
+    return `<div class="nlc"><b>Possibili perdite (da verificare sullo spettro)</b>${li.length ? `<ul>${li.join("")}</ul>` : `<div class="muted sm">Nessuna perdita o combinazione della lista entro &plusmn;0.5.</div>`}</div>`;
+  }
   function lossTab() {
-    return `<table><tr><th>perdita</th><th class="num">&Delta;m</th><th>tipica di</th></tr>` +
-      LOSS.map(([f, n]) => { const m = massOf(f); return `<tr><td><b>${sub(f)}</b></td><td class="num"><b>${Math.round(m)}</b></td><td class="muted sm">${n}</td></tr>`; }).join("") + "</table>" + lossRefs();
+    return `<div class="nlbar"><label>Cerca &Delta;m <input id="nl-q" inputmode="decimal" autocomplete="off" placeholder="es. 62" value="${H(NL.q)}" title="Scrivi la differenza di massa osservata: evidenzia le perdite con quel valore (±0.5) e mostra coppie e ripetizioni che la compongono"></label>
+      <span class="seg" id="nl-pol" title="Polarità tipica della perdita"><button data-p="+" class="${NL.pol === "+" ? "on" : ""}">+</button><button data-p="-" class="${NL.pol === "-" ? "on" : ""}">&minus;</button><button data-p="" class="${NL.pol === "" ? "on" : ""}">tutte</button></span></div>
+      <div id="nl-res">${lossCombosHtml()}</div><div id="nl-list">${lossList()}</div>` + lossRefs();
+  }
+  function bindLoss(root, show) {
+    const list = () => { root.querySelector("#nl-list").innerHTML = lossList(); wire(); root.querySelector("#nl-res").innerHTML = lossCombosHtml(); };
+    const wire = () => {
+      root.querySelectorAll(".nld").forEach(b => b.onclick = () => { const id = b.dataset.d, row = b.closest(".nlr"), d = row.querySelector(".nldet"); if (NL.open.has(id)) NL.open.delete(id); else NL.open.add(id); d.hidden = !NL.open.has(id); b.setAttribute("aria-expanded", NL.open.has(id)); });
+      root.querySelectorAll("[data-go]").forEach(a => a.onclick = e => { e.preventDefault(); show(a.dataset.go); });
+    };
+    wire();
+    root.querySelector("#nl-q").oninput = e => { NL.q = e.target.value; list(); };
+    root.querySelectorAll("#nl-pol button").forEach(b => b.onclick = () => { NL.pol = b.dataset.p; root.querySelectorAll("#nl-pol button").forEach(x => x.classList.toggle("on", x === b)); list(); });
+  }
+  // the polarity of the loaded files sets the filter when the window opens (the student can change it)
+  function lossPolStart() {
+    try { const fl = typeof shown === "function" && shown().length ? shown() : E.files.filter(f => f.vis), pos = fl.some(f => f.polarity === "positive"), neg = fl.some(f => f.polarity === "negative"); NL.pol = pos && !neg ? "+" : neg && !pos ? "-" : ""; } catch (_) { NL.pol = ""; }
   }
 
   // ---------------------------------------------------------------- isotope pattern, computed here (no external library)
@@ -240,11 +275,12 @@
   }
 
   // ---------------------------------------------------------------- dialog with three tabs
-  const TABS = [["pt", "Tavola periodica", periodic, bindPeriodic], ["ad", "Addotti", adductTab, bindAdducts], ["is", "Isotopi", isoTab, bindIso], ["ls", "Perdite neutre", lossTab, null]];
-  function open(which) {
+  const TABS = [["pt", "Tavola periodica", periodic, bindPeriodic], ["ad", "Addotti", adductTab, bindAdducts], ["is", "Isotopi", isoTab, bindIso], ["ls", "Perdite neutre", lossTab, bindLoss]];
+  function open(which, opt = {}) {
     const d = Qs("#refdlg"), body = Qs("#refbody");
+    if (which === "ls") { if (!d.open) lossPolStart(); if (opt.q != null) NL.q = String(opt.q); }
     const show = id => {
-      const t = TABS.find(x => x[0] === id); body.innerHTML = t[2](); if (t[3]) t[3](body);
+      const t = TABS.find(x => x[0] === id); body.innerHTML = t[2](); if (t[3]) t[3](body, show);
       d.querySelectorAll("#reftabs button").forEach(b => b.classList.toggle("on", b.dataset.t === id));
     };
     Qs("#reftabs").innerHTML = TABS.map(t => `<button data-t="${t[0]}">${t[1]}</button>`).join("");
