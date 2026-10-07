@@ -55,7 +55,7 @@ try:
             m = pg.evaluate(f"{SPEC}.meas"); assert len(m["list"]) == 1 and abs((m["list"][0]["b"] - m["list"][0]["a"]) - (b["mz"] - a["mz"])) < 0.5 and abs(abs(m["list"][0]["b"] - m["list"][0]["a"]) - 170) < 1, m      # about 170, sign + towards the right
             pg.screenshot(path=SH + "spettro_righello.png", clip={"x": 0, "y": 0, "width": 1500, "height": 900}) if False else None
             pg.keyboard.press("Escape"); pg.wait_for_timeout(300); assert pg.evaluate(f"{SPEC}.meas") is None
-        step("G1: ruler: reference, second peak fixes delta m/z (364.4 -> 194.2 = -170.2), Esc removes", ruler)
+        step("G1: ruler: reference, second peak fixes delta m/z (about 170, shown without sign), Esc removes", ruler)
         def ruler_btn():
             pg.click(".pnl.spec [data-a=rul]"); a = peak_x(364.4); pg.mouse.click(a["x"], a["y"] + 3); pg.wait_for_timeout(300)
             assert pg.evaluate(f"{SPEC}.meas.ref") is not None

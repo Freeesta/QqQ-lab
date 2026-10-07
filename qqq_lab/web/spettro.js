@@ -37,7 +37,7 @@ function drawMeas(p, g, X, Y, W) {
     const xa = X(q.a), xb = X(q.b), y = M.t + 26 + (i % 6) * 17;
     g.setLineDash([2, 3]); g.globalAlpha = .55; g.beginPath(); g.moveTo(xa, y); g.lineTo(xa, Y(0)); g.moveTo(xb, y); g.lineTo(xb, Y(0)); g.stroke(); g.setLineDash([]); g.globalAlpha = 1;
     g.lineWidth = 1.4; g.beginPath(); g.moveTo(xa, y - 4); g.lineTo(xa, y + 4); g.moveTo(xa, y); g.lineTo(xb, y); g.moveTo(xb, y - 4); g.lineTo(xb, y + 4); g.stroke(); g.lineWidth = 1;
-    const t = "Δm/z = " + sgn1(q.b - q.a), cx = Math.max(x0 + 40, Math.min(x1 - 40, (xa + xb) / 2));
+    const t = "Δm/z " + Math.abs(q.b - q.a).toFixed(1), cx = Math.max(x0 + 40, Math.min(x1 - 40, (xa + xb) / 2));
     g.textAlign = "center"; g.lineWidth = 3; g.strokeStyle = css("--panel"); g.strokeText(t, cx, y - 5); g.fillStyle = ac; g.fillText(t, cx, y - 5); g.strokeStyle = ac; g.lineWidth = 1;
   });
   g.restore();

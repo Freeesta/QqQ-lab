@@ -57,6 +57,17 @@ laboratorio l'asse m/z è spostato di circa +0.3 Da: usa una finestra XIC di +-1
 Il programma legge solo mzML. I `.wiff` (con il loro `.wiff.scan`) si convertono con ProteoWizard
 MSConvert su Windows (la guida è nella schermata di caricamento del sito).
 
+## Licenze e crediti
+
+Il codice di QqQ lab è sotto licenza **MIT** (`LICENSE`, Federico Cristaudo). Il sito usa anche materiale di terzi, ciascuno con la sua licenza (testi e link in [`LICENZE-TERZI.md`](LICENZE-TERZI.md), copiato anche nel sito):
+
+- **Ketcher** 3.18.0 (EPAM Systems), Apache-2.0: `qqq_lab/web/vendor/ketcher/`, https://github.com/epam/ketcher
+- **OpenChemLib JS** 9.25.1 (Zakodium / Actelion), BSD-3-Clause: `qqq_lab/web/vendor/openchemlib.js`, https://github.com/cheminfo/openchemlib-js
+- **Pyodide** 314.0.7, MPL-2.0 (Python: licenza PSF), scaricato dalla build del sito: https://github.com/pyodide/pyodide
+- **NumPy** (incluso in Pyodide), BSD-3-Clause: https://numpy.org
+- **Masse, pesi e abbondanze degli elementi** (`elements.js`): masse da OpenChemLib, pesi atomici da Ketcher, abbondanze IUPAC.
+- **Logo**: deriva da *QuadrupoleContour.svg* di **Geek3** (Wikimedia Commons), **CC BY-SA 4.0**; il logo e le icone derivate si distribuiscono con la stessa licenza.
+
 ## Cosa puoi modificare, dal più semplice al più profondo
 
 | Cosa | File | Serve programmare? |

@@ -23,12 +23,13 @@ try:
             assert pg.evaluate("E.panels[0]._a.sr.every(s=>E.files[s.k].kind!=='mrm')"), "MRM TIC in the chromatogram"
         step("TIC on top, spectrum below at the apex, full width", layout)
         def helpq():
-            pg.locator('.pnl.chrom .hq').first.click(); pg.wait_for_timeout(300)
-            assert pg.is_visible("#helppop") and "Cromatogramma" in pg.inner_text("#helppop")
+            assert pg.locator(".hq:visible").count() == 1, "only the general ? is left"
+            pg.locator('button.hq[data-help=header]').click(); pg.wait_for_timeout(300)
+            tx = pg.inner_text("#helppop"); assert pg.is_visible("#helppop") and "Cromatogramma" in tx and "Spettro" in tx and "Full Scan" in tx, tx[:200]
             pg.screenshot(path=SH + "71_help.png")
             pg.keyboard.press("Escape"); pg.wait_for_timeout(200); assert not pg.is_visible("#helppop")
-            n = pg.locator(".hq:visible").count(); assert n >= 5, n
-        step("? buttons open the explanation", helpq)
+            assert "Doppio clic per rinominare" in pg.evaluate("document.querySelector('.pnl.chrom .ttl').title")
+        step("only the general ? is left: it opens the guide; panel titles carry the short explanation", helpq)
         def xlsxexcel():
             pg.click("#dtabs [data-t=mrm]"); pg.wait_for_timeout(2500)
             with pg.expect_download() as d: pg.locator(".pnl.mrm [data-a=xlsx]").first.click()

@@ -6,11 +6,15 @@ const pickTab = want => (want && tabFiles(want).length ? want : firstTab());
 E.curBy = {};
 
 const TABICON = { full: "full", ms2: "prod", mrm: "mrm" }, TABHELP = { full: "modo-full", ms2: "modo-ms2", mrm: "modo-mrm" };
+// short label of the tab (what the experiment is and what it is for), from the text of the three modes
+function modeTip(t) {
+  try { const m = QMODI.M[QMODI.tab2key[t]]; return [m.what, m.use].filter(Boolean).join(". ").replace(/<[^>]+>/g, "").replace(/&gt;/g, ">").replace(/&amp;/g, "&"); } catch (e) { return ""; }
+}
 function renderTabs() {
   const el = Q("#dtabs"); if (!el) return;
   el.innerHTML = TABS.map(([t, n]) => {
-    const c = tabFiles(t).length, ic = typeof QICON !== "undefined" ? QICON.get(TABICON[t], 16) : "";
-    return `<span class="tw"><button data-t="${t}" class="${t === E.tab ? "on" : ""}${c ? "" : " off"}">${ic ? `<span class="qi">${ic}</span>` : ""}${EH(n)}<i>${c}</i></button><button class="hq" data-help="${TABHELP[t]}" title="Che cos'è questo modo">?</button></span>`;
+    const c = tabFiles(t).length, ic = typeof QICON !== "undefined" ? QICON.get(TABICON[t], 24) : "";
+    return `<span class="tw"><button data-t="${t}" title="${EH(modeTip(t))}" class="${t === E.tab ? "on" : ""}${c ? "" : " off"}">${ic ? `<span class="qi">${ic}</span>` : ""}${EH(n)}<i>${c}</i></button></span>`;
   }).join("") + `<span class="sp"></span><button id="ovbtn" title="Quali file ci sono per ogni tempo e per ogni tipo di esperimento">Tempi ed esperimenti</button>`;
   el.querySelectorAll("[data-t]").forEach(b => b.onclick = () => setTab(b.dataset.t));
   Q("#ovbtn").onclick = openOverview;
@@ -75,7 +79,17 @@ function ms2Exps() {
     const e = m.get(x.prec) || { prec: x.prec, ce: new Set(), n: 0, files: new Set(), k: f.k };
     if (x.ce != null) e.ce.add(x.ce); e.n += x.n; e.files.add(f.k); m.set(x.prec, e);
   }));
-  return [...m.values()].sort((a, b) => (a.prec ?? 0) - (b.prec ?? 0));
+  const l = [...m.values()];
+  return l.length > 8 ? l.sort((a, b) => b.n - a.n) : l.sort((a, b) => (a.prec ?? 0) - (b.prec ?? 0));      // a data-dependent file has many precursors with few scans: the most scanned first
+}
+// a triangle on the survey chromatogram: open that product-ion scan in the MS² tab
+async function goMs2(t) {
+  setTab("ms2", true);
+  await new Promise(r => setTimeout(r, 700));
+  await ms2Switch(t.prec);
+  const c = tabPanels("ms2").filter(q => q.type === "chrom").sort((a, b) => a.y - b.y)[0]; if (!c) return;
+  E.cur = t.k2; c.cur = t.rt; c.sel = null; const dt = 0.01;
+  pushLinked(c, t.rt - dt / 2, t.rt + dt / 2, t.k2); draw(c); uiSave();
 }
 
 function defaultLayoutTab(t) {
@@ -160,8 +174,8 @@ function ms2Switch(prec) {
   const live = E.panels.filter(q => q.type === "spec" && q.link === c.id);
   live.forEach(sp => { sp.prec = prec; sp.zoom = null; sp.zoomY = null; sp.lock = null; sp.title = `Spettro degli ioni prodotto${prec != null ? " · " + prec : ""}`; });
   ctl(c); live.forEach(ctl);
-  Promise.resolve(draw(c)).then(() => live[0] ? apexSpectrum(c, live[0]) : null);       // the spectrum of the highest scan of the new precursor
   renderFileList(); uiSave();
+  return Promise.resolve(draw(c)).then(() => live[0] ? apexSpectrum(c, live[0]) : null);       // the spectrum of the highest scan of the new precursor
 }
 
 // which files exist for each time and each kind of experiment; a click opens the file in its tab
@@ -172,7 +186,7 @@ function openOverview() {
   const rows = new Map();
   E.files.forEach(f => { const k = key(f) + "|" + lab(f); if (!rows.has(k)) rows.set(k, { lab: lab(f), by: {} }); (rows.get(k).by[f.kind] = rows.get(k).by[f.kind] || []).push(f); });
   const body = [...rows.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([, r]) => `<tr><td><b>${EH(r.lab)}</b></td>` + kinds.map(([t]) => `<td>${(r.by[t] || []).map(f => `<button class="fc" data-k="${f.k}" title="Apri nella scheda ${EH(TABS.find(x => x[0] === t)[1])}">${EH(f.label)}</button>`).join("") || '<span class="muted">-</span>'}</td>`).join("") + "</tr>").join("");
-  big("Tempi ed esperimenti", `<div class="muted sm" style="margin-bottom:6px">Una riga per tempo di trattamento (o standard, o bianco), una colonna per tipo di esperimento. Clic su un file: si apre nella sua scheda, un file alla volta.</div><table id="ovw"><tr><th></th>${kinds.map(([, n]) => `<th>${EH(n)}</th>`).join("")}</tr>${body}</table>`, () => {
+  big("Tempi ed esperimenti", `<div class="muted sm" style="margin-bottom:6px">Una riga per tempo (o standard, o bianco), una colonna per tipo di esperimento. Clic su un file: si apre nella sua scheda.</div><table id="ovw"><tr><th></th>${kinds.map(([, n]) => `<th>${EH(n)}</th>`).join("")}</tr>${body}</table>`, () => {
     Q("#bigbody").querySelectorAll("button.fc").forEach(b => b.onclick = () => {
       const f = E.files[+b.dataset.k]; Q("#bigdlg").close();
       setTab(f.kind, true); E.cur = f.k; E.browse = true; renderFileList(); renderNav(); redrawAll(); uiSave();

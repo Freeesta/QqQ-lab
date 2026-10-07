@@ -31,7 +31,7 @@ const OG_COLORS = ["#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4
 function ogDialog() {
   let d = document.getElementById("ogdlg"); if (d) return d;
   d = document.createElement("dialog"); d.id = "ogdlg";
-  d.innerHTML = `<div class="ogh"><h3>Da dove viene questo ione? <button class="hq" data-help="origine" title="Aiuto">?</button></h3><button id="og-x" title="Chiudi">&times;</button></div>
+  d.innerHTML = `<div class="ogh"><h3>Da dove viene questo ione?</h3><button id="og-x" title="Chiudi">&times;</button></div>
 <div class="ogb"><p class="why">Qui vedi <b>misure</b>, non risposte. Uno ione che sembra un prodotto di trasformazione può essere un frammento prodotto nella sorgente dello strumento (<i>in-source fragmentation</i>) a partire da un ione più pesante: le misure sotto ti dicono quanto i due ioni si comportano come uno solo. La conclusione la scrivi tu in fondo.</p>
 <div class="ogf">
 <label><span>Ione da studiare (<i>m/z</i> come lo vedi nello spettro)</span><input id="og-mz" class="mzf" inputmode="decimal" autocomplete="off"></label>

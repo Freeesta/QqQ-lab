@@ -168,7 +168,7 @@ const MONO = { H: 1.00782503, D: 2.01410178, C: 12, N: 14.00307401, O: 15.994914
   Si: 27.97692653, P: 30.97376163, S: 31.97207100, Cl: 34.96885268, K: 38.96370668, Ca: 39.96259098, Fe: 55.9349375, Cu: 62.9295975, Zn: 63.9291422,
   As: 74.9215965, Se: 79.9165213, Br: 78.9183371, Sn: 119.9021947, I: 126.904473, Hg: 201.970643, B: 11.0093054, Li: 7.01600455 };
 const ELECTRON = 0.00054858;
-const roundHalfUp = v => Math.floor(v + 0.5);
+const roundHalfUp = v => Math.floor(v + 0.5);   // decimals use rh() of explore.js: the same half-up rounding as the Addotti table and elements.round_half_up
 // one entry per connected structure: formula (Hill order), charge, monoisotopic mass, bounding box (Ketcher coordinates, y down)
 // counts {C: 8, H: 9, ...} -> Hill formula and monoisotopic mass
 function formulaOf(n) {
@@ -245,7 +245,7 @@ function labelParts(d0) {
   if (m) {
     const raw = d.q ? (d.mass - d.q * ELECTRON) / Math.abs(d.q) : d.mass;
     const line = f ? (lines.push([]), lines[1]) : parts;
-    line.push([d.q ? "m/z" : "M", "it"], [` ${d.q ? "" : "= "}${dec ? raw.toFixed(dec) : roundHalfUp(raw)}`, ""]);
+    line.push([d.q ? "m/z" : "M", "it"], [` ${d.q ? "" : "= "}${dec ? rh(raw, dec).toFixed(dec) : roundHalfUp(raw)}`, ""]);
   }
   return lines;
 }
@@ -287,7 +287,7 @@ function ketWithLabels(ket) {
 }));
 document.addEventListener("nbloaded", () => {      // older notebooks only have NB.labels (both on)
   Q("#lb-f").checked = NB.labF !== undefined ? NB.labF : NB.labels !== false; Q("#lb-m").checked = NB.labM !== undefined ? NB.labM : NB.labels !== false;
-  Q("#lb-dec").value = String(NB.labDec || 0);
+  Q("#lb-dec").value = String(Math.min(5, Math.max(0, +NB.labDec || 0)));
   Q("#lb-ion").value = IONS[NB.labIon] ? NB.labIon : "";          // default (new session, old notebooks): no ion
   Q("#ex-name").value = NB.drawName || stamp();
   drawLabels();

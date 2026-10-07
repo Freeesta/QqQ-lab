@@ -48,15 +48,15 @@ try:
             pg.mouse.move(5, 5); pg.wait_for_timeout(200); assert pg.evaluate("document.querySelector('#qtip').hidden")
         step("tooltip after ~1.7 s, not before, gone when the pointer leaves", tip)
         def rt():
-            c = pg.locator(".pnl canvas").first; b = c.bounding_box()
-            y = b["y"] + b["height"] / 2
-            pg.mouse.move(b["x"] + b["width"] * .5, y); pg.mouse.down(); pg.mouse.move(b["x"] - 200, y, steps=8); pg.mouse.up(); pg.wait_for_timeout(300)
-            v = pg.evaluate("(()=>{const q=E.panels[0];return [q.r0,q.r1,q._a&&q._a.full]})()")
-            print("rt", v)
-            if v[0] is not None and v[2]: assert v[0] >= v[2][0] - 1e-9 and v[1] <= v[2][1] + 1e-9, v
-            pg.mouse.move(b["x"] + b["width"] * .5, y); pg.mouse.down(); pg.mouse.move(b["x"] + b["width"] + 300, y, steps=8); pg.mouse.up(); pg.wait_for_timeout(300)
-            v = pg.evaluate("(()=>{const q=E.panels[0];return [q.r0,q.r1,q._a&&q._a.full]})()")
-            if v[0] is not None and v[2]: assert v[0] >= v[2][0] - 1e-9 and v[1] <= v[2][1] + 1e-9, v
+            ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom'&&p.tab===E.tab)"); assert ci >= 0
+            pg.evaluate(f"E.panels[{ci}].el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
+            b = pg.evaluate(f"(()=>{{const r=E.panels[{ci}].cv.getBoundingClientRect(),a=E.panels[{ci}]._a;return {{x:r.left,w:r.width,y:r.top+r.height/2,l:a.X(a.x0+(a.x1-a.x0)*0.5)-0,mid:r.left+a.X(a.x0+(a.x1-a.x0)*0.8)}}}})()")
+            state = lambda: pg.evaluate(f"(()=>{{const q=E.panels[{ci}];return [q.sel,q._a.full]}})()")
+            pg.mouse.move(b["mid"], b["y"]); pg.mouse.down(); pg.mouse.move(b["x"] - 200, b["y"], steps=8); pg.mouse.up(); pg.wait_for_timeout(300)
+            s, full = state(); assert s is not None, "the drag must create a selection (otherwise the test proves nothing)"
+            assert s[0] >= full[0] - 1e-9 and s[1] <= full[1] + 1e-9 and s[0] - full[0] < 0.1 * (full[1] - full[0]), (s, full)           # never before the start of the run, and it did reach the left end
+            pg.mouse.move(b["mid"], b["y"]); pg.mouse.down(); pg.mouse.move(b["x"] + b["w"] + 300, b["y"], steps=8); pg.mouse.up(); pg.wait_for_timeout(300)
+            s, full = state(); assert s is not None and s[1] <= full[1] + 1e-9 and full[1] - s[1] < 0.1 * (full[1] - full[0]) and s[0] >= full[0] - 1e-9, (s, full)    # and never after the end
         step("RT selection dragged outside the chromatogram stays inside its range", rt)
     r.close()
 except Exception as e:

@@ -7,9 +7,11 @@ def flst_own(pg):
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
-    except Exception as e: steps.append((name, "FAIL " + str(e).split("\n")[0][:300]))
+    except Exception as e:
+        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e12.py")][-1]
+        steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:300]))
 r = Run(port=8822, wd="/tmp/wd12")
-F = FILES + ["scansione-15"]
+F = FILES + ["B_FullMass-t10"]      # a sixth file of the B series (the old extra file was not in the data repository)
 with sync_playwright() as p:
     pg = r.page(p)
     pg.set_input_files("#pick", [mz(f) for f in F]); pg.wait_for_timeout(2500)
@@ -59,7 +61,7 @@ with sync_playwright() as p:
         assert pg.evaluate(f"E.panels[{xi}].ints.length") == 2 and xp.locator('[data-a=itab]').is_visible()
         xp.locator('[data-a=iman]').click()
         # header: only the m/z range; quick file chooser; RT readout bottom right; clear integrations
-        assert xp.locator('[data-o=xlo]').input_value() == "363.6" and xp.locator('[data-o=xhi]').input_value() == "364.6" and xp.locator('#xic-q, [data-o=tol]').count() == 0
+        assert xp.locator('[data-o=xlo]').input_value() == "363.8" and xp.locator('[data-o=xhi]').input_value() == "364.8" and xp.locator('#xic-q, [data-o=tol]').count() == 0
         xp.locator('[data-o=xlo]').fill("363,9"); xp.locator('[data-o=xlo]').press("Enter"); xp.locator('[data-o=xhi]').fill("364.3"); xp.locator('[data-o=xhi]').press("Enter"); pg.wait_for_timeout(1500)
         tw = pg.evaluate(f"[E.panels[{xi}].traces[0].mz, E.panels[{xi}].traces[0].w]"); assert abs(tw[0] - 364.1) < 0.011 and abs(tw[1] - 0.2) < 0.011, tw
         nv = pg.evaluate("tabFiles().filter(f=>f.vis).length")
@@ -75,7 +77,7 @@ with sync_playwright() as p:
         pg.click("#dtabs [data-t=ms2]"); pg.wait_for_timeout(3500)
         assert pg.locator("#expbar").count() == 0
         ch = pg.evaluate("tabPanels().filter(p=>p.type==='chrom').map(p=>[p.prec,p._a.sr[0].x.length])")
-        assert len(ch) == 2 and ch[0][0] != ch[1][0] and all(n > 0 for _, n in ch), ch      # one chromatogram per precursor
+        assert len(ch) == 1 and ch[0][1] > 0, ch      # one pair of graphs (since 7/10); the precursor is chosen in the list
         assert flst_own(pg).upper().count("MS\u00b2") == 1 and "MRM" not in flst_own(pg)
         sel = pg.locator('.pnl.chrom [data-o=prec]:visible').first; assert sel.count() == 1
         pg.screenshot(path=SH + "123_ms2.png")
@@ -90,11 +92,11 @@ with sync_playwright() as p:
         assert pg.evaluate("E.panels[0]._exp") in (False, None)
     step("PNG downloads", png)
     def method():
-        pg.evaluate("E.cur=1;E.browse=true;renderFileList();renderNav()")
+        pg.evaluate("E.cur=E.files.findIndex(f=>f.kind==='mrm');E.browse=true;renderFileList();renderNav()")
         pg.set_input_files("input[type=file][accept*='.dam']", []) if False else None
         pg.click("#np-method"); pg.wait_for_timeout(1500); t = pg.inner_text("#bigdlg"); assert "MRM" in t and "transizione" in t.lower(), t[:300]
         pg.screenshot(path=SH + "124_method_mrm.png"); pg.click("#bigx")
-        pg.evaluate("E.cur=3;renderFileList();renderNav()"); pg.click("#np-method"); pg.wait_for_timeout(1500)
+        pg.evaluate("E.cur=E.files.findIndex(f=>f.kind==='ms2');renderFileList();renderNav()"); pg.click("#np-method"); pg.wait_for_timeout(1500)
         assert "ioni prodotto" in pg.inner_text("#bigdlg"); pg.screenshot(path=SH + "125_method_ms2.png"); pg.click("#bigx")
     step("Metodo: MRM and MS2 explained", method)
     def ital():

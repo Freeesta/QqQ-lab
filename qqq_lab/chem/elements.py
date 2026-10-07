@@ -27,9 +27,34 @@ DEFAULT_ADDUCT = {"positive": "[M+H]+", "negative": "[M-H]-"}
 _TOKEN = re.compile(r"([A-Z][a-z]?)(\d*)")
 
 
-def parse_formula(s: str) -> dict[str, int]:
-    """'C15H12N2O' -> {'C': 15, 'H': 12, 'N': 2, 'O': 1}. Parentheses are allowed: 'C(OH)2'."""
+# two-letter symbols that a lower-case spelling may mean (organic / environmental chemistry). Others (co, no, cn, ni, pb, sn, hf...) are read as two elements.
+COMMON2 = {"Cl", "Br", "Si", "Na", "Se", "Li", "Mg", "Ca", "Al", "Fe", "Zn", "Cu", "Mn", "As", "Hg", "Cd"}
+
+
+def normalize_formula(s: str) -> str:
+    """Fix the capitals of a formula typed in lower case ('c9h10cl2n2o' -> 'C9H10Cl2N2O').
+
+    A correctly written symbol is kept ('Co' is cobalt, 'CO' is C + O). A lower-case letter followed by a lower-case letter makes a two-letter
+    symbol only if it is a common one (Cl, Br, Si, Na, Se...); otherwise they are two elements ('co' = C + O, not cobalt).
+    """
     s = re.sub(r"\s+", "", s or "")
+    out, i, n = [], 0, len(s)
+    while i < n:
+        c, nx = s[i], s[i + 1] if i + 1 < n else ""
+        if not c.isalpha():
+            out.append(c); i += 1
+        elif c.isupper() and nx.islower() and (c + nx) in MASS:
+            out.append(c + nx); i += 2                                # as typed
+        elif c.islower() and nx.islower() and (c.upper() + nx) in COMMON2:
+            out.append(c.upper() + nx); i += 2
+        else:
+            out.append(c.upper()); i += 1
+    return "".join(out)
+
+
+def parse_formula(s: str) -> dict[str, int]:
+    """'C15H12N2O' -> {'C': 15, 'H': 12, 'N': 2, 'O': 1}. Parentheses are allowed: 'C(OH)2'. Lower case is understood (see normalize_formula)."""
+    s = normalize_formula(s)
     if not s:
         raise ValueError("empty formula")
     stack: list[dict[str, int]] = [{}]

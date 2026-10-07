@@ -48,7 +48,7 @@ const HELP = {
   "origine": ["Da dove viene questo ione?", `Nel 3200 QTRAP molti ioni si rompono già nella <b>sorgente</b>, prima del primo quadrupolo (<i>in-source fragmentation</i>, ISF): nel full scan compaiono come picchi di ioni più leggeri che sembrano prodotti di trasformazione, ma sono frammenti del composto di partenza. Questa finestra ti dà le <b>misure</b> per ragionarci: i profili cromatografici dei due ioni (devono coincidere), la proporzionalità fra le loro aree scansione per scansione (F contro P), il comportamento nei campioni (cinetica).
     <br>Scegli tu lo ione da studiare e il candidato progenitore; il programma <b>non</b> dice «è un frammento» o «è un prodotto»: è compatibile, o no, con ciascuna ipotesi, e la conclusione la scrivi tu nel riquadro finale. Se l'evidenza è ambigua (picchi isobari, saturazione, pochi punti) compaiono degli avvisi: leggili.
     <br>Per una prova decisiva servono dati in più (standard del solo composto di partenza, MS² del candidato): il programma non li inventa.`],
-  "header": ["QqQ lab", `<b>QqQ lab</b> è il programma didattico per il laboratorio di inquinanti della laurea magistrale in Chimica dell'ambiente: apri i file mzML del triplo quadrupolo (SCIEX 3200 QTRAP), guardi cromatogrammi, spettri e transizioni MRM e integri i picchi. I tuoi file restano sul tuo computer.<br>Suggerimenti e correzioni: <a href="mailto:federico.cristaudo@unito.it">federico.cristaudo@unito.it</a> (Federico Cristaudo, Università di Torino).`],
+  "header": ["QqQ lab", `<b>QqQ lab</b> è il programma didattico per il laboratorio di inquinanti della laurea magistrale in Chimica dell'ambiente: apri i file mzML del triplo quadrupolo (SCIEX 3200 QTRAP), guardi cromatogrammi, spettri e transizioni MRM e integri i picchi. I tuoi file restano sul tuo computer.<br>Crediti: Ketcher (EPAM, Apache-2.0), OpenChemLib (BSD-3), Pyodide (MPL-2.0) e NumPy (BSD-3); il logo deriva da <i>QuadrupoleContour.svg</i> di Geek3 (Wikimedia Commons, CC BY-SA 4.0). Dettagli in <code>LICENZE-TERZI.md</code>.<br>Suggerimenti e correzioni: <a href="mailto:federico.cristaudo@unito.it">federico.cristaudo@unito.it</a> (Federico Cristaudo, Università di Torino).`],
 };
 (() => {
   const pop = document.createElement("div"); pop.id = "helppop"; pop.hidden = true; document.body.appendChild(pop);
@@ -60,8 +60,8 @@ const HELP = {
     e.preventDefault(); e.stopPropagation();
     if (cur === b) return close();
     const key = b.dataset.help, mk = /^modo-(full|ms2|mrm)$/.exec(key);
-    const h = mk && typeof QMODI !== "undefined" ? [QMODI.M[QMODI.tab2key[mk[1]]].name, QMODI.html(QMODI.tab2key[mk[1]])] : HELP[key]; if (!h) return;
-    pop.classList.toggle("wide", !!mk);
+    const h = key === "header" ? ["Guida di QqQ lab", guideHtml()] : mk && typeof QMODI !== "undefined" ? [QMODI.M[QMODI.tab2key[mk[1]]].name, QMODI.html(QMODI.tab2key[mk[1]])] : HELP[key]; if (!h) return;
+    pop.classList.toggle("wide", !!mk || key === "header"); pop.classList.toggle("guide", key === "header");
     pop.innerHTML = `<div class="hp-t"><b>${h[0]}</b><button class="x" title="Chiudi">&times;</button></div><div>${h[1]}</div>`;
     pop.querySelector(".x").onclick = close;
     pop.hidden = false; cur = b;
@@ -71,6 +71,15 @@ const HELP = {
     pop.style.left = left + "px"; pop.style.top = top + "px";
   }, true);
   document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
-  addEventListener("scroll", close, true);
+  addEventListener("scroll", e => { if (!pop.contains(e.target)) close(); }, true);
 })();
-const helpBtn = key => `<button class="hq" data-help="${key}" title="Che cos'è?">?</button>`;
+// the "?" buttons are gone (7/10): the short text of each one is now the label of its control (hover ~1.5 s); the only "?" is the general one in the header
+const helpBtn = () => "";
+const shortHelp = key => { const h = HELP[key]; if (!h) return ""; const t = h[1].replace(/<br>.*/s, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim(); return t.length > 190 ? t.slice(0, t.lastIndexOf(" ", 187)) + "…" : t; };
+// the general guide: all the explanations in one place, by topic
+function guideHtml() {
+  const sec = (title, keys) => `<details open><summary><b>${title}</b></summary>${keys.filter(k => HELP[k]).map(k => `<div class="hp-s"><b>${HELP[k][0]}</b><div>${HELP[k][1]}</div></div>`).join("")}</details>`;
+  let modes = "";
+  try { modes = `<details><summary><b>I tre tipi di esperimento (Full Scan, MS², MRM)</b></summary>${["full", "ms2", "mrm"].map(t => QMODI.html(QMODI.tab2key[t])).join("")}</details>`; } catch (e) { /* the modes text is optional */ }
+  return `<div>${HELP.header[1]}</div>` + sec("Aprire i dati", ["start", "files"]) + sec("Lavorare con i grafici", ["toolbar", "nav", "scorrimento", "pnl-chrom", "pnl-spec", "pnl-xic", "pnl-mrm", "pnl-map"]) + sec("Metodo, immagini e proprietà", ["tools", "prop"]) + modes;
+}

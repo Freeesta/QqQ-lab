@@ -101,8 +101,8 @@ try:
         step("B-13 single XIC trace in the title, legend = files only; the window remembers the last ion", xicleg)
         def oneunit():
             pg.evaluate("E.browse=false"); pg.evaluate("ctl(E.panels.find(p=>p.type==='spec'))")
-            t = pg.evaluate("E.panels.find(p=>p.type==='spec').el.querySelector('.ctl').textContent"); assert "uno spettro alla volta" in t, t
-        step("B-12 spectrum row says one spectrum at a time", oneunit)
+            t = pg.evaluate("E.panels.find(p=>p.type==='spec').el.querySelector('.ctl').textContent"); assert "uno spettro alla volta" not in t, t      # hint removed 7/10 (block B)
+        step("B-12 spectrum row: no explanatory hint", oneunit)
         def keepzoom():
             pg.evaluate("(()=>{const s=" + SPEC + ";s.zoom=[300,420];draw(s);E.browse=true;renderNav();redrawAll()})()"); pg.wait_for_timeout(400)
             r0 = pg.evaluate(f"[{SPEC}.r0,{SPEC}.r1]"); k0 = pg.evaluate("E.cur"); pg.evaluate("goFile(1)"); pg.wait_for_timeout(1200)

@@ -115,7 +115,6 @@
   function adductTab() {
     return `<div class="bar"><label>M (massa neutra) o formula <input id="ad-in" placeholder="es. 363.0665 oppure C14H13F4N3O2S" style="width:260px"></label><span id="ad-msg" class="muted sm"></span></div>
       <div class="muted sm">M è la massa esatta <b>monoisotopica</b> della molecola neutra (Cl-35, Br-79, C-12): per composti con Cl o Br il picco più alto può essere M+2 (vedi la scheda Isotopi). La colonna &Delta; aiuta a riconoscere gli addotti nello spettro: per esempio un picco 21.98 sopra [M+H]<sup>+</sup> è quasi sempre [M+Na]<sup>+</sup>.</div>
-      <div class="muted sm" style="margin-top:4px">Con la risoluzione unitaria conta la massa <b>nominale</b> (intero). Sugli spettri del laboratorio il picco può apparire fino a circa 0.4 Da sopra il valore calcolato (calibrazione): non cercare il valore esatto al decimale.</div>
       <div id="ad-tbl">${adducts(null)}</div>
       <h4>Due picchi: sono addotti dello stesso composto?</h4>
       <div class="bar"><label><i>m/z</i> osservati <input id="pr-a" class="mzf" inputmode="decimal" autocomplete="off" placeholder="es. 364.4"> e <input id="pr-b" class="mzf" inputmode="decimal" autocomplete="off" placeholder="es. 386.4"></label></div>
@@ -206,7 +205,7 @@
   function isoTab() {
     return `<div class="bar"><label>Formula <input id="is-f" placeholder="es. C14H13F4N3O2S" style="width:220px"></label>
       <label>Addotto <select id="is-ad">${ADD.map(a => `<option>${H(a.n)}</option>`).join("")}</select></label><span id="is-msg" class="muted sm"></span></div>
-      <div class="muted sm">Profilo isotopico calcolato dalla formula che scrivi tu (abbondanze naturali), come lo vede uno strumento a risoluzione unitaria: un picco per ogni massa intera (M, M+1, M+2...). Confrontalo con lo spettro: un cloro dà M+2 circa un terzo di M, un bromo M+2 alto quasi come M, lo zolfo un M+2 piccolo (4-5%). Nello spettro, clic destro &rarr; &laquo;Confronta con il profilo isotopico&raquo; lo disegna sopra i picchi.</div>
+      <div class="muted sm">Profilo isotopico calcolato dalla formula che scrivi tu (abbondanze naturali): un picco per ogni massa intera (M, M+1, M+2...). Nello spettro, clic destro &rarr; &laquo;Profilo isotopico di una formula&raquo; lo disegna sopra i picchi.</div>
       <div id="is-out"></div>`;
   }
   // stick spectrum of the pattern (m/z on x, relative intensity on y): every peak M, M+1, M+2... is a stem with its label and percentage
@@ -223,8 +222,8 @@
     return g + `<text x="${(l + w - r) / 2}" y="${h - 4}" text-anchor="middle" fill="#1f2937">m/z</text><text transform="translate(12 ${(t + h - b) / 2}) rotate(-90)" text-anchor="middle" fill="#1f2937">Intensità relativa (%)</text></svg>`;
   }
   function isoHtml(rows) {
-    return isoSvg(rows) + `<table style="margin-top:6px;max-width:560px"><tr><th>picco</th><th class="num">m/z</th><th class="num">1 decimale</th><th class="num">intensità relativa %</th><th></th></tr>` +
-      rows.map(r => `<tr><td>${r.off ? "M+" + r.off : "M"}</td><td class="num">${r.mz.toFixed(4)}</td><td class="num">${r.mz.toFixed(1)}</td><td class="num"><b>${r.rel < 1 ? r.rel.toFixed(2) : r.rel.toFixed(1)}</b></td>` +
+    return isoSvg(rows) + `<table style="margin-top:6px;max-width:560px"><tr><th>picco</th><th class="num">m/z</th><th class="num">intensità relativa %</th><th></th></tr>` +
+      rows.map(r => `<tr><td>${r.off ? "M+" + r.off : "M"}</td><td class="num">${r.mz.toFixed(4)}</td><td class="num"><b>${r.rel < 1 ? r.rel.toFixed(2) : r.rel.toFixed(1)}</b></td>` +
       `<td><i class="pt-bar" style="width:${Math.max(1, Math.round(r.rel * 2))}px"></i></td></tr>`).join("") + "</table>";
   }
   function bindIso(root) {
