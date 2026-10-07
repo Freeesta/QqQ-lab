@@ -19,7 +19,7 @@ from qqq_lab.app import App  # noqa: E402
 
 STATIC_TYPES = {".html": "text/html", ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf",
                 ".wasm": "application/wasm", ".ico": "image/x-icon", ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json",
-                ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".txt": "text/plain"}
+                ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".txt": "text/plain", ".mzml": "application/octet-stream"}
 
 
 def _static(rel: str):

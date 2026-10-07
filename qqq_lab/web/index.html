@@ -160,6 +160,8 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
  <div class="card" id="loaded" hidden></div>
  <div class="card req"><h3>1. Carica i file dei dati (.mzML)</h3>
   <div id="drop"><b>Trascina qui i file .mzML</b><br>oppure <u>clicca per sceglierli dal computer</u></div>
+  <div class="sm" id="demo" style="margin:6px 0"><button id="demobtn" title="Apre quattro file Full Scan di flufenacet degradato per fotocatalisi (0, 15, 30 e 60 minuti)">Prova con i file di esempio</button>
+   <span class="muted">4 file Full Scan (flufenacet, 0-60 min). Da scaricare: …</span></div>
   <details id="wiffhelp" class="sm"><summary>Hai i file .wiff dello strumento? Convertili prima in .mzML</summary>
    <ol class="muted">
     <li>Scarica <b>ProteoWizard</b> (gratuito) da <a href="https://proteowizard.sourceforge.io/download.html" target="_blank" rel="noopener">proteowizard.sourceforge.io</a>: scegli la versione per <b>Windows a 64 bit</b>, l'unica che legge i file SCIEX (accetta la licenza dei produttori). Su Mac va usato in Windows (per esempio con Parallels).</li>
@@ -270,6 +272,9 @@ function checkGo(){$("#opbtn").disabled=!ST.files.some(usable);$("#gomsg").textC
 // sends a file and returns the JSON answer (progress callback: loaded, total); in the browser version there is no network: it goes to the worker
 const sendFile=(url,f,onp)=>window.QQQ_BROWSER?fetch(url,{method:"POST",body:f}).then(r=>{onp(1,1);return r.json()}):new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open("POST",url);
   x.upload.onprogress=e=>{if(e.lengthComputable)onp(e.loaded,e.total)};x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(_){}ok(j)};x.onerror=()=>ko(new Error("upload fallito"));x.send(f)});
+const DEMO_FILES=["Flufenacet_FullScan_t0.mzML","Flufenacet_FullScan_t15.mzML","Flufenacet_FullScan_t30.mzML","Flufenacet_FullScan_t60.mzML"];
+(()=>{const d=$("#demo");if(!d)return;d.querySelector(".muted").innerHTML="4 file Full Scan (flufenacet, 0-60 min). Da scaricare: "+DEMO_FILES.map(n=>`<a href="static/esempi/${n}" download>t${n.match(/_t(\d+)/)[1]}</a>`).join(" · ")+` · <a href="static/esempi/LEGGIMI.txt" target="_blank" rel="noopener">info</a>`;
+ $("#demobtn").onclick=async()=>{const b=$("#demobtn");b.disabled=true;try{const fs=[];for(const n of DEMO_FILES){const r=await fetch("static/esempi/"+n);if(!r.ok)throw new Error(n);fs.push(new File([await r.blob()],n))}await upload(fs,"data")}catch(e){fail(new Error("Non riesco a scaricare i file di esempio: "+e.message))}finally{b.disabled=false}}})();
 async function upload(files,into){const box=$("#up");fail();
   for(const f of files){const isDam=/\.dam$/i.test(f.name);
     if(into&&isDam!==(into==="dam")){const n=document.createElement("div");n.className="note";n.textContent=`${f.name} è ${isDam?"un metodo: l'ho messo nel riquadro 2":"un file di dati: l'ho messo nel riquadro 1"}.`;box.appendChild(n);setTimeout(()=>n.remove(),6000)}
