@@ -16,6 +16,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 ## Ordine di lavoro
 1. **Barra dei file** (`index.html` `#tools`, `explore.js`)
 2. **Perdite neutre** (`web/tables.js`)
+3. **Header sempre visibile, niente scorrimento su «Dati»** (`index.html`, `tabs.js`)
 
 ---
 
@@ -46,6 +47,15 @@ Nessun altro testo introduttivo; il paragrafo su perdite isobare/cascate già in
 **2.4 Aggiungi la perdita del radicale •Cl.** Nuova riga nella tabella (con il pallino dei radicali, come •CH<sub>3</sub> e •NO<sub>2</sub>): **•Cl**, Δm **35** (e **37** per il precursore che contiene <sup>37</sup>Cl: scrivilo nei «Dettagli»), «si vede in»: «composti con cloro legato a un anello aromatico (es. pesticidi clorurati)», polarità tipica come da fonti (verifica; se incerta, «entrambe»). Nei «Dettagli» una riga che la distingue da **HCl (36)**, già in tabella: «•Cl (35): perdita del solo atomo, rara (radicale); HCl (36): perdita della molecola, più comune». Massa esatta calcolata da `elements.py`. Solo il cloro: niente •Br o •I (decisione di Federico).
 
 e2e del blocco: riga •Cl presente con il pallino; testo introduttivo presente, «Più dettagli» chiuso e apribile, «ESI+»/«ESI−» nella tabella e nel filtro, nessun campo «Cerca Δm», nessuna voce nel menu del righello.
+
+---
+
+## BLOCCO 3: header sempre visibile, niente scorrimento cliccando «Dati»
+
+**3.1 Header fisso in alto.** L'header (logo, Dati / Disegno / Teoria, ingranaggio, pulsanti a destra) deve restare **sempre visibile** mentre si scorre la pagina: `position: sticky; top: 0`, sfondo pieno (stesso colore di oggi), una leggera ombra solo quando la pagina è scorsa, `z-index` sopra pannelli e lista dei file ma **sotto** menu, tendine, finestre e tooltip (che stanno sopra 10000: controlla che non finiscano dietro l'header). Correggi gli elementi che calcolano posizioni rispetto alla cima della pagina e ora devono tenere conto dell'altezza dell'header: la lista dei file a sinistra (`#dfiles{position:sticky;top:8px}` → sotto l'header), gli scorrimenti verso un pannello (`window.scrollTo(... - 70)` in `explore.js` ~r.514 e `tabs.js` ~r.175, `scrollIntoView` ~r.555: usa `scroll-margin-top` o l'altezza reale dell'header), i menu del clic destro vicino al bordo alto. A schermo intero (pannello ⤢) l'header non deve coprire il pannello.
+
+**3.2 Cliccando «Dati» la pagina non deve scorrere.** Oggi tornando a «Dati» da Disegno o Teoria la pagina salta al punto dove si lavorava (spesso il primo cromatogramma) e l'header sparisce: lo fa `setView` in `index.html` (~r.232-233: `S.dataWork`/`S.dataScroll` e `scrollTo(0, S.dataScroll)`), introdotto per «tornare a Dati dove si era». Decisione di Federico: **nessuno scorrimento automatico** cambiando vista. Togli il ripristino dello scorrimento in `setView` (i pannelli, lo zoom, il cursore e il pannello attivo restano: sono stato del programma, non scorrimento). Fai lo stesso per il cambio di scheda Full Scan / MS² / MRM (`tabs.js` ~r.43-58: `E.workY`, `E.scrollBy`, `scrollTo(0, E.scrollBy[t])`) se produce lo stesso salto. Lo scorrimento automatico resta solo quando lo studente crea un pannello nuovo (per mostrarglielo) o usa un comando che porta a un pannello.
+e2e: da Disegno clic su «Dati» → `scrollY` invariato (0 se la pagina era in cima) e header visibile; pagina scorsa in basso → header ancora visibile (`getBoundingClientRect().top == 0`); un menu del clic destro aperto vicino al bordo alto sta sopra l'header.
 
 ---
 
