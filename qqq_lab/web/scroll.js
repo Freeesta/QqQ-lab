@@ -22,7 +22,7 @@ function scFetch(k, lv, pr, i0, i1) {
   if (i0 > i1) return Promise.resolve();
   if (i1 - i0 > 59) i1 = i0 + 59;
   const fk = `${b}|${i0}|${i1}`; if (SC.fl.has(fk)) return SC.fl.get(fk);
-  const pm = J(`api/spectra?k=${k}&i0=${i0}&i1=${i1}&level=${lv}&prec=${pr ?? ""}`).then(j => {
+  const pm = J(`api/spectra?k=${k}&i0=${i0}&i1=${i1}&level=${lv}&prec=${pr ?? ""}` + MERGE()).then(j => {
     SC.n.set(b, j.n);
     for (const s of j.scans) SC.m.set(b + "|" + s.i, s);
     while (SC.m.size > SC.max) SC.m.delete(SC.m.keys().next().value);
@@ -37,7 +37,7 @@ async function scData(p, k) {
     await scFetch(k, p.level, p.prec, p.si - (back ? 40 : 2), p.si + (back ? 2 : 40)).catch(() => {});
     s = scGet(k, p.level, p.prec, p.si);
   }
-  if (s && s.mz.length && s.rt >= p.r0 - 1e-6 && s.rt <= p.r1 + 1e-6) return { mz: s.mz, y: s.y, scans: 1, i0: s.i, n: SC.n.get(scBase(k, p.level, p.prec)) };
+  if (s && s.mz.length && s.rt >= p.r0 - 1e-6 && s.rt <= p.r1 + 1e-6) return { mz: s.mz, y: s.y, mode: s.mode, pmz: s.pmz, py: s.py, scans: 1, i0: s.i, n: SC.n.get(scBase(k, p.level, p.prec)) };
   return getSpec(k, p.r0, p.r1, p.level, p.prec, null);
 }
 // keep the next scans in the cache before they are needed (nothing is waited for)

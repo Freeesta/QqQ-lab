@@ -62,15 +62,17 @@ function specParams(p, btn) {
     <label title="Si etichettano solo i picchi sopra questa percentuale del picco più alto; gli altri restano disegnati">Etichette: oltre <input data-s="thr" type="number" min="0" max="100" step="1" value="${cur.thr}"> %</label>
     <label title="Numero massimo di etichette m/z">al massimo <input data-s="nlab" type="number" min="1" max="60" step="1" value="${cur.nlab}"></label>
     <label>Decimali di <i>m/z</i> <select data-s="dec">${[0, 1, 2].map(n => `<option ${cur.dec === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+    ${(p._a && p._a.data || []).some(x => x.d.pmz) ? `<label title="File in profilo: la linea è lo spettro com'è registrato; i bastoncini sono le cime, una per massa nominale (grafico pulito per la relazione). Le etichette e la tabella usano sempre le cime.">Spettro <select data-s="sticks"><option value="0" ${p.sticks ? "" : "selected"}>Profilo (linea)</option><option value="1" ${p.sticks ? "selected" : ""}>Bastoncini (un picco per massa nominale)</option></select></label>` : ""}
     <button data-s="reset" title="Torna ai valori di partenza">Ripristina predefiniti</button>`;
   const pr = p.el.getBoundingClientRect(), br = btn.getBoundingClientRect();
   p.el.appendChild(pop); pop.style.left = Math.max(4, Math.min(br.left - pr.left, p.el.clientWidth - pop.offsetWidth - 6)) + "px"; pop.style.top = br.bottom - pr.top + 4 + "px";
   const apply = () => { draw(p); uiSave(); };
   pop.querySelectorAll("[data-s]").forEach(x => {
     const k = x.dataset.s;
-    if (k === "reset") x.onclick = () => { p.rel = null; p.thr = SPEC_DEF.thr; p.nlab = SPEC_DEF.nlab; p.dec = SPEC_DEF.dec; pop.remove(); specParams(p, btn); apply(); };
+    if (k === "reset") x.onclick = () => { p.rel = null; p.sticks = false; p.thr = SPEC_DEF.thr; p.nlab = SPEC_DEF.nlab; p.dec = SPEC_DEF.dec; pop.remove(); specParams(p, btn); apply(); };
     else x.onchange = () => {
       if (k === "rel") p.rel = x.value === "1";
+      else if (k === "sticks") p.sticks = x.value === "1";
       else p[k] = Math.max(k === "nlab" ? 1 : 0, Math.min(k === "thr" ? 100 : k === "nlab" ? 60 : 2, Math.round(+x.value || 0)));
       apply();
     };

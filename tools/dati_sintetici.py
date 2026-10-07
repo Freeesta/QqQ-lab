@@ -38,7 +38,7 @@ def _arr(acc, name, data, unit="") -> str:
             f'<cvParam cvRef="MS" accession="{acc}" name="{name}" value=""{unit}/><binary>{_b64(data) if len(data) else ""}</binary></binaryDataArray>')
 
 
-def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False) -> str:
+def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False, profile=False) -> str:
     p = ""
     if prec is not None:
         p = (f'<precursorList count="1"><precursor><selectedIonList count="1"><selectedIon>'
@@ -46,6 +46,7 @@ def _spec(i, rt, mz, it, level=1, prec=None, ce=None, neg=False) -> str:
              f'<activation><cvParam cvRef="MS" accession="MS:1000045" name="collision energy" value="{ce}"/></activation></precursor></precursorList>')
     return (f'<spectrum index="{i}" id="sample=1 period=1 cycle={i + 1} experiment=1" defaultArrayLength="{len(mz)}">'
             f'<cvParam cvRef="MS" accession="MS:1000511" name="ms level" value="{level}"/>'
+            + ('<cvParam cvRef="MS" accession="MS:1000128" name="profile spectrum" value=""/>' if profile else '')
             + ('<cvParam cvRef="MS" accession="MS:1000129" name="negative scan" value=""/>' if neg else '<cvParam cvRef="MS" accession="MS:1000130" name="positive scan" value=""/>') +
             f'<cvParam cvRef="MS" accession="MS:1000285" name="total ion current" value="{float(np.sum(it)):.6g}"/>'
             f'<scanList count="1"><scan><cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="{rt:.6f}" '
@@ -191,6 +192,31 @@ def mixed_polarity(path: Path, rng) -> None:
     _write(path, specs, [])
 
 
+def full_scan_profile(path: Path, t: float, rng) -> None:
+    """The same kind of Full Scan as `full_scan`, but as PROFILE: points every 0.06 Da, peaks about 0.7 Da wide (FWHM) and one ion (305)
+    with a flat top that a centroiding algorithm would split in two. Zeros are left out, as MSConvert does."""
+    k = 0.035
+    P = 2.0e7 * np.exp(-k * t)
+    comps = [(364.07 + OFF, 14.3, 0.06, P, 0.3), (365.07 + OFF, 14.3, 0.06, 0.16 * P, 0.3), (366.07 + OFF, 14.3, 0.06, 0.055 * P, 0.3),
+             (194.0 + 0.2, 14.3, 0.06, 0.8 * P, 0.3), (152.0 + 0.2, 14.3, 0.06, 0.95 * P, 0.3),
+             (305.0 + 0.3, 14.7, 0.06, 2.5e6 * (1 - np.exp(-0.06 * t)) * np.exp(-0.01 * t), -1),     # sigma < 0: flat top
+             (229.1, 7.07, 0.06, 1.2e6 * (1 - np.exp(-0.04 * t)), 0.3)]
+    grid = np.round(np.arange(120.0, 400.0, 0.06), 2)
+    rts = np.linspace(0.5087, 20.0076, 400)
+    specs, tic, bpc = [], [], []
+    for i, rt in enumerate(rts):
+        y = rng.lognormal(np.log(30), 0.8, grid.size) * (rng.random(grid.size) < 0.25)      # chemical noise: sparse small points
+        for m, c, s, a, sg in comps:
+            v = a * _g(rt, c, s) * rng.normal(1, 0.03)
+            if v > 200:
+                x = grid - m
+                y = y + v * (np.exp(-0.5 * (x / sg) ** 2) if sg > 0 else np.exp(-(x / 0.42) ** 8))
+        keep = y > 50
+        mz, it = grid[keep], y[keep]
+        specs.append(_spec(i, rt, mz, it, profile=True)); tic.append(it.sum()); bpc.append(it.max() if len(it) else 0.0)
+    _write(path, specs, [_chrom(0, "TIC", rts, tic), _chrom(1, "BPC", rts, bpc)])
+
+
 def make(out: Path) -> Path:
     out = Path(out); out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(2026)
@@ -205,6 +231,9 @@ def make(out: Path) -> Path:
     full_scan(out / "B_FullMass-neg-t0.mzML", 0, np.random.default_rng(7), neg=True)      # one NEGATIVE Full Scan (written last: the other files do not change)
     rng2 = np.random.default_rng(11)                  # mixed files (several experiments in ONE file), written last: nothing else changes
     mixed_ida(out / "C_IDA-t0.mzML", rng2); mixed_mrm_epi(out / "C_MRM-EPI-t0.mzML", rng2); mixed_polarity(out / "C_POLALT-t0.mzML", rng2)
+    rng3 = np.random.default_rng(5)                   # profile files, written last: nothing else changes
+    for t in (0, 15, 60):
+        full_scan_profile(out / f"P_FullMass-t{t}.mzML", t, rng3)
     (out / "SINTETICI.txt").write_text("Dati sintetici scritti da tools/dati_sintetici.py: NON sono misure del laboratorio.\n", encoding="utf-8")
     return out
 

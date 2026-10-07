@@ -185,7 +185,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
   <div id="dropdam"><b>Trascina qui il metodo .dam</b><br>oppure <u>clicca per sceglierlo dal computer</u></div>
   <input type="file" id="pickdam" multiple accept=".dam,.DAM" hidden>
   <div id="mlist"></div></div>
- <div class="card"><div id="guessnote" class="muted" hidden><span class="guess" style="padding:1px 6px;border-radius:4px">Controlla i valori in giallo (letti dal nome dei file).</span></div><button class="go" id="opbtn" disabled>Carica dati</button><button id="cancadd" hidden>Annulla</button><div id="gomsg" class="fail"></div></div>
+ <div class="card"><div id="modenote" class="muted sm" hidden>Alcuni file sono in profilo e altri centroidi: le intensità dei due gruppi non sono confrontabili.</div><div id="guessnote" class="muted" hidden><span class="guess" style="padding:1px 6px;border-radius:4px">Controlla i valori in giallo (letti dal nome dei file).</span></div><button class="go" id="opbtn" disabled>Carica dati</button><button id="cancadd" hidden>Annulla</button><div id="gomsg" class="fail"></div></div>
 </section>
 <script src="static/icons-modi.js"></script>
 <script src="static/modi.js"></script>
@@ -277,7 +277,8 @@ function renderFiles(){const F=ST.files,el=$("#flist");
     if(x.dataset.k==="time"||x.dataset.k==="conc")x.addEventListener("keydown",e=>{if(e.key==="Enter"){const f=F[+x.dataset.i];f[x.dataset.k==="time"?"gT":"gC"]=false;x.classList.remove("guess");x.title="";guessNote()}})});
   const cu=$("#cunit");if(cu)cu.onchange=()=>{const k=cu.value,r=CU[ST.unit][1]/CU[k][1];F.forEach(f=>{if(f.conc!=null)f.conc=roundc(f.conc*r)});ST.unit=k;renderFiles()};
   el.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{try{const f=F[+b.dataset.rm];const j=await post("api/remove",{name:f.name});mergeFiles(j.files)}catch(e){fail(e)}});checkGo();guessNote()}
-function guessNote(){const n=$("#guessnote");if(n)n.hidden=!ST.files.some(f=>f.use&&((f.gT&&f.time!=null&&f.type==="sample")||(f.gC&&f.conc!=null&&isCal(f))))}
+function modeNote(){const m=$("#modenote");if(!m)return;const u=ST.files.filter(f=>f.use&&["full","ms2"].includes(f.kind)),has=x=>u.some(f=>f.spectrum_mode===x||f.spectrum_mode==="mixed");m.hidden=!(has("profile")&&has("centroid"))}
+function guessNote(){const n=$("#guessnote");modeNote();if(n)n.hidden=!ST.files.some(f=>f.use&&((f.gT&&f.time!=null&&f.type==="sample")||(f.gC&&f.conc!=null&&isCal(f))))}
 // the button is live only when at least one chosen file can be opened (an mzML with no data cannot)
 const usable=f=>f.use&&["full","ms2","mrm"].includes(f.kind);
 function checkGo(){$("#opbtn").disabled=!ST.files.some(usable);$("#gomsg").textContent=""}

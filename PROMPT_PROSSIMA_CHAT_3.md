@@ -14,7 +14,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 - **Aggiorna Federico** alla fine di ogni blocco con 3-5 righe: fatto, non fatto, cosa provare a mano. Se il budget sta finendo: fermati dopo un commit pulito e aggiorna questo file.
 
 ## Ordine di lavoro (per importanza)
-1. **Integrazione dei picchi e file in profilo** (dati corretti prima di tutto)
+1. ~~Integrazione dei picchi e file in profilo~~ (fatto il 7/10, vedi `AGENTS.md` sez. 19)
 2. **Schermo intero**
 3. **Dimensione del testo anche dentro i grafici**
 4. **Strumenti dell'header e schermata di caricamento**: via Isotopi, calcolatrice vera, Addotti più semplici, pulsante dei file di esempio, «Informazioni» al posto del «?»
@@ -22,50 +22,6 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 6. **Disegno** (campo SMILES che si svuota, via il menu «Ione»)
 7. **Simboli** (segno di polarità leggibile e senza sbordare, «MS2» con un vero apice)
 8. **Ordine di cartelle e file** (inventario, cartelle vuote, cestino fuori da git, test obsoleti): per ultimo
-
----
-
-## BLOCCO 1: integrazione dei picchi e file in profilo (`explore.js`: `addInt`, `intSeries`, `p.ints`, `showInts`, barre trascinabili)
-
-**Problema**: oggi si può integrare un picco sopra un altro già integrato (stessa traccia, stesso file), con aree sovrapposte e una tabella sbagliata; e cancellare un singolo picco integrato non è immediato.
-
-**Come fanno gli altri programmi** (MultiQuant/Analyst, Chromeleon, OpenLab): ogni picco integrato è una zona riempita con la sua linea di base; i picchi **non si sovrappongono** (al massimo si **toccano**: due picchi vicini condividono il bordo con una «linea di caduta» verticale); si **seleziona** un picco cliccandolo e lo si cancella con il tasto Canc o dal menu; c'è sempre un «annulla» per l'ultima modifica.
-
-**1.1 Niente sovrapposizioni.** Per la stessa traccia e lo stesso file un intervallo già integrato **non si può integrare di nuovo**:
-- integrazione automatica o manuale che cade (anche in parte) su un picco già integrato → non viene creata e compare un messaggio breve vicino al cursore: «Qui c'è già un picco integrato: toglilo prima (clic destro → Elimina)»;
-- trascinando i bordi di un picco, la barra **si ferma** al bordo del picco vicino (i due picchi possono toccarsi, non sovrapporsi);
-- con «tutti i file» (MRM, una finestra per tutti i file) la regola vale file per file; con Quantificatore/Qualificatore a specchio vale per entrambe le tracce;
-- i taccuini vecchi con picchi sovrapposti: si caricano lo stesso e nella tabella le righe sovrapposte hanno un segno «⚠ sovrapposto» (non cancellarle da solo).
-
-**1.2 Selezionare e cancellare un picco alla volta.**
-- **Clic sulla zona riempita** di un picco integrato = lo seleziona (bordo più marcato, area evidenziata); clic fuori = deseleziona.
-- Con un picco selezionato: tasto **Canc/Backspace** lo cancella (Backspace qui ha la precedenza sulla «vista intera» solo se c'è un picco selezionato).
-- **Clic destro** su un picco integrato: in cima «Elimina questa integrazione» (già esiste: verificala), poi «Elimina tutte le integrazioni di questo pannello» (con conferma).
-- Nella tabella delle integrazioni: una **×** per riga, che cancella quel picco anche dal grafico.
-- **Annulla**: Ctrl/Cmd+Z annulla l'ultima integrazione aggiunta, cancellata o spostata (pila delle ultime 20 modifiche delle integrazioni per pannello; se c'è già un Ctrl+Z per lo zoom, l'annulla vale per l'ultima azione fatta, qualunque sia).
-- e2e: integra A, prova a integrare B sopra A → rifiutato; B adiacente → accettato e bordo condiviso; trascina il bordo di B dentro A → si ferma; seleziona B + Canc → sparisce dal grafico e dalla tabella; Ctrl+Z → ritorna.
-
-**1.3 File in profilo (formato consigliato) e file centroidi: entrambi, il profilo fatto bene (decisione di Federico, 7/10).**
-
-*Perché.* I file del laboratorio sono convertiti con il centroiding del costruttore (`peakPicking vendor`, nell'mzML «ABI/Analyst peak picking», `MS:1000127`), che spezza spesso un picco largo in due centroidi (es. 363.97 e 364.43 per lo stesso ione). Misura del 7/10 sulla serie B 2025-26 riconvertita in tre modi (`Data/mzML prove conversione/`): con il centroiding del costruttore il **28%** delle masse con segnale ha 2 o più centroidi forti (MS2: 15%); il centroiding CWT di ProteoWizard è **scartato** (perde quasi tutto il segnale MS2 debole); il **profilo** (MSConvert senza filtro peakPicking, `MS:1000128` «profile spectrum») è il dato vero dello strumento: punti ogni ~0.06 Da, ~1600 per scansione, file 2 volte più grandi, picchi larghi ~1 Da e quasi piatti in cima (364: ~363.5–364.8), M e M+1 che si toccano. Per gli studenti è il formato migliore: vedono la risoluzione unitaria com'è (come in Analyst). Il programma deve **accettare entrambi** e trattare il profilo **bene**.
-
-*Riconoscimento.* Ogni spettro (o il file) è «profilo» o «centroide» dal contenuto (`MS:1000128` / `MS:1000127`), non dal nome. In `Item.info()` un campo `spectrum_mode` (profile | centroid | mixed); nella schermata di caricamento e nella lista dei file non serve mostrarlo, salvo la nota del punto f.
-
-*a) Disegno.* Spettri in profilo disegnati come **linea continua** (riempimento leggero sotto, stesso colore del file), non come migliaia di bastoncini. Con più file sovrapposti, una linea per file. Il PNG esporta la linea.
-
-*b) Picchi del profilo («cime»).* Una funzione unica (lato Python, così vale per sito e test) che dal profilo ricava le cime: profilo leggermente lisciato (Savitzky-Golay corto, esiste già `sgFilter`/equivalente), un massimo per **finestra unitaria [n − 0.2, n + 0.8]** (la stessa costante dell'XIC, `XIC_BELOW`/`XIC_DRIFT`, una sola definizione condivisa), con m/z = centroide pesato dei punti sopra metà altezza attorno al massimo e intensità = altezza della cima (scrivi la scelta nell'etichetta dell'asse o nel «Come si usa»). Queste cime servono a: **etichette** dei picchi (una per massa nominale, sulla cima), **tabella dei picchi**, **righello**, aggancio del **clic destro** (punto 1.0), **profilo isotopico** (allineato alla cima), **«picco base»** della riga della scansione, Excel dello spettro (foglio con le cime; il profilo intero solo se lo studente lo chiede).
-
-*c) Interruttore «linea / bastoncini».* Nella tendina dei parametri dello spettro: «Profilo (linea)» predefinito per i file in profilo, «Bastoncini (un picco per massa nominale)» per un grafico pulito da relazione (le cime del punto b disegnate come bastoncini).
-
-*d) File centroidi.* Restano supportati. Nuova impostazione nell'**ingranaggio** (accanto a Dimensione testo / Tema / Colori: `settings.js`, `UIP`): **«Unisci i centroidi della stessa massa nominale»**, **attiva di default**; etichetta: «Nei file convertiti con il centroiding, un picco largo può essere spezzato in due: questa opzione li riunisce (un picco per massa nominale, come lo vede uno strumento a risoluzione unitaria)». Attiva: i centroidi nella stessa finestra unitaria diventano un picco (intensità = somma, m/z = media pesata); spenta: centroidi originali. Ai file in profilo non si applica (hanno già le cime del punto b).
-
-*e) XIC, TIC, integrazione.* L'XIC sommando i punti nella finestra unitaria funziona già con entrambi i formati: controlla che per il profilo usi tutti i punti della finestra (non solo i «picchi») e che `_binned`/la tabella dei picchi del lettore non tratti i punti a zero come rumore in modo sbagliato (nel profilo ci sono molti zeri). **Rimisura** la finestra XIC sui dati in profilo: posizione delle cime rispetto alla massa nominale calcolata (sugli ioni forti dei 7 Full Scan in profilo); se cambia rispetto al centroide (+0.14…+0.37, mediana +0.24), proponi a Federico la costante da usare e scrivi i numeri in `AGENTS.md` sez. 12.
-
-*f) Intensità non confrontabili fra formati.* Le intensità di un file in profilo (altezza della cima o somma di punti campionati ogni ~0.06 Da) e di un file centroide (il centroide del costruttore è circa la somma del picco) **non sono confrontabili**. Se in una sessione ci sono file dei due formati, nella schermata di caricamento compare UNA riga breve: «Alcuni file sono in profilo e altri centroidi: le intensità dei due gruppi non sono confrontabili». Nessun altro avviso.
-
-*g) Prestazioni.* Il profilo ha ~10 volte i punti per scansione: misura (sul Mac o nel container, non in Pyodide) caricamento, spettro singolo, media su un intervallo, mappa RT-m/z e XIC con 7 Full Scan in profilo; se qualcosa supera ~2 volte il tempo con i centroidi, ottimizza (es. cime calcolate una volta per scansione e messe in cache; mappa costruita dalle cime).
-
-*h) Test.* Dati sintetici: aggiungi a `tools/dati_sintetici.py` una versione **in profilo** della serie (picchi gaussiani larghi ~0.7 Da FWHM, punti ogni 0.06 Da, uno ione volutamente piatto in cima che il centroiding spezzerebbe). Dati veri: il repository `QqQ-lab-dati` avrà la serie B in profilo in `mzML_profilo/` (vedi Lavori in coda: se non c'è ancora, usa i sintetici). pytest: cime una per massa nominale; ione piatto → una sola cima; M, M+1, M+2 del t0 **separati** (~364, ~365, ~366: se due finiscono nella stessa finestra la regola è sbagliata: fermati e scrivilo a Federico); fusione dei centroidi 364.0 (1e6) + 364.4 (2e6) → 364.27 con 3e6, 364.4 e 365.4 restano separati, bordo n+0.79/n+0.81. e2e: file in profilo → linea continua, etichetta unica a ~364, interruttore linea/bastoncini, clic destro sulla cima → XIC giusto; file centroide con l'opzione dell'ingranaggio attiva/spenta → 1 / 2 etichette vicino a 364; sessione mista → la riga del punto f.
 
 ---
 
