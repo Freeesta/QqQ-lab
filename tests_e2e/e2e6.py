@@ -94,7 +94,7 @@ try:
         def overlay():
             sp = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')")
             pg.evaluate(f"(()=>{{const p=E.panels[{sp}];p.iso={{formula:'C14H13F4N3O2S',ad:'[M+H]+'}};p.zoom=[360,372];draw(p)}})()"); pg.wait_for_timeout(1500)
-            leg = pg.inner_text(".pnl.spec .leg"); print("ISO LEG:", leg.replace("\n", " | "))
+            leg = pg.evaluate("[...document.querySelectorAll('.pnl.spec .leg2')].map(e=>e.textContent).join(' ')"); print("ISO LEG:", leg.replace("\n", " | "))
             assert "profilo teorico" in leg and "allineato al picco" in leg, leg
             pg.screenshot(path=SH + "70_iso_overlay.png")
             pg.evaluate(f"(()=>{{const p=E.panels[{sp}];p.iso=null;draw(p)}})()")

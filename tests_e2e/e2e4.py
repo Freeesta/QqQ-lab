@@ -39,7 +39,7 @@ try:
             pg.click("#askno"); assert pg.evaluate("E.panels[0].ints.length") == 0
         step("TIC refuses integration (only XIC)", stack_int)
         def logv():
-            pg.locator('.pnl.chrom [data-o="mode"]').select_option("ovl"); pg.locator('.pnl.chrom [data-o="log"]').check(); pg.wait_for_timeout(800)
+            pg.locator('.pnl.chrom [data-o="mode"]').select_option("ovl"); pg.click('.pnl.chrom [data-a="cpar"]'); pg.locator('.pnl.chrom [data-o="log"]').check(); pg.wait_for_timeout(800)
             pg.screenshot(path=SH + "44_log.png"); assert pg.evaluate("E.panels[0]._a.logy === true")
             pg.locator('.pnl.chrom [data-o="log"]').uncheck(); pg.wait_for_timeout(300)
         step("log scale", logv)

@@ -262,7 +262,7 @@ function paintFiles() {
 }
 // back to the automatic colours of the current palette (the student's own colours are dropped)
 function resetColors() { E.files.forEach(f => { f.colorSet = false; }); paintFiles(); renderFileList(); redrawAll(); uiSave(); }
-const modeIcon = (kind, px = 13) => { const k = typeof QMODI !== "undefined" && QMODI.tab2key[kind]; return k ? `<span class="qi" title="${EH(KIND[kind] || kind)}">${QICON.get(QMODI.M[k].ico, px)}</span>` : ""; };
+const modeIcon = () => "";       // the little icons of the three experiments are gone from the tabs and the file list (7 Oct 2026, Federico): they stay only in Teoria, where they are big enough to read
 // go to the tab of a file that is not usable in the current one, with a one-line message
 function goToFileTab(f) {
   setTab(f.kind); E.cur = f.k; renderFileList(); renderNav(); redrawAll(); uiSave();
@@ -276,7 +276,7 @@ function renderFileList() {
   if (E.tab === "mrm") groups.sort((a, b) => ["Standard", "Campioni", "Bianchi"].indexOf(a.g) - ["Standard", "Campioni", "Bianchi"].indexOf(b.g));
   const sub = f => f.type === "sample" ? (f.time != null ? f.time + " min" : "") : (f.type === "blank" ? "bianco" : "standard" + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
   const row = f => `<div class="fl ${f.k === E.cur ? "cur" : ""}"><input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="Mostra o nascondi">
-    <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}" title="Clic per scegliere il file corrente, doppio clic per rinominare">${EH(f.label)}</b>${polSign(f)}
+    <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}" title="Clic sulla riga per scegliere il file corrente, doppio clic sul nome per rinominare">${EH(f.label)}</b>${polSign(f)}
     <small>${sub(f)}</small>
 </div></div>`;
   const ghost = f => `<div class="fl ghost" data-go="${f.k}" title="Questo file è ${EH(kindOf(f))}: non si usa in questa scheda. Clic per aprire la scheda ${EH(TABS.find(x => x[0] === f.kind)[1])}."><input type="checkbox" disabled><i style="background:${f.color}"></i><div class="fi"><b class="nm">${EH(f.label)}</b><small>${sub(f)}</small></div></div>`;
@@ -294,9 +294,14 @@ function renderFileList() {
   Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => { tabFiles().filter(f => x.dataset.g === "__all" || grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked); renderFileList(); redrawAll(); uiSave(); });
   Q("#flst").querySelectorAll("input[data-k]").forEach(x => x.onchange = () => { E.files[+x.dataset.k].vis = x.checked; redrawAll(); uiSave(); });
   Q("#flst").querySelectorAll(".fl:not(.ghost)").forEach(el => { const nm = el.querySelector(".nm"); if (nm) el.oncontextmenu = e => fileCtx(e, E.files[+nm.dataset.k]); });
-  Q("#flst").querySelectorAll(".fl:not(.ghost) .nm").forEach(x => {
-    x.onclick = () => { E.cur = +x.dataset.k; renderFileList(); renderNav(); if (E.browse) redrawAll(); };
-    x.ondblclick = () => renameFile(E.files[+x.dataset.k]);
+  // the WHOLE row selects the file (colour square, time, empty space); only the check box shows / hides. The list is not rebuilt on a click (only the classes change), so a double click on the name still reaches it.
+  Q("#flst").querySelectorAll(".fl:not(.ghost):not(.pr)").forEach(row => {
+    const nm = row.querySelector(".nm"); if (!nm) return;
+    row.onclick = e => {
+      if (e.target.closest("input")) return;
+      E.cur = +nm.dataset.k; Q("#flst").querySelectorAll(".fl").forEach(r => r.classList.toggle("cur", r === row)); renderNav(); if (E.browse) redrawAll();
+    };
+    nm.ondblclick = () => renameFile(E.files[+nm.dataset.k]);
   });
   renderNav();
 }
@@ -586,8 +591,8 @@ function addPanel(type, o, after) {
     const gm = '<span class="tbg mv"><button class="bt" data-a="up" title="Sposta questo grafico in su">&#9650;</button><button class="bt" data-a="down" title="Sposta questo grafico in giù">&#9660;</button></span>';
     const go = `<span class="tbg"><button class="bt" data-a="png" title="Salva il grafico come immagine PNG">${IC_DL}PNG</button>${type === "map" ? "" : '<button class="bt" data-a="xlsx" title="Salva i dati del grafico (le tracce visibili) in un file Excel (.xlsx): numeri veri, un foglio, intestazioni con le unità">' + IC_DL + 'Excel</button>'}</span>`;
     return `<span class="tbs">${gv + gl + gs + gi + gx + gm + go}<button class="bt fsb" data-a="max" title="Schermo intero: ingrandisce questo pannello (Esc per uscire)">${IC_FS}</button><button class="x" title="Chiudi il pannello">&times;</button></span>`;
-  })()}</div><canvas></canvas>${type === "spec" ? `<button class="bt lkb" data-a="lock">${IC_UNLOCK}</button>` : ""}<div class="vl" hidden></div><div class="cl" hidden></div><div class="tip" hidden></div><div class="leg"></div>`;
-  p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg");
+  })()}</div><canvas></canvas>${type === "spec" ? `<button class="bt lkb" data-a="lock">${IC_UNLOCK}</button>` : ""}<div class="vl" hidden></div><div class="cl" hidden></div><div class="tip" hidden></div><div class="leg"></div>${type === "spec" ? '<div class="leg2"></div>' : ""}`;
+  p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2");
   Q("#dpanels").appendChild(el);
   E.panels.push(p); apply(p); if (p.tab !== E.tab) el.style.display = "none"; fitHost();
   // sposta (trascina l'intestazione), porta davanti, ridimensiona (maniglia in basso a destra), ingrandisci
@@ -922,6 +927,7 @@ const fmz = v => String(rh(v, 1));                   // 363.8, 364 (no trailing 
 // anchored to the nominal mass n of the calculated value: [n - XIC_BELOW, n + 1 - XIC_BELOW]. Every way to create an XIC (XIC button, warning when integrating from a TIC,
 // right click on a chromatogram, on a spectrum, on the RT-m/z map, Calcolatrice m/z, Disegno) opens this window, possibly pre-filled:
 //   pre = { mz, obs }   one m/z value (obs = it is an OBSERVED centroid, so the calibration drift is taken off before the nominal mass is found)   pre = { formula, adduct }
+const TIP_DELAY = 1250;   // ms before the label of a button appears (one value for the whole program; 1500 before 7 Oct 2026)
 const XIC_BELOW = 0.2;   // the unit window starts 0.2 Da under the nominal mass n and ends 0.8 Da over it: [n-0.2, n+0.8]. The centroids of the lab files sit +0.14..+0.37 Da over the calculated m/z (AGENTS.md, 6 Oct 2026), so a window [n-0.5, n+0.5] would lose every ion whose mass defect plus drift passes +0.5 (e.g. calc n+0.2 observed up to n+0.57), while [n-0.2, n+0.8] keeps them with 0.13+ Da of margin and still leaves out the neighbours (n-1 observed <= n-0.3, n+1 observed >= n+1.04)
 const XIC_DRIFT = 0.25;  // mean offset (Da) of the observed centroids over the calculated m/z, used only to go from a CLICKED centroid back to the calculated nominal mass (364.37 -> 364.12 -> n = 364, not 365)
 const xicNominal = (v, obs) => Math.round(obs ? v - XIC_DRIFT : v);
@@ -1179,7 +1185,15 @@ function legend(p, all, note = "") {
   p.leg.querySelectorAll("[data-t]").forEach(b => b.ondblclick = async () => { const t = p.traces.find(x => x.id == b.dataset.t), v = await ask("Nome dell'ione", t.label); if (v) { t.label = v; draw(p); } });
   p.leg.querySelectorAll("[data-r]").forEach(b => b.onclick = () => { p.traces = p.traces.filter(x => x.id != b.dataset.r); ctl(p); draw(p); });
   p.leg.querySelectorAll("[data-h]").forEach(b => b.onclick = () => { const k = b.dataset.h; if (p.hid[k]) delete p.hid[k]; else p.hid[k] = true; draw(p); });
+  legCollapse(p);
   ibkChip(p);
+}
+// with many traces the legend would cover the graph: a small chip («7 tracce») and the list when the pointer rests on it
+function legCollapse(p) {
+  const L = p.leg, n = L.querySelectorAll(".tg").length; if (n <= 4) return;
+  const lst = document.createElement("div"); lst.className = "lgl"; [...L.children].forEach(el => lst.appendChild(el));
+  const chip = document.createElement("span"); chip.className = "lgc"; chip.textContent = n + " tracce \u25BE";
+  L.appendChild(chip); L.appendChild(lst);
 }
 
 async function drawLines(p) {
@@ -1750,15 +1764,19 @@ function attach(p) {
     } else if (drag && drag.edge) { drag.edge.it[drag.edge.e] = x; draw(p); }
     else if (drag && drag.ya) {                               // line along the y axis: only the intensity axis is zoomed
       drag.y = Math.max(M.t, Math.min(a.H - M.b, py)); zl.hidden = false; zl.className = "zl v";
-      zl.style.left = cv.offsetLeft + M.l - 10 + "px"; zl.style.width = ""; zl.style.top = cv.offsetTop + Math.min(drag.y, drag.y0) + "px"; zl.style.height = Math.abs(drag.y - drag.y0) + "px";
+      zl.style.left = cv.offsetLeft + M.l - 20 + "px"; zl.style.width = ""; zl.style.top = cv.offsetTop + Math.min(drag.y, drag.y0) + "px"; zl.style.height = Math.abs(drag.y - drag.y0) + "px";
+      zl.dataset.v = `${fmt(a.yinv(Math.max(drag.y, drag.y0)))} – ${fmt(a.yinv(Math.min(drag.y, drag.y0)))}`;
     } else if (drag && drag.xa) {                             // line along the x axis: only the x axis is zoomed
       drag.x = Math.max(M.l, Math.min(a.W - M.r, px)); zl.hidden = false; zl.className = "zl h";
-      zl.style.top = cv.offsetTop + a.H - M.b + 8 + "px"; zl.style.height = ""; zl.style.left = cv.offsetLeft + Math.min(drag.x, drag.x0) + "px"; zl.style.width = Math.abs(drag.x - drag.x0) + "px";
+      zl.style.top = cv.offsetTop + a.H - M.b + 6 + "px"; zl.style.height = ""; zl.style.left = cv.offsetLeft + Math.min(drag.x, drag.x0) + "px"; zl.style.width = Math.abs(drag.x - drag.x0) + "px";
+      const u = xd(drag.x0), v = xd(drag.x), lo = Math.min(u, v), hi = Math.max(u, v);
+      zl.dataset.v = p.type === "spec" ? `m/z ${lo.toFixed(1)}–${hi.toFixed(1)}` : `RT ${lo.toFixed(2)}–${hi.toFixed(2)} min`;
     }
     else if (drag) { drag.x = px; drag.y = py; if (p.type === "spec" || (p.imode === "zoom" && p.type !== "map")) {      // zoom box (x and y together)
       if (Math.abs(px - drag.x0) > 4) { zr.hidden = false; const yy = canYZ(a) ? [Math.min(py, drag.y0), Math.abs(py - drag.y0)] : [M.t, a.H - M.t - M.b]; zr.style.left = cv.offsetLeft + Math.min(px, drag.x0) + "px"; zr.style.width = Math.abs(px - drag.x0) + "px"; zr.style.top = cv.offsetTop + yy[0] + "px"; zr.style.height = yy[1] + "px"; }
     } else { p.sel = [Math.min(xd(drag.x0), x), Math.max(xd(drag.x0), x)]; draw(p); } }
-    else cv.style.cursor = e.shiftKey ? "grab" : yAxisZone(px, py) ? "ns-resize" : xAxisZone(px, py) ? "ew-resize" : edgeAt(px) ? "col-resize" : onCur(px) ? "ew-resize" : p.imode === "zoom" ? "zoom-in" : p.imode ? "cell" : "crosshair";
+    else axisHint(yAxisZone(px, py) ? "v" : xAxisZone(px, py) ? "h" : null, e);
+    if (!drag) cv.style.cursor = e.shiftKey ? "grab" : yAxisZone(px, py) ? "ns-resize" : xAxisZone(px, py) ? "ew-resize" : edgeAt(px) ? "col-resize" : onCur(px) ? "ew-resize" : p.imode === "zoom" ? "zoom-in" : p.imode ? "cell" : "crosshair";
     const lh = !drag && (a.lbls || []).find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
     if (lh) { cv.style.cursor = "pointer"; lb.hidden = false; lb.style.left = cv.offsetLeft + lh.x + "px"; lb.style.top = cv.offsetTop + lh.y + "px"; lb.style.width = lh.w + "px"; lb.style.height = lh.h + "px"; } else lb.hidden = true;
     p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(1) : "RT " + x.toFixed(2) + " min" + (a.map && !a.is3d ? " · m/z " + a.mzAt(py).toFixed(1) : "");   // pass-over text: it goes away when the mouse leaves (see onmouseleave)
@@ -1767,8 +1785,19 @@ function attach(p) {
   };
   const lb = document.createElement("div"); lb.className = "lbbox"; lb.hidden = true; p.el.appendChild(lb);   // box around the label under the mouse
   const zr = document.createElement("div"); zr.className = "zr"; zr.hidden = true; p.el.appendChild(zr);   // area being zoomed (box)
-  const zl = document.createElement("div"); zl.className = "zl"; zl.hidden = true; p.el.appendChild(zl);   // line being dragged on an axis (zooms that axis only)
-  cv.onmouseleave = () => { hideHover(p); lb.hidden = true; p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
+  const zl = document.createElement("div"); zl.className = "zl"; zl.hidden = true; p.el.appendChild(zl);
+  // over the numbers of an axis: a faint strip and the cursor say that a drag there zooms only that axis (the program's own label appears after TIP_DELAY)
+  let hintT = null;
+  const axisHint = (z, e) => {
+    if (z === p._hz) return; p._hz = z; clearTimeout(hintT); const q = Q("#qtip"); if (q && q._ax) { q.hidden = true; q._ax = false; }
+    const a = p._a; if (!z || !a) { zl.hidden = true; return; }
+    zl.hidden = false; zl.className = "zl hint " + z; zl.dataset.v = "";
+    if (z === "v") { zl.style.left = cv.offsetLeft + "px"; zl.style.width = M.l - 2 + "px"; zl.style.top = cv.offsetTop + M.t + "px"; zl.style.height = a.H - M.t - M.b + "px"; }
+    else { zl.style.top = cv.offsetTop + a.H - M.b + 1 + "px"; zl.style.height = M.b - 2 + "px"; zl.style.left = cv.offsetLeft + M.l + "px"; zl.style.width = a.W - M.l - M.r + "px"; }
+    const cx = e.clientX, cy = e.clientY;
+    hintT = setTimeout(() => { if (!q) return; q.textContent = "Trascina qui per ingrandire solo quest'asse"; q.hidden = false; q._ax = true; q.style.left = Math.max(6, Math.min(innerWidth - q.offsetWidth - 6, cx + 12)) + "px"; q.style.top = Math.min(innerHeight - q.offsetHeight - 6, cy + 16) + "px"; }, TIP_DELAY);
+  };   // line being dragged on an axis (zooms that axis only)
+  cv.onmouseleave = () => { axisHint(null, {}); hideHover(p); lb.hidden = true; p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
     if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
@@ -1780,7 +1809,7 @@ function attach(p) {
   p._up = e => {
     if (!drag) return; const d = drag; drag = null; zr.hidden = true;
     if (d.rot) { p._rot = false; draw(p); return; }
-    zl.hidden = true;
+    zl.hidden = true; p._hz = null;
     if (d.pan) { uiSave(); return; }
     if (d.edge || d.cursor) { uiSave(); return; }
     const a = p._a;
@@ -2089,11 +2118,11 @@ async function calcRun() {
 }
 Q("#calcin").oninput = calcRun;
 
-// ---- discreet tooltip on the buttons and controls of the panels: it appears when the pointer rests on one for about 1.5 s and goes away when the pointer leaves.
+// ---- discreet tooltip on every button and control (the program's own, not the browser's): it appears when the pointer rests on one for TIP_DELAY (1.25 s; it was 1.5 s until 7 Oct 2026) and goes away when the pointer leaves.
 // The text is the element's title; the title is moved to data-tip on the first hover so the browser's own (earlier, fixed-style) tooltip does not also show up.
 (function () {
   const tip = document.createElement("div"); tip.id = "qtip"; tip.hidden = true; document.body.appendChild(tip);
-  const SEL = ".pnl .hd [title], .pnl .hd [data-tip], .pnl .ctl [title], .pnl .ctl [data-tip]", DELAY = 1500;
+  const SEL = "[title], [data-tip], [data-tiph]", DELAY = TIP_DELAY;
   let timer = null, cur = null;
   const hide = () => { clearTimeout(timer); timer = null; tip.hidden = true; cur = null; };
   document.addEventListener("mouseover", e => {
@@ -2102,10 +2131,11 @@ Q("#calcin").oninput = calcRun;
     hide();
     if (!t || t.closest("dialog[open]")) return;
     if (t.hasAttribute("title")) { t.dataset.tip = t.getAttribute("title"); t.removeAttribute("title"); }
-    const txt = t.dataset.tip; if (!txt) return;
+    const txt = t.dataset.tip, html = t.dataset.tiph; if (!txt && !html) return;
     cur = t;
     timer = setTimeout(() => {
-      tip.textContent = txt; tip.hidden = false;
+      if (html) tip.innerHTML = html; else tip.textContent = txt;
+      tip.hidden = false;
       const r = t.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
       tip.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + "px";
       tip.style.top = (r.bottom + h + 10 < innerHeight ? r.bottom + 6 : Math.max(6, r.top - h - 6)) + "px";
