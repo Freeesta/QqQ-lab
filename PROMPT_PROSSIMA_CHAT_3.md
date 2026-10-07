@@ -17,7 +17,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 1. **Integrazione dei picchi** (dati corretti prima di tutto)
 2. **Schermo intero**
 3. **Dimensione del testo anche dentro i grafici**
-4. **Strumenti dell'header**: via Isotopi, calcolatrice vera, Addotti più semplici
+4. **Strumenti dell'header e schermata di caricamento**: via Isotopi, calcolatrice vera, Addotti più semplici, pulsante dei file di esempio, «Informazioni» al posto del «?»
 5. **Rifiniture** (menu «Correzione» con icone, documenti per gli agenti)
 
 ---
@@ -65,7 +65,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 
 ---
 
-## BLOCCO 4: strumenti dell'header
+## BLOCCO 4: strumenti dell'header e schermata di caricamento
 
 **4.1 Via «Isotopi» dall'header.** Togli il pulsante Isotopi dall'header e la scheda Isotopi dalla finestra Tavola/Addotti (semplificazione decisa da Federico). Il profilo isotopico si usa **solo dentro i grafici**: clic destro sullo spettro → «Profilo isotopico di una formula…» (già esiste, `p.iso`). Aggiorna i rimandi alla «scheda Isotopi» (es. nelle Perdite neutre: «guarda M+2 nella scheda Isotopi» diventa «controlla M+2 con il profilo isotopico nello spettro (clic destro)»), Teoria, aiuto, `AGENTS.md` ed e2e.
 
@@ -83,6 +83,16 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 - **Togli** il testo «M è la massa esatta monoisotopica della molecola neutra (Cl-35, Br-79, C-12): per composti con Cl o Br il picco più alto può essere M+2 (vedi la scheda Isotopi). La colonna Δ aiuta a riconoscere gli addotti nello spettro: per esempio un picco 21.98 sopra [M+H]+ è quasi sempre [M+Na]+.» e mettilo al suo posto **esattamente** questo testo (scritto da Federico/Claude, non cambiarlo):
   > «Un **addotto** è lo ione che la molecola M forma nella sorgente legandosi a un piccolo ione presente in soluzione (H⁺, Na⁺, NH₄⁺, K⁺ in positivo; HCOO⁻ o Cl⁻ in negativo) o cedendo un protone ([M−H]⁻). Nello spettro non si vede M, ma l'm/z dei suoi addotti: per questo lo stesso composto può dare più picchi, sempre alla stessa distanza fra loro (per esempio circa 22 tra [M+H]⁺ e [M+Na]⁺).»
 - e2e: righe comuni visibili, altri nascosti finché non si apre la riga; strumento «Due picchi» assente; testo nuovo presente.
+
+**4.4 Schermata di caricamento: solo il pulsante «Prova con i file di esempio».** Oggi (`index.html`, `#demo`, `#demobtn`) accanto al pulsante c'è la riga «4 file Full Scan (flufenacet, 0-60 min). Da scaricare: t0 · t15 · t30 · t60 · info»: **toglila** (testo e link). Resta solo il pulsante, messo bene in vista: **dentro il riquadro 1** (quello dei file mzML), subito **sotto la zona «Trascina qui i file»**, centrato, stile secondario (bordo, non pieno) con una piccola icona (es. provetta o «play»), separato da una riga sottile «oppure». Etichetta al passaggio del mouse: «Apre 4 file Full Scan di esempio (0, 15, 30 e 60 minuti di irraggiamento)». **Attenzione**: oggi il `title` del pulsante e la riga tolta nominano il composto (flufenacet), che per gli studenti è l'inquinante **incognito** dell'esperienza (`AGENTS.md` sez. 1): non deve comparire da nessuna parte nell'interfaccia (controlla con `grep -rni flufenacet qqq_lab/web` e togli dove è visibile allo studente; nei commenti del codice e nei test può restare). e2e: niente link di download, pulsante presente e funzionante, «flufenacet» assente dal testo visibile della pagina.
+
+**4.5 Il «?» dell'header diventa «Informazioni».** Oggi il «?» in alto a destra apre la «Guida di QqQ lab» (`help.js`, chiave `header`, `guideHtml()`). Federico vuole lì **solo** chi ha fatto il programma e a cosa serve, quindi:
+- il pulsante diventa un'icona **«i» (informazioni)** nel cerchio, stesso stile delle altre icone dell'header, etichetta «Informazioni su QqQ lab»;
+- apre un riquadro piccolo **senza titolo** con esattamente questo testo (due paragrafi, l'indirizzo come link `mailto:`):
+  > QqQ lab è il programma didattico per il laboratorio di inquinanti della laurea magistrale in Chimica dell'ambiente.
+  > Suggerimenti e correzioni: federico.cristaudo@unito.it (Federico Cristaudo, Università di Torino).
+- **Non perdere la guida**: il contenuto di `guideHtml()` (uso dei pannelli, scorciatoie da tastiera, ecc.) va in Teoria come capitolo breve **«Come si usa QqQ lab»** (primo nel menu della Teoria), senza ripetere ciò che c'è già negli altri capitoli; le etichette dei pulsanti restano come sono. Aggiorna i rimandi al «? generale» in Teoria, aiuto, `AGENTS.md`, e gli e2e che aprivano la guida dall'header.
+- e2e: l'icona apre il riquadro con i due paragrafi e il link email; il capitolo «Come si usa» esiste e contiene le scorciatoie.
 
 ---
 
