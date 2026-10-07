@@ -28,7 +28,7 @@ function drawMeas(p, g, X, Y, W) {
   const m = p.meas; if (!m || p._exp && false) return;
   const ac = css("--accent"), x0 = M.l, x1 = W - M.r;
   g.save(); g.beginPath(); g.rect(x0, M.t - 1, x1 - x0, 400); g.clip();
-  g.strokeStyle = g.fillStyle = ac; g.lineWidth = 1; g.font = "11px system-ui"; g.textAlign = "center";
+  g.strokeStyle = g.fillStyle = ac; g.lineWidth = 1; g.font = fpx(11); g.textAlign = "center";
   if (m.ref != null && X(m.ref) >= x0 && X(m.ref) <= x1) {
     g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(m.ref), Y(0)); g.lineTo(X(m.ref), M.t + 2); g.stroke(); g.setLineDash([]);
     g.textAlign = "left"; g.fillText("rif.", X(m.ref) + 3, M.t + 10);
@@ -62,15 +62,17 @@ function specParams(p, btn) {
     <label title="Si etichettano solo i picchi sopra questa percentuale del picco più alto; gli altri restano disegnati">Etichette: oltre <input data-s="thr" type="number" min="0" max="100" step="1" value="${cur.thr}"> %</label>
     <label title="Numero massimo di etichette m/z">al massimo <input data-s="nlab" type="number" min="1" max="60" step="1" value="${cur.nlab}"></label>
     <label>Decimali di <i>m/z</i> <select data-s="dec">${[0, 1, 2].map(n => `<option ${cur.dec === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+    ${(p._a && p._a.data || []).some(x => x.d.pmz) ? `<label title="File in profilo: la linea è lo spettro com'è registrato; i bastoncini sono le cime, una per massa nominale (grafico pulito per la relazione). Le etichette e la tabella usano sempre le cime.">Spettro <select data-s="sticks"><option value="0" ${p.sticks ? "" : "selected"}>Profilo (linea)</option><option value="1" ${p.sticks ? "selected" : ""}>Bastoncini (un picco per massa nominale)</option></select></label>` : ""}
     <button data-s="reset" title="Torna ai valori di partenza">Ripristina predefiniti</button>`;
   const pr = p.el.getBoundingClientRect(), br = btn.getBoundingClientRect();
   p.el.appendChild(pop); pop.style.left = Math.max(4, Math.min(br.left - pr.left, p.el.clientWidth - pop.offsetWidth - 6)) + "px"; pop.style.top = br.bottom - pr.top + 4 + "px";
   const apply = () => { draw(p); uiSave(); };
   pop.querySelectorAll("[data-s]").forEach(x => {
     const k = x.dataset.s;
-    if (k === "reset") x.onclick = () => { p.rel = null; p.thr = SPEC_DEF.thr; p.nlab = SPEC_DEF.nlab; p.dec = SPEC_DEF.dec; pop.remove(); specParams(p, btn); apply(); };
+    if (k === "reset") x.onclick = () => { p.rel = null; p.sticks = false; p.thr = SPEC_DEF.thr; p.nlab = SPEC_DEF.nlab; p.dec = SPEC_DEF.dec; pop.remove(); specParams(p, btn); apply(); };
     else x.onchange = () => {
       if (k === "rel") p.rel = x.value === "1";
+      else if (k === "sticks") p.sticks = x.value === "1";
       else p[k] = Math.max(k === "nlab" ? 1 : 0, Math.min(k === "thr" ? 100 : k === "nlab" ? 60 : 2, Math.round(+x.value || 0)));
       apply();
     };
@@ -128,25 +130,32 @@ function peakTable(p) {
 // ---------------------------------------------------------------- zoom history, whole view (keys)
 function pushZh(p) {
   const s = { zoom: p.zoom ? [...p.zoom] : null, zoomY: p.zoomY ? [...p.zoomY] : null }, h = p.zh = p.zh || [], l = h[h.length - 1];
-  if (l && JSON.stringify(l) === JSON.stringify(s)) return;
-  h.push(s); if (h.length > 15) h.shift();
+  if (l && JSON.stringify({ zoom: l.zoom, zoomY: l.zoomY }) === JSON.stringify(s)) return;
+  s.n = ++HSEQ; h.push(s); if (h.length > 15) h.shift();
 }
 function undoZoom(p) {
   const h = p.zh; if (!h || !h.length) return;
   const s = h.pop(); p.zoom = s.zoom; p.zoomY = s.zoomY; if (p.type === "spec") p.lock = null; draw(p); uiSave();
 }
+function undoLast(p) {                                                    // Ctrl/Cmd+Z: the last thing done, whether a zoom or an integration
+  const z = p.zh && p.zh[p.zh.length - 1], i = p.ih && p.ih[p.ih.length - 1];
+  if (i && (!z || i.n > (z.n || 0))) undoInt(p); else undoZoom(p);
+}
 document.addEventListener("keydown", e => {
   const a = E.active; if (!a || !a.el || !Q("#dpanels").offsetParent || a.type === "map" && false) return;
   if (e.target.closest && e.target.closest("input,textarea,select,[contenteditable='true']")) return;
   if (document.querySelector("dialog[open]")) return;
+  const chosen = a.isel != null && a.ints && a.ints.find(i => i.id === a.isel);
+  if ((e.key === "Delete" || e.key === "Backspace") && chosen && !e.ctrlKey && !e.metaKey) { e.preventDefault(); delInts(a, [chosen]); return; }      // with a peak selected, Delete/Backspace remove it (before "whole view")
   if (e.key === "Backspace" && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); pushZh(a); a.zoom = null; a.zoomY = null; if (a.type === "spec") a.lock = null; draw(a); uiSave(); }
-  else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "z") { e.preventDefault(); undoZoom(a); }
+  else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "z") { e.preventDefault(); undoLast(a); }
   else if (e.key === "Escape" && a.type === "spec" && (a.meas || a.rul)) measClear(a);
 });
 
 // ---------------------------------------------------------------- linked time axes: the panels with the chain on share the interval of time
 function syncT(p) {
   const key = JSON.stringify(p.zoom || null); if (p._zs === key) return; p._zs = key;
+  if (fsPanel()) return;                                         // full screen: the other panels keep their zoom
   tabPanels().filter(q => q !== p && q.tl && q.type !== "spec" && q.type !== "map" && JSON.stringify(q.zoom || null) !== key)
     .forEach(q => { q.zoom = p.zoom ? [...p.zoom] : null; q._zs = key; draw(q); });
 }

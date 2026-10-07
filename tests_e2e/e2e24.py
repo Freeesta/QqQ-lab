@@ -52,8 +52,6 @@ try:
             pg.uncheck("#lb-f"); pg.check("#lb-f"); pg.uncheck("#lb-m"); pg.check("#lb-m"); same("labels")
             for v in ("1", "2", "0"): pg.select_option("#lb-dec", v); pg.wait_for_timeout(200)
             same("decimals")
-            for v in ("[M+H]+", "[M-H]-", ""): pg.select_option("#lb-ion", v); pg.wait_for_timeout(300)
-            same("ion")
             pg.evaluate("(async()=>{const k=%s;const ids=[...k.editor.struct().atoms.keys()];k.editor.selection({atoms:ids.slice(0,4)})})()" % KQ); pg.wait_for_timeout(1500)
             same("selection"); pg.evaluate(KQ + ".editor.selection(null)"); pg.wait_for_timeout(600)
             for fmt in ("png", "svg", "jpg", "ket"):
@@ -88,21 +86,22 @@ try:
         step("2.1 charged structures: neutral form (acetate = acetic acid, ammonium, counter-ion dropped, quaternary = message)", charge)
         def helptext():
             assert pg.locator("#prop-card .hq").count() == 0
-            pg.locator("button.hq[data-help=header]").click(); pg.wait_for_timeout(300)
-            t = pg.inner_text("#helppop"); assert "0.5" in t and "logD" in t, t
-            pg.keyboard.press("Escape")
+            t = r.teoria(pg); assert "0.5" in t and "logD" in t, t[:300]      # the explanation lives in the guide chapter of the Teoria
             assert "L'errore tipico" not in pg.inner_text("#prop-body")
         step("2.1 the explanation is in the ? of the box, not inside it", helptext)
         # ---------------------------------------------------------------- 2.2 default ion
         def ion():
-            assert pg.input_value("#lb-ion") == "", pg.input_value("#lb-ion")
-            assert "nessuno (molecola neutra)" in pg.locator("#lb-ion option").first.inner_text()
-            assert pg.locator("label:has(#lb-ion)").inner_text().strip().startswith("Ione:")
-            pg.select_option("#lb-ion", "[M+Na]+"); pg.wait_for_timeout(400)
-            pg.evaluate("(()=>{NB.labIon='[M+K]+';document.dispatchEvent(new Event('nbloaded'))})()"); pg.wait_for_timeout(300); assert pg.input_value("#lb-ion") == "[M+K]+"
-            pg.evaluate("(()=>{delete NB.labIon;document.dispatchEvent(new Event('nbloaded'))})()"); pg.wait_for_timeout(300); assert pg.input_value("#lb-ion") == "", "old notebook without labIon"
-            pg.evaluate("(()=>{NB.labIon='';document.dispatchEvent(new Event('nbloaded'))})()"); pg.wait_for_timeout(300); assert pg.input_value("#lb-ion") == ""
-        step("2.2 ion menu starts at 'Ione: nessuno (molecola neutra)' (new notebook, old notebook)", ion)
+            assert pg.locator("#lb-ion").count() == 0, "the Ione menu is gone"
+            pg.evaluate("(()=>{NB.labIon='[M+K]+';document.dispatchEvent(new Event('nbloaded'))})()"); pg.wait_for_timeout(300)     # an old notebook with labIon opens without errors, the value is ignored
+        step("2.2 no Ione menu; an old notebook with labIon opens fine", ion)
+        def smiles_clear():
+            pg.fill("#ex-smi", "CC(=O)Nc1ccc(O)cc1"); pg.click("#ex-load"); pg.wait_for_timeout(2500)
+            assert pg.input_value("#ex-smi") == "", "a valid SMILES is drawn and the field is emptied"
+            assert pg.evaluate("document.querySelector('#smi-warn').hidden")
+            pg.fill("#ex-smi", "not a smiles((("); pg.click("#ex-load"); pg.wait_for_timeout(2000)
+            assert pg.input_value("#ex-smi") == "not a smiles(((" and not pg.evaluate("document.querySelector('#smi-warn').hidden"), "a wrong SMILES stays in the field with the warning"
+            pg.fill("#ex-smi", "")
+        step("6.1 the SMILES field empties after a good drawing, keeps a wrong one", smiles_clear)
         # ---------------------------------------------------------------- 2.3 selection SMILES, logP, exports
         def selection():
             setmol(pg, "CC(=O)Nc1ccc(O)cc1.Nc1ccc(O)cc1")

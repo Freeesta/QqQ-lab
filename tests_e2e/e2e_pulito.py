@@ -29,7 +29,8 @@ try:
         step("the tabs say what the experiment is (hover)", tabs)
         def guide():
             pg.click("button.hq[data-help=header]"); pg.wait_for_timeout(300)
-            t = pg.inner_text("#helppop"); assert all(w in t for w in ["Aprire i dati", "Lavorare con i grafici", "Full Scan", "MRM"]), t[:200]
+            t = pg.inner_text("#helppop"); assert "Guida" not in t and "Aprire i dati" not in t, t[:200]
+            t = r.teoria(pg); assert all(w in t for w in ["Aprire i dati", "Lavorare con i grafici", "Full Scan", "MRM"]), t[:200]
             pg.keyboard.press("Escape")
         step("the general ? is the guide, by topic", guide)
     r.close()

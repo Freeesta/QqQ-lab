@@ -23,13 +23,14 @@ try:
             assert pg.evaluate("E.panels[0]._a.sr.every(s=>E.files[s.k].kind!=='mrm')"), "MRM TIC in the chromatogram"
         step("TIC on top, spectrum below at the apex, full width", layout)
         def helpq():
-            assert pg.locator(".hq:visible").count() == 1, "only the general ? is left"
+            assert pg.locator(".hq:visible").count() == 1, "only the general (i) is left"
             pg.locator('button.hq[data-help=header]').click(); pg.wait_for_timeout(300)
-            tx = pg.inner_text("#helppop"); assert pg.is_visible("#helppop") and "Cromatogramma" in tx and "Spettro" in tx and "Full Scan" in tx, tx[:200]
+            tx = pg.inner_text("#helppop"); assert pg.is_visible("#helppop") and "programma didattico" in tx and "federico.cristaudo@unito.it" in tx, tx[:200]
+            tg = r.teoria(pg); assert "Cromatogramma" in tg and "Spettro" in tg and "Full Scan" in tg, tg[:200]      # the old guide is the first chapter of the Teoria
             pg.screenshot(path=SH + "71_help.png")
             pg.keyboard.press("Escape"); pg.wait_for_timeout(200); assert not pg.is_visible("#helppop")
             assert "Doppio clic per rinominare" in pg.evaluate("document.querySelector('.pnl.chrom .ttl').title")
-        step("only the general ? is left: it opens the guide; panel titles carry the short explanation", helpq)
+        step("only the general (i) is left: it opens the info box; the guide is the first Teoria chapter; panel titles carry the short explanation", helpq)
         def xlsxexcel():
             pg.click("#dtabs [data-t=mrm]"); pg.wait_for_timeout(2500)
             with pg.expect_download() as d: pg.locator(".pnl.mrm [data-a=xlsx]").first.click()
@@ -78,19 +79,15 @@ try:
         step("adducts and neutral losses tables", adducts); print(steps[-2:])
         if pg.evaluate("Q(\"#refdlg\").open"): pg.evaluate("Q(\"#refdlg\").close()")
         def isotopes():
-            pg.click("#np-ad"); pg.wait_for_timeout(400); pg.click('#reftabs button[data-t="is"]')
-            pg.fill("#is-f", "C9H10Cl2N2O"); pg.wait_for_timeout(700)
-            t = pg.inner_text("#is-out"); print("ISO:", t.replace("\n", " | ")[:200])
-            assert "233.0243" in t and "64.7" in t and "10.7" in t, t      # diuron [M+H]+: Cl2 pattern 100 : 65 : 11
-            pg.screenshot(path=SH + "69_isotopes.png")
+            pg.click("#np-pt"); pg.wait_for_timeout(400)
+            assert pg.locator('#reftabs button[data-t="is"]').count() == 0, "no Isotopi tab any more (the profile is drawn from the spectrum)"
             # periodic table keeps the same size whatever element is shown
-            pg.click('#reftabs button[data-t="pt"]'); pg.wait_for_timeout(300)
             hs = []
             for el in ["F", "Sn", "C", "Hg"]:
                 pg.hover(f'.pt-c[data-s="{el}"]'); pg.wait_for_timeout(150); hs.append(pg.evaluate("Q('.pt').getBoundingClientRect().height"))
             assert max(hs) - min(hs) < 1, hs
             pg.click("#refx")
-        step("isotope pattern tab (diuron Cl2) and fixed-size periodic table", isotopes)
+        step("no Isotopi tab; fixed-size periodic table", isotopes)
         def overlay():
             sp = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')")
             pg.evaluate(f"(()=>{{const p=E.panels[{sp}];p.iso={{formula:'C14H13F4N3O2S',ad:'[M+H]+'}};p.zoom=[360,372];draw(p)}})()"); pg.wait_for_timeout(1500)
@@ -180,17 +177,10 @@ try:
             assert pg.is_enabled("#ex-jpg") and pg.evaluate(corner) == [255, 255, 255, 255]
         step("\"senza sfondo\": transparent PNG and SVG, JPEG disabled; off = white", nobg)
         def ion_choice():
-            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); pg.wait_for_timeout(1200)
-            for ad, want in [("[M+H]+", ["C8H10NO2+  m/z 152"]), ("[M-H]-", ["C8H8NO2\u2212  m/z 150"]), ("[M+Na]+", ["C8H9NNaO2+  m/z 174"]), ("[M+NH4]+", ["C8H13N2O2+  m/z 169"])]:
-                pg.select_option("#lb-ion", ad); pg.wait_for_timeout(400)
-                t = pg.evaluate(LBL); assert [x for x in [" ".join(t)]] == [w.replace("  ", " ") for w in want], (ad, t)
-            # a structure drawn with its own charge keeps it: the ion menu adds nothing
-            pg.select_option("#lb-ion", "[M+Na]+")
-            pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); pg.wait_for_timeout(1200)
+            pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); pg.wait_for_timeout(1200)       # the charge drawn by the student gives the ion label (there is no Ione menu any more)
             t = pg.evaluate(LBL); assert " ".join(t) == "C8H10NO2+ m/z 152", t
-            pg.select_option("#lb-ion", ""); pg.wait_for_timeout(300)
             pg.screenshot(path=SH + "67_ion_choice.png")
-        step("ion menu: [M+H]+ 152, [M-H]- 150, [M+Na]+ 174, [M+NH4]+ 169; drawn charge wins", ion_choice)
+        step("a drawn charge: C8H10NO2+ m/z 152", ion_choice)
         def nh3():
             pg.evaluate(KQ + ".setMolecule('Oc1ccc([NH3+])cc1>>Oc1cc[c+]cc1')"); pg.wait_for_timeout(1500)
             t = pg.evaluate(LBL); print("NH3:", t)

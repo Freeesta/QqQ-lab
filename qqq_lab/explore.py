@@ -40,6 +40,33 @@ class Item:
         """Peak table of this experiment (level and, for a part of a file with both polarities, the polarity)."""
         return self.run.table(level, self.pol)
 
+    def spectrum_mode(self, level: int | None = None) -> str:
+        """'profile', 'centroid' or 'mixed': read from the scans themselves (MS:1000128 / MS:1000127), not from the file name."""
+        sc = [s for s in self.sc if level is None or s.level == level] or self.sc
+        n = sum(1 for s in sc if s.profile)
+        return "profile" if sc and n == len(sc) else "centroid" if n == 0 else "mixed"
+
+    def _step(self, level: int):
+        """Point spacing of a profile spectrum (Da), None for centroids: profile points are summed on their own grid, not in bins of 0.1 Da."""
+        cache = self.__dict__.setdefault("_steps", {})
+        if level not in cache:
+            ids = [s.index for s in self.sc if s.level == level and s.profile]
+            step = None
+            if ids and self.spectrum_mode(level) == "profile":
+                for i in ids[len(ids) // 2:len(ids) // 2 + 20]:
+                    mz, _ = self.run.read(i)
+                    if len(mz) > 20:
+                        d = np.diff(mz)
+                        step = float(np.round(d[d > 1e-4].min(), 4))                  # the shortest gap = the point spacing (the converter leaves out zeros, so other gaps are multiples)
+                        break
+            cache[level] = step if step and step > 0 else None
+        return cache[level]
+
+    def _cells(self, mz, bin_da: float, level: int):
+        """Cell of each point: bins of bin_da Da for centroids, the point grid itself for profile spectra."""
+        st = self._step(level)
+        return np.rint(mz / st).astype(np.int64) if st else np.floor(mz / bin_da).astype(np.int64)
+
     def info(self) -> dict:
         r = self.run
         ms1 = [s for s in self.sc if s.level == 1]
@@ -56,7 +83,7 @@ class Item:
                 "mz2_min": float(t2.mz[0]) if t2 is not None and len(t2.mz) else None,
                 "mz2_max": float(t2.mz[-1]) if t2 is not None and len(t2.mz) else None,
                 "polarity": "positive" if pol == [1] else "negative" if pol == [-1] else "mixed" if pol else "unknown",
-                "precursors": sorted({round(s.precursor, 1) for s in ms2 if s.precursor}),
+                "precursors": sorted({round(s.precursor, 1) for s in ms2 if s.precursor}), "spectrum_mode": self.spectrum_mode(),
                 "ms2_exps": self._ms2_exps(ms2), "chromatograms": r.n_chromatograms, "kind": self.kind(),
                 "srm": sum(1 for c in r.chromatograms() if c["kind"] == "srm"), "pda": self.has_pda()}
         if self.part:
@@ -261,7 +288,7 @@ class Item:
         mz, y = t.mz[m], t.inten[m]
         if len(mz) == 0:
             return (*e, n)
-        b = np.floor(mz / bin_da).astype(np.int64)
+        b = self._cells(mz, bin_da, level)
         u, inv = np.unique(b, return_inverse=True)
         sy = np.bincount(inv, weights=y)
         smz = np.bincount(inv, weights=y * mz) / np.maximum(sy, 1e-12)
@@ -297,7 +324,7 @@ class Item:
         for i in range(max(i0, 0), min(i1, len(ids) - 1) + 1):
             mz, y = self.run.read(int(ids[i]))
             if len(mz):
-                b = np.floor(mz / bin_da).astype(np.int64)
+                b = self._cells(mz, bin_da, level)
                 u, inv = np.unique(b, return_inverse=True)
                 sy = np.bincount(inv, weights=y)
                 mz, y = np.bincount(inv, weights=y * mz) / np.maximum(sy, 1e-12), sy
@@ -407,6 +434,6 @@ def sniff(path: Path) -> dict:
     it = Item(path.name, None, None, "sample", path)
     try:
         i = it.info()
-        return {"kind": i["kind"], "scans": i["scans"], "srm": i["srm"], "polarity": i["polarity"], "mixed": mixed_text(it.run)}
+        return {"kind": i["kind"], "scans": i["scans"], "srm": i["srm"], "polarity": i["polarity"], "mixed": mixed_text(it.run), "spectrum_mode": i["spectrum_mode"]}
     finally:
         it.run.close()

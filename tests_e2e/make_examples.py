@@ -93,14 +93,12 @@ def main():
                   {"key": "TP1", "parts": [["TP1", "BOLD"], [" ", ""], ["m/z", "ITALIC"], [" 168", ""]]},
                   {"key": "TP2", "parts": [["TP2", "BOLD"], [" ", ""], ["m/z", "ITALIC"], [" 184", ""]]},
                   {"key": "TP3", "parts": [["TP3", "BOLD"], [" ", ""], ["m/z", "ITALIC"], [" 110", ""]]}]
-            pg.select_option("#lb-ion", SCHEME_T["ion"])
             pg.evaluate(BUILD, {"scheme": SCHEME_T, "texts": tx}); pg.wait_for_timeout(1800)
             pg.screenshot(path=SH + "F_ex_T_canvas.png")
             LBL = "[...document.getElementById('kframe').contentWindow.document.querySelectorAll('#qqq-labels text')].map(t=>t.textContent)"
             print("labels T:", pg.evaluate(LBL))
             open(web / "esempio-trasformazione.png", "wb").write(base64.b64decode(png_b64(pg)))
             # 2) fragmentation scheme: all ions drawn with their charge
-            pg.select_option("#lb-ion", SCHEME_F["ion"])
             pg.evaluate(BUILD, {"scheme": SCHEME_F, "texts": []}); pg.wait_for_timeout(1800)
             pg.screenshot(path=SH + "F_ex_F_canvas.png")
             print("labels F:", pg.evaluate(LBL))

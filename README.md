@@ -21,7 +21,7 @@ Come si pubblica: vedi `AGENTS.md`, sezione "Versione nel browser".
 
 ## Uso
 
-Non hai file? Nella pagina iniziale il pulsante **«Prova con i file di esempio»** apre cinque file Full Scan reali (flufenacet degradato per fotocatalisi, 0, 5, 10, 15 e 30 min); si possono anche scaricare da `qqq_lab/web/esempi/` (con `LEGGIMI.txt`) e usare altrove.
+Non hai file? Nella pagina iniziale il pulsante **«Prova con i file di esempio»** apre cinque file Full Scan reali (una soluzione degradata per fotocatalisi, 0, 5, 10, 15 e 30 min); si possono anche scaricare da `qqq_lab/web/esempi/` (con `LEGGIMI.txt`) e usare altrove.
 
 Apri il sito, trascina i file `.mzML` (o "clicca per sceglierli"), controlla tempi e tipi, premi **Carica dati**.
 Il taccuino (pannelli, XIC, integrazioni, annotazioni, disegni) si salva da solo nel browser e si ripristina alla riapertura.
@@ -39,7 +39,7 @@ Il programma gira solo nel browser (sito su GitHub Pages). Per le prove c'è un 
   vista impilata, scala log, zoom, cursore con i valori, sottrazione del bianco e linea di base,
   integrazione con tabella delle aree nel tempo (per le cinetiche) esportabile in Excel (.xlsx).
   Popup "Metodo" (parametri dello strumento) e "Calcolatrice m/z".
-- **Tavola periodica** e **Addotti** (pulsanti in alto a destra): masse esatte e abbondanze isotopiche passando sopra gli elementi; tabella degli addotti ESI con l'm/z calcolato da una massa o una formula; profilo isotopico di una formula (M, M+1, M+2..., calcolato dal programma), che si può anche sovrapporre a uno spettro con il clic destro; perdite neutre più comuni.
+- **Tavola periodica** e **Addotti** (pulsanti in alto a destra): masse esatte e abbondanze isotopiche passando sopra gli elementi; tabella degli addotti ESI con l'm/z calcolato da una massa o una formula; perdite neutre più comuni; il profilo isotopico di una formula (M, M+1, M+2..., calcolato dal programma) si sovrappone a uno spettro con il clic destro.
 - **Teoria**: dodici capitoli sulla teoria dell'esperienza (prodotti di trasformazione, fotocatalisi TiO2, LC in fase inversa, elettrospray, vuoto, teoria del quadrupolo, triplo quadrupolo e CID, come si frammentano gli ioni, full scan/MS2/MRM, strategia per i TP, glossario e bibliografia), con figure interattive calcolate nel browser. Si apre anche da solo, con doppio clic su `qqq_lab/web/teoria/index.html`, in qualsiasi browser e offline.
 - **Disegno**: editor chimico (Ketcher) per molecole, frammenti e vie di trasformazione. Sotto ogni
   struttura compaiono da sole formula bruta e massa intera (m/z se c'è una carica), sopra ogni freccia la

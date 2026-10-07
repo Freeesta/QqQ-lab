@@ -3,11 +3,11 @@
 // Texts for students, in Italian. To add one: a key here and a "?" button where it is needed. Classic script.
 const HELP = {
   "start": ["Caricare i dati", `Trascina qui i file <b>.mzML</b> (o clicca per sceglierli). Puoi caricarne molti insieme: un file per ogni tempo di trattamento, il bianco, gli standard.
-    <br>Il tipo di esperimento (Full Scan, MS² Product Ion, MRM) è letto dal contenuto del file. Dal nome il programma indovina il <b>tipo</b> (campione, bianco, standard), il <b>tempo</b> (es. <i>t15</i> = 15 min) e, per gli standard, la <b>concentrazione</b> (es. <i>std_0.5ppm</i>): controllali nella tabella prima di premere <b>Carica dati</b>. Il metodo <b>.dam</b> va nel secondo riquadro (se lo trascini nel primo, ci pensa il programma).
+    <br>Il tipo di esperimento (Full Scan, MS<sup>2</sup> Product Ion, MRM) è letto dal contenuto del file. Dal nome il programma indovina il <b>tipo</b> (campione, bianco, standard), il <b>tempo</b> (es. <i>t15</i> = 15 min) e, per gli standard, la <b>concentrazione</b> (es. <i>std_0.5ppm</i>): controllali nella tabella prima di premere <b>Carica dati</b>. Il metodo <b>.dam</b> va nel secondo riquadro (se lo trascini nel primo, ci pensa il programma).
     <br>I file <b>.wiff</b> dello strumento vanno prima convertiti in .mzML con MSConvert (vedi il riquadro qui sotto).`],
   "files": ["Elenco dei file", `Ogni riga è un file aperto, con il suo colore nei grafici. La <b>casella</b> mostra o nasconde la traccia; <b>clic sul nome</b> = file corrente (quello usato da spettro e mappa), <b>doppio clic</b> = rinomina.
-    <br>Sotto il nome: tipo di esperimento (Full Scan, MS², MRM) e tempo.
-    <br>In <b>Dati</b> ci sono tre schede, una per tipo di esperimento (Full Scan, MS², MRM): non si mescolano mai nello stesso grafico. <b>Tempi ed esperimenti</b> mostra quali file hai per ogni tempo e tipo.
+    <br>Sotto il nome: tipo di esperimento (Full Scan, MS<sup>2</sup>, MRM) e tempo.
+    <br>In <b>Dati</b> ci sono tre schede, una per tipo di esperimento (Full Scan, MS<sup>2</sup>, MRM): non si mescolano mai nello stesso grafico. <b>Tempi ed esperimenti</b> mostra quali file hai per ogni tempo e tipo.
     <br><b>+</b> carica altri file senza perdere i pannelli; <b>◀</b> nasconde l'elenco per dare più spazio ai grafici.`],
   "toolbar": ["Aggiungere pannelli", `<b>Cromatogramma</b>: TIC (somma di tutti gli ioni) o BPC (ione più intenso) di ogni file.
     <br><b>Spettro</b>: lo spettro di massa in un intervallo di tempo. <b>Mappa RT-m/z</b>: tutti gli ioni nel tempo, come un'immagine.
@@ -17,7 +17,7 @@ const HELP = {
   "tools": ["Metodo e immagini", `<b>Metodo</b>: tipo di esperimento (Q1, EMS, MS2, MRM), strumento, polarità, intervallo di massa, transizioni MRM e parametri del metodo di laboratorio (.dam), con il confronto con i dati.
     <br><b>Integrazione</b> (si integra <b>solo da un XIC</b>: TIC, BPC e PDA non lo permettono; usa il pulsante XIC per scegliere la finestra, es. da 100 a 100.5; scrivendo «da», «a» si compila da solo con da + 0.5 e puoi cambiarlo): nei grafici di cromatogrammi, XIC e MRM ci sono le icone dell'integrazione <b>automatica</b> (clic su un picco) e <b>manuale</b> (trascini l'intervallo); la tabella delle aree si apre dall'icona a tabella del grafico.
     <br>Nell'intestazione dei grafici i pulsanti sono in gruppi separati da una barra: <b>lente</b> (zoom: trascina sull'intervallo) con accanto il pulsante per <b>tornare alla vista intera</b> (grigio finché non ingrandisci; si può anche usare il clic destro, «Ripristina zoom») | integrazione <b>automatica</b> e <b>manuale</b> | <b>XIC</b> | <b>PNG</b> ed <b>Excel</b>.
-    <br>Ogni grafico ha il pulsante <b>PNG</b> (immagine; senza la linea del cursore, e lo spettro porta scritto RT e numero di scan); XIC, MRM e spettri hanno anche <b>Excel</b>: un file .xlsx con i numeri veri (non testo), un foglio e le unità nelle intestazioni, da aprire con Excel o LibreOffice e da cui costruire tabelle e grafici. Anche la tabella delle integrazioni e la retta di taratura si esportano in Excel (la retta ha due fogli: i dati e la retta con pendenza, intercetta, R², LOD e LOQ).`],
+    <br>Ogni grafico ha il pulsante <b>PNG</b> (immagine; senza la linea del cursore, e lo spettro porta scritto RT e numero di scan); XIC, MRM e spettri hanno anche <b>Excel</b>: un file .xlsx con i numeri veri (non testo), un foglio e le unità nelle intestazioni, da aprire con Excel o LibreOffice e da cui costruire tabelle e grafici. Anche la tabella delle integrazioni e la retta di taratura si esportano in Excel (la retta ha due fogli: i dati e la retta con pendenza, intercetta, R<sup>2</sup>, LOD e LOQ).`],
   "prop": ["Proprietà previste", `Stime di OpenChemLib per la forma <b>neutra</b> (logS in log mol/L, TPSA in &Aring;<sup>2</sup>; se c'è una carica, il calcolo la esclude: spunta «Escludi la carica»). L'errore tipico del logP è di circa 0.5 unità, a volte 1.
     <br>In LC (C18, acqua/ACN con HCOOH) la ritenzione dipende anche da pKa e carica (logD): usa il logP per confrontare composti simili, non come valore assoluto.`],
   "scorrimento": ["Scorciatoie e scorrimento fra le scansioni", `Metti il cursore sul cromatogramma (un clic) e <b>guarda lo spettro Full Scan scansione per scansione</b>: quali ioni salgono e quali scendono mentre passi sul picco.
@@ -47,8 +47,8 @@ const HELP = {
     <br><b>2D / 3D</b>: la vista 3D disegna una superficie (altezza = intensità) che si ruota trascinando; per scegliere una zona o estrarre un XIC si usa la vista 2D (l'intervallo è lo stesso). <b>Sottrazione fra esperimenti</b>: scegli un secondo file in «differenza con»; se i due file hanno intensità molto diverse, «normalizza al massimo» (o al totale) li rende confrontabili prima della sottrazione.`],
   "origine": ["Da dove viene questo ione?", `Nel 3200 QTRAP molti ioni si rompono già nella <b>sorgente</b>, prima del primo quadrupolo (<i>in-source fragmentation</i>, ISF): nel full scan compaiono come picchi di ioni più leggeri che sembrano prodotti di trasformazione, ma sono frammenti del composto di partenza. Questa finestra ti dà le <b>misure</b> per ragionarci: i profili cromatografici dei due ioni (devono coincidere), la proporzionalità fra le loro aree scansione per scansione (F contro P), il comportamento nei campioni (cinetica).
     <br>Scegli tu lo ione da studiare e il candidato progenitore; il programma <b>non</b> dice «è un frammento» o «è un prodotto»: è compatibile, o no, con ciascuna ipotesi, e la conclusione la scrivi tu nel riquadro finale. Se l'evidenza è ambigua (picchi isobari, saturazione, pochi punti) compaiono degli avvisi: leggili.
-    <br>Per una prova decisiva servono dati in più (standard del solo composto di partenza, MS² del candidato): il programma non li inventa.`],
-  "header": ["QqQ lab", `<b>QqQ lab</b> è il programma didattico per il laboratorio di inquinanti della laurea magistrale in Chimica dell'ambiente: apri i file mzML del triplo quadrupolo (SCIEX 3200 QTRAP), guardi cromatogrammi, spettri e transizioni MRM e integri i picchi. I tuoi file restano sul tuo computer.<br>Crediti: Ketcher (EPAM, Apache-2.0), OpenChemLib (BSD-3), Pyodide (MPL-2.0) e NumPy (BSD-3); il logo deriva da <i>QuadrupoleContour.svg</i> di Geek3 (Wikimedia Commons, CC BY-SA 4.0). Dettagli in <code>LICENZE-TERZI.md</code>.<br>Suggerimenti e correzioni: <a href="mailto:federico.cristaudo@unito.it">federico.cristaudo@unito.it</a> (Federico Cristaudo, Università di Torino).`],
+    <br>Per una prova decisiva servono dati in più (standard del solo composto di partenza, MS<sup>2</sup> del candidato): il programma non li inventa.`],
+  "header": ["", `<p style="margin:0 0 8px">QqQ lab è il programma didattico per il laboratorio di inquinanti della laurea magistrale in Chimica dell'ambiente.</p><p style="margin:0">Suggerimenti e correzioni: <a href="mailto:federico.cristaudo@unito.it">federico.cristaudo@unito.it</a> (Federico Cristaudo, Università di Torino).</p>`],
 };
 (() => {
   const pop = document.createElement("div"); pop.id = "helppop"; pop.hidden = true; document.body.appendChild(pop);
@@ -60,9 +60,9 @@ const HELP = {
     e.preventDefault(); e.stopPropagation();
     if (cur === b) return close();
     const key = b.dataset.help, mk = /^modo-(full|ms2|mrm)$/.exec(key);
-    const h = key === "header" ? ["Guida di QqQ lab", guideHtml()] : mk && typeof QMODI !== "undefined" ? [QMODI.M[QMODI.tab2key[mk[1]]].name, QMODI.html(QMODI.tab2key[mk[1]])] : HELP[key]; if (!h) return;
-    pop.classList.toggle("wide", !!mk || key === "header"); pop.classList.toggle("guide", key === "header");
-    pop.innerHTML = `<div class="hp-t"><b>${h[0]}</b><button class="x" title="Chiudi">&times;</button></div><div>${h[1]}</div>`;
+    const h = mk && typeof QMODI !== "undefined" ? [QMODI.M[QMODI.tab2key[mk[1]]].name, QMODI.html(QMODI.tab2key[mk[1]])] : HELP[key]; if (!h) return;
+    pop.classList.toggle("wide", !!mk); pop.classList.remove("guide");
+    pop.innerHTML = `<div class="hp-t"><b>${h[0]}</b><button class="x" title="Chiudi">&times;</button></div><div>${h[1]}</div>`;      // no title for the "Informazioni" box (key header)
     pop.querySelector(".x").onclick = close;
     pop.hidden = false; cur = b;
     const r = b.getBoundingClientRect(), w = pop.offsetWidth, hgt = pop.offsetHeight;
@@ -76,10 +76,11 @@ const HELP = {
 // the "?" buttons are gone (7/10): the short text of each one is now the label of its control (hover ~1.5 s); the only "?" is the general one in the header
 const helpBtn = () => "";
 const shortHelp = key => { const h = HELP[key]; if (!h) return ""; const t = h[1].replace(/<br>.*/s, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim(); return t.length > 190 ? t.slice(0, t.lastIndexOf(" ", 187)) + "…" : t; };
-// the general guide: all the explanations in one place, by topic
+// the general guide, now the first chapter of the Teoria ("Come si usa QqQ lab", teoria/00-uso.html): all the explanations in one place, by topic
 function guideHtml() {
   const sec = (title, keys) => `<details open><summary><b>${title}</b></summary>${keys.filter(k => HELP[k]).map(k => `<div class="hp-s"><b>${HELP[k][0]}</b><div>${HELP[k][1]}</div></div>`).join("")}</details>`;
   let modes = "";
-  try { modes = `<details><summary><b>I tre tipi di esperimento (Full Scan, MS², MRM)</b></summary>${["full", "ms2", "mrm"].map(t => QMODI.html(QMODI.tab2key[t])).join("")}</details>`; } catch (e) { /* the modes text is optional */ }
-  return `<div>${HELP.header[1]}</div>` + sec("Aprire i dati", ["start", "files"]) + sec("Lavorare con i grafici", ["toolbar", "nav", "scorrimento", "pnl-chrom", "pnl-spec", "pnl-xic", "pnl-mrm", "pnl-map"]) + sec("Metodo, immagini e proprietà", ["tools", "prop"]) + modes;
+  try { modes = `<details><summary><b>I tre tipi di esperimento (Full Scan, MS<sup>2</sup>, MRM)</b></summary>${["full", "ms2", "mrm"].map(t => QMODI.html(QMODI.tab2key[t])).join("")}</details>`; } catch (e) { /* the modes text is optional */ }
+  const credits = `<details><summary><b>Crediti e licenze</b></summary><div class="hp-s">Ketcher (EPAM, Apache-2.0), OpenChemLib (BSD-3), Pyodide (MPL-2.0) e NumPy (BSD-3); il logo deriva da <i>QuadrupoleContour.svg</i> di Geek3 (Wikimedia Commons, CC BY-SA 4.0). I file mzML restano sul tuo computer. Dettagli in <code>LICENZE-TERZI.md</code>.</div></details>`;
+  return sec("Aprire i dati", ["start", "files"]) + sec("Lavorare con i grafici", ["toolbar", "nav", "scorrimento", "pnl-chrom", "pnl-spec", "pnl-xic", "pnl-mrm", "pnl-map"]) + sec("Metodo, immagini e proprietà", ["tools", "prop"]) + modes + credits;
 }

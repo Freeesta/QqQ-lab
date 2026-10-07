@@ -22,6 +22,8 @@ try:
         addion("C14H13F4N3O2S")
         xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')")
         sel = lambda o: f'.pnl.xic [data-o="{o}"]'
+        def CORR(v):      # the "Correzione" drop-down: open it, click the choice
+            pg.click('.pnl.xic [data-o="corr"]'); pg.wait_for_timeout(150); pg.click(f'.pnl.xic .corri[data-c="{v}"]')
         def formula_in_xic():
             t = pg.evaluate(f"E.panels[{xi}].traces.map(t=>[t.mz,t.w,t.label])"); print("traces:", t)
             # the neutral formula gives the calculated m/z of the adduct (364.0737 for [M+H]+) and a window of +-0.5 Da around it
@@ -50,13 +52,13 @@ try:
             pg.evaluate(f"(()=>{{const p=E.panels[{xi}]; p.traces=p.traces.slice(0,1); p.fk=''}})()"); pg.wait_for_timeout(100)
             base = pg.evaluate(f"seriesOf(E.panels[{xi}]).then(a=>a.map(s=>[s.name,Math.max(...s.y)]))"); print("before:", base)
             pg.evaluate("E.files[2].type='blank'"); pg.evaluate(f"ctl(E.panels[{xi}])"); pg.wait_for_timeout(300)
-            pg.evaluate(OPENPAR); pg.select_option(sel("corr"), value="f" + str(pg.evaluate("E.files[2].k")))   # third file = t60 marked as the 'blank'
+            pg.evaluate(OPENPAR); CORR("f" + str(pg.evaluate("E.files[2].k")))   # third file = t60 marked as the 'blank'
             pg.wait_for_timeout(1500)
             after = pg.evaluate(f"seriesOf(E.panels[{xi}]).then(a=>a.map(s=>[s.name,Math.max(...s.y),s.corr]))"); print("after:", after)
             assert len(after) == len(base) - 1 and all(a[2] == "- bianco" for a in after)
             assert all(min(a[1] for a in after) >= 0 for _ in [0])
             pg.screenshot(path=SH + "50_blank.png")
-            pg.evaluate(OPENPAR); pg.select_option(sel("corr"), value="snip"); pg.wait_for_timeout(1200)
+            pg.evaluate(OPENPAR); CORR("snip"); pg.wait_for_timeout(1200)
             sn = pg.evaluate(f"seriesOf(E.panels[{xi}]).then(a=>a.map(s=>[s.corr,Math.max(...s.y)]))"); print("snip:", sn)
             assert all("baseline" in x[0] for x in sn)
             pg.screenshot(path=SH + "51_snip.png")
@@ -92,7 +94,8 @@ try:
             assert pg.evaluate("['selcard','selbody','dcard','dcomp','cap-name','cap-part','cap-ad','cap-on','cap-txt','cap-copy'].every(i=>!document.getElementById(i))")
             LB = "[...document.getElementById('kframe').contentWindow.ketcher.editor.render.paper.canvas.querySelectorAll('#qqq-labels text')].map(t=>t.textContent)"
             assert pg.evaluate(LB) == ["C7H7NO2", "M = 137"], pg.evaluate(LB)
-            pg.select_option("#lb-ion", "[M+H]+"); pg.wait_for_timeout(500)
+            pg.fill("#ex-smi", "Oc1ccc(cc1)C(=O)[NH3+]"); pg.click("#ex-load"); pg.wait_for_timeout(2500)         # a structure drawn with its charge: formula of the ion and m/z
+            pg.evaluate("(()=>{const k=document.getElementById('kframe').contentWindow.ketcher;k.setMolecule('Oc1ccc(cc1)C(=O)[NH3+]')})()"); pg.wait_for_timeout(1500)
             t = pg.evaluate(LB); print("ION:", t); assert t == ["C7H8NO2+", "m/z 138"], t
             pg.screenshot(path=SH + "54_ion.png")
             with pg.expect_download() as d: pg.click("#ex-svg")
@@ -101,10 +104,7 @@ try:
             with pg.expect_download() as d: pg.click("#ex-png")
             import os; sz = os.path.getsize(d.value.path()); print("png bytes", sz); assert sz > 5000
             open(SH + "55_ion.png", "wb").write(open(d.value.path(), "rb").read())
-            pg.select_option("#lb-ion", ""); pg.wait_for_timeout(300)
-            with pg.expect_download() as d: pg.click("#ex-svg")
-            assert "m/z" not in open(d.value.path(), encoding="utf-8").read()
-        step("drawing: no helper boxes, ion choice in the label (canvas, svg, png)", draw_ion)
+        step("drawing: no helper boxes, drawn charge gives the ion label (canvas, svg, png)", draw_ion)
         pg.wait_for_timeout(500)
 finally:
     r.close()

@@ -32,12 +32,38 @@ try:
             pg.fill("#calcin", "C9h10Cl2n2O"); pg.wait_for_timeout(900); assert "C9H10Cl2N2O" in pg.inner_text("#calcsum").replace(" ", "")
             pg.fill("#calcin", "co"); pg.wait_for_timeout(900); assert "CO" in pg.inner_text("#calcsum"), pg.inner_text("#calcsum")
         step("lower-case formula: interpreted line, no extra column / sentence", lower)
-        def isotopes():
-            pg.keyboard.press("Escape"); pg.wait_for_timeout(200); assert pg.evaluate("document.querySelector('#calcdlg').hidden")
-            pg.click("#np-iso"); pg.wait_for_timeout(500); pg.fill("#is-f", "c14h13f4n3o2s"); pg.wait_for_timeout(900)
-            t = pg.inner_text("#refbody"); assert "1 decimale" not in t and "C14H13F4N3O2S" in t.replace(" ", ""), t[:300]
-            pg.keyboard.press("Escape")
-        step("Isotopi tab: same function (lower case), no '1 decimale' column; Esc closes the calculator", isotopes)
+        def arithmetic():
+            pg.click("#np-calc2") if pg.evaluate("document.querySelector('#calcdlg').hidden") else None
+            pg.fill("#calcin", "364.4-194.2"); pg.wait_for_timeout(200)
+            assert pg.inner_text("#calcres").strip() == "170.2" and not pg.evaluate("document.querySelector('#calcpad').hidden")
+            pg.fill("#calcin", "364,4 \u2212 194,2"); pg.wait_for_timeout(200); assert pg.inner_text("#calcres").strip() == "170.2", pg.inner_text("#calcres")
+            pg.fill("#calcin", "(229.1-171.2)*2"); pg.wait_for_timeout(200); assert pg.inner_text("#calcres").strip() == "115.8"
+        step("a calculation: 364.4-194.2 = 170.2 (also with comma and the minus sign)", arithmetic)
+        def keypad():
+            pg.fill("#calcin", ""); pg.wait_for_timeout(100)
+            for k in ("1", "+", "2"): pg.click(f"#calcpad [data-k='{k}']")
+            assert pg.inner_text("#calcres").strip() == "3"
+            pg.click("#calcpad [data-k='=']"); pg.wait_for_timeout(200)
+            assert pg.input_value("#calcin") == "3" and pg.locator("#calctape div").count() == 1 and "1 + 2" in pg.inner_text("#calctape")
+        step("keypad: 1 + 2 = 3 and the tape", keypad)
+        def keyboard():
+            pg.fill("#calcin", ""); pg.click("#calcin"); pg.keyboard.type("5*4"); pg.keyboard.press("Enter"); pg.wait_for_timeout(200)
+            assert pg.input_value("#calcin") == "20" and pg.locator("#calctape div").count() == 2, (pg.input_value("#calcin"), pg.locator("#calctape div").count())
+            pg.keyboard.type("5"); assert pg.input_value("#calcin") == "5", "a digit after = starts a new calculation"
+            pg.fill("#calcin", "Ans+1"); pg.keyboard.press("Enter"); pg.wait_for_timeout(200); assert pg.input_value("#calcin") == "21", pg.input_value("#calcin")
+            pg.locator("#calctape div").nth(2).click(); pg.wait_for_timeout(150); assert pg.input_value("#calcin") == "3", "a row of the tape puts its result back in the field"
+            pg.keyboard.press("Escape"); pg.wait_for_timeout(150); assert pg.input_value("#calcin") == "" and not pg.evaluate("document.querySelector('#calcdlg').hidden"), "Esc clears first"
+        step("keyboard: Enter = result, a new digit starts again, Ans, tape row, Esc clears", keyboard)
+        def formula_hides_pad():
+            pg.fill("#calcin", "C9H10Cl2N2O"); pg.wait_for_timeout(900)
+            assert pg.evaluate("document.querySelector('#calcpad').hidden") and "C9H10Cl2N2O" in pg.inner_text("#calcout").replace(" ", "") and pg.locator("#calcout table").count() == 1
+            assert pg.evaluate("document.querySelector('#calcres').hidden")
+            pg.fill("#calcin", ""); pg.wait_for_timeout(200); assert not pg.evaluate("document.querySelector('#calcpad').hidden")
+        step("a formula: adduct table as before, no keypad", formula_hides_pad)
+        def closes():
+            pg.fill("#calcin", ""); pg.keyboard.press("Escape"); pg.wait_for_timeout(200); assert pg.evaluate("document.querySelector('#calcdlg').hidden")
+            assert pg.locator("#np-iso").count() == 0, "the Isotopi button is gone from the header"
+        step("Esc closes the calculator; no Isotopi button in the header", closes)
         def xic_dlg():
             pg.evaluate("openXic(null,{})"); pg.wait_for_timeout(300); pg.fill("#xic-mz", "c14h13f4n3o2s"); pg.wait_for_timeout(1200)
             assert "interpretata come" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum"); pg.click("#xic-no")

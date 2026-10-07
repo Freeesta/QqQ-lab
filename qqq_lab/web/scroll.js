@@ -22,7 +22,7 @@ function scFetch(k, lv, pr, i0, i1) {
   if (i0 > i1) return Promise.resolve();
   if (i1 - i0 > 59) i1 = i0 + 59;
   const fk = `${b}|${i0}|${i1}`; if (SC.fl.has(fk)) return SC.fl.get(fk);
-  const pm = J(`api/spectra?k=${k}&i0=${i0}&i1=${i1}&level=${lv}&prec=${pr ?? ""}`).then(j => {
+  const pm = J(`api/spectra?k=${k}&i0=${i0}&i1=${i1}&level=${lv}&prec=${pr ?? ""}` + MERGE()).then(j => {
     SC.n.set(b, j.n);
     for (const s of j.scans) SC.m.set(b + "|" + s.i, s);
     while (SC.m.size > SC.max) SC.m.delete(SC.m.keys().next().value);
@@ -37,7 +37,7 @@ async function scData(p, k) {
     await scFetch(k, p.level, p.prec, p.si - (back ? 40 : 2), p.si + (back ? 2 : 40)).catch(() => {});
     s = scGet(k, p.level, p.prec, p.si);
   }
-  if (s && s.mz.length && s.rt >= p.r0 - 1e-6 && s.rt <= p.r1 + 1e-6) return { mz: s.mz, y: s.y, scans: 1, i0: s.i, n: SC.n.get(scBase(k, p.level, p.prec)) };
+  if (s && s.mz.length && s.rt >= p.r0 - 1e-6 && s.rt <= p.r1 + 1e-6) return { mz: s.mz, y: s.y, mode: s.mode, pmz: s.pmz, py: s.py, scans: 1, i0: s.i, n: SC.n.get(scBase(k, p.level, p.prec)) };
   return getSpec(k, p.r0, p.r1, p.level, p.prec, null);
 }
 // keep the next scans in the cache before they are needed (nothing is waited for)
@@ -92,8 +92,9 @@ const KEY = { dir: 0, n: 1, t0: 0, t: 0, raf: 0, p: null };
 const PLAY = { p: null, dir: 1, sel: null, t: 0, raf: 0 };
 // the chromatogram that walks: the active one, or the one a linked spectrum follows (after zooming in the spectrum the arrows still walk)
 const walkTarget = (play) => {
-  let ap = E.active;
-  if (ap && ap.type === "spec" && ap.link != null) ap = E.panels.find(q => q.id === ap.link) || ap;
+  const fp = fsPanel();
+  let ap = fp || E.active;                                          // full screen: only that panel can walk
+  if (!fp && ap && ap.type === "spec" && ap.link != null) ap = E.panels.find(q => q.id === ap.link) || ap;
   return ap && E.panels.includes(ap) && ap._a && ap._a.sr && (ap.cur != null || (play && ap.sel)) ? ap : null;
 };
 function playStop() { if (PLAY.raf) cancelAnimationFrame(PLAY.raf); PLAY.raf = 0; PLAY.p = null; }
@@ -137,7 +138,7 @@ document.addEventListener("keydown", e => {
   const dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0; if (!dir) return;
   e.preventDefault();
   const ap = walkTarget(false);                                      // active panel with a cursor: arrows = previous/next scan; otherwise arrows change file
-  if (!ap) { goFile(dir); return; }
+  if (!ap) { if (!fsPanel()) goFile(dir); return; }
   if (e.repeat) return;                                              // the automatic repeat of the system is ignored: the loop below paces a held key
   playStop();
   KEY.dir = dir; KEY.n = e.shiftKey ? 5 : 1; KEY.p = ap; KEY.t0 = KEY.t = performance.now();
