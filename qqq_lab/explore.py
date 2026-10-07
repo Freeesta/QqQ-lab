@@ -340,7 +340,8 @@ class Item:
         mz, y = t.mz[m], t.inten[m]
         if len(mz) == 0:
             return (*e, n)
-        if hr and raw1 and n == 1:                                  # one scan = its own centroids, exactly
+        if hr and raw1 and n == 1:                                  # one scan = its own centroids, exactly (read from the file: the peak table of a high-resolution file is float32)
+            mz, y = self.run.read(int(t.scan_ids[np.flatnonzero(ok)[0]]))
             return np.arange(len(mz)), mz, y, 1
         b = self._cells(mz, bin_da, level, hr)
         u, inv = np.unique(b, return_inverse=True)
