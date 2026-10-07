@@ -118,7 +118,7 @@ try:
             pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(600)
             t = pg.inner_text(".pnl.spec .leg"); print(t)
             for w in ["scansione", "RT", "TIC", "picco base"]: assert w in t, (w, t)
-            import re; assert re.search(r"scansione \d+/\d+ · RT \d+\.\d{3} min", t), t
+            import re; assert re.search(r"scansione \d+/\d+ · RT \d+\.\d{2} min", t), t
         step("G6: one line: scansione i/N · RT · TIC · picco base", caption)
         def ms2():
             pg.evaluate("setTab('ms2',true)"); pg.wait_for_timeout(2500)

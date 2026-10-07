@@ -15,38 +15,9 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con il repository
 - Se il budget sta finendo: fermati dopo un commit pulito e aggiorna questo file.
 
 ## Ordine di lavoro (i blocchi sono raggruppati per file, così leggi ogni file una volta)
-1. **Spettro e menu del clic destro** (`explore.js`: disegno dello spettro, menu, annotazioni)
 2. **Intestazioni, zoom sugli assi, etichette** (`explore.js` `addPanel`/`ctl`/assi + CSS in `index.html`)
 3. **Finestra XIC e calcolatrice** (`openXic`, `#xicdlg`, `#calcdlg`)
 4. **Perdite neutre** (`web/tables.js`, Teoria cap. 8)
-
----
-
-## BLOCCO 1: spettro e menu del clic destro
-
-**1.0 Il clic destro deve prendere lo STESSO picco dell'etichetta (bug, priorità massima).** Federico ha fatto clic destro sull'etichetta «364.4» e il menu proponeva «Estrai l'XIC di m/z 366.1» (l'isotopo vicino): l'XIC sarebbe stato sbagliato. Causa (verificata il 7/10): il passaggio del mouse usa `p._a.snap(px)` (in `drawSpec`, accanto a `p._a.hov`) e le etichette hanno i loro riquadri cliccabili (`p._a.lbls`), ma il menu dello spettro (gestore del clic destro, ramo `p.type === "spec"`: `let m = null, bestd = 1e9; d0.mz.forEach(...)`) cerca da solo il punto **più vicino in pixel con intensità > 0**, quindi anche un picchetto o un isotopo accanto. Correggi con UNA sola funzione usata da passaggio del mouse, clic destro, righello e annotazioni:
-- clic dentro il riquadro di un'etichetta (`p._a.lbls`) → esattamente il picco di quell'etichetta;
-- altrimenti → il picco che il passaggio del mouse sta evidenziando (`p._a.snap`), cioè lo stesso m/z mostrato nel riquadro del mouse;
-- l'm/z nel titolo del menu, in «Estrai l'XIC di m/z …» e nella finestra dell'XIC è quello del picco scelto, scritto come nell'etichetta.
-e2e: clic destro sull'etichetta di un picco con un isotopo vicino (364.4 con 365.4/366.x nel t0) → menu e XIC usano 364.4; stesso risultato cliccando sulla barra del picco.
-
-**1.1 «segue il cursore» compare su spettri che non lo seguono (bug).** Con un cromatogramma e due spettri sotto, entrambi mostrano il segno 🔗 «segue il cursore», ma solo uno si muove con il cursore (l'altro resta a RT 12.23). Regola (`AGENTS.md` sez. 11): per ogni cromatogramma UN solo spettro «vivo» (`p.link`); i precedenti sono congelati (`freezeSpec`, restano figli con `src`). Correggi: il segno compare SOLO sullo spettro vivo; i congelati mostrano «fermo a RT 12.23 min» e nel menu «Ricollega al cromatogramma». Trova come è nato il caso (doppio clic, «Spettro a questo RT», frecce, ripristino del taccuino) e correggi la causa, non solo l'etichetta. e2e: due spettri dallo stesso cromatogramma → un solo segno; muovendo il cursore cambia solo quello.
-
-**1.2 Lucchetto dell'asse y aperto di default (deciso da Federico).** In tutti gli spettri il lucchetto parte **aperto** e **non si chiude mai da solo** (nemmeno con le frecce ← →): lo chiude lo studente, e resta chiuso finché non lo riapre (o fino a «Vista intera»/doppio clic). Inoltre l'icona oggi **copre l'etichetta più alta dell'asse y** (es. «3.0e+8»): spostala fuori dai numeri (sopra l'asse, con un margine). Aggiorna i test che si aspettavano la chiusura automatica.
-
-**1.3 Clic destro su un picco → XIC diretto, senza finestra.** «Estrai l'XIC di m/z …» dal menu dello spettro apre **subito** il pannello XIC (sotto lo spettro, come già fa) con la finestra predefinita (regola unitaria in uso, `XIC_BELOW`/`XIC_DRIFT`), dal file dello spettro, **senza** `#xicdlg`. La finestra si cambia poi dall'intestazione del pannello XIC. Il dialogo resta per il pulsante XIC (Blocco 3).
-
-**1.4 Voce «Aggiungi a «Ione estratto (XIC)»» incomprensibile.** Diventa **«Sovrapponi all'XIC di m/z 194.2 (pannello 3)»** (m/z e numero del pannello di destinazione), etichetta: «Aggiunge questo ione nello stesso grafico: per vedere se due ioni escono allo stesso tempo». Una voce per pannello XIC della scheda (se più di 3: sottomenu «Sovrapponi a un XIC…»).
-
-**1.5 «Ripristina zoom» in cima al menu.** In **tutti** i grafici (spettro compreso), con uno zoom attivo (x o y) la prima voce del clic destro è «Ripristina zoom»; senza zoom la voce non c'è.
-
-**1.6 Annotazioni.** Oggi l'etichetta è collegata al picco con una linea dello stesso colore della traccia, quindi il picco sembra più alto; e con uno zoom che esclude il picco l'etichetta resta sul bordo e sembra puntare fuori.
-- linea di collegamento **grigia, sottile, tratteggiata**, che parte 3-4 px **sopra** la punta del picco;
-- etichetta con testo `--ink`, bordo grigio sottile, sfondo del pannello: mai nel colore della traccia;
-- punto annotato **fuori dall'intervallo visibile** → etichetta e linea **non si disegnano** (ricompaiono quando torna in vista). Spettri, cromatogrammi e PNG.
-- e2e: presente in vista, assente dopo uno zoom che la esclude, colore della linea ≠ colore della traccia.
-
-**1.7 RT con 2 decimali.** Nell'interfaccia il tempo di ritenzione ha **2 decimali** ovunque: riquadro che segue il mouse, riga della scansione sotto lo spettro e sotto il cromatogramma («scansione 788/1111 · RT 14.32 min»), titoli degli spettri congelati, menu, etichette, tabelle a video. Cerca `toFixed(3)` vicino a `rt` (es. `stepScan`, `specCaption`). Negli Excel resta il valore completo.
 
 ---
 

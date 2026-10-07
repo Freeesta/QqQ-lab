@@ -84,7 +84,7 @@ function peakTable(p) {
   const dd = a.data[0], d = dd.d, cps = d.y0 || d.y, top = Math.max(...cps, 1e-9);
   const all = d.mz.map((m, i) => ({ mz: m, cps: cps[i], pct: cps[i] / top * 100 })).filter(r => r.cps > 0);
   const f = dd.f, ce = p.level === 2 && p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null;
-  const ctx = [f.label, p.r0 != null ? (p.r1 - p.r0 > 1.6 * scanStep() ? `RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min` : `RT ${((p.r0 + p.r1) / 2).toFixed(3)} min`) : "", d.scans === 1 && d.i0 != null ? `scansione ${d.i0 + 1}` : `media di ${d.scans} scansioni`,
+  const ctx = [f.label, p.r0 != null ? (p.r1 - p.r0 > 1.6 * scanStep() ? `RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min` : `RT ${((p.r0 + p.r1) / 2).toFixed(2)} min`) : "", d.scans === 1 && d.i0 != null ? `scansione ${d.i0 + 1}` : `media di ${d.scans} scansioni`,
     p.level === 2 ? `MS2${p.prec != null ? ", precursore " + p.prec : ""}${ce != null ? ", CE " + ce + " eV" : ""}` : "MS1"].filter(Boolean);
   const it = /^it/i.test(navigator.language || "");
   const st = { col: "pct", dir: -1 }, lo0 = +a.x0.toFixed(1), hi0 = +a.x1.toFixed(1);
@@ -163,7 +163,7 @@ function scanLine(p, data, d0) {
   const f = data[0].f, parts = [];
   const i = p.si != null ? p.si : d0.i0, n = d0.n;
   parts.push(d0.scans === 1 && i != null ? `scansione ${i + 1}${n ? "/" + n : ""}` : `media di ${d0.scans} scansioni`);
-  parts.push(d0.scans === 1 || p.r1 - p.r0 <= 1.6 * scanStep() ? `RT ${((p.r0 + p.r1) / 2).toFixed(3)} min` : `RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min`);
+  parts.push(d0.scans === 1 || p.r1 - p.r0 <= 1.6 * scanStep() ? `RT ${((p.r0 + p.r1) / 2).toFixed(2)} min` : `RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min`);
   if (p.level === 2) { const ce = p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null; parts.push("MS2" + (p.prec != null ? ` · precursore ${p.prec}` : "") + (ce != null ? ` · CE ${ce} eV` : "")); }
   parts.push(`${d0.scans === 1 ? "TIC" : "TIC medio"} ${e(tic)}`);
   if (raw.length) parts.push(`picco base <i>m/z</i> ${d0.mz[bi].toFixed(1)} (${e(raw[bi])})`);

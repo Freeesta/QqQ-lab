@@ -33,14 +33,14 @@ try:
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom')"); c = pt(pg, ci, 12.0)
             pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
             items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); print([i[0] for i in items])
-            assert ["Ripristina zoom", "dim"] in items and any(i[0] == "Estrai uno ione (XIC)…" for i in items), items          # no zoom yet: disabled
+            assert not any(i[0] == "Ripristina zoom" for i in items) and any(i[0] == "Estrai uno ione (XIC)…" for i in items), items          # no zoom yet: no such entry
             pg.locator("#ctx div", has_text="Estrai uno ione").first.click(); pg.wait_for_timeout(300)
             assert dlg() and not pg.evaluate("document.querySelector('#askdlg').open"); pg.click("#xic-no")      # the same window, not a separate question
             pg.locator("#dpanels .pnl.chrom [data-a=izoom]").click(); box = pg.locator("#dpanels .pnl.chrom canvas").bounding_box()
             pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(13)"), box["y"] + 100); pg.mouse.down(); pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(16)"), box["y"] + 100, steps=5); pg.mouse.up(); pg.wait_for_timeout(500)
             assert pg.evaluate(f"E.panels[{ci}].zoom") and pg.locator("#dpanels .pnl.chrom [data-a=fit]").is_enabled()
             c = pt(pg, ci, 14.3); pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
-            items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); assert ["Ripristina zoom", ""] in items, items
+            items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); assert items[0] == ["Ripristina zoom", ""], items          # with a zoom it is the first entry
             pg.locator("#ctx div", has_text="Ripristina zoom").first.click(); pg.wait_for_timeout(500)
             assert pg.evaluate(f"E.panels[{ci}].zoom") is None and pg.locator("#dpanels .pnl.chrom [data-a=fit]").is_disabled()
             pg.locator("#dpanels .pnl.chrom [data-a=izoom]").click()
@@ -53,11 +53,14 @@ try:
         step("integrating from the TIC offers the same XIC window", guard)
         def spec_menu():
             si = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')"); a = pg.evaluate(f"""()=>{{const p=E.panels[{si}],r=p.cv.getBoundingClientRect(),d=p._a.data[0].d;let j=0;d.y.forEach((v,i)=>{{if(v>d.y[j])j=i}});return {{px:r.left+p._a.X(d.mz[j]),py:r.top+p._a.Y(d.y[j])+6}}}}""")
+            n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').length")
             pg.mouse.click(a["px"], a["py"], button="right"); pg.wait_for_timeout(300)
-            pg.locator("#ctx div", has_text="Estrai l'XIC").first.click(); pg.wait_for_timeout(400)
-            assert dlg() and "m/z" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") != "", pg.inner_text("#xic-sum")
-            pg.click("#xic-no")
-        step("right click on a peak of the spectrum opens the window already filled in", spec_menu)
+            pg.locator("#ctx div", has_text="Estrai l'XIC").first.click(); pg.wait_for_timeout(600)
+            assert not dlg(), "no dialog: the XIC appears at once"
+            assert pg.evaluate("E.panels.filter(p=>p.type==='xic').length") == n0 + 1
+            t = pg.evaluate("(()=>{const x=E.panels.filter(p=>p.type==='xic').pop().traces[0];return [x.mz,x.w,x.label]})()"); print(t)
+            assert t[2].startswith("m/z ") and abs(t[1] - 0.5) < 1e-9, t          # default unit window [n-0.2, n+0.8]
+        step("right click on a peak of the spectrum extracts the XIC at once, no window", spec_menu)
         def groups():
             for sel, expect in [(".pnl.chrom", ["izoom", "fit", "tlink", "iauto", "iman", "xic", "up", "down", "png", "xlsx", "max"]), (".pnl.xic", ["izoom", "fit", "tlink", "iauto", "iman", "up", "down", "png", "xlsx", "max"]), (".pnl.spec", ["fit", "rul", "par", "ptab", "up", "down", "png", "xlsx", "max"])]:
                 got = pg.evaluate(f"[...document.querySelector('{sel}').querySelectorAll('.tbs [data-a]')].filter(b=>b.tagName==='BUTTON'&&!b.hidden).map(b=>b.dataset.a)"); assert got == expect, (sel, got)

@@ -31,10 +31,13 @@ try:
         step("spectrum: x axis is the same for every scan (whole range of the file)", x_fixed)
         def lock_y_only():
             pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(500)
+            assert pg.evaluate(f"!{SPEC}.lock"), "open by default, the arrows do not close it"
+            pg.click(".pnl.spec [data-a=lock]"); pg.wait_for_timeout(400)
             assert pg.evaluate(f"!!{SPEC}.lock")
             lk = pg.evaluate(f"(()=>{{const s={SPEC};return Object.keys(s.lock)}})()"); assert "x0" not in lk and "ymax" in lk, lk
             b = pg.evaluate(f"(()=>{{const s={SPEC},r=s.el.querySelector('.lkb').getBoundingClientRect(),c=s.cv.getBoundingClientRect();return {{dx:r.left-c.left,dy:r.top-c.top,w:r.width}}}})()")
-            assert b["dx"] < 30 and b["dy"] < 30 and b["w"] <= 24, b          # small, at the top left of the plot, near the y axis
+            assert b["dx"] < 90 and b["dy"] < 16 and b["w"] <= 24, b          # small, in the top margin above the plot, near the y axis
+            top = pg.evaluate(f"(()=>{{const s={SPEC},r=s.el.querySelector('.lkb').getBoundingClientRect(),c=s.cv.getBoundingClientRect();return r.bottom-c.top<=14.5}})()"); assert top, "the lock must not cover the numbers of the y axis"
             assert pg.evaluate(f"!{SPEC}.el.querySelector('.tbs [data-a=lock]')"), "not in the button bar"
         step("lock: y only, small button near the y axis", lock_y_only)
         def no_yz():

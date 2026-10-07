@@ -229,6 +229,7 @@ function restoreUi() {
     ...sp, tab: sp.tab || (sp.type === "mrm" ? "mrm" : E.files[kof(sp.k)]?.kind === "ms2" ? "ms2" : "full"), k: sp.k ? kof(sp.k) : undefined, ref: sp.ref ? kof(sp.ref) : "", bk: sp.bk ? kof(sp.bk) : "", bg: sp.bg === "w" ? "w" : sp.bg ? kof(sp.bg) : "", traces: (sp.traces || []).map(t => ({ id: E.seq++, ...t })), link: null, ints: sp.ints || [], anns: sp.anns || []
   }));
   u.panels.forEach((sp, i) => { if (sp.link >= 0 && made[sp.link]) made[i].link = made[sp.link].id; if (sp.src >= 0 && made[sp.src]) made[i].src = made[sp.src].id; });
+  made.forEach(q => { if (q.type === "spec" && q.link) ctl(q); });     // one live spectrum per chromatogram, even in an old notebook
   if (E.files[E.cur]?.kind !== E.tab) E.cur = (tabFiles()[0] || { k: 0 }).k;
   renderFileList(); return true;
 }
@@ -435,7 +436,7 @@ function menu(ev, items) {
   items.forEach(it => {
     if (it === "-") { m.appendChild(document.createElement("hr")); return; }
     const d = document.createElement("div");
-    d.textContent = it.label;
+    d.textContent = it.label; if (it.tip) d.title = it.tip;
     if (it.dim) d.className = "dim"; else d.onclick = () => { m.hidden = true; it.fn(); };
     m.appendChild(d);
   });
@@ -730,14 +731,14 @@ function stepScan(p, d, o = {}) {
   if (!o.noLock) lockStart(p, k);
   if (full) draw(p); else { cursorLine(p); uiSave(); }
   pushLinked(p, lo, hi, k, true, { step: true, i, dir: sg });
-  stepMsg(p, `scansione ${i + 1}/${tot} · RT ${rt.toFixed(3)} min`, true);
+  stepMsg(p, `scansione ${i + 1}/${tot} · RT ${rt.toFixed(2)} min`, true);
   return true;
 }
 function stepMsg(p, t, keep) { p.rd.textContent = t; if (keep) p._msg = t; }
 // "zoom bar" in the top margin: where the visible window sits in the whole axis, plus the visible range in words; "Vista intera" button
 function afterDraw(p) {
   const rl = p.el.querySelector(".rtl");           // retention time of the spectrum, next to the title
-  if (rl) { if (p.r0 == null) rl.textContent = ""; else { const m = (p.r0 + p.r1) / 2, wide = p.r1 - p.r0 > 1.6 * scanStep(); rl.textContent = wide ? `RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min` : `RT ${m.toFixed(2)} min`; } }
+  if (rl) { if (p.r0 == null) rl.textContent = ""; else { const m = (p.r0 + p.r1) / 2, wide = p.r1 - p.r0 > 1.6 * scanStep(); const rt = wide ? `RT ${p.r0.toFixed(2)}-${p.r1.toFixed(2)} min` : `RT ${m.toFixed(2)} min`; rl.textContent = p.src != null && !p.link && p.type === "spec" ? "fermo a " + rt : rt; } }
   const btn = p.el.querySelector('[data-a="fit"]'), z = !!(p._a && (p.zoom || p.zoomY));
   if (btn) btn.disabled = !z;                      // always there (the layout does not jump), active only when zoomed
   lockButton(p); cursorLine(p);
@@ -804,6 +805,7 @@ async function pngWithMeta(blob, fields) {
 function ctl(p) {
   const c = p.el.querySelector(".ctl"), t = p.el.querySelector(".ttl");
   t.textContent = p.type === "xic" && p.traces.length === 1 && p.title === "Ione estratto (XIC)" ? "XIC · " + p.traces[0].label : p.title;      // a single trace is named in the title
+  if (p.type === "spec" && p.link && (!E.panels.some(q => q.id === p.link) || E.panels.some(q => q !== p && q.type === "spec" && q.link === p.link && q.id > p.id))) { p.src = p.src || p.link; p.link = null; }   // only the newest spectrum of a chromatogram is live; a link to a closed chromatogram is dropped
   if (p.type === "spec" && p.link) t.insertAdjacentHTML("beforeend", ` <span class="lk" title="Questo spettro segue il cromatogramma: un clic, il cursore, le frecce o una selezione lo aggiornano. Gli altri spettri aperti da quel cromatogramma restano fermi al loro tempo.">&#128279; segue il cursore</span>`);
   const T0 = p.tab || E.tab, ms2c = p.type === "chrom" && T0 === "ms2", mrmP = p.type === "mrm";
   if (ms2c) { p.kind = "tic"; p.mz0 = p.mz1 = null; p.bk = ""; p.snip = false; p.log = false; }      // precursor chromatogram: only the MS2 scans of the precursor
@@ -901,6 +903,16 @@ const XIC_DRIFT = 0.25;  // mean offset (Da) of the observed centroids over the 
 const xicNominal = (v, obs) => Math.round(obs ? v - XIC_DRIFT : v);
 const xicWin = (v, obs) => { const n = xicNominal(v, obs); return [rh(n - XIC_BELOW, 1), rh(n + 1 - XIC_BELOW, 1)]; };
 let XIC_LAST = null;       // the last ion the student asked for ({mz} or {formula, adduct}): the window opens with it, still editable
+// Right click on a peak of the spectrum: the XIC appears at once, with the default unit window and no dialog; the window is changed afterwards from the header of the XIC panel.
+function xicDirect(mz, after, panel) {
+  const [a, b] = xicWin(mz, true), c = rh((a + b) / 2, 2), w = rh((b - a) / 2, 2), lab = `m/z ${fmz(a)}-${fmz(b)}`;
+  XIC_LAST = { mz };
+  if (panel && E.panels.includes(panel)) { addTrace(panel, c, lab, w); reveal(panel); return panel; }
+  const np = addPanel("xic", { traces: [{ id: E.seq++, mz: c, w, label: lab }] });
+  if (after && E.panels.includes(after)) { stackAfter(np, after); relayout(); fitHost(); }
+  reveal(np); return np;
+}
+const xicName = q => { const t = q.traces[0]; return t ? "m/z " + (t.w != null ? Math.round(t.mz - (0.5 - XIC_BELOW)) : fmz(t.mz)) + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : "vuoto"; };
 function openXic(panel, pre = {}) {
   if (!pre.formula && pre.mz == null && XIC_LAST) pre = { ...XIC_LAST, ...pre };
   const d = Q("#xicdlg"), q = Q("#xic-q"), mzi = Q("#xic-mz"), sum = Q("#xic-sum"), err = Q("#xic-err"), ad = Q("#xic-ad");
@@ -1060,15 +1072,15 @@ function frame(g, W, H, xt, yt, xtitle, ytitle) {
 }
 // an annotation: a small framed label (panel background, accent border, 12 px text) joined to its point by a thin line; it stays inside the plot and goes to the side when there is no room above
 function drawAnn(p, g, a, px, py, W, gap) {
+  if (a.x < p._a.x0 || a.x > p._a.x1) return;                       // the annotated point is outside the zoomed range: neither label nor line (they come back when it is in view)
   g.save(); g.font = "12px system-ui"; const tw = g.measureText(a.text).width, w = tw + 12, h = 20;
   let bx = px - w / 2, by = py - gap - h;
   if (by < M.t + 1) { by = Math.max(M.t + 1, Math.min(py - h / 2, p._a.H - M.b - h - 1)); bx = px + 14; if (bx + w > W - M.r) bx = px - 14 - w; }       // no room above: to the side
   bx = Math.max(M.l + 2, Math.min(W - M.r - w - 2, bx));
   const ex = Math.max(bx, Math.min(bx + w, px)), ey = by + h < py ? by + h : (by > py ? by : by + h / 2);                       // where the thin line meets the box
-  g.strokeStyle = css("--accent"); g.lineWidth = 1; g.beginPath(); g.moveTo(px, py - 2); g.lineTo(ex, ey); g.stroke();
-  g.beginPath(); g.arc(px, py - 2, 2, 0, 7); g.fillStyle = css("--accent"); g.fill();
+  g.strokeStyle = css("--muted"); g.lineWidth = 1; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(px, py - 4); g.lineTo(ex, ey); g.stroke(); g.setLineDash([]);       // thin, grey, dashed, 4 px above the tip: never the colour of the trace (it would look like a taller peak)
   const r = 4; g.beginPath(); g.moveTo(bx + r, by); g.lineTo(bx + w - r, by); g.quadraticCurveTo(bx + w, by, bx + w, by + r); g.lineTo(bx + w, by + h - r); g.quadraticCurveTo(bx + w, by + h, bx + w - r, by + h); g.lineTo(bx + r, by + h); g.quadraticCurveTo(bx, by + h, bx, by + h - r); g.lineTo(bx, by + r); g.quadraticCurveTo(bx, by, bx + r, by); g.closePath();
-  g.fillStyle = css("--panel"); g.fill(); g.strokeStyle = css("--accent"); g.stroke();
+  g.fillStyle = css("--panel"); g.fill(); g.strokeStyle = css("--muted"); g.stroke();
   g.fillStyle = css("--ink"); g.textAlign = "left"; g.fillText(a.text, bx + 6, by + 14);
   g.restore();
   (p._a.lbls = p._a.lbls || []).push({ x: bx, y: by, w, h, ann: a, tip: `<b>${EH(a.text)}</b><div class="sm">Doppio clic: modifica · tasto destro: azioni</div>` });
@@ -1646,7 +1658,7 @@ async function drawSpec(p) {
   pk.sort((a, b) => b[1] - a[1]); const used = [];
   g.fillStyle = css("--ink"); g.textAlign = "center"; g.font = "10.5px system-ui";
   const lbls = []; p._a.lbls = lbls;                      // clickable labels: hover draws a small box, right click opens the menu
-  for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= NL) continue; used.push(px); const t = m.toFixed(DEC), w = g.measureText(t).width; g.fillText(t, px, Y(y) - 4); lbls.push({ x: px - w / 2 - 3, y: Y(y) - 16, w: w + 6, h: 15, tip: `<b>m/z ${m.toFixed(2)}</b><div class="sm">Tasto destro: azioni</div>` }); }
+  for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= NL) continue; used.push(px); const t = m.toFixed(DEC), w = g.measureText(t).width; g.fillText(t, px, Y(y) - 4); lbls.push({ m, x: px - w / 2 - 3, y: Y(y) - 16, w: w + 6, h: 15, tip: `<b>m/z ${m.toFixed(2)}</b><div class="sm">Tasto destro: azioni</div>` }); }
   g.font = "11px system-ui";
   for (const a of p.anns) {                                        // the point is the top of the nearest observed peak
     let ay = 0, bd = 0.7; d0.mz.forEach((m, j) => { const dd = Math.abs(m - a.x); if (dd < bd) { bd = dd; ay = d0.y[j]; } });
@@ -1772,7 +1784,7 @@ function attach(p) {
     else if (p.type !== "spec") {
       const tt = p.ms2tri && p._a.tri && d.y0 < M.t + 14 ? p._a.tri.reduce((b, q) => (Math.abs(q.px - d.x0) < 6 && (!b || Math.abs(q.px - d.x0) < Math.abs(b.px - d.x0)) ? q : b), null) : null;
       if (tt) { goMs2(tt); return; }                         // a triangle: that MS2 scan in the MS² tab
-      p.sel = null; p.cur = x0; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, x0, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, `scansione più vicina con dati · RT ${sn.rt.toFixed(3)} min`, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else pushLinked(p, x0 - dt / 2, x0 + dt / 2, nearestFile(p, x0));
+      p.sel = null; p.cur = x0; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, x0, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, `scansione più vicina con dati · RT ${sn.rt.toFixed(2)} min`, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else pushLinked(p, x0 - dt / 2, x0 + dt / 2, nearestFile(p, x0));
     }
   };
   addEventListener("mouseup", p._up);
@@ -1850,11 +1862,19 @@ function newSpec(from, r0, r1, k, link = from.id) {
   return s;
 }
 
+// The peak a click on the spectrum means: a click inside the box of a peak label gives exactly that peak; otherwise the peak the mouse box highlights (p._a.snap).
+// Hover, right-click menu, ruler and XIC all use it, so the m/z they show is always the same.
+function specPick(p, px, py) {
+  const a = p._a; if (!a) return null;
+  const lb = (a.lbls || []).find(l => l.m != null && px >= l.x && px <= l.x + l.w && py >= l.y && py <= l.y + l.h);
+  if (lb) return lb.m;
+  const s = a.snap && a.snap(px); return s ? s.m : null;
+}
 function ctxFor(p, e, x, px, py) {
   if (!p._a) return e.preventDefault();
   const items = [];
   const inLbl = a => (p._a.lbls || []).some(l => l.ann === a && px >= l.x && px <= l.x + l.w && py >= l.y && py <= l.y + l.h);
-  const near = p.anns.find(a => inLbl(a) || Math.abs(p._a.X(a.x) - px) < 14);
+  const near = p.anns.find(a => a.x >= p._a.x0 && a.x <= p._a.x1 && (inLbl(a) || Math.abs(p._a.X(a.x) - px) < 14));
   if (p.type === "map" && p._a.is3d) {
     items.push({ label: "Vista 3D: per estrarre un XIC o uno spettro passa alla vista 2D", dim: true }, { label: "Passa alla vista 2D", fn: () => setMapView(p, "2d") }, { label: "Riporta la prospettiva iniziale", fn: () => { p.az = 25; p.elv = 38; draw(p); uiSave(); } });
   } else if (p.type === "map") {
@@ -1867,13 +1887,15 @@ function ctxFor(p, e, x, px, py) {
     items.push({ label: "Spettro a questo RT", fn: () => newSpec(p, x - dt / 2, x + dt / 2, f.k) });
   } else if (p.type === "spec") {
     const a = p._a, d0 = a.data[0].d;
-    let m = null, bestd = 1e9;                              // the click snaps to the nearest peak within ~10 px; on empty space the m/z entries are grey
-    d0.mz.forEach((v, j) => { if (v < a.x0 || v > a.x1) return; const dd = Math.abs(a.X(v) - px); if (dd < 10 && dd < bestd && d0.y[j] > 0) { bestd = dd; m = v; } });
+    const m = specPick(p, px, py);                          // the SAME peak that the label and the mouse box show; on empty space the m/z entries are grey
     const has = m != null, lab = has ? m.toFixed(1) : "…", mi = o => has ? o : { label: o.label, dim: true };
     items.push({ label: has ? `m/z ${lab}` : "nessun picco qui: clic destro su un picco", dim: true }, "-");
-    items.push(mi({ label: `Estrai l'XIC di m/z ${lab}`, fn: () => openXic(null, { mz: m, obs: true, after: p }) }));
-    tabPanels().filter(q => q.type === "xic").forEach(q => items.push(mi({ label: `Aggiungi a «${q.title}»`, fn: () => openXic(q, { mz: m, obs: true }) })));
-    { const sp0 = a.snap(px), mm = sp0 ? sp0.m : m; items.push("-", ...measMenu(p, mm).map((o, i) => i === 0 ? mi(o) : o)); }
+    items.push(mi({ label: `Estrai l'XIC di m/z ${lab}`, fn: () => xicDirect(m, p) }));
+    const xs = tabPanels().filter(q => q.type === "xic"), TIPX = "Aggiunge questo ione nello stesso grafico: per vedere se due ioni escono allo stesso tempo";
+    const ov = q => ({ label: `Sovrapponi all'XIC di ${xicName(q)} (pannello ${q.num || "?"})`, tip: TIPX, fn: () => xicDirect(m, p, q) });
+    if (xs.length > 3) items.push(mi({ label: "Sovrapponi a un XIC…", tip: TIPX, fn: () => menu({ preventDefault() {}, clientX: e.clientX, clientY: e.clientY }, xs.map(ov)) }));
+    else xs.forEach(q => items.push(mi(ov(q))));
+    items.push("-", ...measMenu(p, m).map((o, i) => i === 0 ? mi(o) : o));
     items.push(mi({ label: "Annota questo picco…", fn: async () => { const v = await ask("Annotazione per m/z " + lab, ""); if (v) { p.anns.push({ x: m, text: v }); draw(p); } } }));
     items.push({ label: "Profilo isotopico di una formula…", fn: async () => {
       const v = await ask("Formula della molecola neutra (es. C9H10Cl2N2O). Facoltativo l'addotto dopo uno spazio, es. <b>C9H10Cl2N2O [M+Na]+</b>; senza addotto: " + EH(defAdduct(a.data.map(x => x.f))), p.iso ? p.iso.formula + " " + p.iso.ad : "");
@@ -1900,13 +1922,13 @@ function ctxFor(p, e, x, px, py) {
     if (p.type === "xic") {
       items.push({ label: "Aggiungi un altro ione…", fn: () => openXic(p) });
     }
-    items.push({ label: "Ripristina zoom", fn: () => { p.zoom = null; p.zoomY = null; draw(p); }, dim: !(p.zoom || p.zoomY) });
     items.push("-", ...intMenuItems(p, x, near, py));
     { const ib = ibkMenuItems(p); if (ib.length) items.push("-", ...ib); }
     items.push("-", { label: "Annota questo punto…", fn: async () => { const v = await ask("Annotazione a RT " + x.toFixed(2), ""); if (v) { p.anns.push({ x, text: v }); draw(p); } } });
   }
   if (near) items.push("-", { label: `Modifica «${near.text}»`, fn: async () => { const v = await ask("Annotazione", near.text); if (v) { near.text = v; draw(p); } } },
     { label: `Elimina «${near.text}»`, fn: () => { p.anns = p.anns.filter(a => a !== near); draw(p); } });
+  if (!(p.type === "map" && p._a.is3d) && (p.zoom || p.zoomY)) items.unshift({ label: "Ripristina zoom", fn: () => { p.zoom = null; p.zoomY = null; draw(p); } }, "-");     // with a zoom active it is always the first entry
   menu(e, items);
 }
 

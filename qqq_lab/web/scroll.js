@@ -49,13 +49,7 @@ function scAhead(s) {
 }
 
 // ---- frozen intensity axis while walking (the m/z axis is always fixed, see drawSpec). s.lock = {ymax, z (zoom when locked), k (file), fresh}; {pending:true} = to be measured at the next draw
-function lockStart(p, k) {
-  E.panels.filter(s => s.type === "spec" && s.link === p.id && !s.lock && !s.noAuto).forEach(s => {
-    const a = s._a;
-    s.lock = a ? { ymax: a.ymax, z: s.zoom ? s.zoom.join() : "", k, fresh: true } : { pending: true };
-    lockButton(s);
-  });
-}
+function lockStart() { /* the lock never closes by itself (7 Oct 2026, Federico): only the student closes it, with the lock button */ }
 // y = the highest peak of +-20 scans in the visible m/z range (from the cache) x 1.12, and it can only grow (no cut peaks)
 function lockSync(p, k, x0a, x1a, ymaxA, inRange, one) {
   const lk = p.lock; if (!lk) return null;
@@ -76,12 +70,12 @@ function lockButton(p) {
   const b = p.el && p.el.querySelector('[data-a="lock"]'); if (!b) return;
   const on = !!p.lock;
   b.innerHTML = on ? IC_LOCK : IC_UNLOCK; b.classList.toggle("on", on);
-  b.style.left = p.cv.offsetLeft + 2 + "px"; b.style.top = p.cv.offsetTop + 1 + "px"; b.hidden = !!p._exp;       // small, at the top of the intensity axis
+  b.style.left = p.cv.offsetLeft + M.l + 4 + "px"; b.style.top = p.cv.offsetTop + 0 + "px"; b.hidden = !!p._exp;       // small, in the top margin just above the plot, so it never covers the numbers of the intensity axis
   b.title = on ? "Asse delle intensità bloccato: clic per sbloccare" : "Blocca l'asse delle intensità: così vedi crescere e calare i picchi fra una scansione e l'altra";
 }
 function toggleLock(p) {
-  if (p.lock) { p.lock = null; p.noAuto = true; }                   // unlocked by hand: the arrows do not lock it again until it is locked by hand
-  else { p.noAuto = false; const a = p._a; p.zoomY = null; p.lock = a ? { ymax: a.ymax, z: p.zoom ? p.zoom.join() : "", k: a.data[0].f.k, fresh: p.si != null } : { pending: true }; }
+  if (p.lock) p.lock = null;
+  else { const a = p._a; p.zoomY = null; p.lock = a ? { ymax: a.ymax, z: p.zoom ? p.zoom.join() : "", k: a.data[0].f.k, fresh: p.si != null } : { pending: true }; }
   lockButton(p); draw(p); uiSave();
 }
 
