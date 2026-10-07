@@ -9,7 +9,6 @@ from pathlib import Path
 
 import numpy as np
 
-from .convert import to_mzml
 from .project import guess_sample
 from .reader.mzml import Run
 
@@ -18,7 +17,7 @@ class Item:
     def __init__(self, file: str, label: str | None, time, typ: str, path: Path, conc: float | None = None, cunit: str | None = None):
         self.file, self.time, self.type, self.path, self.conc, self.cunit = file, time, typ, path, conc, cunit
         self.label = label or Path(file).stem
-        self.run = Run(to_mzml(path))
+        self.run = Run(path)
         self._bpc: dict = {}
 
     def info(self) -> dict:

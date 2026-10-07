@@ -14,7 +14,7 @@ Apri https://freeesta.github.io/QqQ-lab/ in un browser recente (Chrome o Edge 90
 **dentro il tuo browser** (Pyodide, WebAssembly). La prima volta si scaricano circa 15 MB (mezzo minuto), poi la
 pagina parte subito. I file mzML non vengono caricati su nessun server: restano nella memoria della pagina e nello
 spazio del browser, così alla riapertura la sessione riprende da dove l'avevi lasciata (sullo stesso computer e
-browser). Dopo la prima visita funziona anche senza internet (copia nel browser). Non c'è la conversione dei `.wiff` (serve msconvert): converti prima in mzML.
+browser). Dopo la prima visita funziona anche senza internet (copia nel browser). I `.wiff` non si aprono: converti prima in mzML (vedi sotto).
 **I tuoi file non lasciano il tuo computer**: la pagina non li invia a nessun server (la pagina stessa limita per regola le connessioni a se stessa).
 **Installare come app** (versione online): Chrome/Edge, icona "Installa" nella barra degli indirizzi; Safari su Mac, File → Aggiungi al Dock; iPhone/iPad, Condividi → Aggiungi alla schermata Home. Dopo la prima visita funziona anche offline (controllato con Chrome: nessun errore di installabilità, service worker attivo, test offline in `tests_e2e/e2e13.py`).
 Come si pubblica: vedi `AGENTS.md`, sezione "Versione nel browser".
@@ -26,7 +26,7 @@ Il taccuino (pannelli, XIC, integrazioni, annotazioni, disegni) si salva da solo
 
 ## Sviluppo (solo per chi modifica il programma)
 
-`pip install -e .` una volta, poi `python -m qqq_lab app` (opzioni `--workdir CARTELLA`, `--port`): server locale usato per i test e2e. Gli studenti usano solo il sito.
+Il programma gira solo nel browser (sito su GitHub Pages). Per le prove c'è un piccolo server di test, `tools/dev_server.py` (lo avvia da solo `tests_e2e/lib.py`); gli studenti non lo usano. Verifica completa con un comando: `python3 tools/verifica.py`.
 
 ## Le schede
 
@@ -38,7 +38,7 @@ Il taccuino (pannelli, XIC, integrazioni, annotazioni, disegni) si salva da solo
   integrazione con tabella delle aree nel tempo (per le cinetiche) esportabile in Excel (.xlsx).
   Popup "Metodo" (parametri dello strumento) e "Calcolatrice m/z".
 - **Tavola periodica** e **Addotti** (pulsanti in alto a destra): masse esatte e abbondanze isotopiche passando sopra gli elementi; tabella degli addotti ESI con l'm/z calcolato da una massa o una formula; profilo isotopico di una formula (M, M+1, M+2..., calcolato dal programma), che si può anche sovrapporre a uno spettro con il clic destro; perdite neutre più comuni.
-- **Teoria**: dodici capitoli sulla teoria dell'esperienza (prodotti di trasformazione, fotocatalisi TiO2, LC in fase inversa, elettrospray, vuoto, teoria del quadrupolo, triplo quadrupolo e CID, come si frammentano gli ioni, full scan/MS2/MRM, strategia per i TP, glossario e bibliografia), con figure interattive calcolate nel browser. Si apre anche **senza il programma**, con doppio clic su `Teoria QqQ lab.html` (o `qqq_lab/web/teoria/index.html`), in qualsiasi browser e offline.
+- **Teoria**: dodici capitoli sulla teoria dell'esperienza (prodotti di trasformazione, fotocatalisi TiO2, LC in fase inversa, elettrospray, vuoto, teoria del quadrupolo, triplo quadrupolo e CID, come si frammentano gli ioni, full scan/MS2/MRM, strategia per i TP, glossario e bibliografia), con figure interattive calcolate nel browser. Si apre anche da solo, con doppio clic su `qqq_lab/web/teoria/index.html`, in qualsiasi browser e offline.
 - **Disegno**: editor chimico (Ketcher) per molecole, frammenti e vie di trasformazione. Sotto ogni
   struttura compaiono da sole formula bruta e massa intera (m/z se c'è una carica), sopra ogni freccia la
   differenza fra le due strutture (es. +O). Selezionando una parte della molecola a destra compare il suo
@@ -55,26 +55,21 @@ laboratorio l'asse m/z è spostato di circa +0.3 Da: usa una finestra XIC di +-1
 ## File .wiff
 
 Il programma legge solo mzML. I `.wiff` (con il loro `.wiff.scan`) si convertono con ProteoWizard
-msconvert su Windows: vedi `../esempio_conversione/converti.bat`, oppure `python -m qqq_lab convert file.wiff`
-se msconvert è installato (l'mzML va in `.qqq_lab-cache/`).
-
-Solo per il docente: `python -m qqq_lab metodo FILE.dam -o metodo.json` legge i parametri del metodo
-(sorgente e composto) per il popup "Metodo".
+MSConvert su Windows (la guida è nella schermata di caricamento del sito).
 
 ## Cosa puoi modificare, dal più semplice al più profondo
 
 | Cosa | File | Serve programmare? |
 |---|---|---|
 | Interfaccia | `qqq_lab/web/` (`index.html`, `explore.js`, `draw.js`: JavaScript semplice, nessuna compilazione) | un po' |
-| Calcoli | `qqq_lab/explore.py` | sì |
+| Calcoli | `qqq_lab/explore.py`, `qqq_lab/app.py` | sì |
 | Chimica | `qqq_lab/chem/` | sì |
 
 Ketcher (Apache-2.0) e OpenChemLib (BSD-3) sono inclusi in `qqq_lab/web/vendor` (vedi il suo README).
 
-## Altri comandi
+## Test
 
-`metodo` (solo per il docente, vedi sopra). Test: `python3 -m pytest -q tests`; prove nel browser in
-`tests_e2e/` (vedi `AGENTS.md`).
+`python3 -m pytest -q tests`; prove nel browser in `tests_e2e/` (vedi `AGENTS.md`).
 
 ## Limiti noti
 

@@ -18,7 +18,7 @@ Per il testo servono solo i file `.html`. I `.js` vanno toccati solo per cambiar
 
 Un editor di testo semplice: Visual Studio Code (consigliato, colora i tag e segnala gli errori), BBEdit, oppure TextEdit **in modalità testo semplice** (Formato > Converti in testo normale; in Preferenze, "Apri file HTML come codice HTML"). Non Word.
 
-Per vedere la modifica: apri il file con doppio clic (o `Teoria QqQ lab.html` nella cartella `qqq_lab`) e ricarica con Cmd+R. Nell'app, scheda Teoria, ricarica la pagina.
+Per vedere la modifica: apri il file con doppio clic e ricarica con Cmd+R. Nell'app, scheda Teoria, ricarica la pagina.
 
 ## Dove sta il testo
 

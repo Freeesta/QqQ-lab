@@ -8,7 +8,7 @@ import pytest
 
 from qqq_lab import api
 from qqq_lab.demo import make_demo
-from qqq_lab.server import App
+from qqq_lab.app import App
 
 
 def _real_files():

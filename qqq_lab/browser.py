@@ -11,7 +11,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from .api import dispatch
-from .server import App
+from .app import App
 
 WORK = Path("/work/sessione")
 app: App | None = None
@@ -28,8 +28,6 @@ def handle(method: str, url: str, body=None):
     u = urlparse(url)
     path = "/" + u.path.lstrip("./")
     q = {k: v[0] for k, v in parse_qs(u.query).items()}
-    if path == "/api/upload" and q.get("name", "").lower().endswith((".wiff", ".scan")):
-        return 400, json.dumps({"error": "nel browser si aprono solo file .mzML: converti prima il .wiff (guida nella pagina) oppure usa il programma sul computer"})
     data = body.to_bytes() if hasattr(body, "to_bytes") else b""
     code, _ctype, out, _hdr = dispatch(app, method, path, q, BytesIO(data), len(data))
     if path == "/api/remove":                     # nothing to recover in a page: free the memory the removed file used

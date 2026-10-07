@@ -424,7 +424,7 @@ def test_real_flufenacet_series_if_available():
 def test_api_origin_endpoint(tmp_path):
     import io
     from qqq_lab import api
-    from qqq_lab.server import App
+    from qqq_lab.app import App
     folder = demo.make_demo(tmp_path / "d")
     app = App(tmp_path / "w")
     for x in sorted(folder.glob("demo_t*.mzML")):

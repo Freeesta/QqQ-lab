@@ -14,8 +14,6 @@ dist/
 .venv-qqq-lab.log
 
 # Caches, work folders and test output
-.qqq_lab-cache/
-QqQ_lab_lavoro/
 tests_e2e/shots/
 .verifica/
 
@@ -40,4 +38,4 @@ desktop.ini
 # Static site built by tools/build_site.py (published by .github/workflows/pages.yml)
 site/
 
-# TP Mine sources (QqQ_lab_privato/) are in the repo on purpose; they are only kept out of the built site (tools/build_site.py)
+# TP Mine sources (TP_Mine/) are in the repo on purpose; they are only kept out of the built site (tools/build_site.py)

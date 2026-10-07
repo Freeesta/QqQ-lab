@@ -5,7 +5,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
 sys.path.insert(0, str(HERE)); import lib  # noqa: F401  (patches wait_for_function for the CSP)
-SRC = Path(os.environ.get("TPMINE_SRC", ROOT / "QqQ_lab_privato" / "tpmine"))
+SRC = Path(os.environ.get("TPMINE_SRC", ROOT / "TP_Mine"))
 MZ = Path(os.environ.get("QQQ_MZML", ROOT.parent / "Data" / "mzML"))
 PORT = 8842
 steps = []
