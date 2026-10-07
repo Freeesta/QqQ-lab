@@ -20,7 +20,7 @@ def run(code):
     const mono=s=>EL[s].iso.reduce((a,b)=>b[2]>a[2]?b:a)[1];
     const mass=f=>{{let m=0;for(const [,s,n] of f.matchAll(/([A-Z][a-z]?)(\\d*)/g))m+=mono(s)*(n?+n:1);return m}};
     {code}"""
-    return json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, text=True).stdout)
+    return json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, encoding="utf-8").stdout)
 
 
 def neutral_mass(formula):

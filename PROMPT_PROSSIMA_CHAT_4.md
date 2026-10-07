@@ -31,7 +31,7 @@ Lavori in `~/QqQ_lab/QqQ_lab` (Mac) o nel clone GitHub (cloud, con `QqQ-lab-dati
 **Stato** (aggiornalo e fai push a ogni punto finito: è quello che legge la chat successiva). Ogni sessione cambia **solo la riga sotto il suo titolo** (le righe vuote fra una sessione e l'altra evitano i conflitti di git: non toglierle). Formato: punti fatti · punto in corso · ramo non ancora in `main`.
 
 **S1**
-- —
+- A0 fatto (encoding utf-8 nei test con node; CI Windows da ricontrollare) · in corso: A1 · ramo claude/upbeat-johnson-xted9o
 
 **S3**
 - —

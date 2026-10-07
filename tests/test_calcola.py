@@ -11,7 +11,7 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is no
 
 
 def run(code):
-    out = subprocess.run(["node", "-e", f"const c=require({str(JS)!r});{code}"], check=True, capture_output=True, text=True).stdout
+    out = subprocess.run(["node", "-e", f"const c=require({str(JS)!r});{code}"], check=True, capture_output=True, encoding="utf-8").stdout
     return json.loads(out)
 
 
