@@ -16,22 +16,10 @@ Lavori in `~/QqQ_lab/QqQ_lab` (sul Mac) oppure nel clone GitHub (cloud). Leggi `
 - **Aggiorna Federico**: alla fine di OGNI blocco scrivigli un messaggio breve (3-5 righe): cosa hai fatto, cosa non hai potuto fare, cosa provare a mano. Se un punto richiede una scelta che cambia l'interfaccia in modo non descritto qui, fai la versione più semplice e segnalalo nel messaggio.
 
 ## Ordine di lavoro (per importanza)
-(I blocchi A, S, G, B, C, F e H sono fatti: vedi `AGENTS.md` sez. 17. Restano da rifinire: nel menu «Correzione» le voci non hanno ancora l'icona con etichetta (è un menu a tendina con `title`).)
-1. **Blocco I** file misti (DDA, Full Scan + MS2, MRM + EPI, polarità alternate): non urgente, solo dopo gli altri
-2. **Blocco D** licenze
-3. **Blocco E** residui
+(I blocchi A, S, G, B, C, F, H e I sono fatti (il blocco I solo su dati SINTETICI: serve un vero file IDA / MRM-IDA-EPI del 3200 QTRAP per confermare il formato): vedi `AGENTS.md` sez. 17. Restano da rifinire: nel menu «Correzione» le voci non hanno ancora l'icona con etichetta (è un menu a tendina con `title`).)
+1. **Blocco D** licenze
+2. **Blocco E** residui
 Un commit per blocco e un messaggio a Federico per blocco. Se il tempo o i token finiscono, fermati dopo un commit pulito: è meglio finire bene i blocchi 1-2 che iniziare tutto.
-
----
-
-## BLOCCO I: file «misti» (più tipi di esperimento nello stesso file) — non urgente
-**Perché**: nei dati del laboratorio oggi ogni file ha un solo tipo di esperimento, ma il 3200 QTRAP può acquisire nello stesso file: (a) **IDA/DDA** a bassa risoluzione (survey EMS o Q1 + EPI/product ion sui precursori più intensi, precursori diversi a ogni ciclo); (b) Full Scan + MS2 su precursori fissi; (c) MRM + EPI (MRM-IDA-EPI, molto comune sui QTRAP); (d) polarità positiva e negativa alternate. **Oggi** `Item.kind()` (`explore.py` ~r.55) sceglie un solo tipo: se c'è anche una sola scansione MS2 il file diventa «ms2» (il Full Scan sparisce dalla scheda Full Scan); scansioni + cromatogrammi SRM diventano «full» (l'MRM si perde). `AGENTS.md` lo segna come limite noto.
-**Proposta da realizzare (dividere il file per esperimento, senza duplicare i dati)**:
-1. **Un file, più «parti»**: in `explore.py` un file misto produce più voci logiche con lo stesso percorso e un filtro: Full Scan (scansioni di livello 1, per polarità), MS2 (scansioni di livello 2, raggruppate per precursore come già fa `_ms2_exps`), MRM (cromatogrammi SRM). Ogni parte va nella sua scheda (Full Scan / MS² / MRM) con il nome del file e un suffisso breve («· MS1», «· MS2», «· MRM», «· neg»); tempo, tipo di campione e colore sono gli stessi del file. `Item.total`, `spectrum`, `xic`, `mrm` ricevono già livello/precursore: usa quelli, non leggere il file due volte (stessa `Run` in cache).
-2. **Schermata di caricamento**: nella colonna Esperimento il file misto mostra «misto: Full Scan + MS2 (12 precursori)» ecc.; il tempo si scrive una volta per tutte le parti.
-3. **DDA**: nella scheda MS² i precursori di un DDA sono molti e con poche scansioni: raggruppali per m/z (tolleranza ±0.5) nella lista, ordinati per numero di scansioni. Nella scheda Full Scan, sul cromatogramma della parte MS1, piccoli **triangoli** sopra la traccia nei tempi in cui è partita una MS2 (interruttore «mostra le MS2», spento di default); clic su un triangolo = apre lo spettro MS2 di quella scansione nella scheda MS². È una vista dei dati acquisiti, non una risposta.
-4. **Polarità**: se il file alterna positivo e negativo, due parti separate («· pos», «· neg»), mai sommate nello stesso TIC.
-5. **Test**: nei dati veri non c'è un file misto: aggiungi a `tools/dati_sintetici.py` un file IDA sintetico (survey + EPI con precursori variabili), un MRM+EPI e uno a polarità alternata, e pytest per la divisione in parti + un e2e. Chiedi a Federico (nel messaggio di fine blocco) se può acquisire un vero file IDA/MRM-IDA-EPI al 3200 QTRAP per confermare il formato dell'mzML (ProteoWizard: livelli, `precursor`, filtri).
 
 ---
 
@@ -53,7 +41,7 @@ Un commit per blocco e un messaggio a Federico per blocco. Se il tempo o i token
 1. **Dati dello studente**: `navigator.storage.persist()` + spazio usato; Esporta/Importa sessione (.zip con file, `taccuino.json`, `LEGGIMI.txt`; la scrittura zip c'è in `xlsx.js`). Dove mettere i pulsanti: da decidere con Federico (l'ingranaggio ha 3 controlli).
 2. **Origine degli ioni**: Pyodide lento (`/api/origin` 19-38 s, obiettivo < 10 s); standard puro = t0 (eccesso F_t - r0*P_t); TP Mine: `isf.isf_classify` → flag `insource` (verifica se già fatto).
 3. **Da provare a mano (Federico)**: Windows, Safari, file grandi, retta di taratura contro Analyst.
-4. **Limiti noti** (non nasconderli): PDA solo TWC (niente spettri UV); file misti finché il Blocco I non è fatto.
+4. **Limiti noti** (non nasconderli): PDA solo TWC (niente spettri UV); file misti provati solo su dati sintetici.
 
 ## Chiusura
 - `python3 tools/verifica.py` completo; ultimo messaggio a Federico (report breve): riassunto prima/dopo, una riga per punto (fatto / proposta / non fatto e perché), elenco dei testi tolti (B2), cosa provare a mano con Cmd+Shift+R.

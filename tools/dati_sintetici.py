@@ -2,7 +2,7 @@
 (cloud sessions, CI). The real data never go into the repository: this script WRITES files with the same names and
 the same structure as the lab files, but every number is invented.
 
-    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_FullMass-neg-t0 (ESI-), B_MS2-t15, B_MRM-*, B_MRM-STD_*
+    python3 tools/dati_sintetici.py OUT_DIR            # writes B_FullMass-t0..t60, B_FullMass-neg-t0 (ESI-), C_IDA / C_MRM-EPI / C_POLALT (mixed files), B_MS2-t15, B_MRM-*, B_MRM-STD_*
 
 What is built in (so the e2e tests find what they expect):
 - Full Scan (7 times, RT 0.5-20 min, ~1100 scans, m/z 120-480, +0.3 Da offset like the instrument): parent 364.4 at
@@ -144,6 +144,53 @@ def mrm(path: Path, amount: float, rng, sample: int) -> None:
                       _chrom(4, "TWC", tp, yp)])
 
 
+def _scan_ions(rt, rng, ions, neg=False):
+    mz = list(rng.uniform(120, 480, 12)); it = list(rng.lognormal(np.log(3e3), 0.8, 12))
+    for m, c, sg, a in ions:
+        v = a * _g(rt, c, sg) * rng.normal(1, 0.03)
+        if v > 200:
+            mz.append(m + rng.normal(0, 0.03)); it.append(v)
+    o = np.argsort(mz); return np.array(mz)[o], np.array(it)[o]
+
+
+def mixed_ida(path: Path, rng) -> None:
+    """IDA / DDA look-alike: a survey scan (level 1) and two product-ion scans (level 2) at every cycle, the precursors change from cycle to cycle."""
+    ions = [(364.4, 14.3, 0.06, 2e7), (305.3, 14.7, 0.06, 2e6), (229.1, 7.07, 0.06, 1e6), (224.2, 13.0, 0.06, 6e5), (391.3, 18.3, 0.08, 6e5)]
+    rts = np.linspace(0.5, 20.0, 160); specs, tic, i = [], [], 0
+    for c, rt in enumerate(rts):
+        mz, it = _scan_ions(rt, rng, ions); specs.append(_spec(i, rt, mz, it)); tic.append(it.sum()); i += 1
+        for k in range(2):
+            top = sorted(ions, key=lambda x: -x[3] * _g(rt, x[1], x[2]))[k]
+            prec = round(top[0] + rng.normal(0, 0.15), 1) if c % 3 else round(top[0] + 0.0, 1)
+            frag = np.sort(rng.uniform(60, prec - 10, 5)); it2 = rng.lognormal(np.log(2e3), 0.6, 5) * (1 + 3 * _g(rt, top[1], top[2]))
+            specs.append(_spec(i, rt + 0.004 * (k + 1), frag, it2, level=2, prec=prec, ce=25.0)); i += 1
+    _write(path, specs, [_chrom(0, "TIC", rts, tic)])
+
+
+def mixed_mrm_epi(path: Path, rng) -> None:
+    """MRM + EPI look-alike: SRM chromatograms of two transitions plus product-ion scans (level 2) triggered on the MRM peak."""
+    t = np.linspace(0, 20.0, 4000)
+    q = 1e5 * _g(t, 14.3, 0.05) + rng.normal(0, 150, t.size).clip(0) + 200
+    ql = 1.7e5 * _g(t, 14.3, 0.05) + rng.normal(0, 150, t.size).clip(0) + 200
+    pol = '<cvParam cvRef="MS" accession="MS:1000130" name="positive scan" value=""/>'
+    srm = lambda n, q3, name: f"SRM SIC Q1=364.1 Q3={q3} sample=1 period=1 experiment=1 transition={n} ce=20 name={name}"
+    specs = []
+    for i, rt in enumerate(np.linspace(14.0, 14.7, 20)):
+        frag = np.array([152.2, 194.2, 224.1, 305.2]); it = np.array([0.5, 1.0, 0.2, 0.3]) * 1e5 * _g(rt, 14.3, 0.1) * rng.normal(1, 0.05, 4)
+        specs.append(_spec(i, rt, frag, it, level=2, prec=364.1, ce=30.0))
+    _write(path, specs, [_chrom(0, "TIC", t, q + ql), _chrom(1, srm(0, "194.1", "Quant"), t, q, pol), _chrom(2, srm(1, "152.1", "Qual"), t, ql, pol)])
+
+
+def mixed_polarity(path: Path, rng) -> None:
+    """Positive and negative scans alternate at every cycle (Full Scan only)."""
+    ions = [(364.4, 14.3, 0.06, 2e7), (362.4, 14.3, 0.06, 1e7)]
+    rts = np.linspace(0.5, 20.0, 200); specs, i = [], 0
+    for rt in rts:
+        for neg in (False, True):
+            mz, it = _scan_ions(rt, rng, [ions[1] if neg else ions[0]]); specs.append(_spec(i, rt + (0.003 if neg else 0), mz, it, neg=neg)); i += 1
+    _write(path, specs, [])
+
+
 def make(out: Path) -> Path:
     out = Path(out); out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(2026)
@@ -156,6 +203,8 @@ def make(out: Path) -> Path:
     for i, (name, c) in enumerate(STANDARDS.items()):
         mrm(out / f"B_MRM-STD_{name}ppm.mzML", 1.0e4 * c, rng, 1 + i)
     full_scan(out / "B_FullMass-neg-t0.mzML", 0, np.random.default_rng(7), neg=True)      # one NEGATIVE Full Scan (written last: the other files do not change)
+    rng2 = np.random.default_rng(11)                  # mixed files (several experiments in ONE file), written last: nothing else changes
+    mixed_ida(out / "C_IDA-t0.mzML", rng2); mixed_mrm_epi(out / "C_MRM-EPI-t0.mzML", rng2); mixed_polarity(out / "C_POLALT-t0.mzML", rng2)
     (out / "SINTETICI.txt").write_text("Dati sintetici scritti da tools/dati_sintetici.py: NON sono misure del laboratorio.\n", encoding="utf-8")
     return out
 

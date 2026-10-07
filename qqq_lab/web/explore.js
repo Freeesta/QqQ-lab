@@ -136,7 +136,7 @@ function uiSave(now = false) {
         traces: (p.traces || []).map(t => ({ mz: t.mz, w: t.w, label: t.label })),
         k: E.files[p.k]?.file ?? null, r0: p.r0, r1: p.r1, level: p.level, prec: p.prec, all: p.all, zoom: p.zoom, anns: p.anns, ints: p.ints, tr: p.tr,
         link: p.link ? E.panels.findIndex(q => q.id === p.link) : -1, src: p.src ? E.panels.findIndex(q => q.id === p.src) : -1, imode: p.imode || null, intf: p.intf || "",
-        lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl || undefined, iso: p.iso || null, ibk: p.ibk || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, view: p.view, norm: p.norm, az: p.az, elv: p.elv, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
+        lock: p.type === "spec" ? !!p.lock : undefined, rel: p.type === "spec" && typeof p.rel === "boolean" ? p.rel : undefined, thr: p.type === "spec" ? p.thr : undefined, nlab: p.type === "spec" ? p.nlab : undefined, dec: p.type === "spec" ? p.dec : undefined, meas: p.type === "spec" && p.meas ? p.meas : undefined, tl: p.tl || undefined, ms2tri: p.ms2tri || undefined, iso: p.iso || null, ibk: p.ibk || null, mz0: p.mz0 ?? null, mz1: p.mz1 ?? null, mode: p.mode, log: p.log, hid: p.hid, bk: p.bk === "" || p.bk == null ? "" : E.files[+p.bk]?.file ?? "", snip: p.snip, snipw: p.snipw, adduct: p.adduct, bg: p.bg === "" || p.bg == null ? "" : p.bg === "w" ? "w" : E.files[+p.bg]?.file ?? "", bw0: p.bw0, bw1: p.bw1, scale: p.scale, view: p.view, norm: p.norm, az: p.az, elv: p.elv, zoomY: p.zoomY, ref: p.ref === "" || p.ref == null ? "" : E.files[+p.ref]?.file ?? ""
       }))
     };
     nbSave(now);
@@ -564,6 +564,7 @@ function addPanel(type, o, after) {
   if (type !== "spec" && type !== "map") Object.assign(p, { mode: o.mode || "ovl", log: !!o.log, hid: o.hid || {} });
   if (type !== "spec" && type !== "map") Object.assign(p, { bk: o.bk ?? "", snip: !!o.snip, snipw: o.snipw ?? 1 });
   if (type !== "spec" && type !== "map") p.tl = !!o.tl;                 // linked time axis
+  if (type === "chrom") p.ms2tri = !!o.ms2tri;                          // triangles of the MS2 scans on the survey chromatogram
   if (type === "xic") p.adduct = o.adduct || defAdduct();
   if (type === "spec") Object.assign(p, { bg: o.bg ?? "", bw0: o.bw0 ?? null, bw1: o.bw1 ?? null, lock: o.lock ? { pending: true } : null, si: null,
     rel: typeof o.rel === "boolean" ? o.rel : null, thr: o.thr ?? 5, nlab: o.nlab ?? 10, dec: o.dec ?? 1, meas: o.meas && Array.isArray(o.meas.list) ? o.meas : null, rul: false });   // lock: only open/closed is saved, the values are measured again
@@ -825,7 +826,7 @@ function ctl(p) {
   const corr = `<select data-o="corr"${off(ms2c || mrmP, ms2c ? NOMS2 : NOMRM)} title="Correzione del fondo (una sola alla volta). Nessuna: i dati come sono. File bianco: toglie il segnale del file bianco (utile se il fondo cambia nel tempo come nel campione). Fondo di un tratto: trascini un tratto senza picchi e se ne toglie la media (fondo piatto). Linea di base automatica: toglie la base che sale sotto i picchi (algoritmo SNIP)."><option value="" ${cval === "" ? "selected" : ""}>Correzione: nessuna</option><optgroup label="Sottrai un file bianco">${bkList.length ? bkList.map(x => `<option value="f${x.k}" ${cval === "f" + x.k ? "selected" : ""}>${EH(x.label)}</option>`).join("") : '<option disabled>nessun file indicato come bianco</option>'}</optgroup><option value="tract" ${cval === "tract" ? "selected" : ""}>Sottrai il fondo di un tratto</option><option value="snip" ${cval === "snip" ? "selected" : ""}>Linea di base automatica</option></select>${p.snip && !bkOn ? `<label class="muted" title="Larghezza della finestra: deve essere più larga dei picchi">&le;<input data-o="snipw" type="number" step="0.5" min="0.2" value="${p.snipw}" style="width:50px"> min</label>` : ""}`;
   const fsel = `<button data-o="fpop" class="fcount"${off(ONEF, "Hai caricato un solo file in questa scheda.")} title="Scegli al volo quali file mostrare (vale per tutti i grafici, come la lista a sinistra)">File ${TF.filter(f => f.vis).length}/${TF.length} &#9662;</button>`;
   const kindSel = ms2c ? `<select disabled title="${NOMS2}"><option>scan MS² dei precursori</option></select>` : null;
-  if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>TIC (somma)</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="Picco base: lo ione più intenso di ogni scan. Non esiste nei file MRM (si registrano solo le transizioni scelte)">BPC (picco base)</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="Segnale del rivelatore a serie di diodi (PDA/UV): non dipende dallo spettrometro di massa">PDA (UV, totale)</option></select>`}${p.kind === "pda" ? "" : precSel + (hasScan ? mzbar : "")}${chk("smooth", "smoothing")}${view}${corr}`;
+  if (p.type === "chrom") c.innerHTML = `${kindSel || `<select data-o="kind"><option value="tic" ${p.kind === "tic" ? "selected" : ""}>TIC (somma)</option><option value="bpc" ${p.kind === "bpc" ? "selected" : ""} ${hasScan ? "" : "disabled"} title="Picco base: lo ione più intenso di ogni scan. Non esiste nei file MRM (si registrano solo le transizioni scelte)">BPC (picco base)</option><option value="pda" ${p.kind === "pda" ? "selected" : ""} ${hasPda ? "" : "disabled"} title="Segnale del rivelatore a serie di diodi (PDA/UV): non dipende dallo spettrometro di massa">PDA (UV, totale)</option></select>`}${p.kind === "pda" ? "" : precSel + (hasScan ? mzbar : "")}${chk("smooth", "smoothing")}${view}${corr}${p.type === "chrom" && p.tab === "full" && E.files.some(x => x.ms2_events) ? chk("ms2tri", "mostra le MS2", false, "", "Un triangolino in alto ogni volta che è partita una scansione MS2 (file con survey e MS2 insieme). Clic su un triangolino: apre quello spettro MS2 nella scheda MS²") : ""}`;
   if (p.type === "xic") {
     p._xt = Math.min(p._xt || 0, Math.max(0, p.traces.length - 1));
     const xt = p.traces[p._xt], xw1 = xt ? (xt.w ?? p.tol) : 0;
@@ -1208,6 +1209,17 @@ async function drawLines(p) {
     g.stroke();
   }
   g.restore(); g.setLineDash([]);
+  p._a.tri = [];
+  if (p.ms2tri && p.tab === "full") for (const s of sr) {              // MS2 events of the same physical file: a small triangle at the top at every MS2 scan
+    const base = (E.files[s.k] || {}).file; if (!base) continue;
+    const sib = E.files.find(x => x.ms2_events && x.file.split("#")[0] === base.split("#")[0]); if (!sib) continue;
+    g.fillStyle = s.color; let last = -9;
+    for (const [rt, prec] of sib.ms2_events) {
+      if (rt < x0 || rt > x1) continue; const px = X(rt); if (px - last < 3) continue; last = px;
+      g.beginPath(); g.moveTo(px - 3, M.t + 1); g.lineTo(px + 3, M.t + 1); g.lineTo(px, M.t + 8); g.closePath(); g.fill();
+      p._a.tri.push({ px, rt, prec, k2: sib.k });
+    }
+  }
   if (yzf) for (const s of sr) {                                  // a small triangle at the top says: this peak goes on above the graph
     let seg = null; const tri = x => { g.fillStyle = s.color; g.beginPath(); g.moveTo(X(x) - 4, M.t + 7); g.lineTo(X(x) + 4, M.t + 7); g.lineTo(X(x), M.t); g.closePath(); g.fill(); };
     s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const v = U(s, s.ys[i]); if (v > ymax) { if (!seg || v > seg.v) seg = { v, x: r }; } else if (seg) { tri(seg.x); seg = null; } });
@@ -1758,6 +1770,8 @@ function attach(p) {
       else { p.sel = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); pushLinked(p, p.sel[0], p.sel[1], nearestFile(p, (x0 + x1) / 2)); }
     } else if (p.type === "spec") { specClick(p, d.x0); }
     else if (p.type !== "spec") {
+      const tt = p.ms2tri && p._a.tri && d.y0 < M.t + 14 ? p._a.tri.reduce((b, q) => (Math.abs(q.px - d.x0) < 6 && (!b || Math.abs(q.px - d.x0) < Math.abs(b.px - d.x0)) ? q : b), null) : null;
+      if (tt) { goMs2(tt); return; }                         // a triangle: that MS2 scan in the MS² tab
       p.sel = null; p.cur = x0; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, x0, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, `scansione più vicina con dati · RT ${sn.rt.toFixed(3)} min`, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else pushLinked(p, x0 - dt / 2, x0 + dt / 2, nearestFile(p, x0));
     }
   };

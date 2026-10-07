@@ -14,23 +14,43 @@ from .reader.mzml import Run
 
 
 class Item:
-    def __init__(self, file: str, label: str | None, time, typ: str, path: Path, conc: float | None = None, cunit: str | None = None):
+    def __init__(self, file: str, label: str | None, time, typ: str, path: Path, conc: float | None = None, cunit: str | None = None,
+                 part: dict | None = None, run: Run | None = None):
+        # part = {"mode": "ms1" | "ms2" | "mrm", "pol": 1 | -1 | None, "tag": "MS2"}: one experiment of a MIXED file (survey + product ions, MRM + EPI, + and - polarity).
+        # The parts of a file share one Run (the file is read once); `file` is then "name.mzML#tag", the name of the physical file is `path.name`.
         self.file, self.time, self.type, self.path, self.conc, self.cunit = file, time, typ, path, conc, cunit
-        self.label = label or Path(file).stem
-        self.run = Run(path)
+        self.part = part
+        base = label or Path(path).stem
+        self.label = base + (f" · {part['tag']}" if part and not base.endswith(part["tag"]) else "")
+        self.run = run or Run(path)
+        self.pol = part.get("pol") if part else None
+        self.sc = [s for s in self.run.scans if self._match(s)]
         self._bpc: dict = {}
+        self._tabs: dict = {}
+
+    def _match(self, s) -> bool:
+        p = self.part
+        if not p:
+            return True
+        if p["mode"] == "mrm" or (p.get("pol") not in (None, 0) and s.polarity not in (p["pol"], 0)):
+            return False
+        return s.level == 1 if p["mode"] == "ms1" else s.level >= 2
+
+    def _tbl(self, level: int):
+        """Peak table of this experiment (level and, for a part of a file with both polarities, the polarity)."""
+        return self.run.table(level, self.pol)
 
     def info(self) -> dict:
         r = self.run
-        ms1 = [s for s in r.scans if s.level == 1]
-        ms2 = [s for s in r.scans if s.level >= 2]
-        t1 = r.table(1) if ms1 else None
-        t2 = r.table(2) if ms2 else None
-        pol = sorted({s.polarity for s in r.scans if s.polarity})
+        ms1 = [s for s in self.sc if s.level == 1]
+        ms2 = [s for s in self.sc if s.level >= 2]
+        t1 = self._tbl(1) if ms1 else None
+        t2 = self._tbl(2) if ms2 else None
+        pol = sorted({s.polarity for s in self.sc if s.polarity})
         out = {"file": self.file, "label": self.label, "time": self.time, "type": self.type, "conc": self.conc, "cunit": self.cunit,
-                "scans": len(r.scans), "ms1": len(ms1), "ms2": len(ms2),
-                "rt_min": float(min((s.rt for s in r.scans), default=0.0)),
-                "rt_max": float(max((s.rt for s in r.scans), default=0.0)),
+                "scans": len(self.sc), "ms1": len(ms1), "ms2": len(ms2),
+                "rt_min": float(min((s.rt for s in self.sc), default=0.0)),
+                "rt_max": float(max((s.rt for s in self.sc), default=0.0)),
                 "mz_min": float(t1.mz[0]) if t1 is not None and len(t1.mz) else None,
                 "mz_max": float(t1.mz[-1]) if t1 is not None and len(t1.mz) else None,
                 "mz2_min": float(t2.mz[0]) if t2 is not None and len(t2.mz) else None,
@@ -39,7 +59,11 @@ class Item:
                 "precursors": sorted({round(s.precursor, 1) for s in ms2 if s.precursor}),
                 "ms2_exps": self._ms2_exps(ms2), "chromatograms": r.n_chromatograms, "kind": self.kind(),
                 "srm": sum(1 for c in r.chromatograms() if c["kind"] == "srm"), "pda": self.has_pda()}
-        if not r.scans:                                   # MRM file: no scans, take times and polarity from the chromatograms
+        if self.part:
+            out["part"] = self.part["tag"]
+            if self.part["mode"] == "ms2":                # when each product-ion scan started and from which precursor (the triangles on the survey chromatogram)
+                out["ms2_events"] = [[round(float(s.rt), 4), round(float(s.precursor), 1) if s.precursor else None] for s in ms2[:20000]]
+        if not self.sc:                                # MRM file: no scans, take times and polarity from the chromatograms
             rng = self._srm_rt_range()
             if rng:
                 out["rt_min"], out["rt_max"] = rng
@@ -48,16 +72,32 @@ class Item:
 
     @staticmethod
     def _ms2_exps(ms2) -> list[dict]:
-        """The MS2 experiments of a file: one per precursor (and collision energy), with the number of scans."""
+        """The MS2 experiments of a file: one per precursor (and collision energy), with the number of scans.
+
+        A data-dependent file (IDA/DDA) has a different precursor at every cycle: precursors closer than 0.5 are one group
+        (at most 1 m/z wide), named by their most frequent value.
+        """
         cnt: dict = {}
         for s in ms2:
             k = (round(s.precursor, 1) if s.precursor else None, s.collision_energy)
             cnt[k] = cnt.get(k, 0) + 1
-        return [{"prec": k[0], "ce": k[1], "n": n} for k, n in sorted(cnt.items(), key=lambda kv: (kv[0][0] or 0, kv[0][1] or 0))]
+        rows = sorted(cnt.items(), key=lambda kv: (kv[0][0] or 0, kv[0][1] or 0))
+        if len({k[0] for k in cnt}) <= 8:
+            return [{"prec": k[0], "ce": k[1], "n": n} for k, n in rows]
+        groups: list[dict] = []
+        for (pr, ce), n in rows:
+            g = groups[-1] if groups else None
+            if pr is not None and g and g["lo"] is not None and pr - g["lo"] <= 0.5 and g["ce"] == ce:
+                g["n"] += n; g["votes"][pr] = g["votes"].get(pr, 0) + n
+            else:
+                groups.append({"lo": pr, "ce": ce, "n": n, "votes": {pr: n}})
+        return [{"prec": max(g["votes"], key=g["votes"].get), "ce": g["ce"], "n": g["n"]} for g in groups]
 
     def kind(self) -> str:
         """Experiment type: 'full' (Q1 scan), 'ms2' (product ion scans) or 'mrm' (SRM chromatograms only)."""
         r = self.run
+        if self.part:
+            return {"ms1": "full", "ms2": "ms2", "mrm": "mrm"}[self.part["mode"]]
         n1 = sum(1 for s in r.scans if s.level == 1)
         n2 = len(r.scans) - n1
         if n2:
@@ -99,14 +139,14 @@ class Item:
         """What the mzML says about how the data were acquired (the source parameters are not stored in mzML)."""
         r, md = self.run, self.run.metadata()
         kind = self.kind()
-        ms2 = [s for s in r.scans if s.level >= 2]
-        rts = np.array([s.rt for s in r.scans if s.level == (1 if kind == "full" else 2)])
+        ms2 = [s for s in self.sc if s.level >= 2]
+        rts = np.array([s.rt for s in self.sc if s.level == (1 if kind == "full" else 2)])
         cycle = float(np.median(np.diff(rts)) * 60) if len(rts) > 2 else None
         win = r.scan_window()
-        res = {"file": self.file, "kind": kind, **md, "polarity": self.info()["polarity"] if kind != "mrm" else self._header_polarity(), "scans": len(r.scans),
-               "rt_min": float(min((s.rt for s in r.scans), default=0.0)), "rt_max": float(max((s.rt for s in r.scans), default=0.0)),
+        res = {"file": self.file, "kind": kind, **md, "polarity": self.info()["polarity"] if kind != "mrm" else self._header_polarity(), "scans": len(self.sc),
+               "rt_min": float(min((s.rt for s in self.sc), default=0.0)), "rt_max": float(max((s.rt for s in self.sc), default=0.0)),
                "pda": self.has_pda(), "cycle_s": cycle, "scan_window": list(win) if win else None,
-               "filters": sorted({s.filter for s in r.scans if s.filter})[:6],
+               "filters": sorted({s.filter for s in self.sc if s.filter})[:6],
                "precursors": sorted({round(s.precursor, 2) for s in ms2 if s.precursor}),
                "ce": sorted({s.collision_energy for s in ms2 if s.collision_energy is not None}),
                "transitions": [{"q1": c.get("q1"), "q3": c.get("q3"), "ce": c.get("ce"), "name": c.get("name", ""), "dwell": c.get("dwell")}
@@ -122,7 +162,7 @@ class Item:
         """Chromatogram of the whole file. prec (MS2 files): only the scans of that precursor ion (None = all the precursors)."""
         rt, y = self._total(kind, level, mz0, mz1)
         if prec is not None and level > 1 and len(rt):
-            t = self.run.table(level)
+            t = self._tbl(level)
             pr = np.array([self.run.scans[i].precursor or -1.0 for i in t.scan_ids])
             sm = np.abs(pr - prec) <= 0.6
             if len(sm) == len(rt):
@@ -141,7 +181,7 @@ class Item:
                     t, y = self.run.chromatogram(c["index"])
                     return t, y
             return np.zeros(0), np.zeros(0)
-        t = self.run.table(level)
+        t = self._tbl(level)
         if len(t.rt) == 0:
             return np.zeros(0), np.zeros(0)
         if mz0 is not None or mz1 is not None:          # only the ions inside [mz0, mz1] (None = open end)
@@ -174,7 +214,7 @@ class Item:
         return t.rt, self._bpc[key]
 
     def xic(self, mz: float, tol: float, level: int = 1):
-        t = self.run.table(level)
+        t = self._tbl(level)
         return t.rt, t.xic(mz, tol)
 
     # ------------------------------------------------------------------ ion map (RT x m/z)
@@ -189,7 +229,7 @@ class Item:
         if key in cache:
             return cache[key]
         nrt, nmz = grid["nrt"], grid["nmz"]
-        t = self.run.table(level)
+        t = self._tbl(level)
         out = np.zeros((nrt, nmz), dtype=np.float32)
         if len(t.rt) and len(t.mz):
             span = max(grid["rt1"] - grid["rt0"], 1e-9)
@@ -207,7 +247,7 @@ class Item:
     def _binned(self, rt0, rt1, level=1, precursor=None, prec_tol=0.6, bin_da=0.1):
         """Mean spectrum in [rt0, rt1] on a fixed bin grid: (bin ids, centroid m/z, mean intensity, n scans)."""
         e = (np.zeros(0, dtype=np.int64), np.zeros(0), np.zeros(0))
-        t = self.run.table(level)
+        t = self._tbl(level)
         if len(t.rt) == 0:
             return (*e, 0)
         ok = (t.rt >= min(rt0, rt1)) & (t.rt <= max(rt0, rt1))
@@ -232,7 +272,7 @@ class Item:
         return len(self._scan_ids(level, precursor, prec_tol)[0])
 
     def _scan_ids(self, level, precursor, prec_tol):
-        t = self.run.table(level)
+        t = self._tbl(level)
         ids, rt = t.scan_ids, t.rt
         if level > 1 and precursor is not None and len(ids):
             pr = np.array([self.run.scans[i].precursor or -1.0 for i in ids])
@@ -288,15 +328,57 @@ class Item:
         return smz, sy, n
 
 
+def file_parts(run) -> list[dict]:
+    """The experiments of a MIXED file (survey + product ions, MRM + EPI, positive + negative polarity), or [] when the file has only one.
+
+    Each part is {"mode": "ms1" | "ms2" | "mrm", "pol": 1 | -1 | None, "tag": "MS1" | "MS2" | "MRM" (+ " pos" / " neg" when both polarities are there)}.
+    """
+    sc = run.scans
+    split = len({s.polarity for s in sc if s.polarity in (1, -1)}) > 1
+    parts = []
+    for mode, name, test in (("ms1", "MS1", lambda s: s.level == 1), ("ms2", "MS2", lambda s: s.level >= 2)):
+        sel = [s for s in sc if test(s)]
+        if not sel:
+            continue
+        for pol in (sorted({s.polarity for s in sel if s.polarity in (1, -1)}, reverse=True) if split else [None]):
+            parts.append({"mode": mode, "pol": pol, "tag": name + ((" pos" if pol == 1 else " neg") if split else "")})
+    if any(c["kind"] == "srm" for c in run.chromatograms()):
+        parts.append({"mode": "mrm", "pol": None, "tag": "MRM"})
+    return parts if len(parts) > 1 else []
+
+
+def mixed_text(run) -> str:
+    """One line for the loading table: what a mixed file holds ('' for a file with a single experiment)."""
+    parts = file_parts(run)
+    if not parts:
+        return ""
+    n_prec = len({round(s.precursor) for s in run.scans if s.level >= 2 and s.precursor})
+    names = {"ms1": "Full Scan", "ms2": "MS2", "mrm": "MRM"}
+    out = []
+    for p in parts:
+        t = names[p["mode"]] + ((" pos" if p["pol"] == 1 else " neg") if p["pol"] else "")
+        if p["mode"] == "ms2" and n_prec:
+            t += f" ({n_prec} precursor{'i' if n_prec != 1 else 'e'})"
+        out.append(t)
+    return " + ".join(out)
+
+
 class Session:
     def __init__(self, samples: list[dict], root: Path):
         self.items: list[Item] = []
         for s in samples:
-            f = Path(s["file"])
+            name, _, tag = str(s["file"]).partition("#")      # "x.mzML#MS2" = the MS2 part of a mixed file (as saved in the notebook)
+            f = Path(name)
             label, t, typ = guess_sample(f.name)
-            self.items.append(Item(s["file"], s.get("label") or label,
-                                   s["time"] if s.get("time") is not None else t,
-                                   s.get("type") or typ, f if f.is_absolute() else root / f, s.get("conc"), s.get("cunit")))
+            path = f if f.is_absolute() else root / f
+            run = Run(path)
+            parts = file_parts(run)
+            common = (s.get("label") or label, s["time"] if s.get("time") is not None else t, s.get("type") or typ)
+            if not parts:
+                self.items.append(Item(name, *common[:1], common[1], common[2], path, s.get("conc"), s.get("cunit"), run=run))
+                continue
+            for p in ([q for q in parts if q["tag"] == tag] if tag else parts):
+                self.items.append(Item(f"{name}#{p['tag']}", common[0], common[1], common[2], path, s.get("conc"), s.get("cunit"), part=p, run=run))
 
     def info(self) -> list[dict]:
         return [it.info() for it in self.items]
@@ -305,11 +387,11 @@ class Session:
         """Common RT x m/z grid for the ion maps of every file that has scans of this level."""
         rts, mzs = [], []
         for it in self.items:
-            sc = [x for x in it.run.scans if x.level == level]
+            sc = [x for x in it.sc if x.level == level]
             if not sc:
                 continue
             rts += [min(x.rt for x in sc), max(x.rt for x in sc)]
-            t = it.run.table(level)
+            t = it._tbl(level)
             if len(t.mz):
                 mzs += [float(t.mz[0]), float(t.mz[-1])]
         if not rts or not mzs:
@@ -325,6 +407,6 @@ def sniff(path: Path) -> dict:
     it = Item(path.name, None, None, "sample", path)
     try:
         i = it.info()
-        return {"kind": i["kind"], "scans": i["scans"], "srm": i["srm"], "polarity": i["polarity"]}
+        return {"kind": i["kind"], "scans": i["scans"], "srm": i["srm"], "polarity": i["polarity"], "mixed": mixed_text(it.run)}
     finally:
         it.run.close()

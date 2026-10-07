@@ -79,7 +79,17 @@ function ms2Exps() {
     const e = m.get(x.prec) || { prec: x.prec, ce: new Set(), n: 0, files: new Set(), k: f.k };
     if (x.ce != null) e.ce.add(x.ce); e.n += x.n; e.files.add(f.k); m.set(x.prec, e);
   }));
-  return [...m.values()].sort((a, b) => (a.prec ?? 0) - (b.prec ?? 0));
+  const l = [...m.values()];
+  return l.length > 8 ? l.sort((a, b) => b.n - a.n) : l.sort((a, b) => (a.prec ?? 0) - (b.prec ?? 0));      // a data-dependent file has many precursors with few scans: the most scanned first
+}
+// a triangle on the survey chromatogram: open that product-ion scan in the MS² tab
+async function goMs2(t) {
+  setTab("ms2", true);
+  await new Promise(r => setTimeout(r, 700));
+  await ms2Switch(t.prec);
+  const c = tabPanels("ms2").filter(q => q.type === "chrom").sort((a, b) => a.y - b.y)[0]; if (!c) return;
+  E.cur = t.k2; c.cur = t.rt; c.sel = null; const dt = 0.01;
+  pushLinked(c, t.rt - dt / 2, t.rt + dt / 2, t.k2); draw(c); uiSave();
 }
 
 function defaultLayoutTab(t) {
@@ -164,8 +174,8 @@ function ms2Switch(prec) {
   const live = E.panels.filter(q => q.type === "spec" && q.link === c.id);
   live.forEach(sp => { sp.prec = prec; sp.zoom = null; sp.zoomY = null; sp.lock = null; sp.title = `Spettro degli ioni prodotto${prec != null ? " · " + prec : ""}`; });
   ctl(c); live.forEach(ctl);
-  Promise.resolve(draw(c)).then(() => live[0] ? apexSpectrum(c, live[0]) : null);       // the spectrum of the highest scan of the new precursor
   renderFileList(); uiSave();
+  return Promise.resolve(draw(c)).then(() => live[0] ? apexSpectrum(c, live[0]) : null);       // the spectrum of the highest scan of the new precursor
 }
 
 // which files exist for each time and each kind of experiment; a click opens the file in its tab

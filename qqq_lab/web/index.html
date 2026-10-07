@@ -239,8 +239,8 @@ function renderMethods(){const el=$("#mlist");
   el.innerHTML=ST.methods.length?`<table><tr><th>File</th><th>Contenuto</th><th class="num">Dimensione</th><th></th></tr>`+ST.methods.map((m,i)=>`<tr><td>${esc(m.name)}</td><td class="muted">${esc(m.info||"")}</td><td class="num muted">${sz(m.size)}</td><td><button data-mrm="${i}" title="Rimuovi (va in _cestino)">&times;</button></td></tr>`).join("")+"</table>":"";
   el.querySelectorAll("[data-mrm]").forEach(b=>b.onclick=async()=>{try{const j=await post("api/remove",{name:ST.methods[+b.dataset.mrm].name});mergeFiles(j.files);ST.methods=j.methods||[];renderMethods()}catch(e){fail(e)}})}
 const EXPN={full:"Full Scan",ms2:"MS² (Product Ion)",mrm:"MRM",empty:"nessun dato"};
-const expCell=f=>f.kind?`<b>${EXPN[f.kind]||f.kind}</b>${f.polarity==="mixed"?' <span class="muted sm">polarità mista</span>':""}`:'<span class="muted">non letto</span>';
-function nameWarn(f){return f.kind&&f.hint&&f.hint!==f.kind?` <div class="fail sm">il nome fa pensare a ${EXPN[f.hint]}, ma nel file ci sono dati ${EXPN[f.kind]}</div>`:""}
+const expCell=f=>f.kind&&f.mixed?`<b>misto</b> <span class="muted sm">${esc(f.mixed)}</span>`:f.kind?`<b>${EXPN[f.kind]||f.kind}</b>${f.polarity==="mixed"?' <span class="muted sm">polarità mista</span>':""}`:'<span class="muted">non letto</span>';
+function nameWarn(f){return f.kind&&!f.mixed&&f.hint&&f.hint!==f.kind?` <div class="fail sm">il nome fa pensare a ${EXPN[f.hint]}, ma nel file ci sono dati ${EXPN[f.kind]}</div>`:""}
 function renderFiles(){const F=ST.files,el=$("#flist");
   const hasCal=F.some(f=>f.use&&isCal(f)),unitSel=`<select id="cunit" title="Unità delle concentrazioni (1 ppm = 1 mg/L in acqua)">${Object.entries(CU).map(([k,v])=>`<option value="${k}" ${k===ST.unit?"selected":""}>${v[0]}</option>`).join("")}</select>`;
   const ncol=6+(hasCal?1:0),GN={0:"Full Scan",1:"MS² (Product Ion)",2:"MRM",3:"Altri file (esperimento non ancora letto)"},GUESS=' title="Letto dal nome del file: controlla"';
