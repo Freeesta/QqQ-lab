@@ -7,10 +7,14 @@ Tutto il testo sta in questa cartella, un file per capitolo. Non c'è niente da 
 | Che cosa | File |
 |---|---|
 | Introduzione e mappa | `index.html` |
-| Capitoli 1–13 | `01-tp.html` … `13-origine.html` (il numero è nel nome) |
+| Capitoli 1–22 | `01-tp.html` … `22-formulario.html` (il numero è nel nome; i vecchi nomi, come `06-quadrupolo.html`, sono rimandi automatici al nuovo capitolo) |
+| Pratica (giochi ed esercizi) | `pratica.html` (pagina iniziale), `pratica-ei.html`, `pratica-orale.html`, `pratica-perdite.html`, `pratica-isotopi.html`, `pratica-formula.html`, `pratica-strumento.html`, `pratica-quadrupolo.html`; codice e dati in `pratica/` |
+| Domande dell'orale (testo e punti della risposta) | `pratica/domande.js` |
+| Spettri EI dei capitoli 15-16 e del gioco | `pratica/ei-dati.js`, generato da `tools/genera_ei.py` (non a mano) |
+| Glossario (parole sottolineate nel testo) | `21-glossario.html`, poi `python3 tools/genera_glossario.py` |
 | Elenco dei capitoli nel menu laterale | `teoria.js`, in alto: lista `CHAPTERS` |
 | Colori, caratteri, aspetto dei riquadri | `teoria.css` |
-| Figure interattive (calcoli e grafici) | `sim-quad.js`, `sim-esi.js`, `sim-qqq.js`, `sim-frag.js`, `sim-misc.js` |
+| Figure interattive (calcoli e grafici) | `sim-quad.js`, `sim-esi.js`, `sim-qqq.js`, `sim-frag.js`, `sim-misc.js`, `sim-chrom.js` (cromatografia), `sim-ei.js` (EI), `sim-hr.js` (risoluzione e formule) |
 
 Per il testo servono solo i file `.html`. I `.js` vanno toccati solo per cambiare le figure interattive.
 
@@ -42,6 +46,11 @@ Caratteri speciali: si possono scrivere direttamente (à è ≈ → Δ λ ±), i
 <div class="box warn"><b>Errore frequente</b><p>Testo.</p></div>      riquadro arancione
 <div class="box lab"><b>In laboratorio</b><p>Testo.</p></div>         riquadro verde
 <div class="box math"><b>Derivazione</b><p>Testo.</p></div>           riquadro viola
+<div class="obj"><b>In questo capitolo impari a</b><ul><li>...</li></ul></div>   obiettivi, subito dopo il sommario
+<div class="box oral"><b>All'orale</b><p>Testo.</p></div>             che cosa si chiede all'esame
+<div class="box lr">…</div> <div class="box hr">…</div>              bassa / alta risoluzione (dentro <div class="duo"> stanno affiancati)
+<details class="poe"><summary>Prevedi, poi guarda</summary><p>…</p></details>   domanda prima di una figura
+<div class="eispec" data-ei="2-esanone" data-keys="1"></div>        spettro EI vero (id in pratica/ei-dati.js)
 
 <span class="eq">a = b + c<span class="no">(6.1)</span></span>         equazione centrata con numero
 <span class="frac"><span>numeratore</span><span>denominatore</span></span>   frazione
@@ -67,7 +76,7 @@ Caratteri speciali: si possono scrivere direttamente (à è ≈ → Δ λ ±), i
 ## Aggiungere o togliere un capitolo
 
 1. Copia un capitolo esistente, rinominalo (es. `12-nuovo.html`), cambia `kicker`, `<h1>` e testo.
-2. In `teoria.js` aggiungi una riga alla lista `CHAPTERS`: `["12-nuovo.html", "12", "Titolo nel menu"],`
+2. In `teoria.js` aggiungi una riga alla lista `CHAPTERS`: `["12-nuovo.html", "12", "Titolo nel menu", "IV. Analizzare gli ioni"],` (l'ultimo campo è la parte del percorso: il menu mette un titoletto quando cambia)
 3. Se vuoi, aggiungi una scheda in `index.html` (sezione "I capitoli").
 
 Menu laterale, indice della pagina e pulsanti avanti/indietro si aggiornano da soli.
@@ -83,3 +92,11 @@ Menu laterale, indice della pagina e pulsanti avanti/indietro si aggiornano da s
 - In Visual Studio Code i tag non chiusi sono evidenziati.
 - Prima di modifiche grosse, fai un commit git (o copia il file): così puoi sempre tornare indietro.
 - Controllo automatico (opzionale): `python3 -m pytest -q tests` dalla cartella `qqq_lab` verifica che link, script e capitoli esistano.
+
+## La Pratica
+
+- Ogni gioco salva i progressi solo nel browser (`localStorage`, chiave `qqq.pratica`): nessun dato esce dal computer, nessuna classifica.
+- Il motore comune è `pratica/motore.js` (livello per competenza con una regola tipo Elo, ripasso distanziato 1-3-7-21 giorni, codici sfida, conti chimici). I giochi brevi sono in `pratica/giochi.js`, il gioco EI in `pratica/gioco-ei.js`.
+- Le domande dell'orale si correggono in `pratica/domande.js`: ogni domanda ha un `id` (non cambiarlo: i progressi sono salvati per id), un'area, il capitolo dove sta la risposta e i punti di una risposta completa.
+- Il gioco EI e l'editor di strutture funzionano dal programma o dal sito, non da un file aperto con doppio clic (il browser blocca i moduli JavaScript da `file://`). I capitoli e gli altri giochi funzionano anche da disco.
+- Spettri: solo da MassBank (licenza CC BY-NC-SA, fonte indicata sotto ogni spettro), mai dalla libreria NIST. Mai usare composti dei metodi del laboratorio.

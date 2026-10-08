@@ -10,7 +10,8 @@
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (_) { /* optional: keeps the files from being evicted */ }
   try { if ("serviceWorker" in navigator) navigator.serviceWorker.register(new URL("../sw.js", SRC)).catch(() => {}); } catch (_) { /* offline copy is optional */ }
   let worker;
-  try { if (modern) worker = new Worker(new URL("browser-worker.js", SRC), { type: "module" }); } catch (_) { worker = null; }
+  // on a smartphone (telefono.js) the engine is not started: the phone sees only the Teoria and downloads nothing heavy
+  try { if (modern && !window.QQQ_PHONE) worker = new Worker(new URL("browser-worker.js", SRC), { type: "module" }); } catch (_) { worker = null; }
   const pending = new Map();
   let seq = 0, isReady = false, failed = null;
 
@@ -25,6 +26,7 @@
   document.addEventListener("DOMContentLoaded", () => step(window.qqStep));
 
   const ready = new Promise((res, rej) => {
+    if (!worker && window.QQQ_PHONE) return rej(new Error("telefono: motore non avviato"));
     if (!worker) { const t = "questo browser è troppo vecchio: usa una versione recente di Chrome, Edge, Firefox o Safari."; failed = t; fail(t); return rej(new Error(t)); }
     worker.onmessage = ev => {
       const m = ev.data;

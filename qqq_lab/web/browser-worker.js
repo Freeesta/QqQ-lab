@@ -31,14 +31,21 @@ function mountBig(blob) {
 }
 
 let py = null, handle = null, linkBig = null;
+// Everything the engine needs is requested at once, in parallel: before, numpy waited for Python to be compiled and the program
+// waited for numpy (about 3 s lost on a 20 Mbit/s line). The numpy wheel is only fetched here to warm the HTTP cache (and the
+// service worker): loadPackage then finds it there instead of starting the download late.
+const IDX = new URL("./pyodide/", import.meta.url).href;
+const zipP = fetch(new URL("./qqq_lab.zip", import.meta.url)).then(r => r.arrayBuffer());
+zipP.catch(() => {});
+fetch(IDX + "pyodide-lock.json").then(r => r.json()).then(l => fetch(IDX + l.packages.numpy.file_name)).then(r => r.arrayBuffer()).catch(() => {});
 async function start() {
   try {
     say("Carico Python...");
-    py = await loadPyodide({ indexURL: new URL("./pyodide/", import.meta.url).href });
+    py = await loadPyodide({ indexURL: IDX });
     say("Carico numpy...");
     await py.loadPackage("numpy");
     say("Carico il programma...");
-    const zip = await (await fetch(new URL("./qqq_lab.zip", import.meta.url))).arrayBuffer();
+    const zip = await zipP;
     py.FS.mkdirTree("/qqq");
     py.unpackArchive(zip, "zip", { extractDir: "/qqq" });
     py.FS.mkdirTree(WORK);

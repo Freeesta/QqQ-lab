@@ -1,23 +1,41 @@
 /* QqQ lab - Teoria: shared layout (header, chapter list, on-page TOC, prev/next) and tiny plotting helpers.
    Classic script, no modules, no network: the pages work from file:// and from the local server. */
 "use strict";
+// [file, number shown in the menu, title, part]. The order is the study path: each chapter uses only what comes before it.
+// The "Pratica" pages (pratica*.html) are the exercises and games; they use the same layout.
 const CHAPTERS = [
-  ["00-uso.html", "A", "Come si usa {APP}"],
-  ["index.html", "0", "Introduzione e mappa del percorso"],
-  ["01-tp.html", "1", "Prodotti di trasformazione"],
-  ["02-fotocatalisi.html", "2", "Fotocatalisi con TiO₂"],
-  ["03-lc.html", "3", "Cromatografia in fase inversa"],
-  ["04-esi.html", "4", "Elettrospray (ESI)"],
-  ["05-vuoto.html", "5", "Dalla sorgente al vuoto"],
-  ["06-quadrupolo.html", "6", "Il quadrupolo: teoria"],
-  ["07-qqq.html", "7", "Il triplo quadrupolo e la CID"],
-  ["08-frammentazione.html", "8", "Come si frammentano gli ioni"],
-  ["09-dati.html", "9", "Full scan, MS2 e MRM: leggere i dati"],
-  ["10-strategia.html", "10", "Strategia per trovare i TP"],
-  ["11-glossario.html", "11", "Glossario e bibliografia"],
-  ["12-disegno.html", "12", "Disegnare le molecole"],
-  ["13-origine.html", "13", "Da dove viene questo ione?"],
-  ["14-alta-risoluzione.html", "14", "Alta risoluzione e DDA"],
+  ["00-uso.html", "A", "Come si usa {APP}", "Guida"],
+  ["index.html", "0", "Introduzione e mappa del percorso", "Guida"],
+  ["01-tp.html", "1", "Prodotti di trasformazione", "I. Il problema"],
+  ["02-fotocatalisi.html", "2", "Fotocatalisi con TiO₂", "I. Il problema"],
+  ["03-cromatografia.html", "3", "Fondamenti di cromatografia", "II. Separare"],
+  ["04-lc.html", "4", "Cromatografia liquida (HPLC)", "II. Separare"],
+  ["05-gc.html", "5", "Gascromatografia (GC)", "II. Separare"],
+  ["06-esi.html", "6", "Elettrospray (ESI) e sorgenti a pressione atmosferica", "III. Ionizzare"],
+  ["07-ei-ci.html", "7", "Ionizzazione elettronica (EI) e chimica (CI)", "III. Ionizzare"],
+  ["08-vuoto.html", "8", "Dalla sorgente al vuoto", "III. Ionizzare"],
+  ["09-quadrupolo.html", "9", "Il quadrupolo: teoria", "IV. Analizzare gli ioni"],
+  ["10-qqq.html", "10", "Il triplo quadrupolo e la CID", "IV. Analizzare gli ioni"],
+  ["11-risoluzione.html", "11", "Risoluzione e alta risoluzione: TOF, Orbitrap", "IV. Analizzare gli ioni"],
+  ["12-dati.html", "12", "Full scan, MS2 e MRM: leggere i dati", "V. Leggere gli spettri"],
+  ["13-formula.html", "13", "Dalla massa alla formula", "V. Leggere gli spettri"],
+  ["14-frammentazione-esi.html", "14", "Frammentazione in CID (ioni a elettroni pari)", "V. Leggere gli spettri"],
+  ["15-ei-metodo.html", "15", "Risolvere uno spettro EI: il metodo", "V. Leggere gli spettri"],
+  ["16-ei-famiglie.html", "16", "Le famiglie di composti in EI", "V. Leggere gli spettri"],
+  ["17-origine.html", "17", "Da dove viene questo ione?", "V. Leggere gli spettri"],
+  ["18-strategia.html", "18", "Strategia per trovare i TP", "VI. Dal dato al risultato"],
+  ["19-hr-dda.html", "19", "Alta risoluzione e DDA nel programma", "VI. Dal dato al risultato"],
+  ["20-disegno.html", "20", "Disegnare le molecole", "VI. Dal dato al risultato"],
+  ["21-glossario.html", "21", "Glossario e bibliografia", "Appendice"],
+  ["22-formulario.html", "22", "Formulario per l'orale", "Appendice"],
+  ["pratica.html", "P", "Allenarsi per l'orale", "Pratica"],
+  ["pratica-ei.html", "P1", "Dallo spettro alla struttura", "Pratica"],
+  ["pratica-orale.html", "P2", "Domande dell'orale", "Pratica"],
+  ["pratica-perdite.html", "P3", "Che cosa ha perso?", "Pratica"],
+  ["pratica-isotopi.html", "P4", "Indovina gli elementi", "Pratica"],
+  ["pratica-formula.html", "P5", "Formula esatta", "Pratica"],
+  ["pratica-strumento.html", "P6", "Carte dello strumento", "Pratica"],
+  ["pratica-quadrupolo.html", "P7", "Pilota il quadrupolo", "Pratica"],
 ];
 const APP = typeof APP_NAME === "string" ? APP_NAME : "mzLab";        // appname.js is loaded first by every page
 CHAPTERS.forEach(c => { c[2] = c[2].split("{APP}").join(APP); });
@@ -35,6 +53,16 @@ const TP = (() => {
   const here = location.pathname.split("/").pop() || "index.html";
   const idx = Math.max(0, CHAPTERS.findIndex(c => c[0] === here));
   const embedded = window.self !== window.top;
+  // smartphone: same rule as ../telefono.js (which the program loads before everything; the Teoria pages do not load it)
+  const PHONE = typeof QQQ_PHONE === "boolean" ? QQQ_PHONE : (() => {
+    let f = null; try { f = sessionStorage.getItem("qqq.telefono"); } catch (_) { /* automatic */ }
+    if (f !== null) return f === "1";
+    const coarse = !!(window.matchMedia && matchMedia("(pointer:coarse)").matches);
+    return /iPhone|iPod|Android.+Mobile|Windows Phone|Mobile.+Firefox|Opera Mini/i.test(navigator.userAgent || "") || (coarse && Math.min(screen.width, screen.height) < 500);
+  })();
+  // on a phone the exercises are not offered (they need a large screen): the page says so and sends back to the Teoria.
+  // The oral questions are only text: they stay.
+  const NOEX = PHONE && /^pratica-/.test(here) && here !== "pratica-orale.html";
 
   function slug(s) {
     return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48);
@@ -46,17 +74,21 @@ const TP = (() => {
     const top = document.createElement("header"); top.id = "top";
     // inside the program the main bar already has the logo and the tabs: no second header there (only the index button on narrow screens)
     if (embedded) document.body.classList.add("emb");
-    top.innerHTML = `<button id="menu" aria-label="Indice">&#9776;</button>` + (embedded ? "" : `<a href="index.html"><img src="../logo.png" alt=""></a>
+    top.innerHTML = `<button id="menu" aria-label="Indice">&#9776;</button>` + (embedded ? "" : `<a href="index.html"><img src="../logo-64.png" alt="" width="28" height="28"></a>
       <span class="t">${APP} <small>· Teoria</small></span><span class="sp"></span>`);
     document.body.prepend(top);
     const side = $("#side");
-    const list = CHAPTERS.map((c, i) => `<li><a href="${c[0]}" class="${i === idx ? "on" : ""}"><b>${c[1]}</b><span>${c[2]}</span></a></li>`).join("");
+    // chapters grouped by part: a small heading each time the part changes
+    const list = CHAPTERS.map((c, i) => (c[3] && c[3] !== (CHAPTERS[i - 1] || [])[3] ? `<li class="part">${c[3]}</li>` : "") +
+      `<li><a href="${c[0]}" class="${i === idx ? "on" : ""}"><b>${c[1]}</b><span>${c[2]}</span></a></li>`).join("");
     // on-page table of contents from h2/h3
     const hs = [...document.querySelectorAll("main h2, main h3")];
     hs.forEach(h => { if (!h.id) h.id = slug(h.textContent); });
     const toc = hs.map(h => `<a href="#${h.id}" class="${h.tagName === "H3" ? "l3" : ""}">${h.textContent}</a>`).join("");
     side.innerHTML = `<h4>Capitoli</h4><ol>${list}</ol>${toc ? `<h4>In questa pagina</h4><div class="toc">${toc}</div>` : ""}`;
     $("#menu").onclick = () => side.classList.toggle("open");
+    side.addEventListener("click", e => { if (e.target.closest("a")) side.classList.remove("open"); });   // narrow screens: the index is a full-screen panel
+    if (PHONE) phone(top);
     // prev / next
     const pn = document.createElement("div"); pn.className = "pn";
     const p = CHAPTERS[idx - 1], n = CHAPTERS[idx + 1];
@@ -71,8 +103,30 @@ const TP = (() => {
       }, { rootMargin: "-70px 0px -70% 0px" });
       hs.forEach(h => io.observe(h));
     }
-    document.title = `${CHAPTERS[idx][1] === "0" ? "" : CHAPTERS[idx][1] + ". "}${CHAPTERS[idx][2]} · Teoria ${APP}`;
+    document.title = `${/^[0-9]+$/.test(CHAPTERS[idx][1]) && CHAPTERS[idx][1] !== "0" ? CHAPTERS[idx][1] + ". " : ""}${CHAPTERS[idx][2]} · ${/^pratica/.test(here) ? "Pratica" : "Teoria"} ${APP}`;
     renameApp();
+  }
+
+  // ---------------------------------------------------------------- smartphone
+  const PHONE_NOTE = `<b>Il sito non è ottimizzato per gli smartphone.</b> Dal telefono si legge tutta la Teoria; l'analisi dei dati, il disegno delle molecole e gli esercizi della Pratica si usano da un computer o da un tablet.`;
+  function phone(top) {
+    document.documentElement.classList.add("phone");
+    if (!embedded) {
+      // header: logo, Teoria, info; it goes away scrolling down and comes back scrolling up (more room for the text, above all in landscape)
+      top.insertAdjacentHTML("beforeend", `<button id="info" type="button" aria-label="Informazioni" title="Informazioni">i</button>`);
+      const note = document.createElement("div"); note.id = "phnote"; note.className = "box warn"; note.hidden = true;
+      note.innerHTML = `<p>${PHONE_NOTE}</p><p><a href="index.html">Indice della Teoria</a> · <a href="22-formulario.html">Formulario</a> · <a href="pratica-orale.html">Domande dell'orale</a></p>`;
+      $("main").prepend(note);
+      $("#info").onclick = () => { note.hidden = !note.hidden; if (!note.hidden) scrollTo({ top: 0, behavior: "smooth" }); };
+      let y0 = scrollY;
+      addEventListener("scroll", () => { const y = scrollY; top.classList.toggle("away", y > y0 && y > 80 && !$("#side").classList.contains("open")); y0 = y; }, { passive: true });
+    }
+    if (NOEX) {
+      document.body.classList.add("noex");
+      $("h1").insertAdjacentHTML("afterend", `<div class="box warn phex"><b>Gli esercizi si fanno da computer o da tablet</b><p>Questo gioco ha bisogno di uno schermo più grande (grafici da cliccare, editor delle strutture). Dal telefono potete ripassare con la Teoria, il formulario e le domande dell'orale.</p><p><a href="index.html">Indice della Teoria</a> · <a href="22-formulario.html">Formulario</a> · <a href="pratica-orale.html">Domande dell'orale</a></p></div>`);
+    } else if (here === "pratica.html") {
+      $("h1").insertAdjacentHTML("afterend", `<div class="box warn phex"><b>Dal telefono</b><p>I giochi si fanno da computer o da tablet; dal telefono funzionano le <a href="pratica-orale.html">domande dell'orale</a>.</p></div>`);
+    }
   }
 
   // ---------------------------------------------------------------- controls
@@ -203,10 +257,10 @@ const TP = (() => {
 
 
   // ---------------------------------------------------------------- glossary hints
-  // Every glossary term (glossario-dati.js, generated from 11-glossario.html by tools/genera_glossario.py) found in the text gets a dotted
+  // Every glossary term (glossario-dati.js, generated from 21-glossario.html by tools/genera_glossario.py) found in the text gets a dotted
   // underline; the mouse over it (or focus / tap) shows the short definition and a link to its chapter.
   function glossary() {
-    if (here === "11-glossario.html") return;
+    if (here === "21-glossario.html") return;
     const s = document.createElement("script"); s.src = "glossario-dati.js"; s.onload = () => { try { markTerms(GLOSSARIO); } catch (_) { /* hints are optional */ } };
     document.head.appendChild(s);
   }

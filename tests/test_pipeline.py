@@ -200,7 +200,9 @@ def test_theory_module_is_served_and_self_contained():
     for name in pages:
         html = (base / name).read_text(encoding="utf-8")
         assert not re.search(r'<script[^>]+src="https?:', html), name
-        for ref in re.findall(r'(?:src|href)="([^"#:]+)"', html):
+        for ref in re.findall(r'(?:src|href)="([^"#:?]+)(?:[?#][^"]*)?"', html):
+            if "${" in ref:          # built by the page script (template literal), checked by the e2e tests
+                continue
             target = "teoria/" + ref if not ref.startswith("../") else ref[3:]
             assert _static(target) is not None, (name, ref)
 

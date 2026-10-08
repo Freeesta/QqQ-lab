@@ -108,7 +108,10 @@ def main() -> None:
             shutil.copy2(ROOT / lic, out / lic)
     # the page: same index.html, plus the bridge that answers api/... without a server
     html = (static / "index.html").read_text(encoding="utf-8")
-    html = html.replace("<head>", '<head>\n<script src="static/browser.js"></script>', 1)
+    # right after telefono.js (it decides whether this is a phone: then the engine is not started at all)
+    tel = '<script src="static/telefono.js"></script>'
+    assert tel in html
+    html = html.replace(tel, tel + '\n<script src="static/browser.js"></script>', 1)
     # the name in the title is written here, not by appname.js: the apps that build link previews do not run JavaScript
     html = html.replace("<title>{APP}</title>", f"<title>{APP_NAME} · {TAGLINE}</title>", 1)
     html = html.replace("</head>", preview_tags() + "\n</head>", 1)

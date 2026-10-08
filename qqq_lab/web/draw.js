@@ -2,7 +2,9 @@
 // The page only draws and labels: the student does the chemistry (no formula/adduct/fragment tables here, on purpose).
 // OpenChemLib (also bundled) only turns what is drawn into SMILES and estimates properties of it (logP ...).
 // Module script; helpers come from explore.js (window).
-import * as OCL from "./vendor/openchemlib.js";
+// OpenChemLib (1.1 MB) is fetched only when the first properties are computed (Disegno open, something drawn), not at page load
+let OCL = null;
+const loadOCL = async () => OCL || (OCL = await import("./vendor/openchemlib.js"));
 
 const Q = s => document.querySelector(s);
 const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -14,9 +16,12 @@ function start() {
   starting = new Promise((resolve, reject) => {
     const on = e => { if (e.source === fr.contentWindow && e.data && e.data.type === "ketcher-ready") { removeEventListener("message", on); K = fr.contentWindow.ketcher; resolve(K); } };
     addEventListener("message", on);
+    Q("#kload").hidden = false;                                                // ~30 MB the first time: say it is loading
     fr.src = "static/vendor/ketcher/index.html";
     setTimeout(() => reject(new Error("Ketcher non si e' avviato")), 60000);
-  }).then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); });
+  });
+  starting.finally(() => { Q("#kload").hidden = true; }).catch(() => {});
+  starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); });
     k.editor.subscribe("selectionChange", () => requestAnimationFrame(showInfo));
     hideMacro(fr); changed(); drawLabels(); return k; });
   starting.catch(e => dnote(e.message));
@@ -116,6 +121,7 @@ async function showInfo() {
 }
 async function showInfo1() {
   const sc = Q("#sel-card"), pc = Q("#prop-card"); if (!K || !sc || !pc) return;
+  await loadOCL();
   const run = ++infoRun, sel = K.editor.selection() || {}, st = K.editor.struct(), set = new Set(sel.atoms || []);
   (sel.bonds || []).forEach(id => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
   const all = pieces(set.size ? set : null).map(p => ({ ...p, c: countAtoms(p.ids.map(i => st.atoms.get(i))) }));
