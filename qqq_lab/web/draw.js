@@ -33,7 +33,29 @@ function start() {
   starting.finally(() => { clearInterval(kldTimer); Q("#kload").hidden = true; }).catch(() => {});
   starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); });
     k.editor.subscribe("selectionChange", () => requestAnimationFrame(showInfo));
-    hideMacro(fr); fitZoom(k, fr); changed(); drawLabels(); return k; });
+    hideMacro(fr); fitZoom(k, fr); changed(); drawLabels();
+    
+    const doc = fr.contentDocument;
+    if (doc && doc.body) {
+      doc.body.addEventListener("dragover", e => { e.preventDefault(); e.stopPropagation(); });
+      doc.body.addEventListener("drop", async e => {
+        e.preventDefault(); e.stopPropagation();
+        const file = e.dataTransfer.files[0];
+        let txt = "";
+        if (file) txt = await file.text();
+        else txt = e.dataTransfer.getData("text/plain");
+        if (txt) {
+          try {
+            const before = await k.getKet();
+            await k.addFragment(txt);
+            if (await k.getKet() === before) dnote("Formato non supportato o non valido.");
+            else { fitZoom(k, fr); if (window.toast) toast("Struttura importata"); dnote(""); }
+          } catch (err) { dnote("Impossibile importare: " + err.message); }
+        }
+      });
+    }
+    
+    return k; });
   starting.catch(e => dnote(e.message));
   return starting;
 }
@@ -335,7 +357,7 @@ async function showInfo1() {
 let neutOn = true;                                                             // "Escludi la carica": on by default
 document.addEventListener("change", e => { if (e.target && e.target.id === "prop-neut") { neutOn = e.target.checked; showInfo(); } });
 const fmtF = f => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
-document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-cp]"); if (b) { try { navigator.clipboard.writeText(b.dataset.cp); b.textContent = "Copiato"; setTimeout(() => { b.textContent = "Copia"; }, 1200); } catch (_) { /* clipboard blocked */ } } });
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-cp]"); if (b) { try { navigator.clipboard.writeText(b.dataset.cp); if (window.toast) toast("SMILES copiato"); b.textContent = "Copiato"; setTimeout(() => { b.textContent = "Copia"; }, 1200); } catch (_) { /* clipboard blocked */ } } });
 
 // ------------------------------------------------------------------ formula and mass written under each structure
 // Optional (checkboxes "#lb-f" formula, "#lb-m" mass + "#lb-dec" decimals). Drawn in an overlay group of Ketcher's own SVG, so the label follows zoom and scroll
@@ -616,11 +638,12 @@ async function doExport(kind) {
   exwarn("");
   try {
     await start();
-    if (kind === "ket") { download(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); return; }
+    if (kind === "ket") { download(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); if (window.toast) toast("File salvato"); return; }
     if (kind === "jpg" && Q("#ex-nobg").checked) return;
     const clear = Q("#ex-nobg").checked && kind !== "jpg", blob = await image(kind);
     if (!blob || !blob.size) throw new Error("immagine vuota");
     download(blob, exportName(kind, clear));
+    if (window.toast) toast("File salvato");
   } catch (e) { exwarn("Esportazione non riuscita: " + (e && e.message ? e.message : e) + ". Ricarica la pagina (Cmd+Maiusc+R) e riprova; se resta, scrivi a chi tiene il corso."); }
 }
 Q("#ex-png").onclick = () => doExport("png");

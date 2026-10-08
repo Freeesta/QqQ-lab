@@ -1,3 +1,24 @@
+
+window.toast = function(msg) {
+  let t = document.getElementById("toast-container");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "toast-container";
+    t.className = "toast-container";
+    t.setAttribute("aria-live", "polite");
+    document.body.appendChild(t);
+  }
+  const el = document.createElement("div");
+  el.className = "toast-msg";
+  el.textContent = msg;
+  t.appendChild(el);
+  setTimeout(() => el.classList.add("show"), 10);
+  setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => el.remove(), 400);
+  }, 3000);
+};
+
 "use strict";
 // Esplorazione dei dati: si parte dal cromatogramma totale, lo studente decide cosa estrarre.
 // Script classico (usa gli helper di index.html: S, setup, nice, fmt, css, esc, smooth, M, setView, applyView).
@@ -81,7 +102,10 @@ function loading(on, msg) {
     if (!ldTimer) { ldNext(); ldTimer = setInterval(ldNext, 5000); } L.hidden = false;   // a phrase already turning (first start) is kept
   } else {
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
-    clearTimeout(ldSlow); setTimeout(() => { L.hidden = true; clearInterval(ldTimer); clearInterval(ldDotTimer); ldTimer = null; }, wait);
+    clearTimeout(ldSlow); setTimeout(() => {
+      L.classList.add("fade-out");
+      setTimeout(() => { L.hidden = true; L.classList.remove("fade-out"); clearInterval(ldTimer); clearInterval(ldDotTimer); ldTimer = null; }, 400);
+    }, wait);
   }
 }
 
@@ -1324,7 +1348,13 @@ async function drawLines(p) {
     g.font = fpx(12);
   } else for (const s of sr) {
     g.strokeStyle = s.color; g.lineWidth = (s.dash.length ? 1.5 : 1.8) + LWX(); g.setLineDash(s.dash); g.beginPath(); let st = false;
-    s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = X(r), py = Y(U(s, s.ys[i])); st ? g.lineTo(px, py) : g.moveTo(px, py); st = true; });
+    let curX = -999, minY, maxY, firstY, lastY;
+    const flush = (cx) => { if (curX === -999) return; if (!st) { g.moveTo(cx, firstY); st = true; } else g.lineTo(cx, firstY); g.lineTo(cx, minY); g.lineTo(cx, maxY); g.lineTo(cx, lastY); };
+    s.x.forEach((r, i) => { if (r < x0 || r > x1) return; const px = Math.round(X(r)), py = Y(U(s, s.ys[i]));
+      if (px !== curX) { flush(curX); curX = px; minY = maxY = firstY = lastY = py; }
+      else { if (py < minY) minY = py; if (py > maxY) maxY = py; lastY = py; }
+    });
+    flush(curX);
     g.stroke();
   }
   g.restore(); g.setLineDash([]);
@@ -1815,7 +1845,13 @@ async function drawSpec(p) {
     g.strokeStyle = x.f.color; g.lineWidth = 1.4 + LWX(); g.beginPath();
     if (lineOf(x)) {                                                     // profile: continuous line with a light fill under it
       const pm = x.d.pmz, py = x.d.py; let on = false;
-      pm.forEach((m, j) => { if (m < x0 - 0.5 || m > x1 + 0.5) return; if (!on) { g.moveTo(X(m), Y(py[j])); on = true; } else g.lineTo(X(m), Y(py[j])); });
+      let curX = -999, minY, maxY, firstY, lastY;
+      const flush = (cx) => { if (curX === -999) return; if (!on) { g.moveTo(cx, firstY); on = true; } else g.lineTo(cx, firstY); g.lineTo(cx, minY); g.lineTo(cx, maxY); g.lineTo(cx, lastY); };
+      pm.forEach((m, j) => { if (m < x0 - 0.5 || m > x1 + 0.5) return; const px = Math.round(X(m)), pvy = Y(py[j]);
+        if (px !== curX) { flush(curX); curX = px; minY = maxY = firstY = lastY = pvy; }
+        else { if (pvy < minY) minY = pvy; if (pvy > maxY) maxY = pvy; lastY = pvy; }
+      });
+      flush(curX);
       g.stroke(); if (on) { g.save(); g.lineTo(X(Math.min(x1 + 0.5, pm[pm.length - 1])), Y(0)); g.lineTo(X(Math.max(x0 - 0.5, pm[0])), Y(0)); g.closePath(); g.globalAlpha = 0.12; g.fillStyle = x.f.color; g.fill(); g.restore(); }
       g.beginPath();
     } else x.d.mz.forEach((m, j) => { if (m < x0 || m > x1) return; g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); }); g.stroke();
