@@ -16,16 +16,19 @@ const SPEC_DEF = { thr: 5, nlab: 10, dec: 1 };
 const sgn1 = (v, d = 1) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(d);
 
 // ---------------------------------------------------------------- ruler: p.meas = { ref: m/z | null, list: [{a, b}] }
+// a measure belongs to one view of one spectrum: a new zoom of the m/z axis, another scan or another file/level cancels it
+const measKey = p => JSON.stringify([p.zoom, p.r0, p.r1, p.k, p.level, p.si, p.prec, p.all]);
 function measClick(p, m) {
-  p.meas = p.meas || { ref: null, list: [] };
+  p.meas = p.meas || { ref: null, list: [], key: measKey(p) };
   if (p.meas.ref == null) p.meas.ref = m;
   else if (Math.abs(m - p.meas.ref) > (p._a && p._a.hrp ? 0.001 : 0.04)) p.meas.list.push({ a: p.meas.ref, b: m });          // one more measure from the same reference
   draw(p); uiSave();
 }
-function measSet(p, m) { p.meas = p.meas || { ref: null, list: [] }; p.meas.ref = m; draw(p); uiSave(); }
+function measSet(p, m) { p.meas = p.meas || { ref: null, list: [], key: measKey(p) }; p.meas.ref = m; draw(p); uiSave(); }
 function measClear(p) { p.meas = null; p.rul = false; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.remove("on"); draw(p); uiSave(); }
 function drawMeas(p, g, X, Y, W) {
   const m = p.meas; if (!m || p._exp && false) return;
+  if (m.key == null) m.key = measKey(p); else if (m.key !== measKey(p)) { p.meas = null; return; }       // zoom or scan changed: the measure is cancelled
   const ac = css("--accent"), x0 = M.l, x1 = W - M.r;
   g.save(); g.beginPath(); g.rect(x0, M.t - 1, x1 - x0, 400); g.clip();
   g.strokeStyle = g.fillStyle = ac; g.lineWidth = 1; g.font = fpx(12); g.textAlign = "center";
@@ -42,8 +45,11 @@ function drawMeas(p, g, X, Y, W) {
   });
   g.restore();
 }
-function specClick(p, px) {                       // a click on the spectrum (no drag): the ruler picks the nearest peak
+function specClick(p, px, py) {                  // a click on the spectrum (no drag): the ruler picks the nearest visible label, else the nearest peak
   if (!(p.rul || (p.meas && p.meas.ref != null)) || !p._a || !p._a.snap) return;
+  let lb = null, bd = 34;                          // the m/z labels are the targets (start and end alike): the nearest one within 34 px, whatever the height of the click
+  (p._a.lbls || []).forEach(l => { if (l.m == null) return; const d = Math.abs(l.x + l.w / 2 - px); if (d < bd) { bd = d; lb = l; } });
+  if (lb) { measClick(p, lb.m); return; }
   const s = p._a.snap(px); if (s) measClick(p, s.m);
 }
 function measMenu(p, m) {                          // entries of the right-click menu of the spectrum

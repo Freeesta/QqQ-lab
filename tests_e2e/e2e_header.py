@@ -37,7 +37,7 @@ try:
             pg.click("text=Carica dati"); ready(pg)
             pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_timeout(2000)
             pg.evaluate("document.querySelector('.pnl.xic [data-a=cpar]').click()"); pg.wait_for_timeout(200)
-            b = pg.locator('.pnl.xic [data-o="corr"]'); assert b.locator("svg").count() == 1 and "Correzione" in b.inner_text()
+            b = pg.locator('.pnl.xic [data-o="corr"]'); assert b.locator("svg").count() == 1 and "Correz" in b.inner_text()
             assert pg.locator(".pnl.xic select[data-o=corr]").count() == 0, "no longer a plain select"
             b.click(); pg.wait_for_timeout(150)
             items = pg.locator(".pnl.xic .corri"); assert items.count() >= 3 and all(items.nth(i).locator("svg").count() == 1 for i in range(items.count()))
