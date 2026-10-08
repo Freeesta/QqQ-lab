@@ -408,7 +408,8 @@ function labelParts(d0) {
   if (m) {
     const raw = d.q ? (d.mass - d.q * ELECTRON) / Math.abs(d.q) : d.mass;
     const line = f ? (lines.push([]), lines[1]) : parts;
-    line.push([d.q ? "m/z" : "exact mass", "it"], [` ${dec ? rh(raw, dec).toFixed(dec) : roundHalfUp(raw)}`, ""]);
+    const lab = d.q ? "m/z" : dec ? "exact mass" : "nominal mass";
+    line.push([lab, "it"], [` ${dec ? rh(raw, dec).toFixed(dec) : roundHalfUp(raw)}`, ""]);
   }
   return lines;
 }
