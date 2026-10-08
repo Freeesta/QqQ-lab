@@ -1,5 +1,6 @@
 """The preview of the shared link (WhatsApp & co): static title, Open Graph tags with ABSOLUTE addresses, a picture of the right size and weight."""
 import importlib.util
+import re
 import struct
 from pathlib import Path
 
@@ -27,6 +28,6 @@ def test_tags_have_the_name_and_absolute_addresses():
 
 def test_the_page_has_one_title_placeholder_and_one_head_to_close():
     html = (ROOT / "qqq_lab" / "web" / "index.html").read_text(encoding="utf-8")
-    assert html.count("<title>{APP}</title>") == 1 and html.count("</head>") == 1
-    out = html.replace("<title>{APP}</title>", f"<title>{bs.APP_NAME} · {bs.TAGLINE}</title>", 1).replace("</head>", bs.preview_tags() + "\n</head>", 1)
+    assert len(re.findall(r"<title>\{APP\}[^<]*</title>", html)) == 1 and html.count("</head>") == 1
+    out = re.sub(r"<title>\{APP\}[^<]*</title>", f"<title>{bs.APP_NAME} · {bs.TAGLINE}</title>", html, count=1).replace("</head>", bs.preview_tags() + "\n</head>", 1)
     assert "{APP}</title>" not in out and out.index("og:image") < out.index("</head>")
