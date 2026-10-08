@@ -63,6 +63,7 @@ def main():
     (WEB / "favicon.svg").write_text(svg_with(core, 64), encoding="utf-8")
     (WEB / "app-icon.svg").write_text(svg_with(core, 160, True), encoding="utf-8")
     (WEB / "favicon-32.png").write_bytes(png(core.resize((32, 32), Image.LANCZOS)))
+    (WEB / "logo-64.png").write_bytes(png(core.resize((64, 64), Image.LANCZOS)))   # headers (28-32 px on screen): 6 kB instead of 110
     core.resize((256, 256), Image.LANCZOS).save(WEB / "favicon.ico", sizes=[(16, 16), (32, 32), (48, 48), (64, 64)])
     (WEB / "apple-touch-icon.png").write_bytes(png(app_icon(core, 180, rounded=False).convert("RGB")))
     big = {}

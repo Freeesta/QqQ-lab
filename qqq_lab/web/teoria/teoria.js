@@ -74,7 +74,7 @@ const TP = (() => {
     const top = document.createElement("header"); top.id = "top";
     // inside the program the main bar already has the logo and the tabs: no second header there (only the index button on narrow screens)
     if (embedded) document.body.classList.add("emb");
-    top.innerHTML = `<button id="menu" aria-label="Indice">&#9776;</button>` + (embedded ? "" : `<a href="index.html"><img src="../logo.png" alt=""></a>
+    top.innerHTML = `<button id="menu" aria-label="Indice">&#9776;</button>` + (embedded ? "" : `<a href="index.html"><img src="../logo-64.png" alt="" width="28" height="28"></a>
       <span class="t">${APP} <small>· Teoria</small></span><span class="sp"></span>`);
     document.body.prepend(top);
     const side = $("#side");
