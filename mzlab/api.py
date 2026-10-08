@@ -66,6 +66,8 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                                     float(q["rt0"]) if q.get("rt0") else None, float(q["rt1"]) if q.get("rt1") else None, q.get("formula")))
         if path == "/api/mrm":
             return _json(app.mrm([int(x) for x in q["k"].split(",") if x]))
+        if path == "/api/method_warnings":
+            return _json(app.method_warnings())
         if path == "/api/method":
             return _json(app.method(int(q["k"])))
         if path == "/api/nearest_scan":

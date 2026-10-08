@@ -35,7 +35,7 @@ E2E = ROOT / "tests_e2e"
 # "dam" = needs a .dam method file (QQQ_DAM); "sito" = builds the static site with Pyodide (network to jsDelivr or PYODIDE_DIR);
 # "crypto" = needs the 'cryptography' package. Keep this table up to date when you add an e2e (default: no needs).
 NEEDS: dict[str, set[str]] = {
-    "e2e9": {"dam"}, "e2e10": {"dam"}, "e2e15": {"dam"},
+    "e2e9": {"dam"}, "e2e10": {"dam"}, "e2e15": {"dam"}, "e2e_dam_incoerente": {"dam"},
     "e2e_studenti": {"veri"},          # needs the whole series B (7 times, 6 standards): the synthetic files are only a few
     "e2e13": {"sito"}, "e2e_tpmine1": {"sito", "crypto"}, "e2e_tpmine2": {"sito", "crypto"},
     "e2e_tpmine_mem": {"sito", "crypto", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes

@@ -271,3 +271,18 @@ def check_against(data: dict, lab: dict) -> list[dict]:
     if pda:
         add("PDA", "attivo", "segnale presente (TWC)" if data.get("pda") else "segnale assente nel file", "ok" if data.get("pda") else "diff")
     return rows
+
+
+def method_kind(lab: dict) -> str | None:
+    """Experiment type a method (.dam) is for: 'mrm' (decoded from the file), 'ms2' or 'full' (only the NAME says: the binary does not tell a Q1
+    scan from a product-ion scan), None when it cannot be said. Used to warn when the opened data are of another type."""
+    import re
+    exps = lab.get("experiments") or []
+    if exps and all(e.get("kind") == "mrm" for e in exps):
+        return "mrm"
+    name = str(lab.get("name") or "").lower()
+    if re.search(r"ms2|msms|ms-ms|epi\b|product|prodotti", name):
+        return "ms2"
+    if re.search(r"full|\bq1\b|\bems\b|\bms1\b|scan", name):
+        return "full"
+    return None
