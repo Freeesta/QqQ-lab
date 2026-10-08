@@ -97,7 +97,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 #loading{position:fixed;inset:0;z-index:10010;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
 .ms{display:flex;align-items:flex-end;gap:5px;height:90px}.ms i{display:block;width:9px;background:var(--accent);border-radius:2px 2px 0 0;animation:pk 1.3s ease-in-out infinite}
 @keyframes pk{0%,100%{transform:scaleY(.15)}50%{transform:scaleY(1)}}.ms i{transform-origin:bottom}
-#ldmsg{font-size:15px;max-width:520px;min-height:44px}#ldsub{color:var(--muted)}#ldth{margin-top:6px}
+#ldmsg{font-size:15px;max-width:520px;min-height:44px}#ldsub{color:var(--muted)}
 #refbody tr.exp td{background:color-mix(in srgb,var(--accent) 9%,transparent)}
 .pnl.chrom .leg,.pnl.xic .leg,.pnl.mrm .leg,.pnl.spec .leg2{position:absolute;z-index:2;max-width:55%;margin:0;padding:2px 8px;font-size:11px;max-height:40%;background:color-mix(in srgb,var(--panel) 86%,transparent);border:1px solid var(--line);border-radius:6px}.pnl.spec .leg2{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted)}.pnl.spec .leg2 span{display:inline-flex;gap:4px;align-items:center}.pnl .leg:empty,.pnl .leg2:empty{display:none}.pnl.chrom .rd:not(.show),.pnl.xic .rd:not(.show),.pnl.mrm .rd:not(.show),.pnl.spec .rd{display:none}.pnl.spec .leg{position:absolute;z-index:2;display:block;margin:0;padding:0;max-width:calc(50% - 56px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10.5px;text-align:right;color:var(--muted);pointer-events:none}.pnl.spec .leg span{display:inline}
 #qtip:has(.qs){max-width:540px;padding:8px 10px}#qtip .qs{white-space:normal}#qtip .qr{display:flex;align-items:stretch;gap:6px;margin:6px 0}#qtip .qb{flex:1 1 0;border:1px solid rgba(255,255,255,.4);border-radius:6px;padding:4px 7px;font-size:12px}#qtip .qb b{display:block;font-size:13px}#qtip .qa{align-self:center;font-size:16px}#qtip .qw{font-size:12px}
@@ -191,7 +191,7 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
  <li>Invia e attendi la tabella dei prodotti (formula, massa monoisotopica, SMILES).</li>
  <li>Torna qui: calcola [M+H]<sup>+</sup> = massa + 1.00728 e controlla nel full scan, con una finestra di ±1 Da, se compare uno ione che cresce con il tempo. Annota i candidati che trovi (m/z, RT, andamento) per la relazione.</li></ol>
  <div class="bar"><button id="bt-open">Riapri BioTransformer</button><span class="sp"></span><button id="btx2">Chiudi</button></div></div>
-<div id="loading"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><div id="ldmsg"></div><div id="ldsub"></div><button id="ldth" class="sec" hidden>Intanto leggi la Teoria</button></div>
+<div id="loading"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><div id="ldmsg"></div><div id="ldsub"></div></div>
 <script>
 const PHRASES = [
   "Ignorando i warning", "Schivando gli ftalati", "Minando crypto di nascosto", "Litigando coi file", "Allineando i quadrupoli",
@@ -295,11 +295,8 @@ function nice(a,b,n){const s=(b-a)/n,p=Math.pow(10,Math.floor(Math.log10(s))),m=
 function smooth(y,k){if(!k)return y;return y.map((_,i)=>{const a=y[i-1]??y[i],c=y[i+1]??y[i];return(a+2*y[i]+c)/4})}
 const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles
 
-// while the engine starts (the first time 10-20 s) the Teoria can already be read: it does not need Python
-let ldThT=setTimeout(()=>{const b=$("#ldth");if(b&&!$("#loading").hidden)b.hidden=false},1500);
-$("#ldth").onclick=()=>{$("#loading").hidden=true;setView("theory")};
 async function init(){try{loading(true);await bootSession();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});
-  const d=await api("api/state");fail();window.qqReady=true;clearTimeout(ldThT);$("#ldth").hidden=true;setTimeout(prefetchIdle,3000);$("#newrun").hidden=!(d.app||S.sess);if(!S.sess)showStart(d);else applyView()}catch(e){fail(e)}finally{loading(false)}}
+  const d=await api("api/state");fail();window.qqReady=true;setTimeout(prefetchIdle,3000);$("#newrun").hidden=!(d.app||S.sess);if(!S.sess)showStart(d);else applyView()}catch(e){fail(e)}finally{loading(false)}}
 
 // ------------------------------------------------------------------ views: Dati (start screen or panels), Disegno
 const ST={files:[],methods:[]};

@@ -50,7 +50,7 @@ Unico documento per gli agenti. Descrive lo STATO ATTUALE (la storia è in git: 
 - **Integrazione**: solo XIC e MRM (TIC/BPC/PDA rimandano all'XIC); automatica o manuale, mai sovrapposte; tabella con S/N e parametri cromatografici facoltativi; Excel. La retta di taratura NON c'è (decisione di Federico).
 - **Correzione**: nessuna | file bianco | fondo di un tratto | linea di base SNIP. Spettri: fondo da un tratto o da un bianco.
 - **Spettro**: asse m/z fisso sull'intervallo del livello, lucchetto solo su y, righello, annotazioni, profilo isotopico di una formula (clic destro), ricerca in libreria per le MS2.
-- **Tolti per decisione di Federico (non reintrodurre)**: schede Attribuzioni e Suggerimenti, retta di taratura, spettro simulato e sagoma, menu «Ione» del Disegno, didascalie automatiche, scheda Isotopi, «?» nei pannelli (resta la guida generale), «Da dove viene?» nei menu.
+- **Tolti per decisione di Federico (non reintrodurre)**: schede Attribuzioni e Suggerimenti, retta di taratura, spettro simulato e sagoma, menu «Ione» del Disegno, didascalie automatiche, scheda Isotopi, «?» nei pannelli (resta la guida generale), «Da dove viene?» nei menu, pulsante «Intanto leggi la Teoria» durante il caricamento.
 
 ### Disegno (`draw.js`, Ketcher in `vendor/ketcher`)
 - Ketcher si carica solo aprendo la scheda (avviso «Carico l'editor…»); OpenChemLib solo al primo calcolo delle proprietà. Il `<style>` iniettato da `hideMacro` ingrandisce le barre (variabili `--ktz`, `--ksz` calcolate dallo spazio e dai pulsanti visibili), sposta gli anelli rapidi in una colonna a sinistra (griglia di `App-module_app` a 4 colonne, nessuna riga in basso) e nasconde aiuto e informazioni di Ketcher. Il riquadro è alto quanto la finestra; zoom iniziale 120-200% secondo la larghezza (`fitZoom`, riapplicato dopo «Disegna veloce»: Ketcher torna a 100% dopo ogni incolla).
@@ -68,7 +68,7 @@ Unico documento per gli agenti. Descrive lo STATO ATTUALE (la storia è in git: 
 - Telefono = user agent da telefono o schermo touch con lato corto < 500 px (un tablet non lo è); `?telefono=1|0` forza la scelta. Sul telefono `index.html` chiama `phoneMode()` invece di `init()`: header con logo, Teoria e «i», avviso «non ottimizzato per smartphone» con «Vai alla Teoria»; nessun motore, nessun Disegno. Nella Teoria l'header sparisce scorrendo; i giochi (tranne le domande dell'orale) rimandano al computer.
 
 ### Caricamenti (misurati sul sito costruito, linea simulata 20 Mbit/s)
-- Subito: solo il motore (~10 MB compressi, serve alla vista Dati); durante l'avvio c'è «Intanto leggi la Teoria». Dopo, nei momenti liberi: le cose sotto 1 MB (Teoria, OpenChemLib). Ketcher (8,7 MB compressi) quando il mouse passa su «Disegno», o da libero solo con connessione veloce e senza risparmio dati. File di esempio solo col pulsante. L'avvio resta ~4-5 s anche alla seconda visita: è la compilazione di Python, non la rete.
+- Subito: solo il motore (~10 MB compressi, serve alla vista Dati). Dopo, nei momenti liberi: le cose sotto 1 MB (Teoria, OpenChemLib). Ketcher (8,7 MB compressi) quando il mouse passa su «Disegno», o da libero solo con connessione veloce e senza risparmio dati. File di esempio solo col pulsante. L'avvio resta ~4-5 s anche alla seconda visita: è la compilazione di Python, non la rete.
 - Le frasi della schermata di caricamento (`PHRASES`, `ldNext`) sono in uno script in linea subito dopo `#loading` in `index.html`: compaiono al primo disegno della pagina, prima dei ~600 kB di script classici. Non spostarle in `explore.js`.
 
 ## 6. Fatti sui dati
