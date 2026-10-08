@@ -299,6 +299,9 @@ function renderFileList() {
   const row = f => `<div class="fl ${f.k === E.cur ? "cur" : ""}"><input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="Mostra o nascondi">
     <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}" title="Clic sulla riga per scegliere il file corrente, doppio clic sul nome per rinominare">${EH(f.label)}</b>${polSign(f)}${window.HR ? HR.badge(f) : ""}
     <small>${sub(f)}</small>
+    ${E.tab === "ms2" && f.precursors && f.precursors.length ? 
+        '<div class="pr-list" style="margin-top:4px">' + [...new Set(f.precursors)].sort((a,b)=>a-b).map(pr => `<div class="fl pr" style="padding-left:0; min-height:0; margin-bottom:2px"><input type="checkbox" data-pr="${pr}" ${ms2PairOf(pr) ? "checked" : ""} title="Aggiunge (o chiude) una seconda coppia di grafici per confrontare questo precursore con quello mostrato"><div class="fi"><b class="pn" data-pg="${pr}" title="Clic: i grafici passano a questo precursore."><span style="font-style:italic">m/z</span> ${EH(pr)}</b></div></div>`).join("") + '</div>'
+    : ""}
 </div></div>`;
   const ghost = f => `<div class="fl ghost" data-go="${f.k}" title="Questo file è ${EH(kindOf(f))}: non si usa in questa scheda. Clic per aprire la scheda ${EH(TABS.find(x => x[0] === f.kind)[1])}."><input type="checkbox" disabled><i style="background:${f.color}"></i><div class="fi"><b class="nm">${EH(f.label)}</b><small>${sub(f)}</small></div></div>`;
   const pre = window.DDA && DDA.listMode() ? DDA.listBlock() : E.tab === "ms2" && window.ms2Exps && ms2Exps().length ? `<div class="fgh"><span>Precursori</span><em>${ms2Exps().length}</em></div>` + ms2Exps().map(x => `<div class="fl pr"><input type="checkbox" data-pr="${x.prec}" ${ms2PairOf(x.prec) ? "checked" : ""} title="Aggiunge (o chiude) una seconda coppia di grafici per confrontare questo precursore con quello mostrato"><div class="fi"><b class="pn" data-pg="${x.prec}" title="Clic: i grafici passano a questo precursore. Presente in ${x.files.size} file">${x.prec != null ? "<span style=\"font-style:italic\">m/z</span> " + EH(x.prec) : "?"}</b><small>${x.ce.size ? "CE " + [...x.ce].join(", ") + " V · " : ""}${x.n} scan</small></div></div>`).join("") : "";
@@ -608,9 +611,9 @@ function addPanel(type, o, after) {
     const gs = type === "spec" ? `<span class="tbg"><button class="bt" data-a="rul" title="Righello: clic su un picco (riferimento) e poi su un altro: mostra la differenza di m/z. Si può anche usare il clic destro su un picco, «Misura da questo picco». Esc toglie le misure">${IC_RULER}</button><button class="bt" data-a="par" title="Parametri dello spettro: asse in % o in cps, quante etichette m/z, decimali">${IC_PARAM}</button></span>` : "";
     const gl = lens ? `<span class="tbg"><button class="bt${o.tl ? " on" : ""}" data-a="tlink" title="Collega l'asse del tempo: ingrandendo un grafico collegato, gli altri collegati mostrano lo stesso intervallo di tempo">${IC_LINK}</button></span>` : "";
     const gi = lens ? `<span class="tbg"><button class="bt" data-a="iauto" title="Integrazione automatica: clicca su un picco e il programma trova i bordi e ne mostra l'area (poi puoi trascinare le barre)">${IC_AUTO}</button><button class="bt" data-a="iman" title="Integrazione manuale: trascina sul grafico l'intervallo da integrare">${IC_MAN}</button><select class="bt" data-a="intf" hidden title="Quale traccia integrare: quella su cui clicchi, tutte le visibili oppure un file preciso"></select><button class="bt" data-a="iclr" hidden title="Cancella tutte le integrazioni di questo grafico">Pulisci integrazioni</button><button class="bt" data-a="itab" hidden title="Tabella delle aree integrate e cinetica">${IC_TAB}</button></span>` : "";
-    const gx = type === "chrom" ? '<span class="tbg"><button class="bt" data-a="xic" title="Estrai uno ione (XIC): scegli la finestra di m/z. Si integra solo dagli XIC">XIC</button></span>' : "";
+    const gx = type === "chrom" ? `<span class="tbg"><button class="bt" data-a="xic" ${p.tab === "ms2" ? "disabled " : ""}title="${p.tab === "ms2" ? "Non disponibile per MS2" : "Estrai uno ione (XIC): scegli la finestra di m/z. Si integra solo dagli XIC"}">XIC</button></span>` : "";
     const gm = '<span class="tbg mv"><button class="bt" data-a="up" title="Sposta questo grafico in su">&#9650;</button><button class="bt" data-a="down" title="Sposta questo grafico in giù">&#9660;</button></span>';
-    const go = `<span class="tbg"><button class="bt" data-a="png" title="Salva il grafico come immagine PNG">${IC_DL}PNG</button>${type === "map" ? "" : '<button class="bt" data-a="xlsx" title="Salva i dati del grafico (le tracce visibili) in un file Excel (.xlsx): numeri veri, un foglio, intestazioni con le unità">' + IC_DL + 'Excel</button>'}</span>`;
+    const go = `<span class="tbg"><button class="bt" data-a="dl" title="Scarica l'immagine o i dati del grafico">${IC_DL}Scarica &#9662;</button></span>`;
     return `<span class="tbs">${gv + gl + gs + gi + gx + gm + go}<button class="bt fsb" data-a="max" title="Schermo intero: ingrandisce questo pannello (Esc per uscire)">${IC_FS}</button><button class="x" title="Chiudi il pannello">&times;</button></span>`;
   })()}</div><canvas></canvas>${type === "spec" ? `<button class="bt lkb" data-a="lock">${IC_UNLOCK}</button>` : ""}<div class="vl" hidden></div><div class="cl" hidden></div><div class="tip" hidden></div><div class="leg"></div>${type === "spec" ? '<div class="leg2"></div>' : ""}`;
   p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2");
@@ -650,20 +653,27 @@ function addPanel(type, o, after) {
     cancelAnimationFrame(p._raf); p._raf = requestAnimationFrame(() => { draw(p); setTimeout(() => draw(p), 120); });
   };
   fsB.onclick = () => p._setMax(!el.classList.contains("max"));
-  const xlsB = el.querySelector('[data-a="xlsx"]');
-  if (xlsB) xlsB.onclick = () => { const t = plotSheets(p); if (t) dlx(plotName(p) + ".xlsx", t); else info("Nessun dato da salvare in questo grafico."); };
   el.querySelector('[data-a="fit"]').onclick = () => { pushZh(p); p.zoom = null; p.zoomY = null; if (p.type === "spec") p.lock = null; draw(p); uiSave(); };
   const lkB = el.querySelector('[data-a="lock"]'); if (lkB) lkB.onclick = () => toggleLock(p);
   const rulB = el.querySelector('[data-a="rul"]'); if (rulB) rulB.onclick = () => { p.rul = !p.rul; rulB.classList.toggle("on", p.rul); if (!p.rul && p.meas && p.meas.ref != null && !p.meas.list.length) { p.meas = null; draw(p); } };
+  const relB = el.querySelector('[data-a="rel"]'); if (relB) relB.onclick = () => { p.rel = !p.rel; relB.classList.toggle("on", p.rel); draw(p); uiSave(); };
   const parB = el.querySelector('[data-a="par"]'); if (parB) parB.onclick = () => specParams(p, parB);
   const tlB = el.querySelector('[data-a="tlink"]'); if (tlB) tlB.onclick = () => toggleTl(p);
-  el.querySelector('[data-a="png"]').onclick = async () => {
-    let cvs; p._exp = true; EXPORTING = true;                             // the picture has no cursor line, no selection and no zoom bar; the spectrum says where it comes from
-    try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; draw(p); }
-    cvs.toBlob(async b => {
-      let out = b; try { out = await pngWithMeta(b, plotMeta(p)); } catch (e) { /* the image is saved anyway, only without metadata */ }
-      const a = document.createElement("a"); a.href = URL.createObjectURL(out); a.download = plotName(p) + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    });
+  const dlB = el.querySelector('[data-a="dl"]');
+  if (dlB) dlB.onclick = e => {
+    menu(e, [
+      { label: "Immagine (PNG)", icon: IC_DL, fn: async () => {
+        let cvs; p._exp = true; EXPORTING = true;
+        try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; draw(p); }
+        cvs.toBlob(async b => {
+          let out = b; try { out = await pngWithMeta(b, plotMeta(p)); } catch (e) { }
+          const a = document.createElement("a"); a.href = URL.createObjectURL(out); a.download = plotName(p) + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        });
+      }},
+      ...(p.type === "map" ? [] : [{ label: "Dati (Excel)", icon: IC_DL, fn: () => {
+        const t = plotSheets(p); if (t) dlx(plotName(p) + ".xlsx", t); else info("Nessun dato da salvare in questo grafico.");
+      }}])
+    ]);
   };
   const bZ = el.querySelector('[data-a="izoom"]'), bA = el.querySelector('[data-a="iauto"]'), bM = el.querySelector('[data-a="iman"]'), bT = el.querySelector('[data-a="itab"]'), bX = el.querySelector('[data-a="xic"]');
   if (bA) {                                             // tools (one at a time): zoom (drag an interval), automatic integration (click a peak), manual integration (drag an interval)
@@ -1774,7 +1784,7 @@ function refreshIntf(p) {
 }
 // students integrate only from an XIC (or an MRM transition): the total chromatograms add up every ion, so their area belongs to no compound
 function guardInt(p) {
-  if (p.type !== "chrom") return true;
+  if (p.type !== "chrom" || p.tab === "ms2") return true;
   yesno("<b>Da questo cromatogramma non si integra.</b><br>Il TIC, il BPC e il PDA sommano tutti gli ioni: l'area che ne esce non appartiene a nessun composto. Estrai prima lo ione che ti interessa (XIC) con una finestra di <i>m/z</i> stretta attorno all'analita, poi integra il picco nell'XIC.<br><br>Vuoi estrarre un XIC adesso?").then(v => { if (v) openXic(null); });
   return false;
 }
