@@ -1,6 +1,6 @@
 """The endpoints of the program, independent of the transport.
 
-`dispatch` is used by the local HTTP server (server.py) and by the browser version (Pyodide, web/worker.js):
+`dispatch` is used by the test server (tools/dev_server.py) and by the browser version (Pyodide, web/browser-worker.js):
 same routes, same answers, one implementation.
 """
 from __future__ import annotations

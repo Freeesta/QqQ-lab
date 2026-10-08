@@ -31,13 +31,29 @@ DAM = Path(os.environ.get("QQQ_DAM", ROOT.parent / "QqQ" / "Metodi inquinanti" /
 SH = str(HERE / "shots") + "/"
 os.makedirs(SH, exist_ok=True)
 def mz(f): return str(MZ / f"{f}.mzML")
+def free_port() -> int:
+    import socket
+    with socket.socket() as so:
+        so.bind(("127.0.0.1", 0)); return so.getsockname()[1]
+# tools/verifica.py runs several tests at once (QQQ_E2E_PARALLEL=1): then every Run takes a free port and its own work folder,
+# because a few tests share the fixed ones (they were written to run one after the other)
+PARALLEL = os.environ.get("QQQ_E2E_PARALLEL") == "1"
 class Run:
     def __init__(s, port=8811, wd="/tmp/wd1", fresh=True, extra=()):
+        if PARALLEL:
+            port = free_port(); wd = f"{wd}_{port}"
         s.port, s.wd, s.errs = port, wd, []
         if fresh: shutil.rmtree(wd, ignore_errors=True)
         s.srv = subprocess.Popen([sys.executable, str(ROOT / "tools" / "dev_server.py"), "--workdir", wd, "--port", str(port), *extra],
                                  cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        time.sleep(2)
+        # ready as soon as the server answers (it was a fixed 2 s wait)
+        import urllib.request
+        t0 = time.time()
+        while time.time() - t0 < 15:
+            try:
+                urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=1).read(); break
+            except Exception:
+                time.sleep(0.1)
     def page(s, p):
         s.b = p.chromium.launch()
         pg = s.b.new_page(viewport={"width": 1500, "height": 2200})
