@@ -1448,21 +1448,77 @@ def source_ramp(dp, f_int, p_int) -> dict:
 # ----------------------------------------------------------------------------------------------------------------------
 # 9. MS2 similarity
 # ----------------------------------------------------------------------------------------------------------------------
-def _match(a_mz, a_i, b_mz, b_i, tol, shift=0.0):
-    """Greedy one-to-one matching of peaks of a (shifted by `shift`) to peaks of b within tol: list of (ia, ib) by descending product."""
-    pairs = []
-    for i, (m, y) in enumerate(zip(a_mz, a_i)):
-        for j, (m2, y2) in enumerate(zip(b_mz, b_i)):
-            if abs(m + shift - m2) <= tol:
-                pairs.append((y * y2, i, j))
-    pairs.sort(reverse=True)
-    ua, ub, out = set(), set(), []
-    for _, i, j in pairs:
-        if i not in ua and j not in ub:
-            ua.add(i)
-            ub.add(j)
-            out.append((i, j))
-    return out
+def greedy_match(S):
+    """Greedy one-to-one matching by descending weight, dense and batched.
+
+    S: (..., Ka, Kb) non-negative candidate weights (0 = not a candidate). Returns (total weight, number of pairs) per leading index.
+    Each round takes the pairs that are the maximum of both their row and their column ("locally dominant"); with distinct weights the pairs
+    taken over the rounds are exactly those of the global greedy (heaviest pair first, then the heaviest compatible one...)."""
+    S = np.asarray(S, float)
+    S = S + (S > 0) * 1e-12 * np.arange(S.shape[-2] * S.shape[-1]).reshape(S.shape[-2:])       # distinct weights
+    tot = np.zeros(S.shape[:-2])
+    n = np.zeros(S.shape[:-2], int)
+    for _ in range(min(S.shape[-2:])):
+        if not (S > 0).any():
+            break
+        dom = (S > 0) & (S == S.max(-1, keepdims=True)) & (S == S.max(-2, keepdims=True))
+        tot += (S * dom).sum((-1, -2))
+        n += dom.sum((-1, -2))
+        S = np.where(dom.any(-1, keepdims=True) | dom.any(-2, keepdims=True), 0.0, S)
+    return tot, n
+
+
+def _candidates(a, b, tol, shifts):
+    """(ia, ib) of every pair with |b - a - d| <= tol for some d in shifts, without building the Ka x Kb matrix."""
+    order = np.argsort(b, kind="stable")
+    bs = b[order]
+    keys = []
+    for d in shifts:
+        lo = np.searchsorted(bs, a + d - tol - 1e-9, "left")
+        n = np.searchsorted(bs, a + d + tol + 1e-9, "right") - lo
+        ia = np.repeat(np.arange(len(a)), n)
+        ib = order[np.arange(int(n.sum())) - np.repeat(np.cumsum(n) - n, n) + np.repeat(lo, n)]
+        ok = np.abs(b[ib] - a[ia] - d) <= tol
+        keys.append(ia[ok] * len(b) + ib[ok])
+    keys = np.unique(np.concatenate(keys)) if keys else np.zeros(0, np.int64)
+    return keys // max(len(b), 1), keys % max(len(b), 1)
+
+
+def _greedy_pairs(ia, ib, w, na, nb):
+    """Global greedy one-to-one matching of weighted candidate pairs (heaviest first; ties by position), by locally dominant rounds.
+    Returns the chosen indices into ia/ib/w, heaviest first."""
+    if len(w) == 0:
+        return np.zeros(0, int)
+    rank = np.empty(len(w), np.int64)
+    rank[np.lexsort((np.arange(len(w)), -w))] = np.arange(len(w))
+    alive = np.arange(len(w))
+    out = []
+    while len(alive):
+        ra = np.full(na, len(w), np.int64)
+        rb = np.full(nb, len(w), np.int64)
+        np.minimum.at(ra, ia[alive], rank[alive])
+        np.minimum.at(rb, ib[alive], rank[alive])
+        dom = alive[(rank[alive] == ra[ia[alive]]) & (rank[alive] == rb[ib[alive]])]
+        out.append(dom)
+        ua, ub = np.zeros(na, bool), np.zeros(nb, bool)
+        ua[ia[dom]] = True
+        ub[ib[dom]] = True
+        alive = alive[~(ua[ia[alive]] | ub[ib[alive]])]
+    out = np.concatenate(out)
+    return out[np.argsort(rank[out])]
+
+
+def _match(a_mz, a_i, b_mz, b_i, tol, shift=0.0, also_shift=None):
+    """Greedy one-to-one matching of the peaks of a to those of b: list of (ia, ib) by descending product of the intensities.
+
+    A pair is a candidate when the peak of a, moved by `shift`, is within tol of the peak of b; with `also_shift` it is also a candidate when it
+    is within tol after that second shift (the modified cosine: fragments that kept their mass and fragments that moved with the precursor
+    compete for the same peaks in one matching, instead of the unshifted ones taking them first)."""
+    a, b = np.asarray(a_mz, float), np.asarray(b_mz, float)
+    ya, yb = np.asarray(a_i, float), np.asarray(b_i, float)
+    ia, ib = _candidates(a, b, tol, (shift,) if also_shift is None else (shift, also_shift))
+    pick = _greedy_pairs(ia, ib, ya[ia] * yb[ib], len(a), len(b))
+    return list(zip(ia[pick].tolist(), ib[pick].tolist()))
 
 
 def ms2_similarity(mz_x, spec_x, mz_p, spec_p, tol: float = 0.5, mz_cut: float = 1.5) -> dict:
@@ -1472,7 +1528,8 @@ def ms2_similarity(mz_x, spec_x, mz_p, spec_p, tol: float = 0.5, mz_cut: float =
     (mz_p - mz_x), which finds the fragments that both share with a constant mass loss; x_in_p: is X among the products of P
     (a peak of P's spectrum within tol of mz_x, excluding P's own precursor); subset_score: fraction of the intensity of X's
     products (with sqrt weighting) found among P's products (same m/z, or shifted by the mass difference). Square-root weighting
-    reduces the dominance of the base peak. A high value says the spectra are compatible, not that X comes from P."""
+    reduces the dominance of the base peak. A high value says the spectra are compatible, not that X comes from P.
+    The modified cosine is one matching in which a peak of X can pair with a peak of P at shift 0 or at the precursor shift, the heaviest pairs first."""
     ax, ix = (np.asarray(v, float) for v in spec_x)
     ap, ip = (np.asarray(v, float) for v in spec_p)
     out = {"n_x": int(len(ax)), "n_p": int(len(ap))}
@@ -1481,20 +1538,15 @@ def ms2_similarity(mz_x, spec_x, mz_p, spec_p, tol: float = 0.5, mz_cut: float =
         return out
     sx, sp = np.sqrt(ix), np.sqrt(ip)
     nx, npp = np.linalg.norm(sx), np.linalg.norm(sp)
-    def score(shift):
-        pairs = _match(ax, sx, ap, sp, tol, shift)
-        return float(sum(sx[i] * sp[j] for i, j in pairs) / (nx * npp)) if nx * npp > 0 else float("nan"), pairs
-    c0, pairs0 = score(0.0)
-    shift = mz_p - mz_x
-    # modified cosine: peaks of X may match at 0 shift or at +shift (loss common to precursor and product)
-    pairs = _match(ax, sx, ap, sp, tol, 0.0)
-    used_a, used_b = {i for i, _ in pairs}, {j for _, j in pairs}
-    extra = [(i, j) for i, j in _match(ax, sx, ap, sp, tol, shift) if i not in used_a and j not in used_b]
-    mc = float(sum(sx[i] * sp[j] for i, j in pairs + extra) / (nx * npp)) if nx * npp > 0 else float("nan")
+    nan = float("nan")
+    pairs0 = _match(ax, sx, ap, sp, tol, 0.0)
+    pairs = _match(ax, sx, ap, sp, tol, 0.0, also_shift=mz_p - mz_x)
+    c0 = float(sum(sx[i] * sp[j] for i, j in pairs0) / (nx * npp)) if nx * npp > 0 else nan
+    mc = float(sum(sx[i] * sp[j] for i, j in pairs) / (nx * npp)) if nx * npp > 0 else nan
     out.update(cosine=c0, modified_cosine=mc)
     prod_p = ap[np.abs(ap - mz_p) > mz_cut]
     out["x_in_p"] = bool(np.any(np.abs(prod_p - mz_x) <= tol))
-    found = set(i for i, _ in pairs + extra)
+    found = [i for i, _ in pairs]
     out["subset_score"] = float(sum(sx[i] ** 2 for i in found) / max((sx ** 2).sum(), 1e-300))
     return out
 
