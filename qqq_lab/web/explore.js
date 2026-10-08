@@ -71,36 +71,17 @@ const IC_FSX = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stro
 const IC_FIT = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/></svg>';
 const IC_LOCK = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2.5" y="6.2" width="9" height="6.3" rx="1.2"/><path d="M4.5 6.2V4.3a2.5 2.5 0 0 1 5 0v1.9"/></svg>';
 const IC_UNLOCK = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2.5" y="6.2" width="9" height="6.3" rx="1.2"/><path d="M4.5 6.2V4.3a2.5 2.5 0 0 1 4.8-1"/></svg>';
-const PHRASES = [
-  "Ignorando i warning", "Schivando gli ftalati", "Minando crypto di nascosto", "Litigando coi file", "Allineando i quadrupoli",
-  "Compilando preghiere", "Aggiornando Matrix", "Cercando il segnale perduto", "Riavviando l'universo", "Ansia da separazione",
-  "Contaminando la sorgente", "Accecando l'elettromoltiplicatore", "Maledicendo la matrice", "Cuocendo sui quadrupoli"];
-// loading screen: one phrase every 5 s, in random order without repeats; the three dots appear one after the other
-let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
-function ldNext() {
-  if (window.qqFailed) return;                                    // a failed start keeps its error message on screen
-  if (!ldBag.length) {                                            // refill with a fresh shuffle, never starting with the phrase just shown
-    ldBag = PHRASES.map((_, i) => i).sort(() => Math.random() - 0.5);
-    if (ldBag[ldBag.length - 1] === ldLast) ldBag.unshift(ldBag.pop());
-  }
-  ldLast = ldBag.pop();
-  const el = Q("#ldmsg"); el.textContent = PHRASES[ldLast];
-  const dots = document.createElement("span");
-  for (let i = 0; i < 3; i++) { const d = document.createElement("span"); d.textContent = "."; dots.appendChild(d); }   // the phrase appears at once with its three dots (a fast load must still show them)
-  el.appendChild(dots);
-  let n = 3; clearInterval(ldDotTimer);
-  ldDotTimer = setInterval(() => { n = (n + 1) % 4; [...dots.children].forEach((d, i) => { d.style.visibility = i < n ? "visible" : "hidden"; }); }, 450);
-}
+// PHRASES and ldNext() are in index.html, right after #loading: the first phrase shows before the ~600 kB of scripts arrive
 let ldSlow = 0;
 function loading(on, msg) {
   const L = Q("#loading");
   if (on) {
     ldSince = Date.now(); Q("#ldsub").textContent = msg || "";
     clearTimeout(ldSlow); ldSlow = setTimeout(() => { if (!window.qqFailed && !Q("#loading").hidden && !Q("#ldsub").textContent) Q("#ldsub").textContent = "La prima apertura scarica circa 15 MB: può volerci un minuto."; }, 20000);
-    clearInterval(ldTimer); ldNext(); ldTimer = setInterval(ldNext, 5000); L.hidden = false;
+    if (!ldTimer) { ldNext(); ldTimer = setInterval(ldNext, 5000); } L.hidden = false;   // a phrase already turning (first start) is kept
   } else {
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
-    clearTimeout(ldSlow); setTimeout(() => { L.hidden = true; clearInterval(ldTimer); clearInterval(ldDotTimer); }, wait);
+    clearTimeout(ldSlow); setTimeout(() => { L.hidden = true; clearInterval(ldTimer); clearInterval(ldDotTimer); ldTimer = null; }, wait);
   }
 }
 

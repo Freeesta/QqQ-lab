@@ -192,6 +192,29 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
  <li>Torna qui: calcola [M+H]<sup>+</sup> = massa + 1.00728 e controlla nel full scan, con una finestra di ±1 Da, se compare uno ione che cresce con il tempo. Annota i candidati che trovi (m/z, RT, andamento) per la relazione.</li></ol>
  <div class="bar"><button id="bt-open">Riapri BioTransformer</button><span class="sp"></span><button id="btx2">Chiudi</button></div></div>
 <div id="loading"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><div id="ldmsg"></div><div id="ldsub"></div><button id="ldth" class="sec" hidden>Intanto leggi la Teoria</button></div>
+<script>
+const PHRASES = [
+  "Ignorando i warning", "Schivando gli ftalati", "Minando crypto di nascosto", "Litigando coi file", "Allineando i quadrupoli",
+  "Compilando preghiere", "Aggiornando Matrix", "Cercando il segnale perduto", "Riavviando l'universo", "Ansia da separazione",
+  "Contaminando la sorgente", "Accecando l'elettromoltiplicatore", "Maledicendo la matrice", "Cuocendo sui quadrupoli"];
+// loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
+let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
+function ldNext() {
+  if (window.qqFailed) return;                                    // a failed start keeps its error message on screen
+  if (!ldBag.length) {                                            // refill with a fresh shuffle, never starting with the phrase just shown
+    ldBag = PHRASES.map((_, i) => i).sort(() => Math.random() - 0.5);
+    if (ldBag[ldBag.length - 1] === ldLast) ldBag.unshift(ldBag.pop());
+  }
+  ldLast = ldBag.pop();
+  const el = document.getElementById("ldmsg"); el.textContent = PHRASES[ldLast];
+  const dots = document.createElement("span");
+  for (let i = 0; i < 3; i++) { const d = document.createElement("span"); d.textContent = "."; dots.appendChild(d); }   // the phrase appears at once with its three dots (a fast load must still show them)
+  el.appendChild(dots);
+  let n = 3; clearInterval(ldDotTimer);
+  ldDotTimer = setInterval(() => { n = (n + 1) % 4; [...dots.children].forEach((d, i) => { d.style.visibility = i < n ? "visible" : "hidden"; }); }, 450);
+}
+if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); }   // at once, on the first paint
+</script>
 <div id="calcdlg" class="card" hidden role="dialog" aria-label="Calcolatrice m/z"><div class="top" style="display:flex"><h3 style="margin:0;flex:1">Calcolatrice m/z</h3><button class="x" id="calcx" title="Chiudi">&times;</button></div>
  <input id="calcin" placeholder="un conto (364,4 − 194,2) o una formula (C14H12Cl2NO3)" autocomplete="off" title="Un conto: numeri e + − × ÷ ( ), anche con la virgola. Una formula bruta: anche con parentesi (C9H10N2O) e in minuscolo (c9h10n2o). «Ans» = l'ultimo risultato. Invio = risultato, Esc = azzera.">
  <div id="calcres" aria-live="polite" hidden></div><div id="calcsum" class="sm"></div>

@@ -69,6 +69,7 @@ Unico documento per gli agenti. Descrive lo STATO ATTUALE (la storia è in git: 
 
 ### Caricamenti (misurati sul sito costruito, linea simulata 20 Mbit/s)
 - Subito: solo il motore (~10 MB compressi, serve alla vista Dati); durante l'avvio c'è «Intanto leggi la Teoria». Dopo, nei momenti liberi: le cose sotto 1 MB (Teoria, OpenChemLib). Ketcher (8,7 MB compressi) quando il mouse passa su «Disegno», o da libero solo con connessione veloce e senza risparmio dati. File di esempio solo col pulsante. L'avvio resta ~4-5 s anche alla seconda visita: è la compilazione di Python, non la rete.
+- Le frasi della schermata di caricamento (`PHRASES`, `ldNext`) sono in uno script in linea subito dopo `#loading` in `index.html`: compaiono al primo disegno della pagina, prima dei ~600 kB di script classici. Non spostarle in `explore.js`.
 
 ## 6. Fatti sui dati
 - Analyst 1.6.3; il programma legge solo mzML (conversione con ProteoWizard MSConvert su Windows, istruzioni nella schermata di carico; consigliato il profilo).
