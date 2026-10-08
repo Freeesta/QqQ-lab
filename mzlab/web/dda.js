@@ -18,7 +18,7 @@ const DDA = (() => {
 
   // ---------------------------------------------------------------- the MS2 scans of a file (one request per file, memo + sync copy)
   const store = new Map();            // physical file name + switch -> prepared data
-  const keyOf = k => phys(E.files[k]) + "|" + (HR.on() ? 1 : 0);
+  const keyOf = k => phys(E.files[k]);
   function prepare(j) {
     const idx = new Map(j.sid.map((s, i) => [s, i])), byParent = new Map();
     j.parent.forEach((p, i) => { if (p != null) { let l = byParent.get(p); if (!l) byParent.set(p, l = []); l.push(i); } });

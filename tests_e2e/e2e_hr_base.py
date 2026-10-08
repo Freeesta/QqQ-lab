@@ -48,11 +48,11 @@ try:
         
         # Test mix loading
         def test_mix():
-            pg.click("#np-upload"); pg.wait_for_timeout(500)
-            pg.set_input_files("#upfiles", [D / "B_FullMass-t0.mzML"])
+            pg.click("#addf"); pg.wait_for_timeout(500)
+            pg.set_input_files("#pick", [D / "B_FullMass-t0.mzML"])
             pg.wait_for_timeout(500)
             pg.click("#opbtn")
-            pg.wait_for_timeout(1000)
+            pg.wait_for_timeout(1500)
             assert pg.is_visible("#hrmix-replace") and pg.is_visible("#hrmix-cancel")
             pg.click("#hrmix-replace")
             pg.wait_for_timeout(6000)
