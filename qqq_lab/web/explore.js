@@ -1614,7 +1614,7 @@ async function drawMap(p) {
     const step = Math.max(1, Math.floor((i1 - i0) / lines));
     const dy = ph_r / lines;
     const dx = pw_r / (j1 - j0 + 1);
-    const Z = 0.8 * ph_r; // max height of a peak
+    const Z = 0.45 * ph_r; // max height of a peak
     
     g.lineJoin = "round"; g.lineWidth = 1.5;
     for (let k = 0; k < lines; k++) {
