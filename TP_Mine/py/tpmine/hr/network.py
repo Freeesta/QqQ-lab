@@ -32,7 +32,7 @@ CANDIDATE_KEYS = ("id", "mz", "rt", "formula", "n_formulas", "ppm", "area_max", 
 
 # neutral changes besides the user's transformation list (names in Italian): ordered (name, delta as signed formula text)
 HR_TRANSFORMATIONS = [("idrossilazione", "+O"), ("deidrogenazione", "-H2"), ("ossidazione a carbonile", "+O-H2"), ("perdita di C4H8", "-C4H8"),
-                      ("perdita di C2H2", "-C2H2"), ("perdita di CO", "-CO"), ("perdita di CH2O con ossidazione", "-CH2O+O"), ("idratazione", "+H2O"),
+                      ("perdita di C2H2", "-C2H2"), ("perdita di CO", "-CO"), ("idratazione", "+H2O"),
                       ("disidratazione", "-H2O"), ("demetilazione", "-CH2"), ("diidrossilazione", "+O2"), ("trisidrossilazione", "+O3")]
 NATURAL = {"C13": 0.0107, "N15": 0.00364, "S33": 0.0075, "H2": 0.000115, "O17": 0.00038}
 

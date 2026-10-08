@@ -56,6 +56,31 @@ try:
             with pg.expect_download(timeout=120000) as dl: pg.click("#tp-x-xlsx")
             path = dl.value.path(); import zipfile; z = zipfile.ZipFile(path); assert z.testzip() is None; names = z.namelist(); assert any("sheet" in n for n in names), names
         step("xlsx export", xl)
+        def hr():
+            sys.path[:0] = [str(SRC / "tests"), str(SRC / "py"), str(ROOT)]
+            import lc_synth, msn_synth                                          # synthetic caffeine series (TP_Mine/tests): the HR mode end to end
+            d = Path(tempfile.mkdtemp()); fs = lc_synth.write_series(d); mf = msn_synth.write_msn(d / "cafe_msn.mzML", msn_synth.caffeine_nodes())
+            pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
+            for _ in range(5): pg.click('button.hq[data-help="header"]')
+            pg.wait_for_selector("#qt-dlg[open]"); pg.fill("#qt-pw", pw); pg.click("#qt-go"); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
+            pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
+            pg.set_input_files("#tp-in", [f["path"] for f in fs] + [str(mf)])
+            pg.wait_for_function("document.querySelectorAll('#tp-files tr').length >= 8", timeout=300000)
+            t = pg.inner_text("#tp-files"); assert "LC-HRMS" in t and "MSn (infusione)" in t, t
+            pg.fill("#tp-mol", "Cn1cnc2c1c(=O)n(C)c(=O)n2C"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('195.0877')", timeout=60000)
+            pg.click("#tp-go"); pg.wait_for_selector("#hr-t tr.clk", timeout=300000)
+            tab = pg.inner_text("#hr-t")
+            assert "C8H11N4O3" in tab and "C7H9N4O2" in tab, tab[:600]
+            assert "ipotesi, non un'identificazione" in pg.inner_text("#tp-right")
+            pg.click("#hr-t tr.clk:has-text('C8H11N4O3')"); pg.wait_for_selector("#hr-ms2", timeout=60000); pg.wait_for_timeout(500)
+            assert pg.evaluate("document.getElementById('hr-kin').width") > 0 and pg.evaluate("document.getElementById('hr-ms2').width") > 0
+            assert "Criteri" in pg.inner_text("#tp-det") and "Cinetica per sessione" in pg.inner_text("#tp-det")
+            with pg.expect_download(timeout=120000) as dl: pg.click("#hr-x-xlsx")
+            import zipfile; z = zipfile.ZipFile(dl.value.path()); assert z.testzip() is None and any("sheet" in n for n in z.namelist())
+            with pg.expect_download(timeout=60000) as dl2: pg.click("#hr-x-incl")
+            assert dl2.value.path()
+            pg.screenshot(path=str(HERE / "shots" / "tpmine2_hr.png"), full_page=True)
+        step("HR mode (synthetic caffeine series + MSn): ranking, detail, mirror MS2, Excel, inclusion list", hr)
         if MZ.exists() and (MZ / "B_FullMass-t0.mzML").exists():
             def real():
                 pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
