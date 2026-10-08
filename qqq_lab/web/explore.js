@@ -989,8 +989,11 @@ function xicDirect(mz, after, panel) {
   const ht = window.HR && HR.ionTrace(mz, { obs: true, tab: panel && panel.tab });          // a high-resolution file among the files: the ion with its ppm window
   if (panel && E.panels.includes(panel)) { if (ht) { panel.traces.push(ht); ctl(panel); draw(panel); } else addTrace(panel, c, lab, w); reveal(panel); return panel; }
   const np = addPanel("xic", { traces: [ht || { id: E.seq++, mz: c, w, label: lab }] });
-  if (after && E.panels.includes(after)) { stackAfter(np, after); relayout(); fitHost(); }
-  reveal(np); return np;
+  if (after && E.panels.includes(after)) {
+    np.el.classList.add("drag"); np.y = after.y + after.h; np.el.style.top = np.y + "px"; void np.el.offsetHeight; np.el.classList.remove("drag");
+    stackAfter(np, after); relayout(); fitHost(); 
+  } else reveal(np);
+  return np;
 }
 const xicName = q => { const t = q.traces[0]; return t && t.ion ? t.label + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : t ? "m/z " + t.mz.toFixed(1) + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : "vuoto"; };
 // Estrai ioni (XIC): a list of rows (2 at the start, up to 10), each one an m/z or a neutral formula (+ adduct); all the ions go into the SAME panel, one trace per ion.
@@ -1069,12 +1072,15 @@ function openXic(panel, pre = {}) {
     if (panel && E.panels.includes(panel)) { traces.forEach(t => panel.traces.push(t)); np = panel; ctl(np); }
     else {
       np = addPanel("xic", { traces });
-      if (pre.after && E.panels.includes(pre.after)) { stackAfter(np, pre.after); relayout(); fitHost(); }   // from a spectrum: the new XIC sits right under it
+      if (pre.after && E.panels.includes(pre.after)) { 
+        np.el.classList.add("drag"); np.y = pre.after.y + pre.after.h; np.el.style.top = np.y + "px"; void np.el.offsetHeight; np.el.classList.remove("drag");
+        stackAfter(np, pre.after); relayout(); fitHost(); 
+      }
     }
     // the file: the one chosen in the window; with more than 3 ions and several files the panel starts on the selected file only (otherwise it is a tangle of lines)
     const keep = fsel.value !== "" ? E.files[+fsel.value] : traces.length > 3 && ff.length > 1 && ff.includes(E.files[E.cur]) ? E.files[E.cur] : null;
     if (keep) ff.forEach(f => { if (f !== keep) traces.forEach(t => { np.hid["x|" + f.k + "|" + t.mz] = true; }); });
-    if (np === panel) draw(np); else reveal(np);
+    if (np === panel) draw(np); else if (!(pre.after && E.panels.includes(pre.after))) reveal(np);
   };
   d.showModal();
   rows[0].inp.focus();
@@ -2109,8 +2115,16 @@ function liveSpec(s, from) {
 function newSpec(from, r0, r1, k, link = from.id) {
   if (link) E.panels.filter(q => q.type === "spec" && q.link === from.id).forEach(freezeSpec);
   const s = addPanel("spec", { link, src: from.id, k, r0, r1, level: E.files[k]?.lv || 1, prec: from.tab === "ms2" ? from.prec : null, title: from.tab === "ms2" ? `Spettro degli ioni prodotto${from.prec != null ? " · " + from.prec : ""}` : "Spettro di massa" });
+  
+  // Disable transition temporarily so it doesn't fly from the bottom
+  s.el.classList.add("drag");
+  s.y = from.y + from.h;
+  s.el.style.top = s.y + "px";
+  void s.el.offsetHeight; // force reflow
+  s.el.classList.remove("drag");
+  
   stackAfter(s, from); relayout(); fitHost();
-  reveal(s);
+  // Do NOT reveal(s) so the viewport does not shift randomly
   return s;
 }
 
