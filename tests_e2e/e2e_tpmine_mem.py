@@ -1,0 +1,67 @@
+"""TP Mine HR: memory of the real worker (Pyodide) with the 13 real HR files of the series (80 MB each, mounted as Blobs) + the MSn file.
+The WebAssembly memory only grows, so its size at the end is the peak. Target: < 1 GB. Needs QQQ_DATI (private data), PYODIDE_DIR optional.
+Throw-away random password. Run from the repo root: python3 tests_e2e/e2e_tpmine_mem.py   (minutes)"""
+import atexit, glob, json, os, re, secrets, shutil, subprocess, sys, tempfile, time
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
+sys.path.insert(0, str(HERE)); import lib  # noqa: F401,E402  (patches wait_for_function for the CSP)
+SRC = Path(os.environ.get("TPMINE_SRC", ROOT / "TP_Mine"))
+DATI = Path(os.environ["QQQ_DATI"]) if os.environ.get("QQQ_DATI") else None
+GB = 1 << 30
+if not DATI or not (DATI / "HRMS").is_dir():
+    print("SKIP: QQQ_DATI with HRMS/ not available"); sys.exit(0)
+truth = next((json.loads(f.read_text(encoding="utf-8")) for f in sorted((DATI / "scratchpad").glob("*_truth.json")) if "tps" in f.read_text(encoding="utf-8")), None)
+msn = next((json.loads(f.read_text(encoding="utf-8")) for f in sorted((DATI / "scratchpad").glob("*_truth.json")) if "nodes" in f.read_text(encoding="utf-8")), None)
+series = sorted(glob.glob(str(DATI / "HRMS" / "*" / "*TiO2*.mzML")))
+if truth is None or msn is None or len(series) < 13:
+    print("SKIP: truth files or the 13 series files not available"); sys.exit(0)
+PORT = 8844
+pw = secrets.token_urlsafe(12); tmp = Path(tempfile.mkdtemp()); enc = ROOT / "mzlab" / "web" / "tpmine.enc"
+_orig_enc = enc.read_bytes() if enc.exists() else None
+atexit.register(lambda: enc.write_bytes(_orig_enc) if _orig_enc is not None else enc.unlink(missing_ok=True))
+subprocess.run([sys.executable, str(ROOT / "tools" / "build_tpmine.py"), "--src", str(SRC), "--out", str(enc), "--iterations", "310000"], check=True, env=dict(os.environ, TPMINE_PASSWORD=pw))
+cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(tmp / "site")]
+if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
+subprocess.run(cmd, check=True)
+srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1", "-d", str(tmp / "site")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+time.sleep(1); errs = []; ok = False
+
+
+def browser_rss_mb():
+    out = subprocess.run(["ps", "-eo", "rss,args"], capture_output=True, text=True).stdout
+    return sum(int(l.split(None, 1)[0]) for l in out.splitlines()[1:] if "chrom" in l.lower() and "playwright" not in l.lower() or "headless_shell" in l) / 1024
+
+
+try:
+    with sync_playwright() as p:
+        b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1500, "height": 1400}).new_page()
+        pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
+        for _ in range(5): pg.click('button.hq[data-help="header"]')
+        pg.wait_for_selector("#qt-dlg[open]"); pg.fill("#qt-pw", pw); pg.click("#qt-go"); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
+        pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
+        files = sorted(series, key=lambda f: float(re.search(r"t(\d+)min", f).group(1)) if "min" in f else -1) + [str(DATI / msn["file"])]
+        t0 = time.time()
+        pg.set_input_files("#tp-in", files)
+        pg.wait_for_function("document.querySelectorAll('#tp-files tr').length >= 15", timeout=1200000)
+        print(f"files loaded in {time.time() - t0:.0f} s; wasm memory after loading: {pg.evaluate('window.TPMINE_MEM()')['wasm'] / GB:.2f} GB")
+        pg.fill("#tp-mol", truth["parent"]["smiles"]); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('317.1642')", timeout=60000)
+        t0 = time.time(); peak = 0
+        pg.click("#tp-go")
+        while not pg.evaluate("!!document.querySelector('#hr-t tr.clk')"):
+            if time.time() - t0 > 3600: raise SystemExit("timeout: the run takes more than an hour")
+            peak = max(peak, browser_rss_mb()); pg.wait_for_timeout(3000)
+            m = pg.inner_text("#tp-msg")
+            if m.strip() and "errore" in m.lower(): raise SystemExit(m)
+        took = time.time() - t0
+        wasm = pg.evaluate("window.TPMINE_MEM()")["wasm"]
+        n_rows = pg.evaluate("document.querySelectorAll('#hr-t tr.clk').length")
+        print(f"run in the worker: {took:.0f} s, {n_rows} rows; WebAssembly memory (peak) {wasm / GB:.2f} GB; browser processes RSS peak {peak:.0f} MB")
+        ok = wasm < GB and n_rows > 100
+        print("OK" if ok else f"FAIL: peak of the WebAssembly memory {wasm / GB:.2f} GB (target < 1 GB) or too few rows")
+        b.close()
+finally:
+    srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)
+print("page errors:", errs)
+sys.exit(0 if ok and not errs else 1)

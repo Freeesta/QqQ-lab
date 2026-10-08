@@ -71,6 +71,12 @@ def test_kinetic_coherence():
     assert NW.kinetic_coherence({**good, "unimodal": False, "class": ["precoce"]})[0] == 0.0
     assert NW.kinetic_coherence({**good, "unimodal": False, "class": ["tardivo", "persistente"]})[0] == 1.0
     assert NW.kinetic_coherence(None)[0] == 0.5 and NW.kinetic_coherence({"ok": False})[0] == 0.5
+    # coverage: 11 treated samples, the product in all of them / in 6 (more than half: full score) / in 3 / in 1
+    t = list(range(-1, 12))
+    prof = lambda n: [0, 0] + [1.0] * n + [0] * (11 - n)
+    full = lambda n: {**good, "times": t, "profile": prof(n)}
+    assert [round(NW.kinetic_coherence(full(n))[0], 2) for n in (11, 6, 3, 1)] == [1.0, 1.0, 0.73, 0.51]
+    assert "presente in 3 campioni trattati su 11" in NW.kinetic_coherence(full(3))[1]
 
 
 def cand(**kw):

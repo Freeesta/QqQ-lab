@@ -37,7 +37,7 @@ def split_columns(times, types=None) -> tuple[np.ndarray, np.ndarray]:
     return np.flatnonzero(ref), np.flatnonzero(tr)
 
 
-def reference_area(al: Alignment, ref_feats: list[Features], ppm: float = 5.0, rt_tol: float = 0.15) -> np.ndarray:
+def reference_area(al: Alignment, ref_feats: list[Features], ppm: float = 5.0, rt_tol: float = 0.3) -> np.ndarray:
     """For every group, the largest area of a feature of the reference files within `ppm` and `rt_tol` minutes of the group (artefacts excluded).
     Independent of how the groups were cut: a feature of the dark file that sits beside the group counts as 'already there'."""
     out = np.zeros(len(al))
@@ -89,19 +89,26 @@ def formula_feasible(mz: np.ndarray, space: F.FormulaSpace, ppm: float = 3.0) ->
     return space.count(np.asarray(mz, float), ppm) > 0
 
 
-def flat_mask(treated_area: np.ndarray, ratio: float = 3.0, min_present: int = 4) -> np.ndarray:
-    """True where max / min over the treated samples that have the feature is below `ratio` AND the feature is present in at least `min_coverage` of
-    the treated samples: a profile that does not change with the treatment. A product seen in 2-3 samples only, with similar areas, is a transient,
-    not a flat profile (with max/min alone, 4 of the 17 reference products were lost)."""
+def flat_mask(treated_area: np.ndarray, ratio: float = 3.0, min_present: int = 2, transient: tuple = (3, 4)) -> np.ndarray:
+    """True where max / min over the treated samples that have the feature is below `ratio` and the feature is present in at least `min_present` of them
+    (a profile that does not change with the treatment: the reference rule). Exception: a feature present in 3 or 4 CONSECUTIVE treated samples and
+    absent in the others is a transient (formed and consumed), not a flat profile; the same count of samples scattered at random is noise and stays
+    flat. With the groups cut too finely (a wobbling ion split in pieces) the plain rule lost 4 of the 17 reference products; with the groups of
+    `align` as they are now it loses one, a three-sample transient, which the exception keeps (48 candidates more, of 446)."""
     a = np.where(treated_area > 0, treated_area, np.inf)
     mn = a.min(1)
     mx = treated_area.max(1)
+    pres = treated_area > 0
+    n = pres.sum(1)
+    first = np.argmax(pres, 1)
+    last = pres.shape[1] - 1 - np.argmax(pres[:, ::-1], 1)
+    consecutive = (last - first + 1 == n) & (n >= transient[0]) & (n <= transient[1])
     with np.errstate(invalid="ignore", divide="ignore"):
-        return ((mx / mn) < ratio) & ((treated_area > 0).sum(1) >= min_present)
+        return ((mx / mn) < ratio) & (n >= min_present) & ~consecutive
 
 
 def run_filters(al: Alignment, feats: list[Features], times, types=None, parent_ion: dict | None = None, *, fold: float = 5.0, min_treated: int = 2,
-                rt_min: float = 0.7, min_height: float = 2e5, ppm: float = 5.0, rt_tol: float = 0.15, feasible_ppm: float = 3.0, flat_ratio: float = 3.0) -> Funnel:
+                rt_min: float = 0.7, min_height: float = 2e5, ppm: float = 5.0, rt_tol: float = 0.3, feasible_ppm: float = 3.0, flat_ratio: float = 3.0, flat_min_present: int = 2) -> Funnel:
     """Steps (the count after each is in `Funnel.steps`):
     1. fold = largest treated area / (largest reference area + eps) > `fold`, in at least `min_treated` treated samples, RT after `rt_min`;
     2. isotopologues (13C, 34S, 18O of a stronger feature with the same apex) removed;
@@ -128,7 +135,7 @@ def run_filters(al: Alignment, feats: list[Features], times, types=None, parent_
         space, _ = tp_space(parent_ion)
         idx = idx[formula_feasible(al.mz[idx], space, feasible_ppm)]
         steps.append({"name": "formula", "text": f"con una formula possibile derivata dal progenitore ({feasible_ppm:g} ppm)", "n": int(len(idx))})
-    idx = idx[~flat_mask(al.area[idx][:, tr_c], flat_ratio)]
+    idx = idx[~flat_mask(al.area[idx][:, tr_c], flat_ratio, flat_min_present)]
     steps.append({"name": "piatti", "text": f"senza profili piatti (massimo/minimo < {flat_ratio:g})", "n": int(len(idx))})
     return Funnel(idx=idx, steps=steps, fold=fl, reference=ref, n_treated=ntr, isotopologue=isomask)
 

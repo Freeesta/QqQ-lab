@@ -30,7 +30,7 @@ from . import similarity as SM
 from . import spectra as SP
 
 DEFAULT_SETTINGS = {"floor": FT.FLOOR, "min_height": FT.MIN_HEIGHT, "fold": 5.0, "min_treated": 2, "rt_min": 0.7, "max_rows": 500, "iimn_top": 400,
-                    "ppm_prec": 5.0, "weights": dict(NW.WEIGHTS), "polarity": 1, "inclusion": 50, "min_ms2_scans": 1}
+                    "ppm_prec": 5.0, "weights": dict(NW.WEIGHTS), "polarity": 1, "inclusion": 50, "min_ms2_scans": 1, "flat_min_present": 2}
 NO_PROGRESS = lambda text, frac=None: None      # noqa: E731
 
 
@@ -170,7 +170,7 @@ class ExperimentHR:
         if self.sess_factors["applied"]:
             self.warnings.append("le sessioni di misura differiscono: le aree sono state riportate alla sessione di riferimento")
         self.funnel = FL.run_filters(self.al, self.feats, self.times, types, self.ion, fold=self.s["fold"], min_treated=self.s["min_treated"], rt_min=self.s["rt_min"],
-                                     min_height=self.s["min_height"])
+                                     min_height=self.s["min_height"], flat_min_present=self.s["flat_min_present"])
         self.ref_c, self.tr_c = FL.split_columns(self.times, types)
         self.timing["filtri"] = round(time.perf_counter() - t, 2)
         # parent: area per file (saturation), peak limits
@@ -218,6 +218,8 @@ class ExperimentHR:
         if len(sel) < self.s["min_ms2_scans"]:
             return None
         a, b, rts = SP.read_spectra(self.getters, sel)
+        for r in getattr(self, "_open", {}).values():                  # in the browser every open file keeps a 16 MB window: give them back
+            r.release()
         c = SP.ms2_consensus(a, b)
         c["rts"], c["raw"] = rts, (a, b)
         return c

@@ -95,3 +95,45 @@ def test_api_switches_to_hr(series, monkeypatch):
     assert out["mode"] == "hr" and out["rows"]
     assert json.loads(api.detail(out["rows"][0]["id"]))["id"] == out["rows"][0]["id"]
     assert json.loads(api.msn_tree()) and api.inclusion_csv(3).startswith("m/z")
+
+
+# ---------------------------------------------------------------------------------------------------------------------- rows hidden under an ISF
+@pytest.fixture(scope="module")
+def hidden(tmp_path_factory):
+    d = tmp_path_factory.mktemp("lch")
+    files = LS.write_series(d, hidden_isf=True)
+    msn = MS.write_msn(d / "cafe_msn.mzML", MS.caffeine_nodes())
+    e = EN.ExperimentHR(files + [{"name": "cafe_msn.mzML", "path": str(msn), "time": None, "type": "sample"}], {"smiles": SMILES})
+    e.run()
+    return d, files, str(msn), e
+
+
+def test_hidden_isf_row_exists_and_is_flagged(hidden):
+    e = hidden[3]
+    rows = [x for x in e.result["rows"] if x["id"] < 0]
+    assert len(rows) == 1 and abs(rows[0]["mz"] - LS.ISF_FRAGMENT) < 0.003
+    x = rows[0]
+    assert "possibile TP coeluente con un ISF" in x["flags"] and x["formula"] == "C6H8N3O" and x["series"] == [0] * len(e.lc)
+    assert x["level"] in (5, 4) and x["tmax"] is None and x["region"] is None and x["ms2_scans"] == 0
+    assert any(c["id"] == x["id"] for c in e.ranked)
+
+
+def test_hidden_isf_row_detail_selection_and_json(hidden):
+    e = hidden[3]
+    cid = next(x["id"] for x in e.result["rows"] if x["id"] < 0)
+    d = json.loads(json.dumps(e.detail(cid)))
+    assert d["id"] == cid and d["row"]["id"] == cid and len(d["areas"]) == len(d["times"]) and d["criteria"] and "ms2" not in d and "localization" not in d
+    assert "isf_hidden" not in json.dumps(e.result["inclusion"])
+    json.dumps(e.result)
+    assert all(x["mz"] != LS.ISF_FRAGMENT for x in e.result["inclusion"])                # no inclusion-list line for a mass with no peaks of its own
+    assert e.inclusion_csv(5).count("\n") <= 5
+
+
+def test_hidden_isf_row_through_the_api(hidden, monkeypatch):
+    d, files, msn, e = hidden
+    monkeypatch.setattr(api, "DATA", d)
+    fl = [{"name": f["name"], "time": f["time"], "type": "sample"} for f in files] + [{"name": "cafe_msn.mzML", "time": None, "type": "sample"}]
+    out = json.loads(api.run(json.dumps(fl), json.dumps({"smiles": SMILES}), "{}", ""))
+    cid = next(x["id"] for x in out["rows"] if x["id"] < 0)
+    assert json.loads(api.detail(cid))["id"] == cid
+    assert api.inclusion_csv(5).startswith("m/z")
