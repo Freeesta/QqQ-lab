@@ -220,7 +220,18 @@ const legPol = f => polMixed() && f ? " " + polSign(f, shown()) : "";           
 const defAdduct = fs => { const l = fs || (shown().length ? shown() : E.files.filter(f => f.vis)); return l.some(f => f.polarity === "negative") && !l.some(f => f.polarity === "positive") ? "[M-H]-" : "[M+H]+"; };
 const getMrm = k => memo(`m${k}`, () => J(`api/mrm?k=${k}`).then(j => j.files[0].transitions));
 
-async function bootSession() {
+// a method (.dam) of another experiment type than the open files (MRM against Full Scan...): a visible notice above the panels, not a toast
+async function methodWarn() {
+  const el = Q("#methwarn"); if (!el) return;
+  try {
+    const j = await J("api/method_warnings");
+    if (!j.warnings.length) { el.hidden = true; el.innerHTML = ""; return; }
+    el.innerHTML = `<b>Il metodo non corrisponde ai dati.</b> ` + j.warnings.map(w => `«${EH(w.method)}» è un metodo ${EH(w.expects)}, ma i file aperti sono ${EH(w.files.join(" e "))}.`).join(" ") + ` <button type="button" id="methwarn-x" title="Nascondi l'avviso">&times;</button>`;
+    el.hidden = false; Q("#methwarn-x").onclick = () => { el.hidden = true; };
+  } catch (_) { /* no session or no method: nothing to say */ }
+}
+async function bootSession() { await bootSession0(); methodWarn(); }
+async function bootSession0() {
   const j = await J("api/session");
   S.sess = j.session;
   if (!j.session) { E.files = []; E.key = ""; return; }
@@ -2384,7 +2395,7 @@ function loadDam() {
       const j = await (await fetch("api/upload?name=" + encodeURIComponent(fl.name), { method: "POST", body: fl })).json();
       if (j.error) throw new Error(j.error);
       if (typeof ST !== "undefined") { ST.methods = j.methods || ST.methods; renderMethods(); }
-      showMethod();
+      methodWarn(); showMethod();
     } catch (e) { info("Errore: " + EH(e.message)); }
   };
   inp.click();

@@ -14,7 +14,7 @@ import numpy as np
 
 from .explore import Session, sniff
 from .peaks import merge_unit, pad_zeros, profile_peaks
-from .reader.methodinfo import check_against, read_methods
+from .reader.methodinfo import check_against, method_kind, read_methods
 from .project import guess_conc, guess_sample
 
 
@@ -244,6 +244,19 @@ class App:
             if diffs[m["lab_pick"]] > best:
                 m["lab_pick"] = [i for i, d in enumerate(diffs) if d == best][-1]
         return m
+
+    def method_warnings(self) -> dict:
+        """The loaded .dam methods whose experiment type (MRM / Full Scan / MS2) is not among the types of the open files."""
+        if not self.session:
+            return {"warnings": []}
+        have = sorted({it.kind() for it in self.session.items})
+        names = {"full": "Full Scan", "ms2": "MS2", "mrm": "MRM"}
+        out = []
+        for x in self.lab_methods():
+            g = method_kind(x)
+            if g and g not in have:
+                out.append({"method": x.get("name"), "expects": names[g], "files": [names[h] for h in have if h in names]})
+        return {"warnings": out}
 
     def origin(self, k: int, mz: float, parent: float, rt0: float | None = None, rt1: float | None = None, formula: str | None = None) -> dict:
         """"Da dove viene questo ione?": the evidence of mzlab.ionfamily for the ion at mz against the candidate precursor `parent`,
