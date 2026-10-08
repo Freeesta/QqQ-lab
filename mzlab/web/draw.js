@@ -451,8 +451,8 @@ function drawLabels() {
   g.textContent = "";
   if (!labelsOn()) return;
   const text = (x, y, lines, color, size) => lines.forEach((parts, i) => g.appendChild(svgLabel(doc, parts, x, y + i * size * 1.3, size, color)));
-  for (const d of structures()) text(d.cx * sc, d.y * sc + 30, labelParts(d), "#3b3b3b", 13);
-  for (const a of arrowDeltas()) text(a.x * sc, a.y * sc - 12, [a.parts], "#2b5c8a", 12);
+  for (const d of structures()) text(d.cx * sc, d.y * sc + 30, labelParts(d), window.isDark && window.isDark() ? "#e4e7eb" : "#3b3b3b", 13);
+  for (const a of arrowDeltas()) text(a.x * sc, a.y * sc - 12, [a.parts], window.isDark && window.isDark() ? "#7db4e6" : "#2b5c8a", 12);
 }
 // the same labels as Ketcher text objects, only in the copy of the drawing that is exported
 const SUBC = "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089", SUPC = "\u2070\u00b9\u00b2\u00b3\u2074\u2075\u2076\u2077\u2078\u2079";
