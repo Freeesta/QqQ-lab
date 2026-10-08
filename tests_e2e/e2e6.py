@@ -184,7 +184,26 @@ try:
             t = pg.evaluate(LBL); assert " ".join(t) == "C8H10NO2+ m/z 152", t
             pg.screenshot(path=SH + "67_ion_choice.png")
         step("a drawn charge: C8H10NO2+ m/z 152", ion_choice)
+        def arrow_off():
+            assert not pg.is_checked("#lb-a"), "the arrow labels are off by default"
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1>>CC(=O)Nc1ccc(O)c(O)c1')"); pg.wait_for_timeout(1500)
+            t = pg.evaluate(LBL); assert not any("\u0394m" in x for x in t), t
+        step("arrow labels (neutral loss, Δm) are off by default", arrow_off)
+        def labelmenu():
+            pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); pg.wait_for_timeout(1200)
+            xy = pg.evaluate("(()=>{const fr=document.getElementById('kframe'),r=fr.getBoundingClientRect(),t=fr.contentWindow.document.querySelector('#qqq-labels text').getBoundingClientRect();return [r.left+t.x+t.width/2,r.top+t.y+t.height/2]})()")
+            pg.mouse.click(xy[0], xy[1], button="right"); pg.wait_for_timeout(400)
+            t = pg.inner_text("#ctx"); print(t)
+            assert "Copia la formula (C8H10NO2+)" in t and "Copia la massa (m/z 152)" in t, t
+            pg.keyboard.press("Escape")
+        step("right click on the label under a molecule: copy formula and mass", labelmenu)
+        def side():
+            assert pg.is_visible("#v-draw aside")
+            pg.click("#side-toggle"); pg.wait_for_timeout(300); assert not pg.is_visible("#v-draw aside")
+            pg.click("#side-toggle"); pg.wait_for_timeout(300); assert pg.is_visible("#v-draw aside")
+        step("the side cards can be hidden and shown again", side)
         def nh3():
+            pg.check("#lb-a")
             pg.evaluate(KQ + ".setMolecule('Oc1ccc([NH3+])cc1>>Oc1cc[c+]cc1')"); pg.wait_for_timeout(1500)
             t = pg.evaluate(LBL); print("NH3:", t)
             assert any(x.startswith("\u2212NH3") and x.endswith("\u0394m \u221217") for x in t), t
@@ -217,6 +236,7 @@ try:
             assert b1 > b0 * 1.6, (b0, b1); pg.evaluate(KQ + ".editor.zoom(1)")
         step("label follows the zoom", zoom)
         def off():
+            pg.uncheck("#lb-a"); pg.wait_for_timeout(300)           # (the arrow labels are optional and were switched on by the previous steps)
             n0 = len(pg.evaluate(LBL)); assert n0 >= 1
             pg.uncheck("#lb-f"); pg.uncheck("#lb-m"); pg.wait_for_timeout(300); assert pg.evaluate(LBL) == []
             pg.check("#lb-f"); pg.check("#lb-m"); pg.wait_for_timeout(300); assert len(pg.evaluate(LBL)) == n0
