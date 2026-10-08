@@ -99,7 +99,7 @@ try:
         pg.click("#nav button[data-v=draw]"); pg.wait_for_function("window.TPDraw && TPDraw.ready()", timeout=60000)
         def labels():
             pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1')"); pg.wait_for_timeout(1500)
-            t = pg.evaluate(LBL); assert t == ["C8H9NO2", "M = 151"], t            # one text per line: formula, then mass
+            t = pg.evaluate(LBL); assert t == ["C8H9NO2", "exact mass 151"], t            # one text per line: formula, then mass
         step("label under the molecule (formula, nominal mass)", labels)
         def ion():
             pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); pg.wait_for_timeout(1500)
@@ -116,9 +116,9 @@ try:
                const ux=(p1.x+p2.x)/2*40, uy=(p1.y+p2.y)/2*40; return {x:f.left+r.left+(ux-vb.x)*r.width/vb.width, y:f.top+r.top+(uy-vb.y)*r.height/vb.height}})()""" % KQ)
             pg.frame_locator("#kframe").locator("[data-testid=erase]:visible").first.click(); pg.wait_for_timeout(300)
             pg.mouse.click(pos["x"], pos["y"]); pg.wait_for_timeout(1200)
-            t = sorted(pg.evaluate(LBL)); assert t == sorted(["C2H4O", "M = 44", "C6H7NO", "M = 109"]), t
+            t = sorted(pg.evaluate(LBL)); assert t == sorted(["C2H4O", "exact mass 44", "C6H7NO", "exact mass 109"]), t
             pg.screenshot(path=SH + "63_broken.png")
-            pg.evaluate(KQ + ".editor.undo()"); pg.wait_for_timeout(1000); assert pg.evaluate(LBL) == ["C8H9NO2", "M = 151"]
+            pg.evaluate(KQ + ".editor.undo()"); pg.wait_for_timeout(1000); assert pg.evaluate(LBL) == ["C8H9NO2", "exact mass 151"]
         step("erasing a bond gives two labels; undo restores", breakbond)
         def no_boxes():
             # the boxes that did the student's work are gone for good; the cream background option too

@@ -10,17 +10,27 @@ const Q = s => document.querySelector(s);
 const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 let K = null, starting = null, restored = false, timer = null;
 
+let kldTimer = null, kldN = 0;
 function start() {
   if (starting) return starting;
   const fr = Q("#kframe");
   starting = new Promise((resolve, reject) => {
     const on = e => { if (e.source === fr.contentWindow && e.data && e.data.type === "ketcher-ready") { removeEventListener("message", on); K = fr.contentWindow.ketcher; resolve(K); } };
     addEventListener("message", on);
-    Q("#kload").hidden = false;                                                // ~30 MB the first time: say it is loading
+    Q("#kload").hidden = false;
+    const dots = Q("#kld-dots");
+    if (dots) {
+      kldN = 0; [...dots.children].forEach(d => { d.style.visibility = "hidden"; });
+      clearInterval(kldTimer);
+      kldTimer = setInterval(() => {
+        kldN = (kldN + 1) % 4;
+        [...dots.children].forEach((d, i) => { d.style.visibility = i < kldN ? "visible" : "hidden"; });
+      }, 400);
+    }
     fr.src = "static/vendor/ketcher/index.html";
     setTimeout(() => reject(new Error("Ketcher non si e' avviato")), 60000);
   });
-  starting.finally(() => { Q("#kload").hidden = true; }).catch(() => {});
+  starting.finally(() => { clearInterval(kldTimer); Q("#kload").hidden = true; }).catch(() => {});
   starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); });
     k.editor.subscribe("selectionChange", () => requestAnimationFrame(showInfo));
     hideMacro(fr); fitZoom(k, fr); changed(); drawLabels(); return k; });
@@ -35,15 +45,93 @@ function hideMacro(fr) {
     // the buttons of Ketcher are small (32 px): the four toolbars are enlarged (CSS zoom, so the menus that open from them grow too). The size follows the room:
     // the side toolbars need ~655 px of height at normal size, the top one ~910 px of width (its help / about buttons are hidden: the program has its own help)
     st.textContent = '[data-testid="help-button"],[data-testid="about-button"]{display:none!important}' +
-      '[class*="App-module_top"]{zoom:var(--ktz,1.1)}[class*="LeftToolbar-module_root"],[class*="RightToolbar-module_root"],[class*="BottomToolbar-module_root"]{zoom:var(--ksz,1.3)}' +
+      '[class*="App-module_top"]{zoom:var(--ktz,1.1);flex-wrap:nowrap!important}' +
+      '[class*="App-module_top"] kbd{display:none!important}' +
+      '[class*="LeftToolbar-module_root"],[class*="RightToolbar-module_root"],[class*="BottomToolbar-module_root"]{zoom:var(--ksz,1.3)}' +
       // the quick rings (Ketcher's bottom bar) become a column on the far left: the bottom row disappears and the canvas gets the whole height
       '[class*="App-module_app"]{grid-template-columns:auto auto minmax(0,1fr) auto!important;grid-template-rows:auto minmax(0,1fr)!important;' +
       'grid-template-areas:"toolbar-top toolbar-top toolbar-top toolbar-top" "toolbar-bottom toolbar-left canvas toolbar-right"!important}' +
       '[class*="App-module_app"] [class*="BottomToolbar-module_root"]{flex-direction:column!important;flex-wrap:nowrap!important;align-self:start;height:auto!important;width:auto!important;padding:8px 0 8px 8px!important;margin:0!important}' +
       '[class*="App-module_app"] [class*="BottomToolbar-module_group"]{flex-direction:column!important;height:auto!important;width:auto!important}';
+
+    // Move Hand, Select, Erase, Text to top toolbar right after Cut
+    const cutBtn = d.querySelector('[class*="App-module_top"] [data-testid="cut-button"]');
+    const hrCut = cutBtn ? cutBtn.nextElementSibling : null;
+    const hand = d.querySelector('[data-testid="left-toolbar-buttons"] [data-testid="hand"]');
+    const selectDrop = d.querySelector('[data-testid="left-toolbar-buttons"] [data-testid="select-drop-down-button"]');
+    const erase = d.querySelector('[data-testid="left-toolbar-buttons"] [data-testid="erase"]');
+    const text = d.querySelector('[data-testid="left-toolbar-buttons"] [data-testid="text"]');
+
+    if (hrCut && hand && selectDrop && erase && text) {
+      const hrNew = d.createElement("hr"); hrNew.className = hrCut.className;
+      hrCut.after(hrNew);
+      hrCut.after(text);
+      hrCut.after(erase);
+      hrCut.after(selectDrop);
+      hrCut.after(hand);
+    }
+    const left = d.querySelector('[class*="LeftToolbar-module_buttons"]');
+    if (left) {
+      [...left.children].forEach(g => { if (!g.querySelector("[data-testid]")) g.remove(); });
+    }
+
+    // Add Center Structure button next to fullscreen button in top bar
+    const fullBtn = d.querySelector('[class*="App-module_top"] [data-testid="fullscreen-mode-button"]');
+    if (fullBtn && !d.querySelector('[data-testid="center-struct-button"]')) {
+      const btn = d.createElement("button");
+      btn.setAttribute("data-testid", "center-struct-button");
+      btn.setAttribute("title", "Centra il disegno nella tela");
+      btn.className = fullBtn.className;
+      btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>';
+      btn.onclick = () => {
+        const st = K && K.editor && K.editor.struct();
+        if (st && !st.isBlank() && typeof K.editor.centerStruct === "function") {
+          K.editor.centerStruct();
+          drawLabels();
+        }
+      };
+      fullBtn.after(btn);
+    }
+
+    // Context menu on canvas / molecule
+    d.addEventListener("contextmenu", async ev => {
+      const st = K && K.editor && K.editor.struct();
+      if (!st || st.isBlank()) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const sel = K.editor.selection() || {};
+      const set = new Set(sel.atoms || []);
+      (sel.bonds || []).forEach(id => { const b = st.bonds.get(id); if (b) { set.add(b.begin); set.add(b.end); } });
+      let smi = "";
+      if (set.size) { try { smi = await pieceSmiles([...set]); } catch (_) {} }
+      if (!smi) { try { smi = await K.getSmiles(); } catch (_) {} }
+      const frRect = fr.getBoundingClientRect();
+      const mx = frRect.left + ev.clientX, my = frRect.top + ev.clientY;
+      const m = Q("#ctx"); if (!m) return;
+      m.innerHTML = "";
+      const cpItem = document.createElement("div");
+      const shortSmi = smi.length > 24 ? smi.slice(0, 21) + "…" : smi;
+      cpItem.textContent = "Copia SMILES" + (smi ? ` (${shortSmi})` : "");
+      cpItem.onclick = () => {
+        if (smi) navigator.clipboard.writeText(smi).catch(() => {});
+        m.hidden = true;
+      };
+      m.appendChild(cpItem);
+      const ctrItem = document.createElement("div");
+      ctrItem.textContent = "Centra disegno";
+      ctrItem.onclick = () => {
+        if (typeof K.editor.centerStruct === "function") { K.editor.centerStruct(); drawLabels(); }
+        m.hidden = true;
+      };
+      m.appendChild(ctrItem);
+      m.hidden = false;
+      m.style.left = Math.min(mx, innerWidth - 240) + "px";
+      m.style.top = Math.max(4, Math.min(my, innerHeight - m.offsetHeight - 8)) + "px";
+    }, true);
+
     const fit = () => {
       const w = d.defaultView.innerWidth, h = d.defaultView.innerHeight, coarse = d.defaultView.matchMedia("(pointer:coarse)").matches, root = d.documentElement;
-      root.style.setProperty("--ktz", String(Math.max(1, Math.min(coarse ? 1.35 : 1.25, (w - 24) / 910)).toFixed(3)));
+      root.style.setProperty("--ktz", String(Math.max(1, Math.min(coarse ? 1.3 : 1.15, (w - 24) / 1020)).toFixed(3)));
       // the side columns (rings, tools, atoms) grow as much as the height allows: measured at zoom 1, because the visible buttons depend on the choice of tools
       root.style.setProperty("--ksz", "1");
       const need = Math.max(300, ...['[class*="LeftToolbar-module_buttons"]', '[class*="RightToolbar-module_buttons"]', '[class*="BottomToolbar-module_group"]']
@@ -60,10 +148,10 @@ function hideMacro(fr) {
 // ------------------------------------------------------------------ which tools of Ketcher are shown (choice of the student, kept in this browser)
 // Each group lists data-testid of Ketcher's buttons. Default: what is needed to draw structures and transformation pathways;
 // the rest (stereochemistry, S/R groups, biology, mapping ...) is one click away in the «Strumenti dell'editor» card.
+// Note: Hand, Selection, Eraser, Text are in the top toolbar (always on). Shapes and images are always on.
 const TOOLS = [
   ["rings", "Anelli rapidi (benzene, cicloesano...)", true, ["bottom-toolbar"]],
   ["react", "Frecce e «+» delle reazioni", true, ["reaction-plus", "arrows-drop-down-button"]],
-  ["text", "Testo", true, ["text"]],
   ["chain", "Catene", true, ["chain"]],
   ["tidy", "Riordina il disegno (Layout, Clean Up)", true, ["Layout button", "Clean Up button"]],
   ["file", "Apri e salva file di Ketcher", true, ["open-file-button", "save-file-button"]],
@@ -72,7 +160,6 @@ const TOOLS = [
   ["groups", "Gruppi S e R", false, ["sgroup", "rgroup-drop-down-button"]],
   ["calc", "Verifica, valori calcolati e 3D", false, ["Check Structure button", "Calculated Values button", "3D Viewer button"]],
   ["map", "Mappatura degli atomi nelle reazioni", false, ["reaction-mapping-tools-drop-down-button"]],
-  ["shapes", "Forme e immagini", false, ["shapes-drop-down-button", "images"]],
   ["atoms", "Atomi generici e tavola estesa", false, ["any-atom", "extended-table"]],
   ["bio", "Biologia: monomeri e modalità macromolecole (peptidi, DNA, RNA)", false, ["create-monomer", "polymer-toggler"]],
 ];
@@ -102,24 +189,19 @@ function toolCard() {
   const box = Q("#tools-body"); if (!box) return;
   const ch = toolChoice();
   box.innerHTML = TOOLS.map(([k, name]) => `<div style="margin:2px 0"><label><input type="checkbox" data-t="${k}" ${ch[k] ? "checked" : ""}> ${name}</label></div>`).join("") +
-    '<div class="bar" style="margin-top:6px"><button type="button" id="tools-all">Mostra tutti</button><button type="button" id="tools-def">Solo gli essenziali</button></div>' +
-    '<div class="muted sm" style="margin-top:6px">Sempre visibili: selezione, gomma, legami, cariche, atomi e tavola periodica, annulla, copia e incolla, zoom. ' +
-    'Lunghezza dei legami, idrogeni mostrati, caratteri e colori si cambiano dall\'ingranaggio di Ketcher, in alto a destra; la libreria «SL» in fondo agli anelli contiene anche gruppi funzionali, sali e solventi.</div>';
+    '<div class="bar" style="margin-top:6px"><button type="button" id="tools-all">Mostra tutti</button><button type="button" id="tools-def">Solo gli essenziali</button></div>';
   const save = o => { try { localStorage.setItem(TKEY, JSON.stringify(o)); } catch (_) { /* this tab only */ } applyTools(); toolCard(); };
   box.querySelectorAll("input[data-t]").forEach(i => i.onchange = () => save({ ...toolChoice(), [i.dataset.t]: i.checked }));
   Q("#tools-all").onclick = () => save(Object.fromEntries(TOOLS.map(([k]) => [k, true])));
   Q("#tools-def").onclick = () => { try { localStorage.removeItem(TKEY); } catch (_) { /* nothing saved */ } applyTools(); toolCard(); };
 }
 toolCard();
-// Ketcher opens at 100 %: on a large canvas a molecule looked tiny. The first zoom follows the width of the canvas (a bond of ~60-80 px).
+// Zoom preset: 100%. Re-centres if there is content.
 function fitZoom(k, fr) {
   try {
-    const c = fr.contentDocument.querySelector('[class*="App-module_canvas"]'), w = c ? c.getBoundingClientRect().width : 900;
-    const z = Math.max(1.2, Math.min(2, w / 650));
     if (typeof k.editor.zoom !== "function") return;
-    k.editor.zoom(Math.round(z * 10) / 10);
+    k.editor.zoom(1);
     try { k.editor.event.zoomChanged.dispatch(); } catch (_) { /* the «100 %» label of Ketcher is only updated by this event */ }
-    // a drawing restored from the notebook must stay entirely visible: Ketcher zooms out again only if it does not fit, then centres it
     const st = k.editor.struct();
     if (st && !st.isBlank() && typeof k.editor.zoomAccordingContent === "function") { k.editor.zoomAccordingContent(st); k.editor.centerStruct(); }
   } catch (_) { /* default zoom */ }
@@ -326,7 +408,7 @@ function labelParts(d0) {
   if (m) {
     const raw = d.q ? (d.mass - d.q * ELECTRON) / Math.abs(d.q) : d.mass;
     const line = f ? (lines.push([]), lines[1]) : parts;
-    line.push([d.q ? "m/z" : "M", "it"], [` ${d.q ? "" : "= "}${dec ? rh(raw, dec).toFixed(dec) : roundHalfUp(raw)}`, ""]);
+    line.push([d.q ? "m/z" : "exact mass", "it"], [` ${dec ? rh(raw, dec).toFixed(dec) : roundHalfUp(raw)}`, ""]);
   }
   return lines;
 }

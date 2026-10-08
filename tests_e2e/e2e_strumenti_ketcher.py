@@ -25,9 +25,9 @@ try:
                        zoom: f.contentWindow.ketcher.editor.zoom() }; }""")
             assert o["bh"] > o["bw"] and o["bx"] < o["lx"], ("rings: a column left of the tools", o)
             assert o["fb"] <= o["vh"] + 2, ("the editor fits the window", o)
-            assert o["zoom"] > 1, ("first zoom above 100 %", o)
+            assert o["zoom"] == 1, ("first zoom 100 %", o)
             assert not o["title"], "no tooltip over the canvas"
-        step("rings column on the left, editor fits the window, zoom > 100 %, no tooltip", layout)
+        step("rings column on the left, editor fits the window, zoom = 100 %, no tooltip", layout)
         def tools():
             assert pg.evaluate(VIS, "template-0") and pg.evaluate(VIS, "reaction-plus")
             for hidden in ("sgroup", "enhanced-stereo", "create-monomer", "polymer-toggler", "any-atom"): assert not pg.evaluate(VIS, hidden), hidden

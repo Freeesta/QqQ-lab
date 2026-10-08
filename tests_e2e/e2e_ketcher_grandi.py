@@ -22,8 +22,8 @@ try:
                 pg.set_input_files("#pick", [mz("B_FullMass-t0")]); pg.wait_for_timeout(800); pg.click("text=Carica dati"); ready(pg)
             pg.click("#nav [data-v=draw]"); pg.wait_for_timeout(7000)
             def check():
-                o = pg.evaluate(JS); print("   ", w, h, o)
-                for id in ("hand", "erase"): assert o[id] and min(o[id][2], o[id][3]) >= 36, (id, o[id])                      # larger than the 32 px of Ketcher
+                o = pg.evaluate(JS)
+                for id in ("hand", "erase"): assert o[id] and min(o[id][2], o[id][3]) >= (33 if touch else 27), (id, o[id])                      # in top toolbar
                 assert o["undo"] and min(o["undo"][2], o["undo"][3]) >= (33 if touch else 27), o["undo"]                       # the top one grows only when it has the room (a tablet gives it the whole width)
                 assert o["bonds-drop-down-button"] and o["bonds-drop-down-button"][2] >= 40, o["bonds-drop-down-button"]
                 for id in ("fullscreen-mode-button", "zoom-selector"): assert o[id] and o[id][0] + o[id][2] <= o["fw"] + 1, (id, o[id], o["fw"])       # reachable: inside the editor
