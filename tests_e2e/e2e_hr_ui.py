@@ -21,17 +21,32 @@ try:
             assert "errore (ppm)" not in t
             pg.click("#calcx"); pg.wait_for_timeout(200)
         step("calculator with a QqQ file only: as before", calc_qqq)
+        def pills_qqq():
+            rows = pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.ghost)')].map(r=>[r.querySelector('.nm').textContent,[...r.querySelectorAll('.hrb')].map(x=>x.textContent)])"); print(rows)
+            assert rows and all(b == [] for a, b in rows), rows
+        step("no pill «HR» or «DDA» on the QqQ file", pills_qqq)
+        def method_qqq():
+            pg.evaluate("(()=>{const f=E.files.find(f=>f.file.startsWith('B_Full'));E.cur=f.k;showMethod()})()"); pg.wait_for_timeout(1500)
+            t = pg.inner_text("#bigdlg"); assert "Manca il metodo di acquisizione" in t and "Parametri delle scansioni" not in t, t
+            pg.evaluate("document.querySelector('#bigdlg').close()")
+        step("window «Metodo» of a QqQ file: as before", method_qqq)
+        def losses_qqq():
+            pg.evaluate("QQQRef.open('ls',{q:'27.995'})"); pg.wait_for_timeout(800)
+            hit = pg.evaluate("[...document.querySelectorAll('#refdlg .nlr.hit')].map(r=>r.dataset.f)"); ex = pg.evaluate("document.querySelector('#refdlg .nlr[data-f=CO] .nlm small')")
+            print(hit, ex)
+            assert "CO" in hit and "C2H4" in hit and ex is None, (hit, ex)                       # QqQ: ±0.5 Da and no exact masses
+            pg.evaluate("document.querySelector('#refdlg').close()")
+        step("neutral losses with a QqQ file: ±0.5 Da and no exact masses", losses_qqq)
         pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500)
-        load(pg, [D / "HR_DDA-Exploris-t30.mzML", D / "B_FullMass-t0.mzML"], 4000, 3)
+        load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         def pills():
             t = pg.inner_html("#flst"); print(t.count("hrb"))
             rows = pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.ghost)')].map(r=>[r.querySelector('.nm').textContent,[...r.querySelectorAll('.hrb')].map(x=>x.textContent)])"); print(rows)
             d = dict((a, b) for a, b in rows)
             assert d, rows
             full = [a for a in d if "Exploris" in a]; assert full and d[full[0]] == ["HR", "DDA"], d
-            q = [a for a in d if a.startswith("B_Full") or "B_FullMass" in a]; assert not q or d[q[0]] == [], d
             title = pg.evaluate("document.querySelector('#flst .hrb').title"); assert "Orbitrap Exploris 120" in title and "R 45" in title, title
-        step("pills «HR» and «DDA» on the Orbitrap file, none on the QqQ file", pills)
+        step("pills «HR» and «DDA» on the Orbitrap file", pills)
         def calc_hr():
             pg.click("#np-calc2"); pg.wait_for_timeout(400)
             pg.fill("#calcin", ""); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
@@ -50,9 +65,7 @@ try:
             assert "Il metodo completo non è nel file mzML" in t and "Parametri delle scansioni" in t and "NCE" in t and "HCD" in t and "45 000" in t and "±0.75" in t, t
             assert "Manca il metodo di acquisizione" not in t
             pg.evaluate("document.querySelector('#bigdlg').close()")
-            pg.evaluate("(()=>{const f=E.files.find(f=>f.file.startsWith('B_Full'));E.cur=f.k;showMethod()})()"); pg.wait_for_timeout(1500)
-            t = pg.inner_text("#bigdlg"); assert "Manca il metodo di acquisizione" in t and "Parametri delle scansioni" not in t, t       # the QqQ file: as before
-        step("window «Metodo» of an Orbitrap file without .dam: the parameters of the scans; QqQ as before", method)
+        step("window «Metodo» of an Orbitrap file without .dam: the parameters of the scans", method)
         def losses():
             pg.evaluate("QQQRef.open('ls',{q:'27.995'})"); pg.wait_for_timeout(800)
             hit = pg.evaluate("[...document.querySelectorAll('#refdlg .nlr.hit')].map(r=>r.dataset.f)"); ex = pg.evaluate("document.querySelector('#refdlg .nlr[data-f=CO] .nlm small')?.textContent")
@@ -60,12 +73,7 @@ try:
             assert hit == ["CO"] and ex == "27.9949", (hit, ex)                                  # 3 mDa: CO yes, C2H4 (28.0313) no
             assert "Stessa massa nominale (28)" in pg.inner_text("#refdlg")      # the sentence about equal nominal masses stays
             pg.evaluate("document.querySelector('#refdlg').close()")
-            pg.evaluate("UIP.hr=false"); pg.evaluate("QQQRef.open('ls',{q:'27.995'})"); pg.wait_for_timeout(800)
-            hit = pg.evaluate("[...document.querySelectorAll('#refdlg .nlr.hit')].map(r=>r.dataset.f)"); ex = pg.evaluate("document.querySelector('#refdlg .nlr[data-f=CO] .nlm small')")
-            print(hit, ex)
-            assert "CO" in hit and "C2H4" in hit and ex is None, (hit, ex)                       # off: ±0.5 Da and no exact masses
-            pg.evaluate("document.querySelector('#refdlg').close(); UIP.hr=true")
-        step("neutral losses with an Orbitrap file: exact masses and «Cerca Δm» within 3 mDa (±0.5 Da when off)", losses)
+        step("neutral losses with an Orbitrap file: exact masses and «Cerca Δm» within 3 mDa", losses)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

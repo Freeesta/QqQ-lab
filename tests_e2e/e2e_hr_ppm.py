@@ -14,9 +14,8 @@ J = lambda js: pg.evaluate(js)
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        load(pg, [D / "HR_DDA-Exploris-t30.mzML", D / "B_FullMass-t0.mzML"], 4000, 3)
+        load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         K = pg.evaluate("E.files.find(f=>f.file==='HR_DDA-Exploris-t30.mzML#MS1').k")
-        Q = pg.evaluate("E.files.find(f=>f.file==='B_FullMass-t0.mzML').k")
         def mk(k, rt, w=1e-4):
             return pg.evaluate(f"(()=>{{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');const s=newSpec(c,{rt}-{w},{rt}+{w},{k});return s.id}})()")
         def wait_draw(pid):
@@ -42,17 +41,19 @@ try:
             import re
             e = float(re.search(r"\(M: ([+−][0-9.]+) ppm", t).group(1).replace("−", "-")); assert abs(e) < 3, e          # 0.8 ppm noise
         step("isotope profile: the circle sits on the centroid and says the error in ppm", isotopes)
+        def no_switch():
+            assert pg.evaluate("UIP.hr === undefined && !HR.on") and not pg.evaluate("!!document.querySelector('#uip-hr')")
+            v = pg.evaluate(f"(()=>{{const p=E.panels.find(x=>x.id=={sp});return [p._a.hrp,p._a.dec]}})()"); print(v)
+            assert v[0] is True and v[1] == 4, v                        # an Orbitrap file is always read as high resolution
+        step("no «Alta risoluzione» switch any more: the Exploris spectrum keeps its 4 decimals", no_switch)
         def qqq():
+            pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500)
+            load(pg, [D / "B_FullMass-t0.mzML"], 4000, 1)
+            Q = pg.evaluate("E.files.find(f=>f.file==='B_FullMass-t0.mzML').k")
             q = mk(Q, 14.3, 0.02); wait_draw(q)
             v = pg.evaluate(f"(()=>{{const p=E.panels.find(x=>x.id=={q});return [p._a.hrp,p._a.dec]}})()"); print(v)
             assert v == [False, 1], v
-        step("QqQ file: not high resolution, 1 decimal", qqq)
-        def off():
-            pg.evaluate("UIP.hr=false;CACHE.clear();SC.m.clear();SC.n.clear();redrawAll()"); pg.wait_for_timeout(1500)
-            v = pg.evaluate(f"(()=>{{const p=E.panels.find(x=>x.id=={sp}),mz=p._a.data[0].d.mz;return [p._a.hrp,p._a.dec,Math.max(...mz.map(m=>(String(m).split('.')[1]||'').length))]}})()"); print(v)
-            assert v[0] is False and v[1] == 1 and v[2] <= 3, v
-            pg.evaluate("UIP.hr=true;CACHE.clear();SC.m.clear();SC.n.clear();redrawAll()"); pg.wait_for_timeout(1000)
-        step("switch «spenta»: the Exploris spectrum is binned at 0.1 Da with 1 decimal", off)
+        step("QqQ file (its own session): not high resolution, 1 decimal", qqq)
     r.close()
     cuts = real_cuttings()
     if cuts:                                                  # the real cuttings: a spectrum of one scan equals the scan stored in the file (generic property)
