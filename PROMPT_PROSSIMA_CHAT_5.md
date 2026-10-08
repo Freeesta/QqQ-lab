@@ -40,13 +40,13 @@ Federico ha chiesto di fare tutto in una sessione, toccando **solo Teoria e Prat
 **Stato** (aggiornalo e fai push a ogni punto finito). Ogni sessione cambia **solo la riga sotto il suo titolo** (le righe vuote fra le sessioni evitano i conflitti: non toglierle). Formato: punti fatti · punto in corso · ramo non ancora in `main`.
 
 **T**
-- sessione unica (T, G, H insieme) · B1 struttura in corso · ramo `claude/ms-teaching-gamification-joek2s`
+- sessione unica (T, G, H insieme): fatti B1 struttura (22 capitoli in sei parti, rimandi dai vecchi nomi), B2 cromatografia (3-5), B3 EI e CI (7), B4 risoluzione e formula (11, 13), B5 spettri EI MassBank e capitoli 15-16, B6 gioco EI, B7 formulario (22), domande dell'orale e cinque giochi brevi, B8 obiettivi nei capitoli vecchi, indice, glossario, bibliografia, documenti, test e2e_pratica · nessun punto in corso · ramo `claude/ms-teaching-gamification-joek2s` (PR verso `main`). Nota: i dati EI stanno in `teoria/pratica/` (non `palestra/`), la Pratica è dentro il modulo Teoria.
 
 **G**
-- nessun punto fatto
+- svolta dalla sessione T (vedi sopra)
 
 **H**
-- nessun punto fatto
+- svolta dalla sessione T (vedi sopra)
 
 **Se riprendi dopo un'interruzione**: `git fetch origin`; leggi «Stato»; guarda le PR aperte e i rami `claude/...` non uniti con commit «[in corso]» (`git branch -r --no-merged origin/main`); porta il lavoro non unito nel tuo ramo (`git merge origin/<ramo>`), rilancia `python3 tools/verifica.py --solo <test del punto>` e riparti dal punto in corso.
 

@@ -23,3 +23,7 @@ pubblicato con licenza **Creative Commons Attribution-ShareAlike 4.0** (https://
 ## Figure della Teoria
 
 Le figure dei capitoli di Teoria sono disegnate dal programma stesso (SVG e simulazioni in JavaScript): non contengono immagini di terzi.
+
+## Spettri EI della Teoria e della Pratica
+
+Gli spettri di ionizzazione elettronica in `qqq_lab/web/teoria/pratica/ei-dati.js` vengono da **MassBank Europe** (https://massbank.eu), ognuno con il proprio codice di record, autori e licenza indicati nel file e sotto ogni grafico; tutti con licenza **Creative Commons Attribution-NonCommercial-ShareAlike** (CC BY-NC-SA). Per questa licenza gli spettri si usano solo a scopo didattico e non commerciale, con attribuzione, e chi li redistribuisce modificati deve usare la stessa licenza. Le note didattiche sugli ioni sono originali. Nessuno spettro proviene dalla libreria NIST.

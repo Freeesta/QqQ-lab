@@ -18,10 +18,19 @@ OVERRIDE = {
     "Massa nominale / monoisotopica": ["massa nominale", "massa monoisotopica"],
     "Affinità protonica (PA)": ["affinità protonica", "PA"],
     "CUR (curtain gas)": ["CUR", "curtain gas"],
+    "Van Deemter (equazione di)": ["equazione di van Deemter", "van Deemter"],
+    "McLafferty (riarrangiamento di)": ["riarrangiamento di McLafferty", "McLafferty"],
+    "Indice di ritenzione / indice di Kováts": ["indice di ritenzione", "indice di Kováts", "indici di ritenzione"],
+    "Accuratezza di massa / errore in ppm": ["accuratezza di massa", "errore in ppm"],
+    "Tempo di volo (TOF)": ["tempo di volo", "TOF"],
+    "Ionizzazione elettronica (EI)": ["ionizzazione elettronica", "EI"],
+    "Ionizzazione chimica (CI)": ["ionizzazione chimica", "CI"],
 }
 EXTRA = {
     "Perdita neutra": ["perdite neutre"], "Picco base": ["picchi base"], "Ione precursore": ["ioni precursori", "precursore"],
     "Ione prodotto": ["ioni prodotto", "ioni prodotti"], "Transizione": ["transizioni"], "Addotto": ["addotti"],
+    "Piatti teorici": ["piatti", "numero di piatti"], "Radicale catione": ["radicali cationi"],
+    "Trappola ionica": ["trappole ioniche"], "Ione molecolare": ["ioni molecolari"],
 }
 
 
