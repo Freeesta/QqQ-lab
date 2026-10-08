@@ -365,3 +365,58 @@ def test_localisation_of_the_modification(msn_tree):
         assert dt < 1.0
     print("\nlocalisation, fraction of the region in the right place:", report)
     assert ok >= cfg["min_correct"], f"{ok} cases correct: {report}"
+
+
+# ---------------------------------------------------------------------------------------------------------------------- WP10: kinetics
+@need
+def test_kinetics_generation_saturation_and_sessions(series_features):
+    import glob
+    import re
+    import numpy as np
+    from tpmine.hr import kinetics as K
+    feats, times, al, _, _, _ = series_features
+    cfg = json.loads(MSN_TRUTH.read_text(encoding="utf-8"))["kinetics"]
+    truth = json.loads(TRUTH.read_text(encoding="utf-8"))
+    files = sorted(glob.glob(str(DATI / "HRMS" / "*" / "*TiO2*.mzML")), key=lambda f: float(re.search(r"t(\d+)min", f).group(1)) if re.search(r"t(\d+)min", f) else -1.0)
+    lab = K.sessions([K.run_start(f) for f in files])
+    got = {s: sorted(float(t) for t, l in zip(times, lab) if l == s) for s in set(lab)}
+    assert {s: sorted(v) for s, v in cfg["sessions"].items()} == got                            # two sessions, as in the header of the files
+    sf = K.session_factors(al.area, lab)
+    assert sf["n_features"] > 1000 and not sf["applied"]                                        # the factor on the features present everywhere is ~1
+    pm = truth["parent"]["mz"]
+    g = np.flatnonzero((np.abs(al.mz - pm) <= pm * 5e-6) & (np.abs(al.rt - truth["parent"]["rt_obs"]) <= 0.15))
+    g = g[np.argmax(al.area[g].max(1))]
+    assert K.parent_saturation(times, al.area[g])["saturated"] is cfg["parent_saturated"]
+    tr = times >= 0
+    tps = {t["id"]: t for t in truth["tps"]}
+    verdict = {}
+    for tid in cfg["second_generation_ids"]:
+        tp = tps[tid]
+        s = np.flatnonzero((np.abs(al.mz - tp["mz"]) <= tp["mz"] * 5e-6) & (np.abs(al.rt - tp["rt_obs"][0]) <= 0.15))
+        i = s[np.argmax(al.area[s][:, tr].max(1))]
+        verdict[tid] = (K.generation(times[tr], al.area[i][tr])["verdict"], K.descriptors(times, al.area[i])["class"][0])
+    print("\ngeneration of the late aliphatic series:", verdict)
+    assert sum(v[0] == "seconda" for v in verdict.values()) >= len(verdict) - 1
+    assert all(verdict[t][1] == "tardivo" for t in cfg["late_ids"])
+
+
+# ---------------------------------------------------------------------------------------------------------------------- WP11: derivations and isotopes
+@need
+def test_every_reference_product_derives_from_the_parent_and_the_parent_isotopes_fit(series_features):
+    import numpy as np
+    from qqq_lab.chem import elements as E
+    from tpmine.hr import features as FT
+    from tpmine.hr import formula as F
+    from tpmine.hr import network as NW
+    feats, times, al, _, _, _ = series_features
+    truth = json.loads(TRUTH.read_text(encoding="utf-8"))
+    parent = E.parse_formula(truth["parent"]["ion"])
+    els = F.element_order(parent)
+    pv = F.vec(parent, els)
+    table = NW.transformation_table(els)
+    names = {t["id"]: NW.derivation_name(F.vec(t["ion"], els), pv, els, table) for t in truth["tps"]}
+    assert all(names.values()), [k for k, v in names.items() if not v]
+    g = int(np.argmin(np.abs(al.mz - truth["parent"]["mz"]) + (np.abs(al.rt - truth["parent"]["rt_obs"]) > 0.15) * 10))
+    status, text = NW.isotopes_coherent(NW.observed_isotopes(al, g), NW.expected_isotopes(pv, els))
+    print("\nparent isotopes:", text)
+    assert status == "pass"
