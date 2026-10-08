@@ -236,6 +236,7 @@ try:
             assert b1 > b0 * 1.6, (b0, b1); pg.evaluate(KQ + ".editor.zoom(1)")
         step("label follows the zoom", zoom)
         def off():
+            pg.uncheck("#lb-a"); pg.wait_for_timeout(300)           # (the arrow labels are optional and were switched on by the previous steps)
             n0 = len(pg.evaluate(LBL)); assert n0 >= 1
             pg.uncheck("#lb-f"); pg.uncheck("#lb-m"); pg.wait_for_timeout(300); assert pg.evaluate(LBL) == []
             pg.check("#lb-f"); pg.check("#lb-m"); pg.wait_for_timeout(300); assert len(pg.evaluate(LBL)) == n0
