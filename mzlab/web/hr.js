@@ -3,15 +3,13 @@
 // The server sends, for every file, the mass profile of its survey scans (`prof1`) and of its product-ion scans (`prof2`):
 // {hr, an, dec, tol, unit}. Everything in the page that decides decimals, a tolerance or the grouping of m/z goes through HR.prof().
 // The 3200 QTRAP files have the low-resolution profile (1 decimal, the unit window of the XIC): nothing changes for them.
-// A switch in the settings gear ("Alta risoluzione: spenta") makes every file behave as today.
 const HR = (() => {
   const LOW = { hr: false, an: "?", dec: 1, tol: 0.5, unit: "Da" };
-  const on = () => UIP.hr !== false;
   const num = (v, lo, hi, d) => { v = +v; return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
   // profile of file f at a level (1 survey, 2 product ions); `f` may be undefined (no file yet): low resolution
   function prof(f, level) {
     const lv = level || (f && f.lv) || 1, p = f && (lv === 2 ? f.prof2 : f.prof1);
-    if (!on() || !p) return LOW;
+    if (!p) return LOW;
     if (!p.hr) return p;                                                     // ion trap: 2 decimals, 0.5 Da (as Thermo's default), not high resolution
     return { ...p, dec: Math.round(num(UIP.hrDec, 3, 5, p.dec)), tol: num(UIP.hrPpm, 1, 50, p.tol), unit: "ppm" };
   }
@@ -26,7 +24,7 @@ const HR = (() => {
   // "tolerance 5 ppm" or "0.5 Da" as text for titles and tooltips
   const tolText = (f, level) => { const q = prof(f, level); return q.unit === "ppm" ? `${+q.tol.toFixed(1)} ppm` : `${+q.tol.toFixed(2)} Da`; };
   // appended to server requests: the server must also behave as today when the switch is off
-  const q = () => on() ? "" : "&hr=0";
+  const q = () => "";
   // short label of the instrument, for lists and the method window: "Orbitrap Exploris 120 · R 45 000 / 15 000"
   const rtxt = r => r ? Math.round(r).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") : "";
   function label(f) {
@@ -40,7 +38,7 @@ const HR = (() => {
   document.head.appendChild(hrbox);
   const badge = f => {
     if (!f) return "";
-    const hr = !!((f.prof1 && f.prof1.hr) || (f.prof2 && f.prof2.hr)) && on(), t = EH(label(f) || f.instrument || "");
+    const hr = !!((f.prof1 && f.prof1.hr) || (f.prof2 && f.prof2.hr)), t = EH(label(f) || f.instrument || "");
     return (hr ? `<span class="hrb" title="${t}">HR</span>` : "") + (f.dda && f.kind !== "mrm" ? `<span class="hrb" title="${t || "Acquisizione dipendente dai dati: lo strumento sceglie da solo gli ioni da frammentare"}">DDA</span>` : "");
   };
   // a file whose high-resolution reading failed on the server opens as low resolution: say it once
@@ -112,7 +110,7 @@ const HR = (() => {
   // the trace for an ion if a high-resolution file is among the files the XIC is for; otherwise null (the caller makes the classic unit-window trace)
   function ionTrace(mz, o = {}) {
     const fs = xicFiles(o.tab), hf = fs.find(f => isHr(f, f.lv));
-    if (!on() || !hf) return null;
+    if (!hf) return null;
     return { id: E.seq++, mz: +(+mz).toFixed(5), ion: true, obs: !!o.obs && !fs.every(f => isHr(f, f.lv)), label: (o.prefix ? o.prefix + " \u00b7 " : "") + ionText(mz, hf) };
   }
   // [centre, half width] in Da of trace t for file f
@@ -129,6 +127,6 @@ const HR = (() => {
     if (!t.ion || !q) return null;
     const d = q.dec, w = t.mz * q.tol * 1e-6; return [+(t.mz - w).toFixed(d + 1), +(t.mz + w).toFixed(d + 1)];
   }
-  return { LOW, on, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, badge, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
+  return { LOW, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, badge, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
 })();
 window.HR = HR;
