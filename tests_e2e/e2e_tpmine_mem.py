@@ -28,11 +28,6 @@ srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind"
 time.sleep(1); errs = []; ok = False
 
 
-def browser_rss_mb():
-    out = subprocess.run(["ps", "-eo", "rss,args"], capture_output=True, text=True).stdout
-    return sum(int(l.split(None, 1)[0]) for l in out.splitlines()[1:] if "chrom" in l.lower() and "playwright" not in l.lower() or "headless_shell" in l) / 1024
-
-
 try:
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1500, "height": 1400}).new_page()
@@ -47,17 +42,17 @@ try:
         pg.wait_for_function("document.querySelectorAll('#tp-files tr').length >= 15", timeout=1200000)
         print(f"files loaded in {time.time() - t0:.0f} s; wasm memory after loading: {pg.evaluate('window.TPMINE_MEM()')['wasm'] / GB:.2f} GB")
         pg.fill("#tp-mol", truth["parent"]["smiles"]); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('317.1642')", timeout=60000)
-        t0 = time.time(); peak = 0
+        t0 = time.time()
         pg.click("#tp-go")
         while not pg.evaluate("!!document.querySelector('#hr-t tr.clk')"):
             if time.time() - t0 > 3600: raise SystemExit("timeout: the run takes more than an hour")
-            peak = max(peak, browser_rss_mb()); pg.wait_for_timeout(3000)
+            pg.wait_for_timeout(3000)
             m = pg.inner_text("#tp-msg")
             if m.strip() and "errore" in m.lower(): raise SystemExit(m)
         took = time.time() - t0
         wasm = pg.evaluate("window.TPMINE_MEM()")["wasm"]
         n_rows = pg.evaluate("document.querySelectorAll('#hr-t tr.clk').length")
-        print(f"run in the worker: {took:.0f} s, {n_rows} rows; WebAssembly memory (peak) {wasm / GB:.2f} GB; browser processes RSS peak {peak:.0f} MB")
+        print(f"run in the worker: {took:.0f} s, {n_rows} rows; WebAssembly memory (peak) {wasm / GB:.2f} GB")
         ok = wasm < GB and n_rows > 100
         print("OK" if ok else f"FAIL: peak of the WebAssembly memory {wasm / GB:.2f} GB (target < 1 GB) or too few rows")
         b.close()
