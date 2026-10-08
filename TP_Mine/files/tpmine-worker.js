@@ -1,5 +1,5 @@
 // TPMINE-PRIVATE  Web Worker of TP Mine: its own Pyodide (Python + numpy) running the private engine on the mzML bytes sent by the page.
-let py = null, api = null;
+let py = null, api = null, bigN = 0;
 const say = text => postMessage({ type: "step", text });
 onmessage = async ev => {
   const m = ev.data;
@@ -19,7 +19,14 @@ onmessage = async ev => {
       api._progress = (text, frac) => postMessage({ type: "progress", text, frac });
       postMessage({ type: "ready" });
     } else if (m.type === "put") {
-      py.FS.writeFile("/tp_data/" + m.name, new Uint8Array(m.buf));
+      const dst = "/tp_data/" + m.name;
+      try { py.FS.unlink(dst); } catch (_) { /* not there yet */ }
+      if (m.blob) {      // a big file is not copied into the heap of WebAssembly: the Blob is mounted read-only (WORKERFS) and linked, like the main program does
+        const dir = "/big/" + (++bigN);
+        py.FS.mkdirTree(dir);
+        py.FS.mount(py.FS.filesystems.WORKERFS, { blobs: [{ name: "data", data: m.blob }] }, dir);
+        py.FS.symlink(dir + "/data", dst);
+      } else py.FS.writeFile(dst, new Uint8Array(m.buf));
       postMessage({ id: m.id, result: true });
     } else if (m.type === "call") {
       const r = api[m.fn](...(m.args || []));

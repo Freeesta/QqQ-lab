@@ -167,11 +167,15 @@
         <td>${f.kind === "full" || f.kind === "ms2" || f.kind === "mrm" ? `<input type="number" data-i="${i}" data-k="time" value="${f.time ?? ""}" style="width:60px" step="any">` : ""}</td></tr>`).join("") + "</table>";
       $("#tp-files").querySelectorAll("[data-k]").forEach(el => el.onchange = () => { const f = st.files[+el.dataset.i]; f[el.dataset.k] = el.dataset.k === "time" ? (el.value === "" ? null : +el.value) : el.value; });
     };
-    async function addFiles(list) {         // list: [{name, buf}]
+    const BIG = 50 << 20;                   // as in the main program: above this a file is mounted from its Blob, not copied (13 HR files = 1 GB)
+    async function addFiles(list) {         // list: [{name, buf}] or [{name, file}] (File/Blob: read only if small)
       msg("Leggo i file...");
       try {
         await startWorker();
-        for (const f of list) await send({ type: "put", name: f.name, buf: f.buf }, [f.buf]);
+        for (const f of list) {
+          if (f.file && f.file.size > BIG) await send({ type: "put", name: f.name, blob: f.file });
+          else { const buf = f.file ? await f.file.arrayBuffer() : f.buf; await send({ type: "put", name: f.name, buf }, [buf]); }
+        }
         const info = await call("classify", list.map(f => f.name));
         const hint = (() => { try { return Object.fromEntries((window.E && E.files || []).map(x => [String(x.file || x.name || "").split(/[\\/]/).pop(), x])); } catch (_) { return {}; } })();
         st.files = st.files.filter(f => !info.some(i => i.name === f.name));
@@ -184,10 +188,10 @@
       msg("Cerco i file nella memoria del browser...");
       const f = await idbFiles();
       if (!f.length) return msg("Nessun mzML nella scheda Dati di questo browser: aprili lì oppure usa «Scegli mzML...».", true);
-      await addFiles(f.map(x => ({ name: x.name, buf: x.buf.slice ? x.buf.slice(0) : x.buf })));
+      await addFiles(f.map(x => x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: x.buf.slice ? x.buf.slice(0) : x.buf }));
     };
     $("#tp-pick").onclick = () => $("#tp-in").click();
-    $("#tp-in").onchange = async ev => { const fs = [...ev.target.files]; ev.target.value = ""; await addFiles(await Promise.all(fs.map(async f => ({ name: f.name, buf: await f.arrayBuffer() })))); };
+    $("#tp-in").onchange = async ev => { const fs = [...ev.target.files]; ev.target.value = ""; await addFiles(fs.map(f => ({ name: f.name, file: f }))); };
     $("#tp-demo").onclick = async () => {
       msg("Preparo l'esperimento sintetico di bentazone...");
       try {
