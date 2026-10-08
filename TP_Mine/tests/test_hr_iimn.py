@@ -108,9 +108,12 @@ def tree(tmp_path_factory):
 
 
 def test_library_from_the_msn_tree(tree):
-    lib = iimn.build_library(tree)
+    lib = iimn.build_library(tree, node_peak_rel=0.0)                          # all the clean peaks of the nodes
     fs = set(lib.formulas())
     assert {"C8H11N4O2", "C6H8N3O", "C5H8N3", "C5H5N2O", "C4H7N2", "C3H5N2", "C2H4N"} <= fs
+    small = iimn.build_library(tree)                                           # default: the precursors of the nodes only
+    assert {"C8H11N4O2", "C6H8N3O", "C5H8N3", "C6H10N3O2"} <= set(small.formulas()) and "C2H4N" not in small.formulas() and len(small) < len(lib)
+    assert len(iimn.build_library(tree, node_peak_rel=50.0)) <= len(lib)
     assert "C6H10N3O2" in fs                                              # the precursor of the ghost node is a real ion of the tree
     e = lib.entries["C5H8N3"]
     assert e["source"] == {"msn"} and e["idx"] is not None and e["w"].sum() == pytest.approx(1.0) and len(e["idx"]) < 10

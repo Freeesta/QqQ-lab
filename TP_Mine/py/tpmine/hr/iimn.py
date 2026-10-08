@@ -288,10 +288,13 @@ class FragmentLibrary:
         return None
 
 
-def build_library(tree, dda_peaks=None, min_rel: float = 1.0) -> FragmentLibrary:
+def build_library(tree, dda_peaks=None, min_rel: float = 1.0, node_peak_rel: float | None = None) -> FragmentLibrary:
     """Library from an `msn.MsnTree` (formulas of the nodes and of their clean peaks, with the atom sets constrained by the tree) and, if given, the
     consensus MS2 of the parent from the DDA data `dda_peaks = (mz, relative intensity in %)`: peaks of at least `min_rel` % that are a sub-formula
-    of the parent ion, with atom sets from the molecular graph without constraint (weighted like in WP3)."""
+    of the parent ion, with atom sets from the molecular graph without constraint (weighted like in WP3). `node_peak_rel`: the clean peaks of a node
+    enter only above this relative intensity (%); None (the default) = only the precursors of the nodes: measured on the real products, a library
+    with all the clean peaks (300 formulas) makes the unshifted / shifted classification of the fragments nearly random and the localisation fails,
+    with the precursors of the tree and the parent's DDA peaks (23 formulas) it works."""
     lib = FragmentLibrary(tree.els, tree.subs)
     for n in tree.nodes:
         if n["formula"] is None:
@@ -299,9 +302,11 @@ def build_library(tree, dda_peaks=None, min_rel: float = 1.0) -> FragmentLibrary
         idx_w = tree.cand.get(n["id"]) if tree.subs is not None else None
         if n["id"] != "MS1":
             lib.add(n["formula"], n["prec_mz"], "msn", 100.0, *(idx_w if idx_w is not None else (None, None)))
-        if n["ghost"]:
+        if n["ghost"] or node_peak_rel is None:
             continue
         for j, p in enumerate(n["peaks"]):
+            if p["rel"] < node_peak_rel:
+                continue
             ip = tree.peak_cand.get((n["id"], j)) if tree.subs is not None else None
             lib.add(p["formula"], p["mz"], "msn", p["rel"], *(ip if ip is not None else (None, None)))
     if dda_peaks is not None:

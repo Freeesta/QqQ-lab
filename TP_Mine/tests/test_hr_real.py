@@ -203,7 +203,7 @@ def test_families_of_the_parent_and_its_in_source_fragments(msn_tree):
     from tpmine.hr import iimn
     _, _, tree, _ = msn_tree
     truth = json.loads(TRUTH.read_text(encoding="utf-8"))
-    lib = iimn.build_library(tree)
+    lib = iimn.build_library(tree, node_peak_rel=0.0)                  # the broad library: every mass the tree has seen
     assert len(lib) > 100 and all(e["idx"] is not None for e in lib.entries.values())
     f = [x for x in glob.glob(str(DATI / "HRMS" / "*" / "*TiO2*.mzML")) if "t002min" in x][0]
     run = Run(f)
@@ -314,3 +314,54 @@ def test_similarity_hcd_against_hcd_and_against_cid(msn_tree):
     M3, W3, P3 = SM.pad([cid] + specs[1:], [nd["prec_mz"]] + precs[1:])
     _, sc3, _ = SM.one_against_all(M3, W3, P3, 0)
     assert (sc3 <= cfg["vs_cid_max"]).all() and np.median(sc3) < np.median(sc)
+
+
+# ---------------------------------------------------------------------------------------------------------------------- WP9: localisation
+@need
+def test_localisation_of_the_modification(msn_tree):
+    import glob
+    import re
+    import numpy as np
+    from qqq_lab.chem import elements as E
+    from tpmine.hr import formula as F
+    from tpmine.hr import iimn
+    from tpmine.hr import localize as LZ
+    from tpmine.hr import spectra as SP
+    cfg = json.loads(MSN_TRUTH.read_text(encoding="utf-8"))["localization"]
+    truth = json.loads(TRUTH.read_text(encoding="utf-8"))
+    _, _, tree, _ = msn_tree
+    files = sorted(glob.glob(str(DATI / "HRMS" / "*" / "*TiO2*.mzML")), key=lambda f: float(re.search(r"t(\d+)min", f).group(1)) if re.search(r"t(\d+)min", f) else -1.0)
+    runs = [Run(f) for f in files]
+    ixs = [SP.index_ms2(r) for r in runs]
+
+    def cons(mz, lo, hi):
+        sel = SP.select_ms2(ixs, mz, [(lo, hi)] * len(files))
+        a, b, _ = SP.read_spectra(runs, sel)
+        return SP.ms2_consensus(a, b)
+    pm = truth["parent"]["mz"]
+    pc = cons(pm, *cfg["parent_window"])
+    lib = iimn.build_library(tree, dda_peaks=(pc["mz"], pc["rel"]))
+    groups = {k: set(v) for k, v in cfg["groups"].items()}
+    els = tree.els
+    tps = {t["id"]: t for t in truth["tps"]}
+    ok, report = 0, {}
+    for case in cfg["cases"]:
+        tp = tps[case["id"]]
+        rt = tp["rt_obs"][case["rt_index"]]
+        c = cons(tp["mz"], rt - cfg["window"], rt + cfg["window"])
+        space = F.FormulaSpace(F.vec(tp["ion"], els), els)
+        t0 = time.perf_counter()
+        r = LZ.localize(tp["ion"], truth["parent"]["ion"], c["mz"], c["rel"], lib, space, groups=groups, tp_mz=tp["mz"])
+        dt = time.perf_counter() - t0
+        assert r["ok"], (case["id"], r["note"])
+        if "region_in" in case:
+            g = groups[case["region_in"]]
+            frac = len(set(r["region_atoms"]) & g) / len(r["region_atoms"])
+        else:
+            kept = set(r["retained_atoms"])
+            frac = min(len(kept & groups[n]) / len(groups[n]) for n in case["retained"])
+        report[case["id"]] = round(frac, 2)
+        ok += frac >= case["min_fraction"]
+        assert dt < 1.0
+    print("\nlocalisation, fraction of the region in the right place:", report)
+    assert ok >= cfg["min_correct"], f"{ok} cases correct: {report}"
