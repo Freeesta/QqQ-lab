@@ -26,7 +26,16 @@ function start() {
 function hideMacro(fr) {
   try {
     const d = fr.contentDocument, st = d.createElement("style");
-    st.textContent = '[data-testid="polymer-toggler"]{display:none!important}';
+    // the buttons of Ketcher are small (32 px): the four toolbars are enlarged (CSS zoom, so the menus that open from them grow too). The size follows the room:
+    // the side toolbars need ~655 px of height at normal size, the top one ~910 px of width (its help / about buttons are hidden: the program has its own help)
+    st.textContent = '[data-testid="polymer-toggler"],[data-testid="help-button"],[data-testid="about-button"]{display:none!important}' +
+      '[class*="App-module_top"]{zoom:var(--ktz,1.1)}[class*="LeftToolbar-module_root"],[class*="RightToolbar-module_root"],[class*="BottomToolbar-module_root"]{zoom:var(--ksz,1.3)}';
+    const fit = () => {
+      const w = d.defaultView.innerWidth, h = d.defaultView.innerHeight, coarse = d.defaultView.matchMedia("(pointer:coarse)").matches;
+      d.documentElement.style.setProperty("--ktz", String(Math.max(1, Math.min(coarse ? 1.35 : 1.25, (w - 24) / 910)).toFixed(3)));
+      d.documentElement.style.setProperty("--ksz", String(Math.max(1, Math.min(coarse ? 1.55 : 1.4, (h - 60) / 655)).toFixed(3)));
+    };
+    fit(); d.defaultView.addEventListener("resize", fit);
     d.head.appendChild(st);
   } catch (_) { /* not critical */ }
 }
