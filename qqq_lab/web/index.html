@@ -3,7 +3,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' blob:">
 <link rel="icon" href="static/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="static/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png"><link rel="apple-touch-icon" href="static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{APP}</title><script src="static/appname.js"></script>
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>{APP}</title><script src="static/appname.js"></script>
 <style>
 :root{color-scheme:light;--bg:#f7f8fa;--panel:#ffffff;--line:#e2e5ea;--ink:#25282c;--muted:#687080;--accent:#2b5c8a;--ok:#047857;--bad:#b42318;--warn:#92400e;--sel:#edf2f8}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -77,9 +77,9 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 dialog{border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);padding:14px 16px;max-width:520px}dialog::backdrop{background:rgba(60,45,10,.35)}
 dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justify-content:flex-end}
 .hint{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:4px;padding:6px 10px;margin-bottom:10px;color:var(--muted)}
-#v-draw{display:grid;grid-template-columns:1fr 330px;gap:10px;padding:10px 14px}@media (max-width:1000px){#v-draw{grid-template-columns:1fr}}
+#v-draw{display:grid;grid-template-columns:1fr 330px;gap:10px;padding:10px 14px}@media (max-width:1000px){#v-draw{grid-template-columns:1fr}}@media (pointer:coarse) and (max-width:1500px){#v-draw{grid-template-columns:1fr}}   /* tablet: the editor takes the whole width (its top toolbar can be larger), the cards go below */
 #v-theory{padding:0}#tframe{display:block;width:100%;height:calc(100vh - 52px);border:0;background:#fff}
-#kframe{width:100%;height:calc(100vh - 110px);min-height:520px;border:1px solid var(--line);border-radius:6px;background:#fff}
+#kframe{width:100%;height:max(calc(100vh - 110px),940px);min-height:520px;border:1px solid var(--line);border-radius:6px;background:#fff}
 .sm{font-size:12px}
 #refdlg{max-width:min(1100px,96vw);width:96vw;max-height:92vh}#refbody{max-height:80vh;overflow:auto}#refdlg h4{margin:12px 0 4px}
 #reftabs{display:flex;gap:2px}#reftabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:6px 12px;font-weight:600;color:var(--muted)}#reftabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
@@ -105,6 +105,19 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 .leg .lgl{display:none;flex-wrap:wrap;gap:4px 10px;position:absolute;top:100%;right:0;width:max-content;max-width:min(480px,80vw);max-height:260px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;pointer-events:auto;box-shadow:0 4px 14px rgba(0,0,0,.15)}.leg .lgc{cursor:default;pointer-events:auto;color:var(--ink)}.leg .lgc:hover+.lgl,.leg .lgl:hover{display:flex}
 .xrw{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-items:center;margin:8px 0}.xrw>label{font-weight:600}.xrw .xin{display:flex;gap:6px;align-items:center}.xrw .xin input{flex:1;min-width:0}.xrw .xr-sum{grid-column:2;font-size:11px;color:var(--muted);min-height:1.2em}.xrw .xr-x{padding:0 7px}
 .nlintro{font-size:13px;margin:0 0 6px}.nlintro p{margin:0 0 4px}.nlintro a{font-size:12px}.nlbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:2px 0 8px}.nlbar input{width:90px}.nlr{display:grid;grid-template-columns:54px minmax(150px,1.1fr) minmax(160px,1.6fr) 64px auto;gap:2px 10px;align-items:baseline;padding:5px 6px;border-bottom:1px solid var(--line)}.nlr.hit{background:#fff4d6}.nlm{font-size:22px;font-weight:700;text-align:right;color:var(--accent)}.nlf b{margin-right:8px;font-size:14px}.nls{font-size:12px}.nlpp{white-space:nowrap}.nlp{font-style:normal;display:inline-block;min-width:16px;text-align:center;border:1px solid var(--line);border-radius:8px;font-size:11px;margin-right:2px}.nld{font-size:11px;padding:1px 8px}.nlrad,.nldet{grid-column:2 / -1;font-size:12px}.nlrad{color:var(--muted)}.nldet{background:var(--bg);border-radius:6px;padding:6px 8px}.nlg{border:2px solid var(--line);border-radius:8px;margin:6px 0}.nlg .nlr:last-child{border-bottom:0}.nlgn{font-size:12px;padding:5px 8px;background:var(--bg);border-radius:6px 6px 0 0}.nlc{background:#f3f7fb;border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin-bottom:8px}.nlc ul{margin:4px 0 0 18px;padding:0}
+
+/* touch and pen (touch.js): the graphs take the finger, the controls are larger, the keys of the keyboard are on a bar */
+.pnl canvas{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+#tbar{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:9500;display:flex;gap:6px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.28)}
+#tbar button{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:68px;min-height:54px;padding:6px 8px;border-radius:12px;font-size:11px;color:var(--muted);touch-action:none;-webkit-user-select:none;user-select:none}
+#tbar button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.rzg{display:none}html.touch .rzg{display:block;position:absolute;left:0;right:0;bottom:0;height:18px;z-index:3;touch-action:none;cursor:ns-resize}.rzg i{display:block;width:46px;height:5px;border-radius:3px;background:var(--line);margin:7px auto}
+@media (pointer:coarse){
+ button,select,input{font-size:15px}
+ .pnl .bt,.pnl .x{min-width:40px;min-height:40px;font-size:13px}.pnl .bt svg{width:20px;height:20px}
+ .pnl .hd select,.pnl .hd input,#tools button,#tools select,#dtabs button,header button,.seg button,.tbg button{min-height:40px}
+ .fl{padding:11px 4px}.lkb{width:32px;height:32px}
+}
 </style></head><body>
 <header><img class="logo" src="static/logo.svg" alt="{APP}" title="{APP}">
   <nav id="nav"><button data-v="data" class="on">Dati</button><button data-v="draw">Disegno</button><button data-v="theory" title="Teoria: TP, fotocatalisi, LC, ESI, quadrupolo, triplo quadrupolo">Teoria</button></nav><span class="sp"></span>
@@ -209,6 +222,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 <script src="static/tabs.js"></script>
 <script src="static/settings.js"></script>
 <script src="static/libreria.js"></script>
+<script src="static/touch.js"></script>
 <script>document.getElementById("np-pc").addEventListener("click",()=>window.open("https://pubchem.ncbi.nlm.nih.gov/","_blank","noopener"));</script>
 <script src="static/tables.js"></script>
 <script src="static/help.js"></script>
