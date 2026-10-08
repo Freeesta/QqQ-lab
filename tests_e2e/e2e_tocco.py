@@ -141,7 +141,8 @@ try:
             pg.click("#nav [data-v=draw]"); wait(7000)
             assert pg.evaluate("TOUCH._state().ketcher"), "the bridge reached the editor"
             pg.evaluate(f"(() => {{ {K}.editor.tool('bond', {{type: 1, stereo: 0}}); return 1; }})()"); wait(300)
-            c = pg.evaluate("(() => { const r = document.querySelector('#kframe').getBoundingClientRect(); return [r.left + r.width * 0.5, r.top + r.height * 0.5]; })()")
+            pg.evaluate("document.querySelector('#kframe').scrollIntoView({block: 'start'}); window.scrollBy(0, -60)"); wait(400)
+            c = pg.evaluate("(() => { const r = document.querySelector('#kframe').getBoundingClientRect(); return [r.left + r.width * 0.5, 450]; })()")
             n0 = pg.evaluate(f"{K}.editor.struct().atoms.size"); assert n0 == 0, n0
             T("touchStart", [(c[0] - 80, c[1])]); wait(60)
             for k in range(1, 9): T("touchMove", [(c[0] - 80 + 15 * k, c[1] - 6 * k)]); wait(30)
@@ -149,14 +150,14 @@ try:
             assert pg.evaluate(f"{K}.editor.struct().atoms.size") == 2, "a finger drag draws a bond"
         step("molecule editor: a finger drag draws a bond", kfinger)
         def kpen():
-            c = pg.evaluate("(() => { const r = document.querySelector('#kframe').getBoundingClientRect(); return [r.left + r.width * 0.5, r.top + r.height * 0.5 + 120]; })()")
+            c = pg.evaluate("(() => { const r = document.querySelector('#kframe').getBoundingClientRect(); return [r.left + r.width * 0.5, 570]; })()")
             pen("mouseMoved", c[0], c[1]); wait(100); pen("mousePressed", c[0], c[1], buttons=1); wait(50)
             for k in range(1, 9): pen("mouseMoved", c[0] + 15 * k, c[1] + 5 * k, buttons=1); wait(30)
             pen("mouseReleased", c[0] + 120, c[1] + 40); wait(500)
             assert pg.evaluate(f"{K}.editor.struct().atoms.size") == 4, "the pen draws a second bond"
         step("molecule editor: the pen draws", kpen)
         def kpinch():
-            c = pg.evaluate("(() => { const r = document.querySelector('#kframe').getBoundingClientRect(); return [r.left + r.width * 0.5, r.top + r.height * 0.5 - 150]; })()")
+            c = pg.evaluate("(() => { const r = document.querySelector('#kframe').getBoundingClientRect(); return [r.left + r.width * 0.5, 300]; })()")
             z0 = pg.evaluate(f"{K}.editor.zoom()")
             T("touchStart", [(c[0] - 50, c[1]), (c[0] + 50, c[1])]); wait(60)
             for k in range(1, 9): T("touchMove", [(c[0] - 50 - 10 * k, c[1]), (c[0] + 50 + 10 * k, c[1])]); wait(30)
