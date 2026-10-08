@@ -1,6 +1,25 @@
 /* QqQ lab - Teoria. Plain CSS, no build, works from file:// and from the local server. */
 :root{color-scheme:light;--bg:#fbfbf9;--panel:#ffffff;--line:#e4e2dc;--ink:#24231f;--muted:#6b675c;--accent:#2b5c8a;--accent2:#c2410c;--ok:#047857;--bad:#b42318;--warn:#92400e;--sel:#eef3f8;--code:#f4f3ef;
   --c1:#2b5c8a;--c2:#c2410c;--c3:#047857;--c4:#7c3aed;--c5:#b45309;--c6:#0e7490}
+/* dark theme (tema.js sets data-theme on <html>; the media query only avoids a flash before the script runs) */
+:root[data-theme=dark]{color-scheme:dark;--bg:#14171b;--panel:#1d2127;--line:#323944;--ink:#e4e7eb;--muted:#98a2b0;--accent:#7db4e6;--accent2:#fb923c;--ok:#34d399;--bad:#f87171;--warn:#fbbf24;--sel:#232b36;--code:#252a31;
+  --c1:#7db4e6;--c2:#fb923c;--c3:#34d399;--c4:#a78bfa;--c5:#fbbf24;--c6:#22d3ee}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;--bg:#14171b;--panel:#1d2127;--line:#323944;--ink:#e4e7eb;--muted:#98a2b0;--accent:#7db4e6;--accent2:#fb923c;--ok:#34d399;--bad:#f87171;--warn:#fbbf24;--sel:#232b36;--code:#252a31;
+  --c1:#7db4e6;--c2:#fb923c;--c3:#34d399;--c4:#a78bfa;--c5:#fbbf24;--c6:#22d3ee}}
+/* figures drawn in SVG with the colours of the light theme */
+:where(:root[data-theme=dark] svg text:not([fill])){fill:var(--ink)}
+:root[data-theme=dark] svg [fill="#24231f"],:root[data-theme=dark] svg [style*="fill:#24231f"]{fill:var(--ink)}
+:root[data-theme=dark] svg [stroke="#24231f"]{stroke:var(--ink)}
+:root[data-theme=dark] svg [fill="#fff"],:root[data-theme=dark] svg [fill="#ffffff"],:root[data-theme=dark] svg [style*="fill:#fff"]{fill:var(--panel)}
+:root[data-theme=dark] svg [fill="#f4f3ef"],:root[data-theme=dark] svg [fill="#fdf6ec"],:root[data-theme=dark] svg [fill="#e7e2d6"],:root[data-theme=dark] svg [fill="#c9c5bb"],:root[data-theme=dark] svg [fill="#c9d6e3"],:root[data-theme=dark] svg [fill="#9fb5cc"]{fill:var(--code)}
+:root[data-theme=dark] svg [stroke="#c9c5bb"],:root[data-theme=dark] svg [style*="stroke:#c9c5bb"],:root[data-theme=dark] svg [stroke="#9fb5cc"]{stroke:var(--line)}
+:root[data-theme=dark] svg [fill="#6b675c"],:root[data-theme=dark] svg [style*="fill:#6b675c"]{fill:var(--muted)}
+:root[data-theme=dark] svg [stroke="#6b675c"]{stroke:var(--muted)}
+:root[data-theme=dark] svg [fill="#2b5c8a"],:root[data-theme=dark] svg [style*="fill:#2b5c8a"]{fill:var(--c1)}:root[data-theme=dark] svg [stroke="#2b5c8a"],:root[data-theme=dark] svg [style*="stroke:#2b5c8a"]{stroke:var(--c1)}
+:root[data-theme=dark] svg [fill="#c2410c"]{fill:var(--c2)}:root[data-theme=dark] svg [stroke="#c2410c"],:root[data-theme=dark] svg [style*="stroke:#c2410c"]{stroke:var(--c2)}
+:root[data-theme=dark] svg [fill="#047857"]{fill:var(--c3)}:root[data-theme=dark] svg [stroke="#047857"]{stroke:var(--c3)}
+:root[data-theme=dark] svg [fill="#7c3aed"]{fill:var(--c4)}:root[data-theme=dark] svg [stroke="#7c3aed"]{stroke:var(--c4)}
+:root[data-theme=dark] svg [fill="#b45309"]{fill:var(--c5)}:root[data-theme=dark] svg [stroke="#b45309"]{stroke:var(--c5)}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:64px}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.62 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -68,11 +87,11 @@ figcaption b{color:var(--ink)}
 .ctl label{display:flex;flex-direction:column;font-size:13.5px;color:var(--muted)}
 .ctl label span{display:flex;justify-content:space-between;gap:8px}.ctl label output{white-space:nowrap;color:var(--ink);font-weight:650;font-variant-numeric:tabular-nums}
 .ctl input[type=range]{width:100%;accent-color:var(--accent)}
-.ctl select,.ctl input[type=text],.ctl input[type=number]{font:inherit;font-size:14px;padding:3px 6px;border:1px solid var(--line);border-radius:5px;background:#fff;color:var(--ink)}
+.ctl select,.ctl input[type=text],.ctl input[type=number]{font:inherit;font-size:14px;padding:3px 6px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink)}
 .btns{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
-.btns button{font:inherit;font-size:14px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:3px 11px;cursor:pointer;color:var(--ink)}
+.btns button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:3px 11px;cursor:pointer;color:var(--ink)}
 .btns button:hover{border-color:var(--accent)}.btns button.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.sim canvas{display:block;width:100%;border:1px solid var(--line);border-radius:6px;background:#fff}
+.sim canvas{display:block;width:100%;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media (max-width:760px){.grid2{grid-template-columns:1fr}}
 .readout{font-size:14px;background:var(--code);border-radius:6px;padding:6px 10px;margin-top:8px;font-variant-numeric:tabular-nums}
 .readout b{font-weight:650}
@@ -124,7 +143,7 @@ details.poe summary{cursor:pointer;font-weight:600;color:#0e7490}details.poe[ope
 
 /* real EI spectra (ei-spettri.js) */
 .eispec{margin:16px 0;background:var(--panel);border:1px solid var(--line);border-top:3px solid #0e7490;border-radius:8px;padding:10px 14px}
-.eispec h4{margin:0 0 6px;font-size:15.5px}.eispec canvas{display:block;width:100%;border:1px solid var(--line);border-radius:6px;background:#fff}
+.eispec h4{margin:0 0 6px;font-size:15.5px}.eispec canvas{display:block;width:100%;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
 .eispec .src{font-size:12px;color:var(--muted);margin:6px 0 0}
 .eitab{margin:8px 0 2px;font-size:13px}.eitab th{width:2.5em}.eitab td{padding:2px 6px}
 .eikeys{margin:8px 0 0;padding-left:18px;font-size:14.5px}.eikeys li{margin:3px 0}
@@ -143,3 +162,10 @@ html.phone #top #info{display:inline-flex;align-items:center;justify-content:cen
 html.phone #phnote{margin-top:0}
 body.noex main>:not(.kicker):not(h1):not(.phex):not(.pn){display:none!important}
 @media (max-width:600px){main h1{font-size:28px}main .lead{font-size:17px}.eq{font-size:15px;padding:8px 10px}}
+
+/* dark theme: the coloured boxes keep their coloured edge and get a dark tint */
+:root[data-theme=dark] .box.lr{background:#1b2230;border-left-color:#94a3b8}:root[data-theme=dark] .box.lr>b:first-child{color:#cbd5e1}
+:root[data-theme=dark] .box.hr{background:#241d33;border-left-color:#a78bfa}:root[data-theme=dark] .box.hr>b:first-child{color:#c4b5fd}
+:root[data-theme=dark] .box.gym{background:#12272b;border-left-color:#22d3ee}:root[data-theme=dark] .box.gym>b:first-child{color:#67e8f9}
+:root[data-theme=dark] .box.oral{background:#2a2216;border-left-color:#fbbf24}:root[data-theme=dark] .box.oral>b:first-child{color:#fcd34d}
+:root[data-theme=dark] details.poe{background:#12272b;border-color:#22d3ee}

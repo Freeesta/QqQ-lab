@@ -454,7 +454,7 @@ function renderLoaded(){const el=$("#loaded"),on=!!(S.sess&&S.adding&&typeof E!=
 async function wipeLocal(){
   // qqq.* kept from the old name: renaming it would lose the users' data
   try{const ks=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith("qqq."))ks.push(k)}ks.forEach(k=>localStorage.removeItem(k));sessionStorage.clear()}catch(e){}
-  UIP.font=100;UIP.theme="auto";setPal("time");
+  UIP.theme="auto";setPal("time");
   Object.keys(NB).forEach(k=>delete NB[k]);NB.ui=null;NB.session=null;
   document.dispatchEvent(new Event("nbreset"));
   if(typeof uipApply==="function")uipApply()}
@@ -479,7 +479,7 @@ function prefetchKetcher(){if(kPre||window.QQQ_PHONE)return;kPre=true;
   fetch("static/vendor/ketcher/index.html").then(r=>r.text()).then(t=>{const u=[...t.matchAll(/(?:src|href)="\.?\/?(assets\/[^"]+)"/g)].map(m=>"static/vendor/ketcher/"+m[1]);
     u.forEach(x=>fetch(x,{priority:"low"}).then(r=>r.arrayBuffer()).catch(()=>{}))}).catch(()=>{kPre=false})}
 function prefetchIdle(){const go=()=>{const c=navigator.connection||{};if(c.saveData)return;
-  prefetch(["static/teoria/index.html","static/teoria/teoria.css","static/teoria/teoria.js","static/teoria/glossario-dati.js"]);
+  prefetch(["static/teoria/index.html","static/teoria/teoria.css","static/teoria/teoria.js","static/teoria/tema.js","static/teoria/glossario-dati.js"]);
   prefetch(["static/vendor/openchemlib.js"],"module");
   if(c.downlink>=10&&!/2g|3g/.test(c.effectiveType||""))prefetchKetcher()};
   window.requestIdleCallback?requestIdleCallback(go,{timeout:8000}):setTimeout(go,2000)}
