@@ -5,7 +5,7 @@
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const fmtA = v => v >= 1e6 ? (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + "M" : v >= 1e3 ? (v / 1e3).toFixed(v >= 1e4 ? 0 : 1) + "k" : String(Math.round(v));
   const TYPES = { sample: "campione", blank: "bianco", standard: "standard", control: "controllo" };
-  const KINDS = { full: "Full scan", ms2: "MS2", mrm: "MRM", empty: "vuoto", error: "errore" };
+  const KINDS = { full: "Full scan", ms2: "MS2", mrm: "MRM", hr: "LC-HRMS", msn: "MSn (infusione)", empty: "vuoto", error: "errore" };
   const LAB = { forte: "forte", possibile: "possibile", debole: "debole", progenitore: "progenitore" };
 
   const CSS = `
@@ -163,8 +163,8 @@
     const renderFiles = () => {
       if (!st.files.length) { $("#tp-files").innerHTML = "Nessun file. Il tempo e il tipo si leggono dal nome (t15, blank, STD) e si possono correggere."; return; }
       $("#tp-files").innerHTML = `<table><tr><th>File</th><th>Tipo di dato</th><th>Campione</th><th>t (min)</th></tr>` + st.files.map((f, i) => `<tr><td title="${esc(f.name)}">${esc(f.name.replace(/\.mzml$/i, ""))}</td><td>${KINDS[f.kind] || f.kind}${f.error ? ` <span class="err" title="${esc(f.error)}">!</span>` : ""}</td>
-        <td>${f.kind === "full" || f.kind === "mrm" ? `<select data-i="${i}" data-k="type">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}"${f.type === k ? " selected" : ""}>${v}</option>`).join("")}</select>` : (f.kind === "ms2" ? "frammenti" : "-")}</td>
-        <td>${f.kind === "full" || f.kind === "ms2" || f.kind === "mrm" ? `<input type="number" data-i="${i}" data-k="time" value="${f.time ?? ""}" style="width:60px" step="any">` : ""}</td></tr>`).join("") + "</table>";
+        <td>${f.kind === "full" || f.kind === "mrm" || f.kind === "hr" ? `<select data-i="${i}" data-k="type">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}"${f.type === k ? " selected" : ""}>${v}</option>`).join("")}</select>` : (f.kind === "ms2" ? "frammenti" : "-")}</td>
+        <td>${f.kind === "full" || f.kind === "ms2" || f.kind === "mrm" || f.kind === "hr" ? `<input type="number" data-i="${i}" data-k="time" value="${f.time ?? ""}" style="width:60px" step="any">` : ""}</td></tr>`).join("") + "</table>";
       $("#tp-files").querySelectorAll("[data-k]").forEach(el => el.onchange = () => { const f = st.files[+el.dataset.i]; f[el.dataset.k] = el.dataset.k === "time" ? (el.value === "" ? null : +el.value) : el.value; });
     };
     const BIG = 50 << 20;                   // as in the main program: above this a file is mounted from its Blob, not copied (13 HR files = 1 GB)
@@ -179,7 +179,7 @@
         const info = await call("classify", list.map(f => f.name));
         const hint = (() => { try { return Object.fromEntries((window.E && E.files || []).map(x => [String(x.file || x.name || "").split(/[\\/]/).pop(), x])); } catch (_) { return {}; } })();
         st.files = st.files.filter(f => !info.some(i => i.name === f.name));
-        for (const i of info) { const h = hint[i.name]; if (h && h.time != null) i.time = h.time; if (h && ["sample", "blank", "standard", "control"].includes(h.type)) i.type = h.type; st.files.push(i); }
+        for (const i of info) { if (i.hr_kind === "hr" || i.hr_kind === "msn") i.kind = i.hr_kind; const h = hint[i.name]; if (h && h.time != null) i.time = h.time; if (h && ["sample", "blank", "standard", "control"].includes(h.type)) i.type = h.type; st.files.push(i); }
         st.files.sort((a, b) => (a.kind > b.kind ? 1 : a.kind < b.kind ? -1 : (a.time ?? -1) - (b.time ?? -1)));
         renderFiles(); msg("");
       } catch (e) { msg(String(e.message || e), true); }
@@ -229,13 +229,23 @@
     // ---- run
     $("#tp-go").onclick = async () => {
       const mol = $("#tp-mol").value.trim();
-      if (!st.files.some(f => f.kind === "full")) return msg("Servono file di full scan (MS1) del campione.", true);
+      const hrMode = st.files.some(f => f.kind === "hr");
+      if (!hrMode && !st.files.some(f => f.kind === "full")) return msg("Servono file di full scan (MS1) del campione.", true);
       if (!mol) return msg("Scrivi la formula bruta neutra o lo SMILES del progenitore.", true);
       $("#tp-go").disabled = true; $("#tp-bar").style.width = "2%"; msg("Scavo..."); $("#tp-minecard").classList.add("mining"); const t0 = performance.now();
       try {
         const files = st.files.filter(f => f.kind !== "error" && f.kind !== "empty").map(f => ({ name: f.name, type: f.type, time: f.time, kind: f.kind }));
         const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, discover: $("#tp-disc").checked };
         const parent = { name: $("#tp-name").value.trim(), neutral: mol, adduct: $("#tp-add").value };
+        if (hrMode) {          // high resolution: its own engine and view (21_tpmine_hr.js)
+          if (parent.adduct !== "[M+H]+") throw new Error("L'alta risoluzione usa lo ione [M+H]+: scegli quell'addotto.");
+          if (/^[A-Za-z0-9()]+$/.test(mol) === false) parent.smiles = mol;
+          const hs = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), "{}", ""));
+          st.took = performance.now() - t0; st.summary = null; st.det = {};
+          window.TPHR.render($("#tp-right"), hs, { esc, fmtA, chart, hue, call, callRaw, toast, dl });
+          $("#tp-bar").style.width = "100%"; msg("Fatto."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
+          $("#tp-go").disabled = false; $("#tp-minecard").classList.remove("mining"); return;
+        }
         st.summary = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
         st.took = performance.now() - t0; st.sel = null; st.det = {}; render(); $("#tp-bar").style.width = "100%"; msg("Fatto."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
       } catch (e) { msg(String(e.message || e), true); $("#tp-bar").style.width = "0"; }
