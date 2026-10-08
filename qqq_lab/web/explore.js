@@ -2311,12 +2311,18 @@ function calcObs(on) {
   if (w) w.hidden = !on;
 }
 async function calcRun() {
-  const t = Q("#calcin").value.trim(), out = Q("#calcout"), sum = Q("#calcsum"), res = Q("#calcres"), pad = Q("#calcpad");
+  const t = Q("#calcin").value.trim(), out = Q("#calcout"), sum = Q("#calcsum"), res = Q("#calcres"), pad = Q("#calcpad"), nlBtn = Q("#calc-nl");
   const ex = !t || calcIsExpr(t);
-  pad.hidden = !ex; res.hidden = !ex || !t; calcTape();
+  pad.hidden = !ex; res.hidden = !ex || !t; if (nlBtn) nlBtn.hidden = true; calcTape();
   if (!t) { out.innerHTML = ""; sum.innerHTML = ""; res.textContent = ""; return; }
   if (ex) {
     out.innerHTML = ""; const r = calcEval(t, CALC.ans); res.textContent = r.v != null ? calcFmt(r.v) : "";
+    if (nlBtn && r.v != null && Math.abs(r.v) > 0.0001) {
+      nlBtn.hidden = false;
+      const vabs = calcFmt(Math.abs(r.v));
+      nlBtn.title = `Cerca \u0394m = ${vabs} nel pannello Perdite neutre`;
+      nlBtn.onclick = () => { calcBox.close(); if (window.QQQRef) QQQRef.open("ls", { q: vabs }); };
+    }
     sum.innerHTML = r.err ? EH(r.err) : ""; return;
   }
   try {

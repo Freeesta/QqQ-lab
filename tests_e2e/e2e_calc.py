@@ -36,9 +36,14 @@ try:
             pg.click("#np-calc2") if pg.evaluate("document.querySelector('#calcdlg').hidden") else None
             pg.fill("#calcin", "364.4-194.2"); pg.wait_for_timeout(200)
             assert pg.inner_text("#calcres").strip() == "170.2" and not pg.evaluate("document.querySelector('#calcpad').hidden")
+            assert pg.is_visible("#calc-nl") and "170.2" in pg.get_attribute("#calc-nl", "title")
             pg.fill("#calcin", "364,4 \u2212 194,2"); pg.wait_for_timeout(200); assert pg.inner_text("#calcres").strip() == "170.2", pg.inner_text("#calcres")
             pg.fill("#calcin", "(229.1-171.2)*2"); pg.wait_for_timeout(200); assert pg.inner_text("#calcres").strip() == "115.8"
-        step("a calculation: 364.4-194.2 = 170.2 (also with comma and the minus sign)", arithmetic)
+            pg.click("#calc-nl"); pg.wait_for_timeout(400)
+            assert pg.evaluate("document.querySelector('#calcdlg').hidden") and pg.evaluate("document.querySelector('#refdlg').open")
+            assert pg.input_value("#nl-q") == "115.8"
+            pg.click("#refx"); pg.click("#np-calc2"); pg.wait_for_timeout(200)
+        step("a calculation: 364.4-194.2 = 170.2 (also with comma and the minus sign), calc-nl button opens refdlg", arithmetic)
         def keypad():
             pg.fill("#calcin", ""); pg.wait_for_timeout(100)
             for k in ("1", "+", "2"): pg.click(f"#calcpad [data-k='{k}']")

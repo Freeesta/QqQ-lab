@@ -139,7 +139,12 @@
   // high resolution (an Orbitrap / Q-TOF file is loaded): the exact mass of each loss is shown and «Cerca Δm» looks within 3 mDa instead of 0.5 Da
   const hrOn = () => !!(window.HR && typeof E !== "undefined" && E.files.some(f => !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2))));
   const NL_TOL = () => hrOn() ? 0.003 : 0.5, NL_DEC = () => hrOn() ? 4 : 1;
-  const polChip = p => `<span class="pol" title="Polarità in cui la perdita si osserva di solito">${p === "±" ? "entrambe" : p === "+" ? "ESI+" : "ESI&minus;"}</span>`;
+  const polChip = p => {
+    const cls = p === "+" ? "pol pos" : p === "-" ? "pol neg" : "pol both";
+    const txt = p === "+" ? "ESI+" : p === "-" ? "ESI&minus;" : "ESI+/-";
+    const tip = p === "+" ? "Polarità: tipico di ESI+" : p === "-" ? "Polarità: tipico di ESI−" : "Polarità: tipico di entrambi (ESI+ e ESI−)";
+    return `<span class="${cls}" title="${tip}">${txt}</span>`;
+  };
   const lossRow = (l, o) => {
     const m = massOf(l.f), id = l.f;
     return `<div class="nlr${o.hit.has(id) ? " hit" : ""}" data-f="${id}"><div class="nlm">${Math.round(m)}${hrOn() ? `<small class="muted" title="Massa esatta, da elements.py" style="display:block;font-size:10.5px;font-weight:400">${m.toFixed(4)}</small>` : ""}</div><div class="nlf"><b>${fl(l.f)}</b><span class="muted">${H(l.name)}</span></div>
@@ -242,6 +247,7 @@
     Qs("#reftabs").querySelectorAll("button").forEach(b => b.onclick = () => show(b.dataset.t));
     Qs("#refx").onclick = () => d.close();
     show(which); if (!d.open) d.showModal();
+    if (which === "ls" && opt.q != null) setTimeout(() => { const i = body.querySelector("#nl-q"); if (i) { i.focus(); i.select(); } }, 50);
   }
   Qs("#np-pt").onclick = () => open("pt");
   Qs("#np-ad").onclick = () => open("ad");

@@ -50,6 +50,7 @@ Unico documento per gli agenti. Descrive lo STATO ATTUALE (la storia è in git: 
 - **Integrazione**: solo XIC e MRM (TIC/BPC/PDA rimandano all'XIC); automatica o manuale, mai sovrapposte; tabella con S/N e parametri cromatografici facoltativi; Excel. La retta di taratura NON c'è (decisione di Federico).
 - **Correzione**: nessuna | file bianco | fondo di un tratto | linea di base SNIP. Spettri: fondo da un tratto o da un bianco.
 - **Spettro**: asse m/z fisso sull'intervallo del livello, lucchetto solo su y, righello, annotazioni, profilo isotopico di una formula (clic destro), ricerca in libreria per le MS2.
+- **Calcolatrice e perdite neutre**: calcolatrice a tendina sotto il pulsante nell'header (formule o conti aritmetici); accanto al risultato compare il pulsante «Cerca in Δm» per aprire direttamente il pannello Perdite neutre (`tables.js`, scheda `ls`) precompilando il valore calcolato (|Δm|). Nel pannello Perdite neutre, i chip di polarità usano codice colore: `ESI+` (blu), `ESI−` (rosso) ed `ESI+/-` (viola, per perdite valide in entrambe le polarità).
 - **Tolti per decisione di Federico (non reintrodurre)**: schede Attribuzioni e Suggerimenti, retta di taratura, spettro simulato e sagoma, menu «Ione» del Disegno, didascalie automatiche, scheda Isotopi, «?» nei pannelli (resta la guida generale), «Da dove viene?» nei menu, pulsante «Intanto leggi la Teoria» durante il caricamento.
 
 ### Disegno (`draw.js`, Ketcher in `vendor/ketcher`)
