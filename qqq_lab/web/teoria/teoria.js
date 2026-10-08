@@ -53,6 +53,16 @@ const TP = (() => {
   const here = location.pathname.split("/").pop() || "index.html";
   const idx = Math.max(0, CHAPTERS.findIndex(c => c[0] === here));
   const embedded = window.self !== window.top;
+  // smartphone: same rule as ../telefono.js (which the program loads before everything; the Teoria pages do not load it)
+  const PHONE = typeof QQQ_PHONE === "boolean" ? QQQ_PHONE : (() => {
+    let f = null; try { f = sessionStorage.getItem("qqq.telefono"); } catch (_) { /* automatic */ }
+    if (f !== null) return f === "1";
+    const coarse = !!(window.matchMedia && matchMedia("(pointer:coarse)").matches);
+    return /iPhone|iPod|Android.+Mobile|Windows Phone|Mobile.+Firefox|Opera Mini/i.test(navigator.userAgent || "") || (coarse && Math.min(screen.width, screen.height) < 500);
+  })();
+  // on a phone the exercises are not offered (they need a large screen): the page says so and sends back to the Teoria.
+  // The oral questions are only text: they stay.
+  const NOEX = PHONE && /^pratica-/.test(here) && here !== "pratica-orale.html";
 
   function slug(s) {
     return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48);
@@ -77,6 +87,8 @@ const TP = (() => {
     const toc = hs.map(h => `<a href="#${h.id}" class="${h.tagName === "H3" ? "l3" : ""}">${h.textContent}</a>`).join("");
     side.innerHTML = `<h4>Capitoli</h4><ol>${list}</ol>${toc ? `<h4>In questa pagina</h4><div class="toc">${toc}</div>` : ""}`;
     $("#menu").onclick = () => side.classList.toggle("open");
+    side.addEventListener("click", e => { if (e.target.closest("a")) side.classList.remove("open"); });   // narrow screens: the index is a full-screen panel
+    if (PHONE) phone(top);
     // prev / next
     const pn = document.createElement("div"); pn.className = "pn";
     const p = CHAPTERS[idx - 1], n = CHAPTERS[idx + 1];
@@ -93,6 +105,28 @@ const TP = (() => {
     }
     document.title = `${/^[0-9]+$/.test(CHAPTERS[idx][1]) && CHAPTERS[idx][1] !== "0" ? CHAPTERS[idx][1] + ". " : ""}${CHAPTERS[idx][2]} · ${/^pratica/.test(here) ? "Pratica" : "Teoria"} ${APP}`;
     renameApp();
+  }
+
+  // ---------------------------------------------------------------- smartphone
+  const PHONE_NOTE = `<b>Il sito non è ottimizzato per gli smartphone.</b> Dal telefono si legge tutta la Teoria; l'analisi dei dati, il disegno delle molecole e gli esercizi della Pratica si usano da un computer o da un tablet.`;
+  function phone(top) {
+    document.documentElement.classList.add("phone");
+    if (!embedded) {
+      // header: logo, Teoria, info; it goes away scrolling down and comes back scrolling up (more room for the text, above all in landscape)
+      top.insertAdjacentHTML("beforeend", `<button id="info" type="button" aria-label="Informazioni" title="Informazioni">i</button>`);
+      const note = document.createElement("div"); note.id = "phnote"; note.className = "box warn"; note.hidden = true;
+      note.innerHTML = `<p>${PHONE_NOTE}</p><p><a href="index.html">Indice della Teoria</a> · <a href="22-formulario.html">Formulario</a> · <a href="pratica-orale.html">Domande dell'orale</a></p>`;
+      $("main").prepend(note);
+      $("#info").onclick = () => { note.hidden = !note.hidden; if (!note.hidden) scrollTo({ top: 0, behavior: "smooth" }); };
+      let y0 = scrollY;
+      addEventListener("scroll", () => { const y = scrollY; top.classList.toggle("away", y > y0 && y > 80 && !$("#side").classList.contains("open")); y0 = y; }, { passive: true });
+    }
+    if (NOEX) {
+      document.body.classList.add("noex");
+      $("h1").insertAdjacentHTML("afterend", `<div class="box warn phex"><b>Gli esercizi si fanno da computer o da tablet</b><p>Questo gioco ha bisogno di uno schermo più grande (grafici da cliccare, editor delle strutture). Dal telefono potete ripassare con la Teoria, il formulario e le domande dell'orale.</p><p><a href="index.html">Indice della Teoria</a> · <a href="22-formulario.html">Formulario</a> · <a href="pratica-orale.html">Domande dell'orale</a></p></div>`);
+    } else if (here === "pratica.html") {
+      $("h1").insertAdjacentHTML("afterend", `<div class="box warn phex"><b>Dal telefono</b><p>I giochi si fanno da computer o da tablet; dal telefono funzionano le <a href="pratica-orale.html">domande dell'orale</a>.</p></div>`);
+    }
   }
 
   // ---------------------------------------------------------------- controls

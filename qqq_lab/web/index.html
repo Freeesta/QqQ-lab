@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8">
+<html lang="it"><head><meta charset="utf-8"><script src="static/telefono.js"></script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' blob:">
 <link rel="icon" href="static/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="static/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png"><link rel="apple-touch-icon" href="static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -79,6 +79,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 .hint{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:4px;padding:6px 10px;margin-bottom:10px;color:var(--muted)}
 #v-draw{display:grid;grid-template-columns:1fr 330px;gap:10px;padding:10px 14px}@media (max-width:1000px){#v-draw{grid-template-columns:1fr}}@media (pointer:coarse) and (max-width:1500px){#v-draw{grid-template-columns:1fr}}   /* tablet: the editor takes the whole width (its top toolbar can be larger), the cards go below */
 #v-theory{padding:0}#tframe{display:block;width:100%;height:calc(100vh - 52px);border:0;background:#fff}
+#kload{position:absolute;left:0;right:0;top:40px;text-align:center;font-size:15px;z-index:1;pointer-events:none}
 #kframe{width:100%;height:max(calc(100vh - 110px),940px);min-height:520px;border:1px solid var(--line);border-radius:6px;background:#fff}
 .sm{font-size:12px}
 #refdlg{max-width:min(1100px,96vw);width:96vw;max-height:92vh}#refbody{max-height:80vh;overflow:auto}#refdlg h4{margin:12px 0 4px}
@@ -118,6 +119,19 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
  .pnl .hd select,.pnl .hd input,#tools button,#tools select,#dtabs button,header button,.seg button,.tbg button{min-height:40px}
  .fl{padding:11px 4px}.lkb{width:32px;height:32px}
 }
+
+/* smartphone (telefono.js): only the header with logo, Teoria and info, and the card that sends to the Teoria; nothing else is built or downloaded */
+#phone{max-width:560px;margin:0 auto;padding:22px 16px 40px}
+#phone h1{font-size:24px;margin:6px 0 12px}#phone h2{font-size:18px;margin:18px 0 6px}#phone p{line-height:1.55;margin:0 0 12px}
+#phone .phw{background:#fffbeb;border:1px solid #f3d38a;border-radius:10px;padding:12px 14px}
+#phone .phb{display:block;text-align:center;background:var(--accent);color:#fff;border-radius:10px;padding:14px;font-size:18px;font-weight:650;text-decoration:none;margin:18px 0}
+#phone .phs{font-size:13px;color:var(--muted)}#phone .phs a{color:var(--muted)}
+#phinfo{display:none}
+html.phone header{flex-wrap:nowrap;transition:transform .2s}html.phone header.away{transform:translateY(-110%)}
+html.phone header>:not(.logo):not(#nav):not(#phinfo){display:none!important}
+html.phone #nav button:not([data-v=theory]){display:none}
+html.phone #phinfo{display:inline-flex;margin-left:auto;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel);font:700 16px Georgia,serif;color:var(--accent)}
+html.phone body>:not(header):not(#phone):not(script):not(style){display:none!important}
 </style></head><body>
 <header><img class="logo" src="static/logo.svg" alt="{APP}" title="{APP}">
   <nav id="nav"><button data-v="data" class="on">Dati</button><button data-v="draw">Disegno</button><button data-v="theory" title="Teoria: TP, fotocatalisi, LC, ESI, quadrupolo, triplo quadrupolo">Teoria</button></nav><span class="sp"></span>
@@ -126,6 +140,14 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
   <button id="np-calc2" class="ib" title="Calcolatrice m/z: scrivi una formula bruta e ottieni l'm/z dello ione (anche arrotondato come lo vede lo strumento)"><span class="ic" data-ic="calc"></span><span class="lb">Calcolatrice m/z</span><span class="sb">Calcolatrice</span></button><button id="np-nl" class="ib" title="Perdite neutre più comuni"><span class="ic" data-ic="nl"></span><span class="lb">Perdite neutre</span><span class="sb">Perdite</span></button>
   <button id="np-pc" title="Apre PubChem in un'altra scheda: cerca il tuo composto per nome, formula o struttura">PubChem &#8599;</button>
   <button id="np-bt" title="Apre BioTransformer in un'altra scheda e spiega come usarlo">BioTransformer &#8599;</button><button class="hq" data-help="header" title="Informazioni su {APP}" aria-label="Informazioni su {APP}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.4"/><path d="M8 7.2v4"/><circle cx="8" cy="4.9" r=".5" fill="currentColor"/></svg></button></header>
+<div id="phone" hidden>
+  <h1>Siete su uno smartphone</h1>
+  <p class="phw"><b>Il sito non è ottimizzato per gli smartphone.</b> L'analisi dei dati (scheda Dati), il disegno delle molecole (Disegno) e gli esercizi della Pratica hanno bisogno di uno schermo grande: usateli da un computer o da un tablet.</p>
+  <p>Dal telefono potete leggere tutta la <b>Teoria</b>: cromatografia GC e LC, ionizzazione, analizzatori a bassa e alta risoluzione, come si risolve uno spettro EI, il formulario e le domande dell'orale.</p>
+  <a class="phb" href="static/teoria/index.html">Vai alla Teoria</a>
+  <div id="phmore" hidden><h2>Che cos'è <span class="appn"></span></h2><p>Il programma dell'esperienza al triplo quadrupolo del laboratorio di analisi degli inquinanti: apre i file dello spettrometro, mostra cromatogrammi e spettri e aiuta a cercare i prodotti di trasformazione. Funziona nel browser, senza installare nulla, e i file restano sul vostro computer.</p></div>
+  <p class="phs"><a href="?telefono=0">Aprire comunque la versione completa</a> (sconsigliato: scarica circa 15 MB e non entra nello schermo).</p>
+</div>
 <div id="err"></div>
 <section id="v-data" hidden>
  <aside id="dfiles"><div class="card"><div class="bar"><b>File</b><span class="sp"></span><button id="addf" title="Carica altri file">+</button><button id="ffold" title="Nascondi l'elenco dei file" aria-label="Nascondi l'elenco dei file"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.8" y="2.5" width="12.4" height="11" rx="1.6"/><path d="M6 2.5v11"/><path d="M11.2 6.2 9.4 8l1.8 1.8"/></svg></button></div><div id="flst"></div><div id="fnote"></div></div></aside>
@@ -140,7 +162,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 </section>
 <section id="v-theory" hidden><iframe id="tframe" title="Teoria"></iframe></section>
 <section id="v-draw" hidden>
- <div><iframe id="kframe" title="Editor chimico" loading="lazy" sandbox="allow-scripts allow-same-origin allow-modals allow-downloads"></iframe></div>
+ <div style="position:relative"><div id="kload" hidden>Carico l'editor delle strutture… <span class="muted">(la prima volta circa 30 MB, poi resta nel browser)</span></div><iframe id="kframe" title="Editor chimico" loading="lazy" sandbox="allow-scripts allow-same-origin allow-modals allow-downloads"></iframe></div>
  <aside>
   <div class="card"><div class="sm" style="margin-bottom:6px"><a href="#" id="ex-link">Vedi un esempio di disegno</a></div>
    <div style="font-weight:600;margin-bottom:2px">Sotto ogni struttura</div>
@@ -321,7 +343,14 @@ const sendFile=(url,f,onp)=>window.QQQ_BROWSER?fetch(url,{method:"POST",body:f})
   x.upload.onprogress=e=>{if(e.lengthComputable)onp(e.loaded,e.total)};x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(_){}ok(j)};x.onerror=()=>ko(new Error("upload fallito"));x.send(f)});
 const DEMO_FILES=[0,5,10,15,30].map(t=>`Esempio_FullScan_t${t}.mzML`);
 (()=>{const d=$("#demo");if(!d)return;
- $("#demobtn").onclick=async()=>{const b=$("#demobtn");b.disabled=true;try{const fs=[];for(const n of DEMO_FILES){const r=await fetch("static/esempi/"+n);if(!r.ok)throw new Error(n);fs.push(new File([await r.blob()],n))}await upload(fs,"data")}catch(e){fail(new Error("Non riesco a scaricare i file di esempio: "+e.message))}finally{b.disabled=false}}})();
+ // the 5 files (~28 MB) are downloaded only on this click; the button says how far the download has got
+ $("#demobtn").onclick=async()=>{const b=$("#demobtn"),lab=b.innerHTML;b.disabled=true;let got=0;
+  const show=i=>{b.textContent=`Scarico i file di esempio: ${i} di ${DEMO_FILES.length} (${(got/1e6).toFixed(1).replace(".",",")} MB)…`};
+  try{const fs=[];for(const [i,n] of DEMO_FILES.entries()){show(i+1);const r=await fetch("static/esempi/"+n);if(!r.ok)throw new Error(n);const parts=[];
+    if(r.body&&r.body.getReader){const rd=r.body.getReader();for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;show(i+1)}}
+    else{const bl=await r.blob();parts.push(bl);got+=bl.size}
+    fs.push(new File(parts,n))}
+   b.textContent="Apro i file di esempio…";await upload(fs,"data")}catch(e){fail(new Error("Non riesco a scaricare i file di esempio: "+e.message))}finally{b.disabled=false;b.innerHTML=lab}}})();
 async function upload(files,into){const box=$("#up");fail();
   for(const f of files){const isDam=/\.dam$/i.test(f.name);
     if(into&&isDam!==(into==="dam")){const n=document.createElement("div");n.className="note";n.textContent=`${f.name} è ${isDam?"un metodo: l'ho messo nel riquadro 2":"un file di dati: l'ho messo nel riquadro 1"}.`;box.appendChild(n);setTimeout(()=>n.remove(),6000)}
@@ -369,6 +398,12 @@ $("#newrun").onclick=async()=>{if(!await yesno("Iniziare una <b>nuova sessione</
  let busy=false;new MutationObserver(ms=>{if(busy)return;busy=true;try{for(const m of ms){if(m.type==="characterData"){if(m.target.parentElement)fix(m.target.parentElement)}else m.addedNodes.forEach(a=>{if(a.nodeType===1)fix(a);else if(a.nodeType===3&&a.parentElement)fix(a.parentElement)})}}finally{busy=false}}).observe(document.body,{childList:true,subtree:true,characterData:true});
  fix(document.body)})();
 document.querySelectorAll("[data-ic]").forEach(e=>{e.innerHTML=QICON.get(e.dataset.ic,16)});
-init();
-</script><script type="module" src="static/draw.js"></script>
+// on a smartphone (telefono.js) only the card that sends to the Teoria: no session, no engine, no drawing editor
+function phoneMode(){$("#loading").hidden=true;$("#phone").hidden=false;document.querySelectorAll(".appn").forEach(e=>e.textContent=window.APP_NAME||"mzLab");
+  const hd=document.querySelector("header"),nav=$("#nav");if(!$("#phinfo"))nav.insertAdjacentHTML("afterend",'<button id="phinfo" type="button" aria-label="Informazioni" title="Informazioni">i</button>');
+  $("#phinfo").onclick=()=>{$("#phmore").hidden=!$("#phmore").hidden;if(!$("#phmore").hidden)$("#phmore").scrollIntoView({behavior:"smooth",block:"nearest"})};
+  nav.querySelector("[data-v=theory]").onclick=()=>{location.href="static/teoria/index.html"};
+  let y0=scrollY;addEventListener("scroll",()=>{const y=scrollY;hd.classList.toggle("away",y>y0&&y>60);y0=y},{passive:true})}   // the header goes away scrolling down, comes back scrolling up
+if(window.QQQ_PHONE)phoneMode();else{const s=document.createElement("script");s.type="module";s.src="static/draw.js";document.body.appendChild(s);init()}   // draw.js (Disegno, with OpenChemLib) is not even fetched on a phone
+</script>
 </body></html>
