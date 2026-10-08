@@ -80,7 +80,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 #v-draw{display:grid;grid-template-columns:1fr 330px;gap:10px;padding:10px 14px}@media (max-width:1000px){#v-draw{grid-template-columns:1fr}}@media (pointer:coarse) and (max-width:1500px){#v-draw{grid-template-columns:1fr}}   /* tablet: the editor takes the whole width (its top toolbar can be larger), the cards go below */
 #v-theory{padding:0}#tframe{display:block;width:100%;height:calc(100vh - 52px);border:0;background:#fff}
 #kload{position:absolute;left:0;right:0;top:40px;text-align:center;font-size:15px;z-index:1;pointer-events:none}
-#kframe{width:100%;height:max(calc(100vh - 110px),940px);min-height:520px;border:1px solid var(--line);border-radius:6px;background:#fff}
+#kframe{width:100%;height:max(calc(100vh - var(--hh,48px) - 24px),700px);min-height:520px;border:1px solid var(--line);border-radius:6px;background:#fff}
 .sm{font-size:12px}
 #refdlg{max-width:min(1100px,96vw);width:96vw;max-height:92vh}#refbody{max-height:80vh;overflow:auto}#refdlg h4{margin:12px 0 4px}
 #reftabs{display:flex;gap:2px}#reftabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:6px 12px;font-weight:600;color:var(--muted)}#reftabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
@@ -160,9 +160,9 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
   <div id="tabempty" class="card" hidden></div>
   <div id="dpanels"></div></div>
 </section>
-<section id="v-theory" hidden><iframe id="tframe" title="Teoria"></iframe></section>
+<section id="v-theory" hidden><iframe id="tframe" aria-label="Teoria"></iframe></section>
 <section id="v-draw" hidden>
- <div style="position:relative"><div id="kload" hidden>Carico l'editor delle strutture… <span class="muted">(la prima volta circa 30 MB, poi resta nel browser)</span></div><iframe id="kframe" title="Editor chimico" loading="lazy" sandbox="allow-scripts allow-same-origin allow-modals allow-downloads"></iframe></div>
+ <div style="position:relative"><div id="kload" hidden>Carico l'editor delle strutture… <span class="muted">(la prima volta circa 30 MB, poi resta nel browser)</span></div><iframe id="kframe" aria-label="Editor chimico" loading="lazy" sandbox="allow-scripts allow-same-origin allow-modals allow-downloads"></iframe></div>
  <aside>
   <div class="card"><div class="sm" style="margin-bottom:6px"><a href="#" id="ex-link">Vedi un esempio di disegno</a></div>
    <div style="font-weight:600;margin-bottom:2px">Sotto ogni struttura</div>
@@ -173,6 +173,7 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
    <div id="smi-warn" class="sm" style="color:#b3261e;margin-top:4px" hidden></div></div>
   <div class="card" id="sel-card" hidden><h3>SMILES della selezione</h3><div id="sel-body"></div></div>
   <div class="card" id="prop-card" hidden><h3>Propriet&agrave; previste</h3><div id="prop-body"></div></div>
+  <details class="card" id="tools-card"><summary style="font-weight:600;cursor:pointer">Strumenti dell'editor</summary><div class="muted sm" style="margin:4px 0">Scegli quali gruppi di pulsanti mostrare. La scelta resta in questo browser.</div><div id="tools-body"></div></details>
   <div class="card"><h3>Esporta la tela</h3><div class="bar"><button id="ex-png">PNG</button><button id="ex-jpg">JPEG</button><button id="ex-svg">SVG</button><button id="ex-ket">Salva (.ket)</button></div>
    <label class="muted sm" title="PNG e SVG con sfondo trasparente (il JPEG non lo supporta: con questa spunta il pulsante JPEG è disattivato). Senza spunta lo sfondo è bianco."><input type="checkbox" id="ex-nobg" autocomplete="off"> Sfondo trasparente</label>
    <div class="bar" style="margin-top:6px"><label class="muted sm" title="Nome dei file scaricati (senza estensione). Predefinito: disegno_data_ora. Solo lettere minuscole senza accento, numeri, trattino e trattino basso.">Nome file <input id="ex-name" autocomplete="off" spellcheck="false" style="width:200px"></label></div>
