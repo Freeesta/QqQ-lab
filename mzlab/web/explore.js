@@ -1897,7 +1897,18 @@ async function drawSpec(p) {
   const rel = specRel(p);                                // y axis in % of the highest peak of each scan (default for MS2) or in cps
   const hrp = !!window.HR && HR.anyHr(files, p.level), DECP = p.dec ?? (window.HR ? HR.dec(files, p.level) : 1);       // high resolution: the m/z are the centroids of the file, written with the decimals of the profile
   const relScale = d => { let mx = 1e-9; for (const v of d.y) if (v > mx) mx = v; const k = 100 / mx; return { ...d, y0: d.y, y: d.y.map(v => v * k), py: d.py ? d.py.map(v => v * k) : d.py }; };
-  const data = await Promise.all(files.map(f => (isDda ? DDA.scanData(p) : one ? scData(p, f.k) : getSpec(f.k, p.r0, p.r1, p.level, p.prec, bgOf(f))).then(d => ({ f, d: rel ? relScale(d) : d }))));
+  const reqs = [];
+  files.forEach(f => {
+    const isHr = !!window.HR && HR.isHr(f);
+    const split = p.level === 2 && !isHr && f.precursors && f.precursors.length > 1 && (p.prec == null || p.prec === "");
+    if (split) {
+      const pset = [...new Set(f.precursors)].sort((a, b) => a - b);
+      pset.forEach((pr, i) => reqs.push({ f, prec: pr, multi: true, idx: i }));
+    } else {
+      reqs.push({ f, prec: p.prec, multi: false });
+    }
+  });
+  const data = await Promise.all(reqs.map(q => (isDda ? DDA.scanData(p) : one ? scData(p, q.f.k) : getSpec(q.f.k, p.r0, p.r1, p.level, q.prec, bgOf(q.f))).then(d => ({ f: q.f, prec: q.prec, multi: q.multi, idx: q.idx, d: rel ? relScale(d) : d }))));
   if (tok !== p._tok) return false;                      // a newer request is on its way: this one is dropped
   const mzs = data.flatMap(x => x.d.mz);
   if (!mzs.length) return say("Nessuno scan in questo intervallo (per MS2: scegli il precursore e il livello giusto).");
@@ -1923,8 +1934,8 @@ async function drawSpec(p) {
   p._a.snap = px => {                                      // the peak nearest to a pixel: the top bin around it and the centroid (intensity weighted) of that peak
     if (hrp) {                                             // high resolution: the nearest centroid itself (never an average of neighbours); on a tie the taller one
       let b = null;
-      data.forEach(x => x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] <= 0) return; const dd = Math.abs(X(m) - px); if (dd < 14 && (!b || dd < b.dd - 0.5 || (Math.abs(dd - b.dd) <= 0.5 && x.d.y[j] > b.y))) b = { dd, m, y: x.d.y[j], y0: (x.d.y0 || x.d.y)[j], f: x.f }; }));
-      return b && { m: b.m, y: b.y, y0: b.y0, f: b.f };
+      data.forEach(x => x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] <= 0) return; const dd = Math.abs(X(m) - px); if (dd < 14 && (!b || dd < b.dd - 0.5 || (Math.abs(dd - b.dd) <= 0.5 && x.d.y[j] > b.y))) b = { dd, m, y: x.d.y[j], y0: (x.d.y0 || x.d.y)[j], f: x.f, multi: x.multi, prec: x.prec }; }));
+      return b && { m: b.m, y: b.y, y0: b.y0, f: b.f, multi: b.multi, prec: b.prec };
     }
     let best = null;
     data.forEach(x => x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] <= 0) return; const dd = Math.abs(X(m) - px); if (dd < 14 && (!best || dd < best.dd)) best = { dd, m, j, x }; }));
@@ -1932,16 +1943,19 @@ async function drawSpec(p) {
     const { mz, y } = best.x.d; let jb = best.j;
     for (let j = 0; j < mz.length; j++) if (Math.abs(mz[j] - best.m) <= 0.35 && y[j] > y[jb]) jb = j;
     let sw = 0, sm = 0; for (let j = 0; j < mz.length; j++) if (Math.abs(mz[j] - mz[jb]) <= 0.5 && y[j] > 0) { sw += y[j]; sm += mz[j] * y[j]; }
-    return { m: sw > 0 ? sm / sw : mz[jb], y: y[jb], y0: (best.x.d.y0 || y)[jb], f: best.x.f };
+    return { m: sw > 0 ? sm / sw : mz[jb], y: y[jb], y0: (best.x.d.y0 || y)[jb], f: best.x.f, multi: best.x.multi, prec: best.x.prec };
   };
   p._a.hov = px => {                                       // peak nearest to the mouse
     const b = p._a.snap(px); if (!b) return null;
     const rf = p.meas && p.meas.ref != null ? `<div>Δ<i>m/z</i> <b>${Math.abs(b.m - p.meas.ref).toFixed(hrp ? DECP : 1)}</b> <span class="sm">da ${p.meas.ref.toFixed(hrp ? DECP : 1)}</span>${hrp ? ` <span class="sm">(${((b.m - p.meas.ref) * 1000).toFixed(1)} mDa)</span>` : ""}</div>` : "";
-    return { px: X(b.m), html: `<b>m/z ${b.m.toFixed(hrp ? DECP : 2)}</b><div>intensità <b>${rel ? b.y.toFixed(1) + " %" : fmt(b.y)}</b>${rel ? ` <span class="sm">(${fmt(b.y0)} cps)</span>` : ""}</div>${data.length > 1 ? `<div class="sm">${EH(b.f.label)}</div>` : ""}${rf}` };
+    return { px: X(b.m), html: `<b>m/z ${b.m.toFixed(hrp ? DECP : 2)}</b><div>intensità <b>${rel ? b.y.toFixed(1) + " %" : fmt(b.y)}</b>${rel ? ` <span class="sm">(${fmt(b.y0)} cps)</span>` : ""}</div>${data.length > 1 ? `<div class="sm">${EH(b.f.label)}${b.multi ? ` (prec. ${b.prec})` : ""}</div>` : ""}${rf}` };
   };
   g.save(); g.beginPath(); g.rect(M.l, M.t - 1, W - M.l - M.r, H - M.t - M.b + 1); g.clip();     // bars taller than the (magnified) graph end at the top edge
   data.forEach(x => {
-    g.strokeStyle = x.f.color; g.lineWidth = 1.4 + LWX(); g.beginPath();
+    const color = x.multi ? PAL[(x.idx + 3) % PAL.length] : x.f.color;
+    g.strokeStyle = color; g.lineWidth = 1.4 + LWX();
+    if (x.multi) g.globalAlpha = 0.55; else g.globalAlpha = 1.0;
+    g.beginPath();
     if (lineOf(x)) {                                                     // profile: continuous line with a light fill under it
       const pm = x.d.pmz, py = x.d.py; let on = false;
       let curX = -999, minY, maxY, firstY, lastY;
@@ -1951,10 +1965,10 @@ async function drawSpec(p) {
         else { if (pvy < minY) minY = pvy; if (pvy > maxY) maxY = pvy; lastY = pvy; }
       });
       flush(curX);
-      g.stroke(); if (on) { g.save(); g.lineTo(X(Math.min(x1 + 0.5, pm[pm.length - 1])), Y(0)); g.lineTo(X(Math.max(x0 - 0.5, pm[0])), Y(0)); g.closePath(); g.globalAlpha = 0.12; g.fillStyle = x.f.color; g.fill(); g.restore(); }
+      g.stroke(); if (on) { g.save(); g.lineTo(X(Math.min(x1 + 0.5, pm[pm.length - 1])), Y(0)); g.lineTo(X(Math.max(x0 - 0.5, pm[0])), Y(0)); g.closePath(); g.globalAlpha = 0.12; g.fillStyle = color; g.fill(); g.restore(); }
       g.beginPath();
     } else x.d.mz.forEach((m, j) => { if (m < x0 || m > x1) return; g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); }); g.stroke();
-    g.fillStyle = x.f.color;                                          // a small triangle on every cut bar
+    g.fillStyle = color;                                          // a small triangle on every cut bar
     x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] <= ymax) return; g.beginPath(); g.moveTo(X(m) - 4, M.t + 7); g.lineTo(X(m) + 4, M.t + 7); g.lineTo(X(m), M.t); g.closePath(); g.fill(); });
   });
   g.restore();
@@ -2003,7 +2017,11 @@ async function drawSpec(p) {
   p.leg.title = p.leg.textContent;
   const multiFiles = scanFiles(tabFiles(p.tab)).length > 1;
   const showLabel = data.length > 1 || multiFiles;
-  if (p.leg2) p.leg2.innerHTML = (showLabel ? data.map(x => { const lab = x.f.label.length > 25 ? x.f.label.slice(0, 24) + "…" : x.f.label; return `<span><i style="background:${x.f.color}"></i>${EH(lab)}${legPol(x.f)}</span>`; }).join("") : "") + isoNote;
+  if (p.leg2) p.leg2.innerHTML = (showLabel ? data.map(x => {
+    const lab = x.f.label.length > 25 ? x.f.label.slice(0, 24) + "…" : x.f.label;
+    const color = x.multi ? PAL[(x.idx + 3) % PAL.length] : x.f.color;
+    return `<span><i style="background:${color}"></i>${EH(lab)}${legPol(x.f)}${x.multi ? ` (prec. ${x.prec})` : ""}</span>`;
+  }).join("") : "") + isoNote;
 }
 
 // ------------------------------------------------------------------ mouse
