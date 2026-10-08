@@ -193,3 +193,175 @@ def test_filters_funnel_recall_and_isf(series_features):
     hits = [m for m in missed for tp in truth["tps"] if tp["id"] == m and res[round(tp["mz"], 4)]["candidate"]]
     assert set(hits) == set(missed), f"products not recovered by the search under the fragment: {set(missed) - set(hits)}"
     assert not res[round(244.0750, 4)]["candidate"]                       # a pure fragment of the parent: not a candidate
+
+
+# ---------------------------------------------------------------------------------------------------------------------- WP6: families
+@need
+def test_families_of_the_parent_and_its_in_source_fragments(msn_tree):
+    import glob
+    import numpy as np
+    from tpmine.hr import iimn
+    _, _, tree, _ = msn_tree
+    truth = json.loads(TRUTH.read_text(encoding="utf-8"))
+    lib = iimn.build_library(tree, node_peak_rel=0.0)                  # the broad library: every mass the tree has seen
+    assert len(lib) > 100 and all(e["idx"] is not None for e in lib.entries.values())
+    f = [x for x in glob.glob(str(DATI / "HRMS" / "*" / "*TiO2*.mzML")) if "t002min" in x][0]
+    run = Run(f)
+    table = run.table(1, 1)
+    rt0 = truth["parent"]["rt_obs"]
+    t0 = time.perf_counter()
+    win = iimn.window_profiles(table, rt0 - 0.3, rt0 + 0.4)
+    dt = time.perf_counter() - t0
+    pm = truth["parent"]["mz"]
+    fam = iimn.family(win, pm, rt0)
+    c = iimn.collapse(fam)
+    names = {e["name"] for e in c["evidence"]}
+    print(f"\nwindow of {len(win)} profiles in {dt * 1000:.0f} ms; parent family: {sorted(names)}")
+    assert dt < 1.0 and len(win) > 1000 and "[M+Na]+" in names and "13C" in names and c["role"] == "ion"
+    # the fragments of the parent that the MSn tree knows are explained as in-source fragments when they follow the parent
+    found = 0
+    for mz in sorted({round(float(m), 4) for m in lib.masses() if 150 < m < pm - 20}):
+        fm = iimn.family(win, mz, rt0, parent_mz=pm, library=lib)
+        if fm and iimn.collapse(fm)["role"] == "loss":
+            found += 1
+    assert found >= 2
+    # the artefacts of the Fourier transform around the intense parent are recognised
+    assert win.artefact.sum() >= 1
+
+
+# ---------------------------------------------------------------------------------------------------------------------- WP7: MS2 and isomers
+@need
+def test_ms2_of_a_feature_and_coeluting_isomers():
+    import glob
+    import re
+    import numpy as np
+    from tpmine.hr import formula as F
+    from tpmine.hr import spectra as SP
+    iso = json.loads(MSN_TRUTH.read_text(encoding="utf-8"))["isomers"]
+    files = sorted(glob.glob(str(DATI / "HRMS" / "*" / "*TiO2*.mzML")), key=lambda f: float(re.search(r"t(\d+)min", f).group(1)) if re.search(r"t(\d+)min", f) else -1.0)
+    runs = [Run(f) for f in files]
+    ixs = [SP.index_ms2(r) for r in runs]
+    sel = SP.select_ms2(ixs, iso["mz"], [tuple(iso["window"])] * len(files))
+    assert len(sel) >= 12
+    mzs, ints, rts = SP.read_spectra(runs, sel)
+    cons = SP.ms2_consensus(mzs, ints)
+    assert len(cons["mz"]) >= 5 and cons["rel"].max() == pytest.approx(100.0)
+    # MS1 trace of the strongest file
+    best = max(range(len(files)), key=lambda k: runs[k].table(1, 1).xic(iso["mz"], iso["mz"] * 5e-6).max())
+    T = runs[best].table(1, 1)
+    y = T.xic(iso["mz"], iso["mz"] * 5e-6)
+    w = (T.rt > iso["window"][0] - 0.1) & (T.rt < iso["window"][1] + 0.1)
+    from qqq_lab.chem import elements as E
+    els = F.element_order(E.parse_formula(iso["formula"]))
+    top = F.vec(iso["formula"], els)
+    space = F.FormulaSpace(top, els)
+    d = SP.deconvolve_isomers(mzs, ints, rts, xic=(T.rt[w], y[w]), allowed=lambda m: space.count(np.asarray(m), 5.0, 0.002, within=top) > 0)
+    assert d["k"] == iso["n_components"] == len(d["components"])
+
+    def level(c, mz):
+        m, rel = c["spectrum"]
+        j = np.flatnonzero(np.abs(m - mz) <= mz * 8e-6)
+        return float(rel[j].max()) if len(j) else 0.0
+    # components are ordered by retention time; the expected spectra are matched to them in any order (the apex of a component is not its isomer)
+    remaining = list(range(len(d["components"])))
+    for exp in iso["components"]:
+        ok = [i for i in remaining if all(level(d["components"][i], float(mz)) >= thr for mz, thr in exp.get("present", {}).items())
+              and all(level(d["components"][i], float(mz)) < thr for mz, thr in exp.get("absent", {}).items())]
+        assert ok, f"no component matches {exp}"
+        remaining.remove(ok[0])
+    assert not remaining
+
+
+# ---------------------------------------------------------------------------------------------------------------------- WP8: similarity
+@need
+def test_similarity_hcd_against_hcd_and_against_cid(msn_tree):
+    import glob
+    import re
+    import numpy as np
+    from tpmine.hr import similarity as SM
+    from tpmine.hr import spectra as SP
+    cfg = json.loads(MSN_TRUTH.read_text(encoding="utf-8"))["similarity"]
+    truth = json.loads(TRUTH.read_text(encoding="utf-8"))
+    _, _, tree, _ = msn_tree
+    files = sorted(glob.glob(str(DATI / "HRMS" / "*" / "*TiO2*.mzML")), key=lambda f: float(re.search(r"t(\d+)min", f).group(1)) if re.search(r"t(\d+)min", f) else -1.0)
+    runs = [Run(f) for f in files]
+    ixs = [SP.index_ms2(r) for r in runs]
+
+    def cons(mz, lo, hi):
+        sel = SP.select_ms2(ixs, mz, [(lo, hi)] * len(files))
+        a, b, _ = SP.read_spectra(runs, sel)
+        return SP.ms2_consensus(a, b)
+    pm = truth["parent"]["mz"]
+    c = cons(pm, *cfg["parent_window"])
+    names, specs, precs = ["parent"], [SM.prepare(c["mz"], c["rel"], pm)], [pm]
+    for tp in truth["tps"]:
+        if tp["id"] in cfg["modified_ids"]:
+            rt = tp["rt_obs"][0]
+            cc = cons(tp["mz"], rt - cfg["window"], rt + cfg["window"])
+            names.append(tp["id"]); specs.append(SM.prepare(cc["mz"], cc["rel"], tp["mz"])); precs.append(tp["mz"])
+    M, W, P = SM.pad(specs, precs)
+    others, sc, nm = SM.one_against_all(M, W, P, 0)
+    print("\nTP vs parent (HCD, HCD):", {names[i]: round(float(s), 2) for i, s in zip(others, sc)})
+    lo, hi = cfg["modified_range"]
+    assert len(sc) == len(cfg["modified_ids"]) and (sc >= lo).all() and (sc <= hi).all() and (nm >= 4).all()
+    nd = tree.node(cfg["cid_node"])
+    cid = SM.prepare([p["mz"] for p in nd["peaks"]], [p["rel"] for p in nd["peaks"]], nd["prec_mz"])
+    M2, W2, P2 = SM.pad([specs[0], cid], [pm, nd["prec_mz"]])
+    parent_cos = float(SM.modified_cosine(M2, W2, P2, [0], [1])[0][0])
+    a, b = cfg["parent_hcd_vs_cid"]
+    print(f"parent HCD vs parent CID (infusion): {parent_cos:.2f}")
+    assert a <= parent_cos <= b
+    M3, W3, P3 = SM.pad([cid] + specs[1:], [nd["prec_mz"]] + precs[1:])
+    _, sc3, _ = SM.one_against_all(M3, W3, P3, 0)
+    assert (sc3 <= cfg["vs_cid_max"]).all() and np.median(sc3) < np.median(sc)
+
+
+# ---------------------------------------------------------------------------------------------------------------------- WP9: localisation
+@need
+def test_localisation_of_the_modification(msn_tree):
+    import glob
+    import re
+    import numpy as np
+    from qqq_lab.chem import elements as E
+    from tpmine.hr import formula as F
+    from tpmine.hr import iimn
+    from tpmine.hr import localize as LZ
+    from tpmine.hr import spectra as SP
+    cfg = json.loads(MSN_TRUTH.read_text(encoding="utf-8"))["localization"]
+    truth = json.loads(TRUTH.read_text(encoding="utf-8"))
+    _, _, tree, _ = msn_tree
+    files = sorted(glob.glob(str(DATI / "HRMS" / "*" / "*TiO2*.mzML")), key=lambda f: float(re.search(r"t(\d+)min", f).group(1)) if re.search(r"t(\d+)min", f) else -1.0)
+    runs = [Run(f) for f in files]
+    ixs = [SP.index_ms2(r) for r in runs]
+
+    def cons(mz, lo, hi):
+        sel = SP.select_ms2(ixs, mz, [(lo, hi)] * len(files))
+        a, b, _ = SP.read_spectra(runs, sel)
+        return SP.ms2_consensus(a, b)
+    pm = truth["parent"]["mz"]
+    pc = cons(pm, *cfg["parent_window"])
+    lib = iimn.build_library(tree, dda_peaks=(pc["mz"], pc["rel"]))
+    groups = {k: set(v) for k, v in cfg["groups"].items()}
+    els = tree.els
+    tps = {t["id"]: t for t in truth["tps"]}
+    ok, report = 0, {}
+    for case in cfg["cases"]:
+        tp = tps[case["id"]]
+        rt = tp["rt_obs"][case["rt_index"]]
+        c = cons(tp["mz"], rt - cfg["window"], rt + cfg["window"])
+        space = F.FormulaSpace(F.vec(tp["ion"], els), els)
+        t0 = time.perf_counter()
+        r = LZ.localize(tp["ion"], truth["parent"]["ion"], c["mz"], c["rel"], lib, space, groups=groups, tp_mz=tp["mz"])
+        dt = time.perf_counter() - t0
+        assert r["ok"], (case["id"], r["note"])
+        if "region_in" in case:
+            g = groups[case["region_in"]]
+            frac = len(set(r["region_atoms"]) & g) / len(r["region_atoms"])
+        else:
+            kept = set(r["retained_atoms"])
+            frac = min(len(kept & groups[n]) / len(groups[n]) for n in case["retained"])
+        report[case["id"]] = round(frac, 2)
+        ok += frac >= case["min_fraction"]
+        assert dt < 1.0
+    print("\nlocalisation, fraction of the region in the right place:", report)
+    assert ok >= cfg["min_correct"], f"{ok} cases correct: {report}"

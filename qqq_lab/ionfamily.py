@@ -1454,15 +1454,15 @@ def greedy_match(S):
     S: (..., Ka, Kb) non-negative candidate weights (0 = not a candidate). Returns (total weight, number of pairs) per leading index.
     Each round takes the pairs that are the maximum of both their row and their column ("locally dominant"); with distinct weights the pairs
     taken over the rounds are exactly those of the global greedy (heaviest pair first, then the heaviest compatible one...)."""
-    S = np.asarray(S, float)
-    S = S + (S > 0) * 1e-12 * np.arange(S.shape[-2] * S.shape[-1]).reshape(S.shape[-2:])       # distinct weights
+    W = np.asarray(S, float)
+    S = W + (W > 0) * 1e-12 * np.arange(W.shape[-2] * W.shape[-1]).reshape(W.shape[-2:])       # distinct weights, only to decide the order
     tot = np.zeros(S.shape[:-2])
     n = np.zeros(S.shape[:-2], int)
     for _ in range(min(S.shape[-2:])):
         if not (S > 0).any():
             break
         dom = (S > 0) & (S == S.max(-1, keepdims=True)) & (S == S.max(-2, keepdims=True))
-        tot += (S * dom).sum((-1, -2))
+        tot += (W * dom).sum((-1, -2))                 # the sums use the true weights, not the tie-breaking ones
         n += dom.sum((-1, -2))
         S = np.where(dom.any(-1, keepdims=True) | dom.any(-2, keepdims=True), 0.0, S)
     return tot, n

@@ -33,27 +33,9 @@ def node_id(key) -> str:
 def consensus(run, idx, ppm: float = 5.0, min_frac: float = 0.5):
     """Consensus centroid spectrum of the scans idx: each scan normalised to its maximum, peaks within `ppm` merged (sort, diff, cumsum of the
     breaks), kept when present in at least `min_frac` of the scans, mean intensity. Returns (mz, intensity, n_scans_with_the_peak)."""
-    ms, its, sid = [], [], []
-    for k, i in enumerate(idx):
-        mz, it = run.read(i)
-        if len(mz) == 0 or it.max() <= 0:
-            continue
-        ms.append(mz)
-        its.append(it / it.max())
-        sid.append(np.full(len(mz), k))
-    if not ms:
-        return np.zeros(0), np.zeros(0), np.zeros(0, int)
-    mz, it, sid = np.concatenate(ms), np.concatenate(its), np.concatenate(sid)
-    o = np.argsort(mz, kind="stable")
-    mz, it, sid = mz[o], it[o], sid[o]
-    lab = np.zeros(len(mz), np.int64)
-    lab[1:] = np.cumsum(np.diff(mz) > mz[1:] * ppm * 1e-6)
-    w = np.bincount(lab, it)
-    cm = np.bincount(lab, it * mz) / w
-    key = lab * (len(idx) + 1) + sid
-    nsc = np.bincount(lab[np.unique(key, return_index=True)[1]], minlength=len(w))
-    keep = nsc >= max(1, min_frac * len(idx))
-    return cm[keep], w[keep] / len(idx), nsc[keep]
+    from .spectra import consensus_arrays
+    reads = [run.read(i) for i in idx]
+    return consensus_arrays([r[0] for r in reads], [r[1] for r in reads], ppm, min_frac, 0.0, n_total=len(idx))
 
 
 class MsnTree:
