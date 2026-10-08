@@ -97,7 +97,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 #loading{position:fixed;inset:0;z-index:10010;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
 .ms{display:flex;align-items:flex-end;gap:5px;height:90px}.ms i{display:block;width:9px;background:var(--accent);border-radius:2px 2px 0 0;animation:pk 1.3s ease-in-out infinite}
 @keyframes pk{0%,100%{transform:scaleY(.15)}50%{transform:scaleY(1)}}.ms i{transform-origin:bottom}
-#ldmsg{font-size:15px;max-width:520px;min-height:44px}#ldsub{color:var(--muted)}
+#ldmsg{font-size:15px;max-width:520px;min-height:44px}#ldsub{color:var(--muted)}#ldth{margin-top:6px}
 #refbody tr.exp td{background:color-mix(in srgb,var(--accent) 9%,transparent)}
 .pnl.chrom .leg,.pnl.xic .leg,.pnl.mrm .leg,.pnl.spec .leg2{position:absolute;z-index:2;max-width:55%;margin:0;padding:2px 8px;font-size:11px;max-height:40%;background:color-mix(in srgb,var(--panel) 86%,transparent);border:1px solid var(--line);border-radius:6px}.pnl.spec .leg2{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted)}.pnl.spec .leg2 span{display:inline-flex;gap:4px;align-items:center}.pnl .leg:empty,.pnl .leg2:empty{display:none}.pnl.chrom .rd:not(.show),.pnl.xic .rd:not(.show),.pnl.mrm .rd:not(.show),.pnl.spec .rd{display:none}.pnl.spec .leg{position:absolute;z-index:2;display:block;margin:0;padding:0;max-width:calc(50% - 56px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10.5px;text-align:right;color:var(--muted);pointer-events:none}.pnl.spec .leg span{display:inline}
 #qtip:has(.qs){max-width:540px;padding:8px 10px}#qtip .qs{white-space:normal}#qtip .qr{display:flex;align-items:stretch;gap:6px;margin:6px 0}#qtip .qb{flex:1 1 0;border:1px solid rgba(255,255,255,.4);border-radius:6px;padding:4px 7px;font-size:12px}#qtip .qb b{display:block;font-size:13px}#qtip .qa{align-self:center;font-size:16px}#qtip .qw{font-size:12px}
@@ -190,7 +190,7 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
  <li>Invia e attendi la tabella dei prodotti (formula, massa monoisotopica, SMILES).</li>
  <li>Torna qui: calcola [M+H]<sup>+</sup> = massa + 1.00728 e controlla nel full scan, con una finestra di ±1 Da, se compare uno ione che cresce con il tempo. Annota i candidati che trovi (m/z, RT, andamento) per la relazione.</li></ol>
  <div class="bar"><button id="bt-open">Riapri BioTransformer</button><span class="sp"></span><button id="btx2">Chiudi</button></div></div>
-<div id="loading"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><div id="ldmsg"></div><div id="ldsub"></div></div>
+<div id="loading"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><div id="ldmsg"></div><div id="ldsub"></div><button id="ldth" class="sec" hidden>Intanto leggi la Teoria</button></div>
 <div id="calcdlg" class="card" hidden role="dialog" aria-label="Calcolatrice m/z"><div class="top" style="display:flex"><h3 style="margin:0;flex:1">Calcolatrice m/z</h3><button class="x" id="calcx" title="Chiudi">&times;</button></div>
  <input id="calcin" placeholder="un conto (364,4 − 194,2) o una formula (C14H12Cl2NO3)" autocomplete="off" title="Un conto: numeri e + − × ÷ ( ), anche con la virgola. Una formula bruta: anche con parentesi (C9H10N2O) e in minuscolo (c9h10n2o). «Ans» = l'ultimo risultato. Invio = risultato, Esc = azzera.">
  <div id="calcres" aria-live="polite" hidden></div><div id="calcsum" class="sm"></div>
@@ -271,8 +271,11 @@ function nice(a,b,n){const s=(b-a)/n,p=Math.pow(10,Math.floor(Math.log10(s))),m=
 function smooth(y,k){if(!k)return y;return y.map((_,i)=>{const a=y[i-1]??y[i],c=y[i+1]??y[i];return(a+2*y[i]+c)/4})}
 const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles
 
+// while the engine starts (the first time 10-20 s) the Teoria can already be read: it does not need Python
+let ldThT=setTimeout(()=>{const b=$("#ldth");if(b&&!$("#loading").hidden)b.hidden=false},1500);
+$("#ldth").onclick=()=>{$("#loading").hidden=true;setView("theory")};
 async function init(){try{loading(true);await bootSession();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});
-  const d=await api("api/state");fail();$("#newrun").hidden=!(d.app||S.sess);if(!S.sess)showStart(d);else applyView()}catch(e){fail(e)}finally{loading(false)}}
+  const d=await api("api/state");fail();window.qqReady=true;clearTimeout(ldThT);$("#ldth").hidden=true;setTimeout(prefetchIdle,3000);$("#newrun").hidden=!(d.app||S.sess);if(!S.sess)showStart(d);else applyView()}catch(e){fail(e)}finally{loading(false)}}
 
 // ------------------------------------------------------------------ views: Dati (start screen or panels), Disegno
 const ST={files:[],methods:[]};
@@ -286,7 +289,7 @@ function applyView(){const v=S.view,d=v==="data";
 {const hd=document.querySelector("header"),hh=()=>{document.documentElement.style.setProperty("--hh",hd.offsetHeight+"px");hd.classList.toggle("scrolled",scrollY>4)};
  hh();addEventListener("scroll",()=>hd.classList.toggle("scrolled",scrollY>4),{passive:true});addEventListener("resize",hh);if(window.ResizeObserver)new ResizeObserver(hh).observe(hd)}
 window.hdrH=()=>document.querySelector("header").offsetHeight;
-function setView(v){S.view=v;applyView()}   // no automatic scroll when the view changes (decision 7/10): panels, zoom, cursor and active graph are state and stay
+function setView(v){S.view=v;applyView();if(v==="data"&&!window.qqReady&&!window.QQQ_PHONE)$("#loading").hidden=false}   // no automatic scroll when the view changes (decision 7/10): panels, zoom, cursor and active graph are state and stay
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.dataset.v));
 
 // ------------------------------------------------------------------ start screen: upload, check times and types, open
@@ -398,6 +401,21 @@ $("#newrun").onclick=async()=>{if(!await yesno("Iniziare una <b>nuova sessione</
  let busy=false;new MutationObserver(ms=>{if(busy)return;busy=true;try{for(const m of ms){if(m.type==="characterData"){if(m.target.parentElement)fix(m.target.parentElement)}else m.addedNodes.forEach(a=>{if(a.nodeType===1)fix(a);else if(a.nodeType===3&&a.parentElement)fix(a.parentElement)})}}finally{busy=false}}).observe(document.body,{childList:true,subtree:true,characterData:true});
  fix(document.body)})();
 document.querySelectorAll("[data-ic]").forEach(e=>{e.innerHTML=QICON.get(e.dataset.ic,16)});
+// What is downloaded when (decided 8/10/2026, measured on the site): the engine (~10 MB compressed) at once, because Dati needs it;
+// after it, when the browser is idle, the small things that make the next clicks instant (Teoria ~60 kB, OpenChemLib ~340 kB:
+// under the threshold of 1 MB); Ketcher (~8.7 MB) only when the mouse goes on «Disegno», or when idle if the connection says it is fast
+// and not metered (Chrome: navigator.connection, downlink >= 10 Mbit/s, no data saver); the example files (~28 MB) only with their button.
+function prefetch(urls,as){urls.forEach(u=>{const l=document.createElement("link");l.rel=as==="module"?"modulepreload":"prefetch";l.href=u;if(as&&as!=="module")l.as=as;document.head.appendChild(l)})}
+let kPre=false;
+function prefetchKetcher(){if(kPre||window.QQQ_PHONE)return;kPre=true;
+  fetch("static/vendor/ketcher/index.html").then(r=>r.text()).then(t=>{const u=[...t.matchAll(/(?:src|href)="\.?\/?(assets\/[^"]+)"/g)].map(m=>"static/vendor/ketcher/"+m[1]);
+    u.forEach(x=>fetch(x,{priority:"low"}).then(r=>r.arrayBuffer()).catch(()=>{}))}).catch(()=>{kPre=false})}
+function prefetchIdle(){const go=()=>{const c=navigator.connection||{};if(c.saveData)return;
+  prefetch(["static/teoria/index.html","static/teoria/teoria.css","static/teoria/teoria.js","static/teoria/glossario-dati.js"]);
+  prefetch(["static/vendor/openchemlib.js"],"module");
+  if(c.downlink>=10&&!/2g|3g/.test(c.effectiveType||""))prefetchKetcher()};
+  window.requestIdleCallback?requestIdleCallback(go,{timeout:8000}):setTimeout(go,2000)}
+{const b=document.querySelector('#nav button[data-v="draw"]');if(b){b.addEventListener("pointerenter",prefetchKetcher,{once:true});b.addEventListener("focus",prefetchKetcher,{once:true})}}
 // on a smartphone (telefono.js) only the card that sends to the Teoria: no session, no engine, no drawing editor
 function phoneMode(){$("#loading").hidden=true;$("#phone").hidden=false;document.querySelectorAll(".appn").forEach(e=>e.textContent=window.APP_NAME||"mzLab");
   const hd=document.querySelector("header"),nav=$("#nav");if(!$("#phinfo"))nav.insertAdjacentHTML("afterend",'<button id="phinfo" type="button" aria-label="Informazioni" title="Informazioni">i</button>');
