@@ -71,6 +71,12 @@ def test_kinetic_coherence():
     assert NW.kinetic_coherence({**good, "unimodal": False, "class": ["precoce"]})[0] == 0.0
     assert NW.kinetic_coherence({**good, "unimodal": False, "class": ["tardivo", "persistente"]})[0] == 1.0
     assert NW.kinetic_coherence(None)[0] == 0.5 and NW.kinetic_coherence({"ok": False})[0] == 0.5
+    # coverage: 11 treated samples, the product in all of them / in 6 (more than half: full score) / in 3 / in 1
+    t = list(range(-1, 12))
+    prof = lambda n: [0, 0] + [1.0] * n + [0] * (11 - n)
+    full = lambda n: {**good, "times": t, "profile": prof(n)}
+    assert [round(NW.kinetic_coherence(full(n))[0], 2) for n in (11, 6, 3, 1)] == [1.0, 1.0, 0.73, 0.51]
+    assert "presente in 3 campioni trattati su 11" in NW.kinetic_coherence(full(3))[1]
 
 
 def cand(**kw):
@@ -128,14 +134,15 @@ def test_confidence_levels():
     assert "2a" not in {str(x) for x in (NW.confidence(cand())["level"],)}
 
 
-def test_rank_orders_by_level_then_score():
+def test_rank_orders_by_score_or_by_level():
     a, b, c = cand(id=1), cand(id=2, rt=6.0), cand(id=3, ms2=None, localization=None)
     rows = []
     for x, area in ((a, 0.2), (b, 1.0), (c, 1.0)):
         x["confidence"], x["priority"] = NW.confidence(x, parent_rt=5.0), NW.priority(x, area)
         rows.append(x)
-    order = [x["id"] for x in NW.rank(rows)]
-    assert order == [1, 2, 3]                                                              # 2b, then 3, then 4 although 3 is the most intense
+    assert [x["id"] for x in NW.rank(rows, by_level=True)] == [1, 2, 3]                  # 2b, then 3, then 4 although 3 is the most intense
+    by_score = [x["id"] for x in NW.rank(rows)]
+    assert by_score == sorted(by_score, key=lambda i: -next(x["priority"]["score"] for x in rows if x["id"] == i))
 
 
 def test_predecessors():

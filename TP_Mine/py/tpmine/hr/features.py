@@ -22,6 +22,7 @@ MIN_HEIGHT = 2e5
 MIN_POINTS = 5
 LONG_TRACE = 400          # scans: longer traces are continuous background (kept, marked)
 MAX_GAP = 2               # missing scans tolerated inside a trace
+SLAB_PEAKS = 1_500_000    # peaks per slab of the detection (memory)
 TOUCH_HEIGHT = 2e6        # only traces this intense are stitched when their pieces merely touch
 
 
@@ -185,8 +186,30 @@ def fourier_artefacts(mz, apex, height, ratio: float = 50.0, ppm_lo: float = 20.
     return out
 
 
+def _slab_edges(mz: np.ndarray, max_peaks: int, min_gap_ppm: float = 50.0) -> list[int]:
+    """Cut points (indices into the m/z-sorted peaks) that split the table in slabs of about `max_peaks` peaks, each at the widest gap of the
+    neighbourhood and only where the gap is at least `min_gap_ppm` (a trace never spans such a gap: the channels are 4 ppm, the stitching joins
+    neighbours). Slabs bound the transient memory of the detection; the result does not change."""
+    n = len(mz)
+    cuts = [0]
+    gap = np.diff(mz) / mz[1:] * 1e6 if n > 1 else np.zeros(0)
+    while n - cuts[-1] > 1.4 * max_peaks:
+        lo, hi = cuts[-1] + int(0.6 * max_peaks), min(n - 1, cuts[-1] + int(1.4 * max_peaks))
+        j = lo + int(np.argmax(gap[lo:hi]))
+        if gap[j] < min_gap_ppm:
+            hi2 = min(n - 1, hi + max_peaks)                              # no wide gap here: look further
+            if hi2 <= hi:
+                break
+            j = hi + int(np.argmax(gap[hi:hi2]))
+            if gap[j] < min_gap_ppm:
+                break
+        cuts.append(j + 1)
+    cuts.append(n)
+    return cuts
+
+
 def detect(table, floor: float = FLOOR, min_points: int = MIN_POINTS, min_height: float = MIN_HEIGHT, max_gap: int = MAX_GAP,
-           long_trace: int = LONG_TRACE) -> Features:
+           long_trace: int = LONG_TRACE, max_peaks: int = SLAB_PEAKS) -> Features:
     """Ion traces of a PeakTable (MS1 of one file and polarity). See the module docstring."""
     import time
     t0 = time.perf_counter()
@@ -196,14 +219,17 @@ def detect(table, floor: float = FLOOR, min_points: int = MIN_POINTS, min_height
     dt = float(np.median(np.diff(table.rt))) * 60 if nscan > 1 else 1.0
     rows = []
     lmz = np.log(mz) / np.log1p(CHANNEL_PPM) if len(mz) else mz
-    for shift in (0.0, 0.5):
-        if len(mz) == 0:
-            break
-        # fragments of a wobbling ion are short: only 2 points are asked before stitching, the length test (min_points) comes after it
-        chan, mzc, apex, n, mx, tot, a, z = _segments(lmz, mz, it, pos, nscan, shift, max_gap, min_height / 4, min_height)
-        chan, mzc, apex, n, mx, tot, a, z = _stitch(chan, mzc, apex, n, mx, tot, a, z, max_gap)
-        good = (n >= min_points) & (mx >= min_height)
-        rows.append(np.c_[mzc[good], table.rt[apex[good]], n[good], mx[good], tot[good] * dt, apex[good], table.rt[a[good]], table.rt[z[good]], (z - a + 1)[good] > long_trace, np.full(good.sum(), shift)])
+    cuts = _slab_edges(mz, max_peaks) if len(mz) else [0, 0]
+    for lo, hi in zip(cuts[:-1], cuts[1:]):
+        for shift in (0.0, 0.5):
+            if hi == lo:
+                break
+            # fragments of a wobbling ion are short: only 2 points are asked before stitching, the length test (min_points) comes after it
+            chan, mzc, apex, n, mx, tot, a, z = _segments(lmz[lo:hi], mz[lo:hi], it[lo:hi], pos[lo:hi], nscan, shift, max_gap, min_height / 4, min_height)
+            chan, mzc, apex, n, mx, tot, a, z = _stitch(chan, mzc, apex, n, mx, tot, a, z, max_gap)
+            good = (n >= min_points) & (mx >= min_height)
+            rows.append(np.c_[mzc[good], table.rt[apex[good]], n[good], mx[good], tot[good] * dt, apex[good], table.rt[a[good]], table.rt[z[good]], (z - a + 1)[good] > long_trace,
+                              np.full(good.sum(), shift)])
     F = np.concatenate(rows) if rows else np.zeros((0, 10))
     F = F[_merge_grids(F[:, [0, 1, 2, 6, 7, 9]])] if len(F) else F
     art = fourier_artefacts(F[:, 0], F[:, 5], F[:, 3]) if len(F) else np.zeros(0, bool)
@@ -260,7 +286,7 @@ def _limit_span(x: np.ndarray, g: np.ndarray, max_span: float) -> np.ndarray:
     return g
 
 
-def align(feats: list[Features], ppm: float = 5.0, rt_gap: float = 0.1, max_ppm_span: float = 10.0, max_rt_span: float = 0.25,
+def align(feats: list[Features], ppm: float = 5.0, rt_gap: float = 0.1, max_ppm_span: float = 10.0, max_rt_span: float | None = None,
           drop_artefacts: bool = True) -> Alignment:
     """Align the features of all files: sort by m/z and break the groups where the gap is above `ppm`, then sort by RT inside each group and
     break where the gap is above `rt_gap` minutes; groups wider than `max_ppm_span` or `max_rt_span` are cut at their largest gap. Area,
@@ -281,7 +307,8 @@ def align(feats: list[Features], ppm: float = 5.0, rt_gap: float = 0.1, max_ppm_
     o = np.lexsort((X[:, 1], cl))
     X, cl = X[o], cl[o]
     g = np.r_[0, np.cumsum((np.diff(cl) != 0) | (np.diff(X[:, 1]) > rt_gap))]
-    g = _limit_span(X[:, 1], g, max_rt_span)
+    if max_rt_span is not None:
+        g = _limit_span(X[:, 1], g, max_rt_span)
     ng = int(g[-1]) + 1
     fi = X[:, 6].astype(np.int64)
     # the largest feature of each (group, file) gives apex and limits

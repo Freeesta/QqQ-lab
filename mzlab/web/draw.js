@@ -75,10 +75,11 @@ function hideMacro(fr) {
       'grid-template-areas:"toolbar-top toolbar-top toolbar-top toolbar-top" "toolbar-bottom toolbar-left canvas toolbar-right"!important}' +
       '[class*="App-module_app"] [class*="BottomToolbar-module_root"]{flex-direction:column!important;flex-wrap:nowrap!important;align-self:start;height:auto!important;width:auto!important;padding:8px 0 8px 8px!important;margin:0!important}' +
       '[class*="App-module_app"] [class*="BottomToolbar-module_group"]{flex-direction:column!important;height:auto!important;width:auto!important}' +
-      '[class*="App-module_top"] [data-testid="select-drop-down-button"] { width: 28px !important; max-width: 28px !important; height: 28px !important; overflow: hidden !important; border-radius: 4px; align-self: center; padding: 0 !important; margin: 0 !important; display: flex !important; align-items: center !important; justify-content: flex-start !important; } ' +
-      '[class*="App-module_top"] [data-testid="select-drop-down-button"] svg { width: 16px !important; height: 16px !important; margin: 0 0 0 6px !important; flex-shrink: 0 !important; } ' +
-      '[class*="App-module_top"] [data-testid="select-drop-down-button"] svg:nth-of-type(n+2), [class*="App-module_top"] [data-testid="select-drop-down-button"] svg ~ svg { display: none !important; } ' +
-      '[class*="App-module_top"] [data-testid="hand"], [class*="App-module_top"] [data-testid="erase"], [class*="App-module_top"] [data-testid="text"] { height: 28px !important; width: 28px !important; display: flex; align-items: center; justify-content: center; align-self: center; border-radius: 4px; padding: 0 !important; } ';
+      '[class*="App-module_top"] [data-testid="select-drop-down-button"] { width: 28px !important; min-width: 28px !important; max-width: 28px !important; height: 28px !important; min-height: 28px !important; max-height: 28px !important; overflow: hidden !important; border-radius: 4px; align-self: center; padding: 0 !important; margin: 0 !important; display: block !important; box-sizing: border-box !important; flex-shrink: 0 !important; } ' +
+      '[class*="App-module_top"] [data-testid="select-drop-down-button"] > button { width: 28px !important; min-width: 28px !important; max-width: 28px !important; height: 28px !important; min-height: 28px !important; max-height: 28px !important; padding: 0 !important; margin: 0 !important; border-radius: 4px; display: flex !important; align-items: center !important; justify-content: center !important; box-sizing: border-box !important; border: none !important; flex-shrink: 0 !important; } ' +
+      '[class*="App-module_top"] [data-testid="select-drop-down-button"] > button svg { width: 16px !important; min-width: 16px !important; height: 16px !important; min-height: 16px !important; margin: 0 !important; padding: 0 !important; flex-shrink: 0 !important; display: block !important; position: static !important; } ' +
+      '[class*="App-module_top"] [data-testid="select-drop-down-button"] > svg { display: none !important; width: 0 !important; height: 0 !important; opacity: 0 !important; } ' +
+      '[class*="App-module_top"] [data-testid="hand"], [class*="App-module_top"] [data-testid="erase"], [class*="App-module_top"] [data-testid="text"] { width: 28px !important; min-width: 28px !important; max-width: 28px !important; height: 28px !important; min-height: 28px !important; max-height: 28px !important; display: flex !important; align-items: center !important; justify-content: center !important; align-self: center !important; border-radius: 4px !important; padding: 0 !important; margin: 0 !important; box-sizing: border-box !important; flex-shrink: 0 !important; } ';
       
 
     // Move Hand, Select, Erase, Text to top toolbar right after Cut
@@ -450,8 +451,8 @@ function drawLabels() {
   g.textContent = "";
   if (!labelsOn()) return;
   const text = (x, y, lines, color, size) => lines.forEach((parts, i) => g.appendChild(svgLabel(doc, parts, x, y + i * size * 1.3, size, color)));
-  for (const d of structures()) text(d.cx * sc, d.y * sc + 30, labelParts(d), "#3b3b3b", 13);
-  for (const a of arrowDeltas()) text(a.x * sc, a.y * sc - 12, [a.parts], "#2b5c8a", 12);
+  for (const d of structures()) text(d.cx * sc, d.y * sc + 30, labelParts(d), window.isDark && window.isDark() ? "#e4e7eb" : "#3b3b3b", 13);
+  for (const a of arrowDeltas()) text(a.x * sc, a.y * sc - 12, [a.parts], window.isDark && window.isDark() ? "#7db4e6" : "#2b5c8a", 12);
 }
 // the same labels as Ketcher text objects, only in the copy of the drawing that is exported
 const SUBC = "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089", SUPC = "\u2070\u00b9\u00b2\u00b3\u2074\u2075\u2076\u2077\u2078\u2079";

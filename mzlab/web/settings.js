@@ -6,7 +6,7 @@ const UIP_KEY = "qqq.prefs"; // kept from the old name: renaming it would lose t
 const uipRead = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const uipWrite = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage not available: the setting lasts until the page is closed */ } };
 function uipLoad() {
-  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if ([90, 100, 115, 130].includes(o.font)) UIP.font = o.font; if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.pal; if (o.merge === false) UIP.merge = false; if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
+  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if ([90, 100, 115, 130].includes(o.font)) UIP.font = o.font; if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.pal; if (o.merge === false) UIP.merge = false;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
   setPal(UIP.pal);
 }
 function uipSave() {
@@ -18,7 +18,17 @@ function uipApply() {
   const r = document.documentElement;
   r.style.setProperty("--z", UIP.font / 100);
   if (UIP.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", UIP.theme);
+  if (typeof setPal === "function") setPal(UIP.pal);
+  if (typeof paintFiles === "function" && typeof E !== "undefined") {
+    paintFiles();
+    if (E.files && E.files.length && typeof renderFileList === "function") renderFileList();
+  }
   if (typeof redrawAll === "function") redrawAll();           // canvases read the colours from the CSS variables
+}
+if (typeof window !== "undefined" && window.matchMedia) {
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (UIP.theme === "auto") uipApply();
+  });
 }
 
 // --- popup of the gear
@@ -30,10 +40,14 @@ function uipOpen(btn) {
     <div class="sm muted" style="margin:-2px 0 4px">Vale anche dentro i grafici; le immagini esportate restano alla dimensione standard.</div>
     <div class="row">Tema <select id="uip-th"><option value="auto">Come il sistema</option><option value="light">Chiaro</option><option value="dark">Scuro</option></select></div>
     <div class="row">Colori dei grafici <select id="uip-pal" title="Per tempo: i file Full Scan con un tempo vanno dal viola scuro al verde in ordine di tempo. Accessibili: colori distinguibili anche con le forme comuni di daltonismo, più linee tratteggiate. Alto contrasto aggiunge anche lo stile della linea. Arcobaleno: tinte ben separate.">${Object.entries(PALS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join("")}</select></div>
-    <div class="row">Librerie di spettri <button id="uip-lib" title="Carica le librerie (MSP, MGF) con cui confrontare le MS2: clic destro su uno spettro MS2, «Cerca nelle librerie»">Librerie…</button></div>
-    <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>Unisci i centroidi della stessa massa nominale<br><span class="sm muted">Nei file convertiti con il centroiding, un picco largo può essere spezzato in due: questa opzione li riunisce (un picco per massa nominale, come lo vede uno strumento a risoluzione unitaria).</span></span></label>
+    <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>Unisci i centroidi della stessa massa nominale</span></label>
+    ${(typeof E !== "undefined" && E.files && E.files.some(f => (window.HR && HR.isHr(f)) || f.kind === "ms2" || f.ms2)) ? `
+    <div class="row">Librerie di spettri <button id="uip-lib" title="Carica le librerie (MSP, MGF) con cui confrontare le MS2: clic destro su uno spettro MS2, «Cerca nelle librerie»">Librerie…</button></div>` : ""}
+    ${(typeof E !== "undefined" && E.files && E.files.some(f => window.HR && HR.isHr(f))) ? `
     <div class="row hr-only" title="Finestra di un XIC e confronto fra m/z nei file ad alta risoluzione (predefinito 5 ppm, come in Thermo FreeStyle)">Tolleranza in alta risoluzione &plusmn; <input type="number" id="uip-ppm" min="1" max="50" step="1" value="${UIP.hrPpm}" style="width:56px"> ppm</div>
-    <div class="row hr-only" title="Decimali delle m/z nei file ad alta risoluzione">Decimali in alta risoluzione <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>`;
+    <div class="row hr-only" title="Decimali delle m/z nei file ad alta risoluzione">Decimali in alta risoluzione <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
+    ` : ""}
+    `;
   document.body.appendChild(d);
   d.querySelector("#uip-th").value = UIP.theme; d.querySelector("#uip-pal").value = UIP.pal;
   const r = btn.getBoundingClientRect(); d.style.top = r.bottom + 6 + "px"; d.style.left = Math.max(8, Math.min(r.left, innerWidth - d.offsetWidth - 8)) + "px";
@@ -43,14 +57,14 @@ function uipOpen(btn) {
     UIP.merge = e.target.checked; uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof redrawAll === "function") redrawAll();
   };
-  d.querySelector("#uip-lib").onclick = () => { d.remove(); if (window.LIB) LIB.open(); };
-  const hrChanged = () => {                                   // every request and every cache that depends on the profile starts again
+  const uipLib = d.querySelector("#uip-lib"); if (uipLib) uipLib.onclick = () => { d.remove(); if (window.LIB) LIB.open(); };
+  const hrChanged = () => {
     uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof renderFileList === "function" && E.files.length) renderFileList();
     if (typeof redrawAll === "function") redrawAll();
   };
-  d.querySelector("#uip-ppm").onchange = e => { UIP.hrPpm = Math.min(50, Math.max(1, +e.target.value || 5)); e.target.value = UIP.hrPpm; hrChanged(); };
-  d.querySelector("#uip-hdec").onchange = e => { UIP.hrDec = Math.min(5, Math.max(3, Math.round(+e.target.value || 4))); e.target.value = UIP.hrDec; hrChanged(); };
+  const uipPpm = d.querySelector("#uip-ppm"); if (uipPpm) uipPpm.onchange = e => { UIP.hrPpm = Math.min(50, Math.max(1, +e.target.value || 5)); e.target.value = UIP.hrPpm; hrChanged(); };
+  const uipHdec = d.querySelector("#uip-hdec"); if (uipHdec) uipHdec.onchange = e => { UIP.hrDec = Math.min(5, Math.max(3, Math.round(+e.target.value || 4))); e.target.value = UIP.hrDec; hrChanged(); };
   d.querySelector("#uip-th").onchange = e => { UIP.theme = e.target.value; uipSave(); uipApply(); };
   d.querySelector("#uip-pal").onchange = e => {              // applied at once: file colours, lists, legends, every graph
     setPal(e.target.value); uipSave();
