@@ -20,6 +20,8 @@ PENALTY = 0.3                         # isotope, adduct, in-source fragment or d
 MIN_MATCHED = 3                       # peaks matched in the modified cosine for the MS2 component
 LOC_MARGIN = 0.25                     # log-likelihood margin that counts as a determined site
 COS_RELATED = 0.6
+COVERAGE_FRACTION = 0.5               # a profile present in this fraction of the treated samples (at least 4) has the full kinetic component
+COVERAGE_FLOOR = 0.4                  # ... and one present in a single sample would keep this fraction of it
 LEVELS = {5: "5", 4: "4", 3: "3", "2b": "2b"}
 LEVEL_ORDER = {"2b": 0, 3: 1, 4: 2, 5: 3, None: 4}
 LEVEL_TEXT = {
@@ -32,7 +34,7 @@ CANDIDATE_KEYS = ("id", "mz", "rt", "formula", "n_formulas", "ppm", "area_max", 
 
 # neutral changes besides the user's transformation list (names in Italian): ordered (name, delta as signed formula text)
 HR_TRANSFORMATIONS = [("idrossilazione", "+O"), ("deidrogenazione", "-H2"), ("ossidazione a carbonile", "+O-H2"), ("perdita di C4H8", "-C4H8"),
-                      ("perdita di C2H2", "-C2H2"), ("perdita di CO", "-CO"), ("perdita di CH2O con ossidazione", "-CH2O+O"), ("idratazione", "+H2O"),
+                      ("perdita di C2H2", "-C2H2"), ("perdita di CO", "-CO"), ("idratazione", "+H2O"),
                       ("disidratazione", "-H2O"), ("demetilazione", "-CH2"), ("diidrossilazione", "+O2"), ("trisidrossilazione", "+O3")]
 NATURAL = {"C13": 0.0107, "N15": 0.00364, "S33": 0.0075, "H2": 0.000115, "O17": 0.00038}
 
@@ -147,7 +149,9 @@ def isotopes_coherent(observed: dict, expected: dict, tol_rel: float = 0.5) -> t
 # ---------------------------------------------------------------------------------------------------------------------- kinetics
 def kinetic_coherence(kin: dict | None) -> tuple[float, str]:
     """Component 'kin' in [0, 1]: 1 when the product is absent (or tiny) in dark / t0 and its profile is unimodal or accumulates (a rise to a maximum, then
-    a fall or a plateau); 0.5 when it cannot be decided (fewer than four treated samples); 0 when it is present before the treatment or noisy."""
+    a fall or a plateau), scaled by the coverage of the series (0.4 + 0.6 x the fraction of treated samples that have it, 1 from half of them: a product
+    seen in two or three samples only is a weak case, in the measured series a third of the candidates are like that and one real product of 17);
+    0.5 when it cannot be decided (fewer than four treated samples); 0 when it is present before the treatment or noisy."""
     if not kin or not kin.get("ok"):
         return 0.5, "profilo non valutabile"
     n = len(kin.get("times", []))
@@ -156,7 +160,13 @@ def kinetic_coherence(kin: dict | None) -> tuple[float, str]:
     if not kin.get("absent_in_reference", True):
         return 0.0, "presente nel buio/t0"
     if kin.get("unimodal") or kin.get("class") and "persistente" in kin["class"]:
-        return 1.0, f"{kin.get('class_text', '')}: sale e poi scende o si accumula"
+        text = f"{kin.get('class_text', '')}: sale e poi scende o si accumula"
+        if kin.get("profile") is None:
+            return 1.0, text
+        t, y = np.asarray(kin["times"], float), np.asarray(kin["profile"], float)
+        n_tr, n_in = int((t > 0).sum()), int(((t > 0) & (y > 0)).sum())
+        cov = min(1.0, n_in / max(4.0, COVERAGE_FRACTION * n_tr))
+        return COVERAGE_FLOOR + (1 - COVERAGE_FLOOR) * cov, f"{text}; presente in {n_in} campioni trattati su {n_tr}"
     return 0.0, "profilo irregolare"
 
 
@@ -297,6 +307,11 @@ def predecessors(cands: list[dict], els: list[str], parent_formula, table, cos=N
     return out
 
 
-def rank(cands: list[dict]) -> list[dict]:
-    """Candidates ordered by confidence level (2b first) and, within it, by score. Those explained by a family keep their place by score but stay visible."""
-    return sorted(cands, key=lambda c: (LEVEL_ORDER[c["confidence"]["level"]], -c["priority"]["score"]))
+def rank(cands: list[dict], by_level: bool = False) -> list[dict]:
+    """Candidates ordered by priority score (the score already carries the evidence of the level: MS2, region, kinetics, formula, intensity). With
+    `by_level` ordered by confidence level (2b first) and, within it, by score: measured on the reference series that puts all the level-3 candidates
+    (an MS2 related to the parent's, many of them not products) above the level-4 products that have no useful MS2 (17 of 20 products in the first 100
+    by score, 13 by level). Those explained by a family keep their place by score but stay visible."""
+    if by_level:
+        return sorted(cands, key=lambda c: (LEVEL_ORDER[c["confidence"]["level"]], -c["priority"]["score"]))
+    return sorted(cands, key=lambda c: -c["priority"]["score"])

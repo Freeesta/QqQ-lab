@@ -61,9 +61,16 @@ def test_formula_feasibility_follows_the_parent():
     assert not FL.formula_feasible([mz("C8H12N4O2")], space)[0]                                 # radical cation: not a closed-shell ion
 
 
-def test_flat_mask_needs_enough_samples():
-    a = np.array([[1, 2, 1.5, 2, 1], [1, 2, 0, 0, 0], [1, 40, 5, 0, 0], [0, 0, 0, 3, 4]]) * 1e6
-    assert FL.flat_mask(a).tolist() == [True, False, False, False]          # similar areas in 5 samples = flat; in 2 samples = a transient
+def test_flat_mask_keeps_consecutive_transients():
+    a = np.array([[1, 2, 1.5, 2, 1],            # similar areas in every treated sample: flat
+                  [1, 40, 5, 0, 0],             # varies by more than 3: not flat
+                  [0, 1, 1.5, 2, 0],            # three CONSECUTIVE samples: formed and consumed, a transient
+                  [1, 0, 2, 0, 1.5],            # three scattered samples with similar areas: noise, flat
+                  [0, 0, 0, 3, 4],              # two samples: the reference rule calls it flat
+                  [0, 0, 0, 0, 3]]) * 1e6       # a single sample is never flat
+    assert FL.flat_mask(a).tolist() == [True, False, False, True, True, False]
+    assert FL.flat_mask(a, min_present=4).tolist() == [True, False, False, False, False, False]
+    assert FL.flat_mask(a, transient=(9, 9)).tolist() == [True, False, True, True, True, False]
 
 
 def test_run_filters_funnel():

@@ -8,6 +8,7 @@ families of the best candidates). numpy only; runs in Pyodide."""
 from __future__ import annotations
 
 import copy
+import gc
 import time
 from pathlib import Path
 
@@ -29,7 +30,7 @@ from . import similarity as SM
 from . import spectra as SP
 
 DEFAULT_SETTINGS = {"floor": FT.FLOOR, "min_height": FT.MIN_HEIGHT, "fold": 5.0, "min_treated": 2, "rt_min": 0.7, "max_rows": 500, "iimn_top": 400,
-                    "ppm_prec": 5.0, "weights": dict(NW.WEIGHTS), "polarity": 1, "inclusion": 50, "min_ms2_scans": 1}
+                    "ppm_prec": 5.0, "weights": dict(NW.WEIGHTS), "polarity": 1, "inclusion": 50, "min_ms2_scans": 1, "flat_min_present": 2}
 NO_PROGRESS = lambda text, frac=None: None      # noqa: E731
 
 
@@ -150,6 +151,8 @@ class ExperimentHR:
                 self.isf_measures[k] = FL.isf_measure(tab, masses, self.parent_mz, rt_hint=self.parent_rt_hint)
             r._tables.clear()
             r.close()
+            del tab
+            gc.collect()
         self.timing["feature"] = round(time.perf_counter() - t0, 2)
         self.times = np.array([x["time"] if x["time"] is not None else (-1.0 if self._is_ref(x) else np.nan) for x in self.lc], float)
         self.sessions = KN.sessions(self.stamps)
@@ -167,7 +170,8 @@ class ExperimentHR:
         if self.sess_factors["applied"]:
             self.warnings.append("le sessioni di misura differiscono: le aree sono state riportate alla sessione di riferimento")
         self.funnel = FL.run_filters(self.al, self.feats, self.times, types, self.ion, fold=self.s["fold"], min_treated=self.s["min_treated"], rt_min=self.s["rt_min"],
-                                     min_height=self.s["min_height"])
+                                     min_height=self.s["min_height"], flat_min_present=self.s["flat_min_present"],
+                                     isf_masses=self.isf_masses, parent_rt=self.parent_rt_hint)
         self.ref_c, self.tr_c = FL.split_columns(self.times, types)
         self.timing["filtri"] = round(time.perf_counter() - t, 2)
         # parent: area per file (saturation), peak limits
@@ -203,11 +207,20 @@ class ExperimentHR:
         self._open = cache
         return [getter(k) for k in range(len(self.lc))]
 
+    def _close_runs(self):
+        """Close the files opened on demand (their pages count in the resident memory while the mappings are alive)."""
+        for r in list(getattr(self, "_open", {}).values()):
+            r._tables.clear()
+            r.close()
+        getattr(self, "_open", {}).clear()
+
     def _ms2_of(self, mz: float, limits) -> dict | None:
         sel = SP.select_ms2(self.ms2idx, mz, limits)
         if len(sel) < self.s["min_ms2_scans"]:
             return None
         a, b, rts = SP.read_spectra(self.getters, sel)
+        for r in getattr(self, "_open", {}).values():                  # in the browser every open file keeps a 16 MB window: give them back
+            r.release()
         c = SP.ms2_consensus(a, b)
         c["rts"], c["raw"] = rts, (a, b)
         return c
@@ -282,8 +295,36 @@ class ExperimentHR:
                 if r.get("ok"):
                     r["n_groups"] = sum(1 for gset in groups.values() if gset & set(r["region_atoms"]))
                 c["localization"] = r
+        lgn = np.concatenate([lgn, self._hidden_candidates(cands, space, table, pv)])
         self.cands, self.lgn = cands, lgn
+        self._close_runs()
         self.timing["candidati"] = round(time.perf_counter() - t0, 2)
+
+    def _hidden_candidates(self, cands: list, space, table, pv) -> np.ndarray:
+        """Masses of the parent's fragments whose ratio to the parent changes with the treatment (or whose peak moves away from the parent's): a possible
+        product hidden under an in-source fragment. Those without a feature of their own become rows with a negative id (no peaks of their own: no
+        kinetics, no MS2); a feature that is already a candidate is only flagged. Returns the normalised intensity of the new rows."""
+        self.hidden_ids = set()
+        have = {id(c): c for c in cands}
+        prt = float(self.al.rt[self.parent_group]) if self.parent_group is not None else (self.parent_rt_hint or 0.0)
+        new = []
+        for j, d in enumerate(d for d in self.isf_hidden if d["candidate"]):
+            if any(abs(c["mz"] - d["mz"]) <= d["mz"] * 5e-6 and abs(c["rt"] - prt) <= 0.5 for c in cands):
+                continue
+            cc = space.candidates(d["mz"], 3.0)
+            c = {"id": -(j + 1), "mz": d["mz"], "rt": prt, "area_max": 0.0, "areas": [0.0] * len(self.lc), "time_step": self._step(), "hidden": True, "isf_hidden": d,
+                 "n_formulas": int(len(cc))}
+            if len(cc):
+                v = space.G[int(cc[0])]
+                c["formula"], c["ppm"] = F.fmt(v, self.els), float(space.error_ppm(d["mz"], int(cc[0])))
+                c["derivation"] = NW.derivation_name(v, pv, self.els, table)
+                c["delta"] = ("-" if (v - pv).sum() < 0 else "+") + F.fmt(np.abs(v - pv), self.els)
+            else:
+                c["formula"] = None
+            new.append(c)
+            self.hidden_ids.add(c["id"])
+        cands.extend(new)
+        return np.full(len(new), 0.3)
 
     def _step(self) -> float:
         t = np.sort(np.unique(self.times[self.times > 0]))
@@ -301,9 +342,13 @@ class ExperimentHR:
         for k, c in enumerate(cands):
             c["priority"] = NW.priority(c, self.lgn[k], w)
         # isf-coincident flags
-        coin = FL.isf_coincident(self.al, np.array([c["id"] for c in cands], int), self.isf_masses, self.al.rt[self.parent_group] if self.parent_group is not None else (self.parent_rt_hint or 0.0)) if cands else np.zeros(0, bool)
-        for c, f in zip(cands, coin):
+        real = [c for c in cands if not c.get("hidden")]
+        coin = FL.isf_coincident(self.al, np.array([c["id"] for c in real], int), self.isf_masses, self.al.rt[self.parent_group] if self.parent_group is not None else (self.parent_rt_hint or 0.0)) if real else np.zeros(0, bool)
+        for c, f in zip(real, coin):
             c["isf_coincident"] = bool(f)
+        for c in cands:
+            if c.get("hidden"):
+                c["isf_coincident"] = True
         # predecessors among the best candidates
         self.progress("Rete dei prodotti...", 0.85)
         top = [k for k in sorted(range(len(cands)), key=lambda k: -cands[k]["priority"]["score"])[:300] if cands[k].get("formula")]
@@ -332,11 +377,12 @@ class ExperimentHR:
             loc = c.get("localization") or {}
             c["confidence"] = NW.confidence(c, parent_rt=prt, groups_of_region=loc.get("n_groups"))
         self.ranked = NW.rank(cands)
+        self._close_runs()
         self.timing["rete"] = round(time.perf_counter() - t0, 2)
 
     def _iimn_top(self):
         cands = self.cands
-        top = sorted(range(len(cands)), key=lambda k: -cands[k]["priority"]["raw"])[: self.s["iimn_top"]]
+        top = [k for k in sorted(range(len(cands)), key=lambda k: -cands[k]["priority"]["raw"]) if not cands[k].get("hidden")][: self.s["iimn_top"]]
         by_file: dict = {}
         for k in top:
             by_file.setdefault(int(np.argmax(self.al.area[cands[k]["id"]])), []).append(k)
@@ -373,7 +419,7 @@ class ExperimentHR:
 
     def _summary(self) -> dict:
         rows = [self._row(c) for c in self.ranked[: self.s["max_rows"]]]
-        noms = [c for c in self.cands if not c.get("ms2")]
+        noms = [c for c in self.cands if not c.get("ms2") and not c.get("hidden")]
         incl = sorted(noms, key=lambda c: -c["priority"]["score"])[: self.s["inclusion"]]
         files = [{"name": x["name"], "label": x["label"], "time": x["time"], "type": x["type"], "kind": x["kind"], "session": s, "n_features": int(len(f))}
                  for x, s, f in zip(self.lc, self.sessions, self.feats)]

@@ -28,8 +28,13 @@ def _g(t, c, s):
     return np.exp(-0.5 * ((t - c) / s) ** 2)
 
 
-def write_series(folder: Path, times=(-1, 0, 5, 10, 20, 40), seed=5) -> list[dict]:
-    """Writes one file per time (-1: dark adsorption) and returns [{name, path, time, type}]."""
+ISF_FRAGMENT = mass_of("C6H8N3O")              # a fragment of the parent that the source also makes (2 % of the parent in every file)
+
+
+def write_series(folder: Path, times=(-1, 0, 5, 10, 20, 40), seed=5, hidden_isf: bool = False) -> list[dict]:
+    """Writes one file per time (-1: dark adsorption) and returns [{name, path, time, type}]. hidden_isf: a product of the treatment with the mass
+    of the parent's fragment, co-eluting with the parent and consumed with it: it never makes a feature of its own (the fragment is there in
+    every file) but the ratio fragment / parent grows with the treatment."""
     rng = np.random.default_rng(seed)
     out = []
     for t in times:
@@ -44,6 +49,10 @@ def write_series(folder: Path, times=(-1, 0, 5, 10, 20, 40), seed=5) -> list[dic
                 y = a * _g(rt, rtc[m], 0.07)
                 if y > 3e4:
                     mz.append(m * (1 + rng.normal(0, 0.3e-6))); it.append(y * rng.uniform(0.95, 1.05))
+            if hidden_isf:
+                y = (0.02 * amp[PARENT] + (0.0 if t <= 0 else 2.5e6 * (1 - np.exp(-k / 15.0)))) * _g(rt, rtc[PARENT], 0.07)
+                if y > 3e4:
+                    mz.append(ISF_FRAGMENT * (1 + rng.normal(0, 0.3e-6))); it.append(y * rng.uniform(0.95, 1.05))
             for b in BACKGROUND:
                 mz.append(b * (1 + rng.normal(0, 0.3e-6))); it.append(BGH[b] * _g(rt, BGC[b], 0.25) * rng.uniform(0.9, 1.1))
             for _ in range(15):
