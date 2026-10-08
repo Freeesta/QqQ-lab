@@ -1054,7 +1054,7 @@ const xicWin = (v, obs) => { const n = xicNominal(v, obs); return [rh(n - XIC_BE
 let XIC_LAST = null;       // the last ion the student asked for ({mz} or {formula, adduct}): the window opens with it, still editable
 // Right click on a peak of the spectrum: the XIC appears at once, with the default unit window and no dialog; the window is changed afterwards from the header of the XIC panel.
 function xicDirect(mz, after, panel) {
-  const [a, b] = xicWin(mz, true), c = rh((a + b) / 2, 2), w = rh((b - a) / 2, 2), lab = `m/z ${c.toFixed(mzd(p))}`;
+  const [a, b] = xicWin(mz, true), c = rh((a + b) / 2, 2), w = rh((b - a) / 2, 2), lab = `m/z ${c.toFixed(mzd(panel))}`;
   XIC_LAST = { mz };
   const ht = window.HR && HR.ionTrace(mz, { obs: true, tab: panel && panel.tab });          // a high-resolution file among the files: the ion with its ppm window
   if (panel && E.panels.includes(panel)) { if (ht) { panel.traces.push(ht); ctl(panel); draw(panel); } else addTrace(panel, c, lab, w); reveal(panel); return panel; }
@@ -1065,7 +1065,7 @@ function xicDirect(mz, after, panel) {
   } else reveal(np);
   return np;
 }
-const xicName = q => { const t = q.traces[0]; return t && t.ion ? t.label + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : t ? "m/z " + t.mz.toFixed(mzd(p)) + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : "vuoto"; };
+const xicName = q => { const t = q.traces[0]; return t && t.ion ? t.label + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : t ? "m/z " + t.mz.toFixed(mzd(q)) + (q.traces.length > 1 ? " +" + (q.traces.length - 1) : "") : "vuoto"; };
 // Estrai ioni (XIC): a list of rows (2 at the start, up to 10), each one an m/z or a neutral formula (+ adduct); all the ions go into the SAME panel, one trace per ion.
 const XIC_MAXROWS = 10, XIC_ADDUCTS = ["[M+H]+", "[M+NH4]+", "[M+Na]+", "[M+K]+", "[M-H]-", "[M+Cl]-", "[M+HCOO]-"];
 function openXic(panel, pre = {}) {
@@ -1134,7 +1134,7 @@ function openXic(panel, pre = {}) {
         const ht = HR.ionTrace(r.ex, { obs: r.obs, prefix: r.label, tab: xtab() }), key = "ion|" + ht.mz; if (seen.has(key)) return; seen.add(key); traces.push(ht); return;
       }
       const [a, b] = r.win, mz = rh((a + b) / 2, 2), w = rh((b - a) / 2, 2), key = mz + "|" + w; if (seen.has(key)) return; seen.add(key);
-      traces.push({ id: E.seq++, mz, w, label: (r.label ? r.label + " · " : "") + `m/z ${mz.toFixed(mzd(p))}` });
+      traces.push({ id: E.seq++, mz, w, label: (r.label ? r.label + " · " : "") + `m/z ${mz.toFixed(mzd(panel))}` });
     });
     d.close();
     const r0 = used[0]; XIC_LAST = isNum(r0.inp.value.trim()) ? { mz: r0.ex ?? numMz1(r0.inp.value) ?? (r0.win[0] + r0.win[1]) / 2 } : { formula: r0.inp.value.trim(), adduct: r0.ad.value };
@@ -2213,7 +2213,7 @@ function attach(p) {
     else if (p.type !== "spec") {
       const tt = p.ms2tri && p._a.tri && d.y0 < M.t + 14 ? p._a.tri.reduce((b, q) => (Math.abs(q.px - d.x0) < 6 && (!b || Math.abs(q.px - d.x0) < Math.abs(b.px - d.x0)) ? q : b), null) : null;
       if (tt) { if (window.DDA && DDA.onTri(p, tt)) return; goMs2(tt); return; }          // a triangle: that MS2 scan (in the DDA trio, or in the MS2 tab)
-      p.sel = null; p.cur = x0; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, x0, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, `scansione più vicina con dati · RT ${sn.rt.toFixed(2)} min`, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else pushLinked(p, x0 - dt / 2, x0 + dt / 2, nearestFile(p, x0));
+      p.sel = null; p.cur = x0; const sn = p.tab === "ms2" && p.type === "chrom" && p._a.sr ? ms2Near(p, x0, 0) : null; if (sn) { p.cur = sn.rt; stepMsg(p, `scansione più vicina con dati · RT ${sn.rt.toFixed(2)} min`, true); } draw(p); const dt = scanStep(); if (sn) pushLinked(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); else { const k0 = nearestFile(p, x0); pushLinked(p, x0 - dt / 2, x0 + dt / 2, k0); nearScan(k0, x0).then(n => { if (n && p.cur === x0) { p.cur = n.rt; draw(p); pushLinked(p, n.rt - NEAR, n.rt + NEAR, k0); } }); }
     }
   };
   addEventListener("mouseup", p._up);
@@ -2237,7 +2237,9 @@ function attach(p) {
       if (!p._a || !f || f.kind === "mrm") return;
       let dt = scanStep(), r0 = x - dt / 2, r1 = x + dt / 2, kk = k;
       const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, x, 0) : null; if (sn) { r0 = sn.rt - sn.g / 2; r1 = sn.rt + sn.g / 2; kk = sn.k; }
-      p.sel = null; p.cur = sn ? sn.rt : x;
+      let at = sn ? sn.rt : x;
+      if (!sn) { const n = await nearScan(kk, x); if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; at = n.rt; } }
+      p.sel = null; p.cur = at;
       newSpec(p, r0, r1, kk);          // every double click makes a new LIVE spectrum right under the chromatogram; the previous ones freeze
       draw(p); return;
     }
@@ -2246,6 +2248,12 @@ function attach(p) {
   };
   cv.oncontextmenu = e => { hideHover(p); ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };
 }
+// high resolution only: the scan of the file (survey or product ions) closest in time to x, found by the server; null for any other file (the window around x is used)
+async function nearScan(k, x) {
+  const f = E.files[k]; if (!f || !window.HR || !HR.isHr(f, f.lv)) return null;
+  try { const j = await J(`api/nearest_scan?k=${k}&rt=${x}&level=${f.lv || 1}`); return j && j.rt != null ? j : null; } catch (e) { return null; }
+}
+const NEAR = 1e-4;                                      // half width (min) of the window around the RT of one exact scan
 const scanStep = () => { const f = scanFiles(tabFiles())[0]; return f ? Math.max((f.rt_max - f.rt_min) / Math.max(f.ms1 + f.ms2 - 1, 1), 0.005) : 0.02; };
 function nearestFile(p, x) {
   const a = p._a; if (a && a.map) return a.f.k; if (!a || !a.sr) return scanFiles(shown())[0]?.k ?? 0;
@@ -2358,7 +2366,7 @@ function ctxFor(p, e, x, px, py) {
     const dt = scanStep();
     if (p.type !== "mrm") {
       if (p.sel) items.push({ label: "Spettro medio dell'intervallo selezionato", fn: () => newSpec(p, p.sel[0], p.sel[1], k) });
-      items.push({ label: "Spettro a questo RT", fn: () => { const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, x, 0) : null; if (sn) { p.cur = sn.rt; newSpec(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); } else newSpec(p, x - dt / 2, x + dt / 2, k); } });
+      items.push({ label: "Spettro a questo RT", fn: () => { const sn = p.tab === "ms2" && p.type === "chrom" ? ms2Near(p, x, 0) : null; if (sn) { p.cur = sn.rt; newSpec(p, sn.rt - sn.g / 2, sn.rt + sn.g / 2, sn.k); } else nearScan(k, x).then(n => { if (n) { p.cur = n.rt; newSpec(p, n.rt - NEAR, n.rt + NEAR, k); } else newSpec(p, x - dt / 2, x + dt / 2, k); }); } });
     }
     if (p.type === "chrom") items.push({ label: "Estrai uno ione (XIC)…", fn: () => openXic(null, { after: p }) });
     if (p.type === "chrom" && window.DDA) { const q = DDA.menuShow(p); if (q) items.push(q); }

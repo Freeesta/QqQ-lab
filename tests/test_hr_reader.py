@@ -183,17 +183,27 @@ def test_formula_has_five_decimals(app_hr):
     code, j = get(app_hr, "/api/formula", f="C14H13F4N3O2S", adduct="[M+H]+")
     assert code == 200 and j["mz"] == round(j["mz5"], 4) and len(str(j["mz5"]).split(".")[1]) == 5
 
-def test_nearest_scan_gets_the_closest_scan_in_time(app):
-    k = [i for i, it in enumerate(app.session.items) if it.file == "e.mzML#MS2"][0]
+def test_nearest_scan_gets_the_closest_scan_in_time(app_hr):
+    k = [i for i, it in enumerate(app_hr.session.items) if it.file == "e.mzML#MS2"][0]
     # In 'e.mzML', MS2 scans are DDA. Let's find one.
-    code, j = get(app, "/api/dda", k=k)
+    code, j = get(app_hr, "/api/dda", k=k)
     rts = j["rt"]
     rt0 = rts[0]
     rt1 = rts[1]
     mid = (rt0 + rt1) / 2
     # test closer to rt0
-    code, r = get(app, "/api/nearest_scan", k=k, rt=mid - 0.001, level=2)
-    print("THIS IS R:", r); assert r["rt"] == rt0
+    code, r = get(app_hr, "/api/nearest_scan", k=k, rt=mid - 0.001, level=2)
+    assert r["rt"] == rt0
     # test closer to rt1
-    code, r = get(app, "/api/nearest_scan", k=k, rt=mid + 0.001, level=2)
+    code, r = get(app_hr, "/api/nearest_scan", k=k, rt=mid + 0.001, level=2)
     assert r["rt"] == rt1
+
+
+def test_precursor_is_the_centre_of_the_isolation_window(app_hr):
+    k = [i for i, it in enumerate(app_hr.session.items) if it.file == "e.mzML#MS2"][0]
+    code, j = get(app_hr, "/api/dda", k=k)
+    sc = app_hr.session.items[k].run.scans
+    sid = next(s.index for s in sc if s.level == 2 and s.iso)
+    code, r = get(app_hr, "/api/scan", k=k, sid=sid)
+    s = sc[sid]
+    assert code == 200 and abs(r["prec"] - sum(s.iso) / 2) < 1e-3
