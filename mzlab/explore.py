@@ -556,6 +556,7 @@ def mixed_text(run) -> str:
 class Session:
     def __init__(self, samples: list[dict], root: Path):
         self.items: list[Item] = []
+        has_hr, has_lr = False, False
         for s in samples:
             name, _, tag = str(s["file"]).partition("#")      # "x.mzML#MS2" = the MS2 part of a mixed file (as saved in the notebook)
             f = Path(name)
@@ -565,10 +566,21 @@ class Session:
             parts = file_parts(run)
             common = (s.get("label") or label, s["time"] if s.get("time") is not None else t, s.get("type") or typ)
             if not parts:
-                self.items.append(Item(name, *common[:1], common[1], common[2], path, s.get("conc"), s.get("cunit"), run=run))
-                continue
-            for p in ([q for q in parts if q["tag"] == tag] if tag else parts):
-                self.items.append(Item(f"{name}#{p['tag']}", common[0], common[1], common[2], path, s.get("conc"), s.get("cunit"), part=p, run=run))
+                item = Item(name, *common[:1], common[1], common[2], path, s.get("conc"), s.get("cunit"), run=run)
+                self.items.append(item)
+                hr_info = item.hr_info()
+            else:
+                for p in ([q for q in parts if q["tag"] == tag] if tag else parts):
+                    item = Item(f"{name}#{p['tag']}", common[0], common[1], common[2], path, s.get("conc"), s.get("cunit"), part=p, run=run)
+                    self.items.append(item)
+                    hr_info = item.hr_info()
+            if hr_info["prof1"]["hr"] or hr_info["prof2"]["hr"]:
+                has_hr = True
+            else:
+                has_lr = True
+        
+        if has_hr and has_lr:
+            raise ValueError("HR_MIX")
 
     def info(self) -> list[dict]:
         return [it.info() for it in self.items]

@@ -6,12 +6,12 @@ const UIP_KEY = "qqq.prefs"; // kept from the old name: renaming it would lose t
 const uipRead = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const uipWrite = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage not available: the setting lasts until the page is closed */ } };
 function uipLoad() {
-  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if ([90, 100, 115, 130].includes(o.font)) UIP.font = o.font; if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.pal; if (o.merge === false) UIP.merge = false; if (o.hr === false) UIP.hr = false; if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
+  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if ([90, 100, 115, 130].includes(o.font)) UIP.font = o.font; if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.pal; if (o.merge === false) UIP.merge = false; if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
   setPal(UIP.pal);
 }
 function uipSave() {
   const o = { font: UIP.font, theme: UIP.theme, pal: UIP.pal, merge: UIP.merge };
-  if (UIP.hr === false) o.hr = false; if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;         // high resolution: only what differs from the defaults
+  if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;         // high resolution: only what differs from the defaults
   uipWrite(UIP_KEY, JSON.stringify(o));
 }
 function uipApply() {
@@ -32,7 +32,6 @@ function uipOpen(btn) {
     <div class="row">Colori dei grafici <select id="uip-pal" title="Per tempo: i file Full Scan con un tempo vanno dal viola scuro al verde in ordine di tempo. Accessibili: colori distinguibili anche con le forme comuni di daltonismo, più linee tratteggiate. Alto contrasto aggiunge anche lo stile della linea. Arcobaleno: tinte ben separate.">${Object.entries(PALS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join("")}</select></div>
     <div class="row">Librerie di spettri <button id="uip-lib" title="Carica le librerie (MSP, MGF) con cui confrontare le MS2: clic destro su uno spettro MS2, «Cerca nelle librerie»">Librerie…</button></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>Unisci i centroidi della stessa massa nominale<br><span class="sm muted">Nei file convertiti con il centroiding, un picco largo può essere spezzato in due: questa opzione li riunisce (un picco per massa nominale, come lo vede uno strumento a risoluzione unitaria).</span></span></label>
-    <div class="row" title="Come si leggono le masse. Automatica: i file Orbitrap e Q-TOF usano più decimali e una tolleranza in ppm, il 3200 QTRAP resta come sempre. Spenta: ogni file è letto come uno strumento a risoluzione unitaria.">Masse: alta risoluzione <select id="uip-hr"><option value="1">automatica (consigliato)</option><option value="0">spenta</option></select></div>
     <div class="row hr-only" title="Finestra di un XIC e confronto fra m/z nei file ad alta risoluzione (predefinito 5 ppm, come in Thermo FreeStyle)">Tolleranza in alta risoluzione &plusmn; <input type="number" id="uip-ppm" min="1" max="50" step="1" value="${UIP.hrPpm}" style="width:56px"> ppm</div>
     <div class="row hr-only" title="Decimali delle m/z nei file ad alta risoluzione">Decimali in alta risoluzione <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>`;
   document.body.appendChild(d);
@@ -45,14 +44,11 @@ function uipOpen(btn) {
     if (typeof redrawAll === "function") redrawAll();
   };
   d.querySelector("#uip-lib").onclick = () => { d.remove(); if (window.LIB) LIB.open(); };
-  const hrRows = () => d.querySelectorAll(".hr-only").forEach(r => { r.style.opacity = UIP.hr ? "" : ".45"; r.querySelector("input").disabled = !UIP.hr; });
   const hrChanged = () => {                                   // every request and every cache that depends on the profile starts again
-    uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear(); hrRows();
+    uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof renderFileList === "function" && E.files.length) renderFileList();
     if (typeof redrawAll === "function") redrawAll();
   };
-  d.querySelector("#uip-hr").value = UIP.hr ? "1" : "0"; hrRows();
-  d.querySelector("#uip-hr").onchange = e => { UIP.hr = e.target.value === "1"; hrChanged(); };
   d.querySelector("#uip-ppm").onchange = e => { UIP.hrPpm = Math.min(50, Math.max(1, +e.target.value || 5)); e.target.value = UIP.hrPpm; hrChanged(); };
   d.querySelector("#uip-hdec").onchange = e => { UIP.hrDec = Math.min(5, Math.max(3, Math.round(+e.target.value || 4))); e.target.value = UIP.hrDec; hrChanged(); };
   d.querySelector("#uip-th").onchange = e => { UIP.theme = e.target.value; uipSave(); uipApply(); };

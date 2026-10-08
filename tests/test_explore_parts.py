@@ -19,6 +19,8 @@ def d(tmp_path_factory):
     ds.mixed_mrm_epi(p / "epi.mzML", np.random.default_rng(2))
     ds.mixed_polarity(p / "pol.mzML", np.random.default_rng(3))
     ds.full_scan(p / "plain.mzML", 0, np.random.default_rng(4))
+    ds.hr_dda(p / "e.mzML", np.random.default_rng(5), "exploris")
+    ds.full_scan(p / "q.mzML", 0, np.random.default_rng(6), "3200 QTRAP")
     return p
 
 
@@ -65,3 +67,9 @@ def test_mrm_part_has_the_transitions(d):
     s = Session([{"file": "epi.mzML"}], d)
     mrm = [i for i in s.items if i.kind() == "mrm"][0]
     assert mrm.info()["srm"] == 2 and mrm.info()["scans"] == 0
+
+
+def test_hr_lr_mix_raises_error(d):
+    with pytest.raises(ValueError, match="HR_MIX"):
+        Session([{"file": "q.mzML"}, {"file": "e.mzML"}], d)
+
