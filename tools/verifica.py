@@ -42,7 +42,8 @@ NEEDS: dict[str, set[str]] = {
 NOT_TESTS = {"lib", "synth", "lat_arrows", "make_examples"}          # helpers and measurements, not tests
 SMOKE = ["e2e3"]
 # Console messages that are known and harmless (not counted as browser errors).
-BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"api/formula\?f=C2H6Qq", r"status of 400"]   # aborted requests = page reloaded or closed by the test
+BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"api/formula\?f=C2H6Qq", r"status of 400",
+          r"Layout was forced before the page was fully loaded"]   # Firefox: a notice about styles, not an error   # aborted requests = page reloaded or closed by the test
 
 
 def sh(cmd, log: Path, timeout: int, env=None, cwd=ROOT) -> tuple[int, str, float]:
@@ -196,7 +197,7 @@ def judge(out: str, rc: int) -> list[str]:
     return probs
 
 
-def e2e(results, only, timeout, kind) -> None:
+def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
     names = sorted(p.stem for p in E2E.glob("e2e*.py") if p.stem not in NOT_TESTS)
     if only:
         names = [n for n in names if n in only]
@@ -208,6 +209,9 @@ def e2e(results, only, timeout, kind) -> None:
     if dam:
         env["QQQ_DAM"] = str(dam)
     crypto = has("cryptography")
+    if jobs > 1:
+        env["QQQ_E2E_PARALLEL"] = "1"          # tests_e2e/lib.py: every test takes a free port and its own work folder
+    todo, out_by = [], {}
     for n in names:
         need = NEEDS.get(n, set())
         why = ("serve un file .dam (QQQ_DAM)" if "dam" in need and not dam else
@@ -215,10 +219,22 @@ def e2e(results, only, timeout, kind) -> None:
                "serve il pacchetto cryptography" if "crypto" in need and not crypto else
                "costruisce il sito con Pyodide: lancialo a parte (--solo)" if "sito" in need and not only else "")
         if why:
-            results.append((n, "SKIP", 0, [why])); continue
+            out_by[n] = (n, "SKIP", 0, [why])
+        else:
+            todo.append(n)
+    def one(n):
         rc, out, dt = sh([sys.executable, str(E2E / f"{n}.py")], LOG / f"{n}.log", timeout, env=env, cwd=ROOT)
         probs = judge(out, rc)
-        results.append((n, "FAIL" if probs else "OK", dt, probs[:4]))
+        return (n, "FAIL" if probs else "OK", dt, probs[:4])
+    # the site tests (they build or serve the site on fixed ports) always run alone, after the others
+    alone = [n for n in todo if "sito" in NEEDS.get(n, set())]
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=max(1, jobs)) as ex:
+        for r in ex.map(one, [n for n in todo if n not in alone]):
+            out_by[r[0]] = r
+    for n in alone:
+        out_by[n] = one(n)
+    results.extend(out_by[n] for n in names)
     results.append(("dati usati per gli e2e", "INFO", 0, [f"{src}: {mz}" + (f" · .dam: {dam.name}" if dam else " · nessun .dam")]))
 
 
@@ -231,6 +247,7 @@ def main() -> None:
     ap.add_argument("--fumo", action="store_true", help="solo gli e2e di fumo (SMOKE), senza sintassi JS e pytest: è il giro del job «browser» della CI")
     ap.add_argument("--setup", action="store_true", help="installa pytest, playwright e chromium se mancano")
     ap.add_argument("--timeout", type=int, default=600, help="secondi per ogni e2e (predefinito 600)")
+    ap.add_argument("--paralleli", type=int, default=3, help="e2e eseguiti insieme (predefinito 3; 1 = uno alla volta, come prima)")
     a = ap.parse_args()
     if a.browser:
         os.environ["QQQ_BROWSER"] = a.browser
@@ -246,7 +263,7 @@ def main() -> None:
             prova_hr(results)
     if not a.senza_e2e:
         only = {s.strip().removesuffix(".py") for s in a.solo.split(",") if s.strip()} or (set(SMOKE) if a.rapida or a.fumo else set())
-        e2e(results, only, a.timeout, "")
+        e2e(results, only, a.timeout, "", a.paralleli)
     fails = [r for r in results if r[1] == "FAIL"]
     lines = [f"# Verifica QqQ lab ({time.strftime('%Y-%m-%d %H:%M')}, {time.time() - t0:.0f} s, browser {browser_name()}): "
              + ("TUTTO OK" if not fails else f"{len(fails)} FAIL"), ""]

@@ -23,26 +23,106 @@ function start() {
   starting.finally(() => { Q("#kload").hidden = true; }).catch(() => {});
   starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); });
     k.editor.subscribe("selectionChange", () => requestAnimationFrame(showInfo));
-    hideMacro(fr); changed(); drawLabels(); return k; });
+    hideMacro(fr); fitZoom(k, fr); changed(); drawLabels(); return k; });
   starting.catch(e => dnote(e.message));
   return starting;
 }
 // Ketcher's macromolecule mode (peptides, RNA, DNA) is not needed here and confuses: its switch is hidden
+let kFit = () => {};                                                       // re-fits the side toolbars of Ketcher (set by hideMacro)
 function hideMacro(fr) {
   try {
     const d = fr.contentDocument, st = d.createElement("style");
     // the buttons of Ketcher are small (32 px): the four toolbars are enlarged (CSS zoom, so the menus that open from them grow too). The size follows the room:
     // the side toolbars need ~655 px of height at normal size, the top one ~910 px of width (its help / about buttons are hidden: the program has its own help)
-    st.textContent = '[data-testid="polymer-toggler"],[data-testid="help-button"],[data-testid="about-button"]{display:none!important}' +
-      '[class*="App-module_top"]{zoom:var(--ktz,1.1)}[class*="LeftToolbar-module_root"],[class*="RightToolbar-module_root"],[class*="BottomToolbar-module_root"]{zoom:var(--ksz,1.3)}';
+    st.textContent = '[data-testid="help-button"],[data-testid="about-button"]{display:none!important}' +
+      '[class*="App-module_top"]{zoom:var(--ktz,1.1)}[class*="LeftToolbar-module_root"],[class*="RightToolbar-module_root"],[class*="BottomToolbar-module_root"]{zoom:var(--ksz,1.3)}' +
+      // the quick rings (Ketcher's bottom bar) become a column on the far left: the bottom row disappears and the canvas gets the whole height
+      '[class*="App-module_app"]{grid-template-columns:auto auto minmax(0,1fr) auto!important;grid-template-rows:auto minmax(0,1fr)!important;' +
+      'grid-template-areas:"toolbar-top toolbar-top toolbar-top toolbar-top" "toolbar-bottom toolbar-left canvas toolbar-right"!important}' +
+      '[class*="App-module_app"] [class*="BottomToolbar-module_root"]{flex-direction:column!important;flex-wrap:nowrap!important;align-self:start;height:auto!important;width:auto!important;padding:8px 0 8px 8px!important;margin:0!important}' +
+      '[class*="App-module_app"] [class*="BottomToolbar-module_group"]{flex-direction:column!important;height:auto!important;width:auto!important}';
     const fit = () => {
-      const w = d.defaultView.innerWidth, h = d.defaultView.innerHeight, coarse = d.defaultView.matchMedia("(pointer:coarse)").matches;
-      d.documentElement.style.setProperty("--ktz", String(Math.max(1, Math.min(coarse ? 1.35 : 1.25, (w - 24) / 910)).toFixed(3)));
-      d.documentElement.style.setProperty("--ksz", String(Math.max(1, Math.min(coarse ? 1.55 : 1.4, (h - 60) / 655)).toFixed(3)));
+      const w = d.defaultView.innerWidth, h = d.defaultView.innerHeight, coarse = d.defaultView.matchMedia("(pointer:coarse)").matches, root = d.documentElement;
+      root.style.setProperty("--ktz", String(Math.max(1, Math.min(coarse ? 1.35 : 1.25, (w - 24) / 910)).toFixed(3)));
+      // the side columns (rings, tools, atoms) grow as much as the height allows: measured at zoom 1, because the visible buttons depend on the choice of tools
+      root.style.setProperty("--ksz", "1");
+      const need = Math.max(300, ...['[class*="LeftToolbar-module_buttons"]', '[class*="RightToolbar-module_buttons"]', '[class*="BottomToolbar-module_group"]']
+        .map(q => { const e = d.querySelector(q); return e ? e.scrollHeight + 16 : 0; }));
+      const top = d.querySelector('[class*="App-module_top"]'), th = top ? top.getBoundingClientRect().height : 46;
+      root.style.setProperty("--ksz", String(Math.max(1, Math.min(coarse ? 1.55 : 1.4, (h - th - 24) / need)).toFixed(3)));
     };
+    kFit = fit;
     fit(); d.defaultView.addEventListener("resize", fit);
     d.head.appendChild(st);
+    applyTools();
   } catch (_) { /* not critical */ }
+}
+// ------------------------------------------------------------------ which tools of Ketcher are shown (choice of the student, kept in this browser)
+// Each group lists data-testid of Ketcher's buttons. Default: what is needed to draw structures and transformation pathways;
+// the rest (stereochemistry, S/R groups, biology, mapping ...) is one click away in the «Strumenti dell'editor» card.
+const TOOLS = [
+  ["rings", "Anelli rapidi (benzene, cicloesano...)", true, ["bottom-toolbar"]],
+  ["react", "Frecce e «+» delle reazioni", true, ["reaction-plus", "arrows-drop-down-button"]],
+  ["text", "Testo", true, ["text"]],
+  ["chain", "Catene", true, ["chain"]],
+  ["tidy", "Riordina il disegno (Layout, Clean Up)", true, ["Layout button", "Clean Up button"]],
+  ["file", "Apri e salva file di Ketcher", true, ["open-file-button", "save-file-button"]],
+  ["arom", "Aromaticità e idrogeni espliciti", false, ["Aromatize button", "Dearomatize button", "Add/Remove explicit hydrogens button"]],
+  ["stereo", "Stereochimica avanzata e CIP", false, ["enhanced-stereo", "Calculate CIP button"]],
+  ["groups", "Gruppi S e R", false, ["sgroup", "rgroup-drop-down-button"]],
+  ["calc", "Verifica, valori calcolati e 3D", false, ["Check Structure button", "Calculated Values button", "3D Viewer button"]],
+  ["map", "Mappatura degli atomi nelle reazioni", false, ["reaction-mapping-tools-drop-down-button"]],
+  ["shapes", "Forme e immagini", false, ["shapes-drop-down-button", "images"]],
+  ["atoms", "Atomi generici e tavola estesa", false, ["any-atom", "extended-table"]],
+  ["bio", "Biologia: monomeri e modalità macromolecole (peptidi, DNA, RNA)", false, ["create-monomer", "polymer-toggler"]],
+];
+const TKEY = "qqq.disegno.strumenti";
+function toolChoice() {
+  let saved = {}; try { saved = JSON.parse(localStorage.getItem(TKEY) || "{}") || {}; } catch (_) { /* default choice */ }
+  return Object.fromEntries(TOOLS.map(([k, , on]) => [k, k in saved ? !!saved[k] : on]));
+}
+function applyTools() {
+  const ch = toolChoice();
+  const off = TOOLS.filter(([k]) => !ch[k]).flatMap(t => t[3]).map(id => `[data-testid="${id}"]`);
+  try {
+    const d = Q("#kframe").contentDocument; if (!d || !d.head) return;
+    let st = d.getElementById("tp-tools"); if (!st) { st = d.createElement("style"); st.id = "tp-tools"; d.head.appendChild(st); }
+    st.textContent = off.length ? off.join(",") + "{display:none!important}" : "";
+    // a group of the side toolbars whose buttons are all hidden would stay as an empty white box: it is hidden too
+    const w = d.defaultView;
+    d.querySelectorAll('[class*="LeftToolbar-module_buttons"] > *, [class*="RightToolbar-module_buttons"] > *').forEach(g => {
+      g.style.display = "";
+      const bs = [...g.querySelectorAll("[data-testid]")];
+      if (bs.length && bs.every(b => w.getComputedStyle(b).display === "none" || b.closest('[style*="display: none"]'))) g.style.display = "none";
+    });
+    kFit();
+  } catch (_) { /* editor not loaded yet: applied when it starts */ }
+}
+function toolCard() {
+  const box = Q("#tools-body"); if (!box) return;
+  const ch = toolChoice();
+  box.innerHTML = TOOLS.map(([k, name]) => `<div style="margin:2px 0"><label><input type="checkbox" data-t="${k}" ${ch[k] ? "checked" : ""}> ${name}</label></div>`).join("") +
+    '<div class="bar" style="margin-top:6px"><button type="button" id="tools-all">Mostra tutti</button><button type="button" id="tools-def">Solo gli essenziali</button></div>' +
+    '<div class="muted sm" style="margin-top:6px">Sempre visibili: selezione, gomma, legami, cariche, atomi e tavola periodica, annulla, copia e incolla, zoom. ' +
+    'Lunghezza dei legami, idrogeni mostrati, caratteri e colori si cambiano dall\'ingranaggio di Ketcher, in alto a destra; la libreria «SL» in fondo agli anelli contiene anche gruppi funzionali, sali e solventi.</div>';
+  const save = o => { try { localStorage.setItem(TKEY, JSON.stringify(o)); } catch (_) { /* this tab only */ } applyTools(); toolCard(); };
+  box.querySelectorAll("input[data-t]").forEach(i => i.onchange = () => save({ ...toolChoice(), [i.dataset.t]: i.checked }));
+  Q("#tools-all").onclick = () => save(Object.fromEntries(TOOLS.map(([k]) => [k, true])));
+  Q("#tools-def").onclick = () => { try { localStorage.removeItem(TKEY); } catch (_) { /* nothing saved */ } applyTools(); toolCard(); };
+}
+toolCard();
+// Ketcher opens at 100 %: on a large canvas a molecule looked tiny. The first zoom follows the width of the canvas (a bond of ~60-80 px).
+function fitZoom(k, fr) {
+  try {
+    const c = fr.contentDocument.querySelector('[class*="App-module_canvas"]'), w = c ? c.getBoundingClientRect().width : 900;
+    const z = Math.max(1.2, Math.min(2, w / 650));
+    if (typeof k.editor.zoom !== "function") return;
+    k.editor.zoom(Math.round(z * 10) / 10);
+    try { k.editor.event.zoomChanged.dispatch(); } catch (_) { /* the «100 %» label of Ketcher is only updated by this event */ }
+    // a drawing restored from the notebook must stay entirely visible: Ketcher zooms out again only if it does not fit, then centres it
+    const st = k.editor.struct();
+    if (st && !st.isBlank() && typeof k.editor.zoomAccordingContent === "function") { k.editor.zoomAccordingContent(st); k.editor.centerStruct(); }
+  } catch (_) { /* default zoom */ }
 }
 async function restore() {
   if (restored || !K) return;
@@ -467,7 +547,7 @@ function syncBg() {                                    // JPEG cannot be transpa
 Q("#ex-nobg").addEventListener("change", syncBg); syncBg();
 freshName();
 Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote("");
-  try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote("SMILES non valido: non è stata aggiunta nessuna struttura."); else Q("#ex-smi").value = ""; }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
+  try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote("SMILES non valido: non è stata aggiunta nessuna struttura."); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
   catch (e) { dnote("SMILES non valido: " + e.message); } };
 
 window.TPDraw = { image, info: showInfo, smiles: async () => { await start(); return K.getSmiles(); }, ready: () => !!K };

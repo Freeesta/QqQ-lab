@@ -139,7 +139,11 @@ try:
             ds = {f: grab(f) for f in ("png", "jpg", "svg", "ket")}
             names = {f: d.suggested_filename for f, d in ds.items()}; print(names)
             assert all(pat.match(n) for n in names.values()), names
-            bases = {re.sub(r"\.\w+$", "", n) for n in names.values()}; assert len(bases) == 1, ("one base name per moment", names)
+            # same base name for the same moment; the four downloads may straddle a change of minute (07:23 -> 07:24), which is not an error
+            hm = [re.search(r"\d{4}-\d\d-\d\d_(\d\d)(\d\d)", n) for n in names.values()]
+            mins = sorted(int(m.group(1)) * 60 + int(m.group(2)) for m in hm)
+            rest = {re.sub(r"(\d{4}-\d\d-\d\d)_\d{4}", r"\1", n).rsplit(".", 1)[0] for n in names.values()}
+            assert mins[-1] - mins[0] <= 1 and len(rest) == 1, ("one base name per moment", names)
             png = open(ds["png"].path(), "rb").read(); assert png[:8] == b"\x89PNG\r\n\x1a\n" and b"tEXt" in png[:600] and b"mzLab" in png[:900], "PNG metadata"
             svg = open(ds["svg"].path(), encoding="utf-8").read(); assert "<title>" in svg
             assert open(ds["jpg"].path(), "rb").read(2) == b"\xff\xd8"
