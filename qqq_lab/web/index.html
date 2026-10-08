@@ -3,7 +3,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' blob:">
 <link rel="icon" href="static/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="static/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png"><link rel="apple-touch-icon" href="static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>{APP}</title><script src="static/appname.js"></script>
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>{APP} • Analisi dati MS</title><script src="static/appname.js"></script>
 <style>
 :root{color-scheme:light;--bg:#f7f8fa;--panel:#ffffff;--line:#e2e5ea;--ink:#25282c;--muted:#687080;--accent:#2b5c8a;--ok:#047857;--bad:#b42318;--warn:#92400e;--sel:#edf2f8}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -195,10 +195,10 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
 <script>
 const PHRASES = [
   "Ignorando i warning", "Schivando gli ftalati", "Minando crypto di nascosto", "Litigando coi raw",
-  "Aggiornando Matrix", "Riavviando l'universo", "Ansia da separazione", "Contaminando la sorgente",
+  "Aggiornando Matrix", "Riavviando l'Universo", "Ansia da separazione", "Contaminando la sorgente",
   "Accecando l'elettromoltiplicatore", "Maledicendo la matrice", "Cuocendo i quadrupoli",
   "Contando fino a 6,022 × 10²³", "Non accettando Δx · Δp ≥ ℏ/2", "Iniettando H₂O nel GC",
-  "Contaminando con PEG", "Sporcando la sorgente"
+  "Contaminando con PEG", "Niente panico", "Sporcando la sorgente"
 ];
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
 let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
