@@ -55,7 +55,7 @@ try:
             assert got[0].startswith("TIC_"), got
         step("plotName", names)
         def png():
-            with pg.expect_download() as d: pg.locator(".pnl [data-a=png]").first.click()
+            with pg.expect_download() as d: dlmenu(pg, ".pnl", "png")
             dd = d.value; path = "/tmp/w8.png"; dd.save_as(path); print("png file", dd.suggested_filename)
             b = open(path, "rb").read(); assert b[:8] == b"\x89PNG\r\n\x1a\n"
             i = 8; txt = {}
@@ -68,7 +68,7 @@ try:
             assert dd.suggested_filename.endswith(".png") and "TIC" in dd.suggested_filename
         step("PNG name + valid tEXt metadata", png)
         def xlsn():
-            with pg.expect_download() as d: pg.locator(".pnl.spec [data-a=xlsx]").first.click()
+            with pg.expect_download() as d: dlmenu(pg, ".pnl.spec", "xlsx")
             print("xlsx file", d.value.suggested_filename); assert d.value.suggested_filename.startswith("spettro")
         step("Excel name", xlsn)
         def ctx():

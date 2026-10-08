@@ -86,9 +86,9 @@ with sync_playwright() as p:
     def png():
         pg.click("#dtabs [data-t=full]"); pg.evaluate("E.files.forEach(f=>f.vis=true);redrawAll()"); pg.wait_for_timeout(1200)
         assert pg.evaluate("E.panels[0].cur") is not None
-        with pg.expect_download() as d: pg.locator('.pnl.chrom [data-a=png]').first.click()
+        with pg.expect_download() as d: dlmenu(pg, '.pnl.chrom', 'png')
         pg.wait_for_timeout(500); print("PNG", d.value.suggested_filename); d.value.save_as("/tmp/chrom.png")
-        with pg.expect_download() as d2: pg.locator('.pnl.spec [data-a=png]').first.click()
+        with pg.expect_download() as d2: dlmenu(pg, '.pnl.spec', 'png')
         d2.value.save_as("/tmp/spec.png")
         assert pg.evaluate("E.panels[0]._exp") in (False, None)
     step("PNG downloads", png)

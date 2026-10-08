@@ -33,7 +33,7 @@ try:
         step("only the general (i) is left: it opens the info box; the guide is the first Teoria chapter; panel titles carry the short explanation", helpq)
         def xlsxexcel():
             pg.click("#dtabs [data-t=mrm]"); ready(pg)
-            with pg.expect_download() as d: pg.locator(".pnl.mrm [data-a=xlsx]").first.click()
+            with pg.expect_download() as d: dlmenu(pg, ".pnl.mrm", "xlsx")
             f = d.value; assert f.suggested_filename.endswith(".xlsx"), f.suggested_filename
             rows = xlsx_rows(f.path()); head = [c[1] for c in rows[0] if c]
             print("XLSX:", f.suggested_filename, head[:2], rows[1][:2])
@@ -50,7 +50,7 @@ try:
             pg.click("#funfold"); pg.wait_for_timeout(600); assert pg.evaluate("E.panels[0].w") == w0 and pg.is_visible("#dfiles")
         step("file list collapses and the panels widen", fold)
         def png():
-            with pg.expect_download() as d: pg.locator(".pnl.chrom [data-a=png]").first.click()
+            with pg.expect_download() as d: dlmenu(pg, ".pnl.chrom", "png")
             path = "/tmp/wd6_chrom.png"; d.value.save_as(path)
             px = pg.evaluate("""async p=>{const i=new Image();i.src=p;await i.decode();const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const g=c.getContext('2d');g.drawImage(i,0,0);return [...g.getImageData(2,2,1,1).data]}""",
                              "data:image/png;base64," + __import__("base64").b64encode(open(path, "rb").read()).decode())
