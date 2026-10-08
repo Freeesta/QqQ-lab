@@ -20,11 +20,15 @@ const CHAPTERS = [
   ["12-dati.html", "12", "Full scan, MS2 e MRM: leggere i dati", "V. Leggere gli spettri"],
   ["13-formula.html", "13", "Dalla massa alla formula", "V. Leggere gli spettri"],
   ["14-frammentazione-esi.html", "14", "Frammentazione in CID (ioni a elettroni pari)", "V. Leggere gli spettri"],
+  ["15-ei-metodo.html", "15", "Risolvere uno spettro EI: il metodo", "V. Leggere gli spettri"],
+  ["16-ei-famiglie.html", "16", "Le famiglie di composti in EI", "V. Leggere gli spettri"],
   ["17-origine.html", "17", "Da dove viene questo ione?", "V. Leggere gli spettri"],
   ["18-strategia.html", "18", "Strategia per trovare i TP", "VI. Dal dato al risultato"],
   ["19-hr-dda.html", "19", "Alta risoluzione e DDA nel programma", "VI. Dal dato al risultato"],
   ["20-disegno.html", "20", "Disegnare le molecole", "VI. Dal dato al risultato"],
   ["21-glossario.html", "21", "Glossario e bibliografia", "Appendice"],
+  ["pratica.html", "P", "Allenarsi per l'orale", "Pratica"],
+  ["pratica-ei.html", "P1", "Dallo spettro alla struttura", "Pratica"],
 ];
 const APP = typeof APP_NAME === "string" ? APP_NAME : "mzLab";        // appname.js is loaded first by every page
 CHAPTERS.forEach(c => { c[2] = c[2].split("{APP}").join(APP); });

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dallo spettro alla struttura · QqQ lab</title><link rel="icon" href="../favicon-32.png"><link rel="stylesheet" href="teoria.css"><link rel="stylesheet" href="pratica/pratica.css"></head>
+<body>
+<div class="wrap"><nav id="side"></nav><main>
+<div class="kicker">Pratica</div>
+<h1>Dallo spettro alla struttura</h1>
+<p class="lead">Uno spettro EI vero, un composto da scoprire. Si segue il procedimento del capitolo 15: ione molecolare, formula, ioni chiave, struttura. Nei livelli bassi ogni passo è guidato e corretto subito; in Modalità orale si scrive il ragionamento come all'esame e la correzione arriva alla fine.</p>
+<noscript><p class="box warn">Serve JavaScript.</p></noscript>
+<div id="nofile" class="box warn" hidden><b>Aprite la Pratica dal programma o dal sito</b><p>Il gioco usa l'editor di strutture e la chimica del programma, che il browser non carica da un file aperto con doppio clic. Aprite il sito (o il programma), scheda Teoria, menu «Pratica».</p></div>
+
+<div class="gbar noprint" id="bar">
+<label>Livello <select id="lv">
+<option value="1">1 · Guidato</option><option value="2">2 · Con aiuto</option><option value="3" selected>3 · Da solo</option><option value="4">4 · Esperto</option><option value="orale">Modalità orale</option></select></label>
+<label>Famiglia <select id="fam"><option value="">tutte, mescolate</option></select></label>
+<button id="new">Nuovo problema</button>
+<span id="chall"></span>
+<span class="pts" id="pts"></span>
+</div>
+
+<div id="game"></div>
+<details class="q noprint"><summary>Come funziona il punteggio</summary>
+<p>Ogni problema parte da 100 punti. Un suggerimento costa 5, 10 o 20 punti (il terzo dà la risposta del passo), la massa esatta 20, una risposta sbagliata 5. Il risultato aggiorna il livello delle competenze (pagina «Pratica») e decide la difficoltà dei problemi successivi; i problemi andati male tornano dopo qualche giorno. In Modalità orale il punteggio viene dalla formula e dalla struttura (controllate dal programma) e dalla vostra autovalutazione sul ragionamento.</p></details>
+<p class="note">Gli spettri vengono da MassBank Europe (licenza CC BY-NC-SA): la fonte di ogni spettro è indicata sotto il grafico.</p>
+</main></div>
+<script src="../appname.js"></script><script src="../elements.js"></script><script src="teoria.js"></script><script src="pratica/ei-dati.js"></script><script src="ei-spettri.js"></script><script src="pratica/motore.js"></script>
+<script type="module" src="pratica/gioco-ei.js"></script>
+<script>if (location.protocol === "file:") document.getElementById("nofile").hidden = false;</script>
+</body></html>
