@@ -707,6 +707,7 @@ function addPanel(type, o, after) {
   const tlB = el.querySelector('[data-a="tlink"]'); if (tlB) tlB.onclick = () => toggleTl(p);
   const dlB = el.querySelector('[data-a="dl"]');
   if (dlB) dlB.onclick = e => {
+    e.stopPropagation();                            // else the click reaches the document and closes the menu at once
     menu(e, [
       { label: "Immagine (PNG)", icon: IC_DL, fn: async () => {
         let cvs; p._exp = true; EXPORTING = true;

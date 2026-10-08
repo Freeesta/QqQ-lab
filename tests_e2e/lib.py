@@ -131,3 +131,9 @@ def xlsx_openpyxl(path):
     import shutil, tempfile
     tmp = os.path.join(tempfile.mkdtemp(), "t.xlsx"); shutil.copy(path, tmp)      # downloads have no extension, openpyxl wants one
     return openpyxl.load_workbook(tmp, data_only=True)
+
+
+def dlmenu(pg, scope, kind):
+    """«Scarica ▾» of a panel: open the menu, then choose the PNG image or the Excel data (kind = 'png' | 'xlsx')."""
+    pg.locator(f"{scope} [data-a=dl]").first.click()
+    pg.locator("#ctx div", has_text="Immagine" if kind == "png" else "Excel").first.click()
