@@ -207,7 +207,7 @@ function applyTools() {
     d.querySelectorAll('[class*="LeftToolbar-module_buttons"] > *, [class*="RightToolbar-module_buttons"] > *').forEach(g => {
       g.style.display = "";
       const bs = [...g.querySelectorAll("[data-testid]")];
-      if (bs.length && bs.every(b => w.getComputedStyle(b).display === "none" || b.closest('[style*="display: none"]'))) g.style.display = "none";
+      if (bs.length === 0 || bs.every(b => w.getComputedStyle(b).display === "none" || b.closest('[style*="display: none"]'))) g.style.display = "none";
     });
     kFit();
   } catch (_) { /* editor not loaded yet: applied when it starts */ }
