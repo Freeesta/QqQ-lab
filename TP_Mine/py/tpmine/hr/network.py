@@ -307,6 +307,11 @@ def predecessors(cands: list[dict], els: list[str], parent_formula, table, cos=N
     return out
 
 
-def rank(cands: list[dict]) -> list[dict]:
-    """Candidates ordered by confidence level (2b first) and, within it, by score. Those explained by a family keep their place by score but stay visible."""
-    return sorted(cands, key=lambda c: (LEVEL_ORDER[c["confidence"]["level"]], -c["priority"]["score"]))
+def rank(cands: list[dict], by_level: bool = False) -> list[dict]:
+    """Candidates ordered by priority score (the score already carries the evidence of the level: MS2, region, kinetics, formula, intensity). With
+    `by_level` ordered by confidence level (2b first) and, within it, by score: measured on the reference series that puts all the level-3 candidates
+    (an MS2 related to the parent's, many of them not products) above the level-4 products that have no useful MS2 (17 of 20 products in the first 100
+    by score, 13 by level). Those explained by a family keep their place by score but stay visible."""
+    if by_level:
+        return sorted(cands, key=lambda c: (LEVEL_ORDER[c["confidence"]["level"]], -c["priority"]["score"]))
+    return sorted(cands, key=lambda c: -c["priority"]["score"])

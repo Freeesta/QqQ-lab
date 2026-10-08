@@ -134,14 +134,15 @@ def test_confidence_levels():
     assert "2a" not in {str(x) for x in (NW.confidence(cand())["level"],)}
 
 
-def test_rank_orders_by_level_then_score():
+def test_rank_orders_by_score_or_by_level():
     a, b, c = cand(id=1), cand(id=2, rt=6.0), cand(id=3, ms2=None, localization=None)
     rows = []
     for x, area in ((a, 0.2), (b, 1.0), (c, 1.0)):
         x["confidence"], x["priority"] = NW.confidence(x, parent_rt=5.0), NW.priority(x, area)
         rows.append(x)
-    order = [x["id"] for x in NW.rank(rows)]
-    assert order == [1, 2, 3]                                                              # 2b, then 3, then 4 although 3 is the most intense
+    assert [x["id"] for x in NW.rank(rows, by_level=True)] == [1, 2, 3]                  # 2b, then 3, then 4 although 3 is the most intense
+    by_score = [x["id"] for x in NW.rank(rows)]
+    assert by_score == sorted(by_score, key=lambda i: -next(x["priority"]["score"] for x in rows if x["id"] == i))
 
 
 def test_predecessors():
