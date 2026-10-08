@@ -227,3 +227,46 @@ def test_families_of_the_parent_and_its_in_source_fragments(msn_tree):
     assert found >= 2
     # the artefacts of the Fourier transform around the intense parent are recognised
     assert win.artefact.sum() >= 1
+
+
+# ---------------------------------------------------------------------------------------------------------------------- WP7: MS2 and isomers
+@need
+def test_ms2_of_a_feature_and_coeluting_isomers():
+    import glob
+    import re
+    import numpy as np
+    from tpmine.hr import formula as F
+    from tpmine.hr import spectra as SP
+    iso = json.loads(MSN_TRUTH.read_text(encoding="utf-8"))["isomers"]
+    files = sorted(glob.glob(str(DATI / "HRMS" / "*" / "*TiO2*.mzML")), key=lambda f: float(re.search(r"t(\d+)min", f).group(1)) if re.search(r"t(\d+)min", f) else -1.0)
+    runs = [Run(f) for f in files]
+    ixs = [SP.index_ms2(r) for r in runs]
+    sel = SP.select_ms2(ixs, iso["mz"], [tuple(iso["window"])] * len(files))
+    assert len(sel) >= 12
+    mzs, ints, rts = SP.read_spectra(runs, sel)
+    cons = SP.ms2_consensus(mzs, ints)
+    assert len(cons["mz"]) >= 5 and cons["rel"].max() == pytest.approx(100.0)
+    # MS1 trace of the strongest file
+    best = max(range(len(files)), key=lambda k: runs[k].table(1, 1).xic(iso["mz"], iso["mz"] * 5e-6).max())
+    T = runs[best].table(1, 1)
+    y = T.xic(iso["mz"], iso["mz"] * 5e-6)
+    w = (T.rt > iso["window"][0] - 0.1) & (T.rt < iso["window"][1] + 0.1)
+    from qqq_lab.chem import elements as E
+    els = F.element_order(E.parse_formula(iso["formula"]))
+    top = F.vec(iso["formula"], els)
+    space = F.FormulaSpace(top, els)
+    d = SP.deconvolve_isomers(mzs, ints, rts, xic=(T.rt[w], y[w]), allowed=lambda m: space.count(np.asarray(m), 5.0, 0.002, within=top) > 0)
+    assert d["k"] == iso["n_components"] == len(d["components"])
+
+    def level(c, mz):
+        m, rel = c["spectrum"]
+        j = np.flatnonzero(np.abs(m - mz) <= mz * 8e-6)
+        return float(rel[j].max()) if len(j) else 0.0
+    # components are ordered by retention time; the expected spectra are matched to them in any order (the apex of a component is not its isomer)
+    remaining = list(range(len(d["components"])))
+    for exp in iso["components"]:
+        ok = [i for i in remaining if all(level(d["components"][i], float(mz)) >= thr for mz, thr in exp.get("present", {}).items())
+              and all(level(d["components"][i], float(mz)) < thr for mz, thr in exp.get("absent", {}).items())]
+        assert ok, f"no component matches {exp}"
+        remaining.remove(ok[0])
+    assert not remaining
