@@ -905,7 +905,7 @@ function ctl(p) {
   if (p.type === "mrm") c.innerHTML = `<select data-o="tr" title="Transizione"><option value="">tutte le transizioni</option>${p._trs.map(t => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${fsel}${chk("smooth", "smoothing", false, "", "Spento: le aree si calcolano sul segnale grezzo. Lo smoothing cambia solo il disegno, mai le aree integrate (nell'MRM si integra, per questo parte spento)")}${view}${parBox(logChk + corr)}`;
   if (p.type === "map") {
     const rf0 = p.ref !== "" && p.ref != null, sf = TF, opt = (v, cur, lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
-    c.innerHTML = `<span class="seg" role="group" title="Vista della mappa: 2D = colori sul piano RT-m/z; 3D = superficie con l'intensità in altezza (trascina per ruotarla)"><button data-o="view" data-v="2d" class="${p.view !== "3d" ? "on" : ""}">2D</button><button data-o="view" data-v="3d" class="${p.view === "3d" ? "on" : ""}">3D</button></span>` +
+    c.innerHTML = `<span class="seg" role="group" title="Vista della mappa: 2D, Mirino interattivo, Ridge (linee 3D), 3D (superficie)"><button data-o="view" data-v="2d" class="${p.view !== "3d" && p.view !== "ridge" && p.view !== "cross" ? "on" : ""}">2D</button><button data-o="view" data-v="cross" class="${p.view === "cross" ? "on" : ""}">Mirino</button><button data-o="view" data-v="ridge" class="${p.view === "ridge" ? "on" : ""}">Ridge</button><button data-o="view" data-v="3d" class="${p.view === "3d" ? "on" : ""}">3D</button></span>` +
       `<select data-o="k"${follow(p.tab || E.tab) ? ' disabled title="Hai scelto «Solo il selezionato» nella barra: la mappa segue il file scelto lì."' : ' title="File da mostrare"'}>${sf.map(x => opt(x.k, follow(p.tab || E.tab) ? E.cur : p.k, x.label)).join("")}</select>` +
       `<select data-o="scale" title="Scala dei colori: la radice quadrata fa emergere i segnali deboli">${opt("sqrt", p.scale, "colori: radice")}${opt("lin", p.scale, "colori: lineare")}${opt("log", p.scale, "colori: log")}</select>` +
       `<label class="muted" title="Sottrae un altro file: in rosso ciò che è più intenso nel file mostrato, in blu ciò che è più intenso nel riferimento">differenza con <select data-o="ref"${off(sf.length <= 1, "Serve un secondo file full scan da sottrarre.")}><option value="">nessuno</option>${sf.map(x => opt(x.k, p.ref, x.label)).join("")}</select></label>` +
@@ -957,8 +957,18 @@ function ctl(p) {
 // the 3D view needs more height than the 2D map: the panel grows while it is in 3D and goes back afterwards
 function setMapView(p, v) {
   p.view = v;
-  if (v === "3d" && p.h < 470) { p.h0v = p.h; p.h = 470; apply(p); relayout(); fitHost(); }
-  else if (v !== "3d" && p.h0v) { p.h = p.h0v; p.h0v = null; apply(p); relayout(); fitHost(); }
+  if ((v === "3d" || v === "ridge") && p.h < 470) { p.h0v = p.h; p.h = 470; apply(p); relayout(); fitHost(); }
+  else if (v !== "3d" && v !== "ridge" && p.h0v) { p.h = p.h0v; p.h0v = null; apply(p); relayout(); fitHost(); }
+  
+  if (p._cxic) { p._cxic.remove(); p._cxic = null; }
+  if (p._cspec) { p._cspec.remove(); p._cspec = null; }
+  
+  if (v === "cross") {
+    p._cspec = document.createElement("canvas"); p._cspec.style.cssText = "position:absolute; top:20px; right:20px; width:220px; height:100px; background:rgba(255,255,255,0.9); border:1px solid var(--line); border-radius:4px; pointer-events:none; z-index:10;"; p._cspec.width = 440; p._cspec.height = 200;
+    p._cxic = document.createElement("canvas"); p._cxic.style.cssText = "position:absolute; bottom:30px; right:20px; width:220px; height:100px; background:rgba(255,255,255,0.9); border:1px solid var(--line); border-radius:4px; pointer-events:none; z-index:10;"; p._cxic.width = 440; p._cxic.height = 200;
+    p.el.appendChild(p._cspec); p.el.appendChild(p._cxic);
+  }
+  
   ctl(p); draw(p); uiSave();
 }
 function addTrace(p, mz, label, w) {
@@ -1582,6 +1592,59 @@ async function drawMap(p) {
     p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? " meno " + EH(rf.label) : ""}</span><span class="cbar" style="background:${bar3}"></span><span class="sm">${B ? "differenza: rosso = più intenso nel file mostrato, blu = nel riferimento" : "altezza e colore = intensità media"} (scala ${scTxt}${nTxt})</span><span class="sm">trascina: ruota · Maiusc+trascina: sposta · Ctrl/Cmd+rotella: ingrandisci · per scegliere la zona usa la vista 2D, l'intervallo resta lo stesso</span>`;
     return;
   }
+  if (p.view === "cross") {
+    if (!p._cspec) {
+      p._cspec = document.createElement("canvas"); p._cspec.style.cssText = "position:absolute; top:40px; right:20px; width:220px; height:100px; background:rgba(255,255,255,0.85); border:1px solid var(--line); border-radius:4px; pointer-events:none; z-index:10; box-shadow:0 2px 6px rgba(0,0,0,0.15);"; p._cspec.width = 440; p._cspec.height = 200;
+      p._cxic = document.createElement("canvas"); p._cxic.style.cssText = "position:absolute; bottom:40px; right:20px; width:220px; height:100px; background:rgba(255,255,255,0.85); border:1px solid var(--line); border-radius:4px; pointer-events:none; z-index:10; box-shadow:0 2px 6px rgba(0,0,0,0.15);"; p._cxic.width = 440; p._cxic.height = 200;
+      p.el.appendChild(p._cspec); p.el.appendChild(p._cxic);
+    }
+  } else {
+    if (p._cspec) { p._cspec.remove(); p._cspec = null; }
+    if (p._cxic) { p._cxic.remove(); p._cxic = null; }
+  }
+
+  if (p.view === "ridge") {
+    g.clearRect(0, 0, W, H);
+    // Draw Ridge Plot: x = m/z, y = RT + intensity
+    const pad = 40, pw_r = W - pad * 2, ph_r = H - pad * 2;
+    // Map RT bounds
+    const i0 = Math.max(0, Math.floor((x0 - rt0) / (rt1 - rt0) * A.nrt)), i1 = Math.min(A.nrt - 1, Math.ceil((x1 - rt0) / (rt1 - rt0) * A.nrt));
+    const j0 = Math.max(0, Math.floor((y0 - mzA) / A.dmz)), j1 = Math.min(A.nmz - 1, Math.ceil((y1 - mzA) / A.dmz));
+    const lines = Math.min(150, i1 - i0 + 1);
+    const step = Math.max(1, Math.floor((i1 - i0) / lines));
+    const dy = ph_r / lines;
+    const dx = pw_r / (j1 - j0 + 1);
+    const Z = 0.8 * ph_r; // max height of a peak
+    
+    g.lineJoin = "round"; g.lineWidth = 1.5;
+    for (let k = 0; k < lines; k++) {
+      const i = i1 - k * step;
+      if (i < 0 || i >= A.nrt) continue;
+      g.beginPath();
+      const baseY = H - pad - k * dy;
+      let first = true;
+      for (let j = j0; j <= j1; j++) {
+        let v = im.v[i * A.nmz + j] || 0;
+        let scaled = im.T(v);
+        let px = pad + (j - j0) * dx;
+        let py = baseY - scaled * Z;
+        if (first) { g.moveTo(px, py); first = false; } else { g.lineTo(px, py); }
+      }
+      g.fillStyle = "rgba(255, 255, 255, 0.85)";
+      g.fill();
+      g.strokeStyle = "rgba(30, 90, 190, 0.7)";
+      g.stroke();
+    }
+    
+    // Axes labels
+    g.fillStyle = css("--ink"); g.textAlign = "center";
+    g.fillText("m/z", W/2, H - 10);
+    g.textAlign = "right"; g.fillText("RT", pad - 10, pad + ph_r / 2);
+    
+    p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}</span><span class="sm">Ridge Plot (vista prospettica 1D)</span>`;
+    p._a = { x0, x1, y0, y1, W, H, f, map: true }; // minimal
+    return;
+  }
   g.clearRect(0, 0, W, H); g.imageSmoothingEnabled = false;
   g.drawImage(im.off, (x0 - rt0) / (rt1 - rt0) * A.nrt, (mzB - y1) / A.dmz, (x1 - x0) / (rt1 - rt0) * A.nrt, (y1 - y0) / A.dmz, M.l, M.t, pw, ph);
   const X = v => M.l + (v - x0) / (x1 - x0) * pw, Yv = v => H - M.b - (v - y0) / (y1 - y0) * ph;
@@ -1593,7 +1656,37 @@ async function drawMap(p) {
   p._a.hov = (px, py) => {
     const rt = xOf(p, px), mz = mzAt(py), i = Math.min(A.nrt - 1, Math.max(0, Math.floor((rt - rt0) / (rt1 - rt0) * A.nrt))), j = Math.min(A.nmz - 1, Math.max(0, Math.floor((mz - A.mz0) / A.dmz)));
     const v = im.v[i * A.nmz + j];
-    return { px, rt, html: `<b>RT ${rt.toFixed(2)} min · m/z ${mz.toFixed(1)}</b><div>${B ? "differenza" : "intensità media"}: <b>${B && v > 0 ? "+" : ""}${fmt(v)}</b></div><div class="sm">bin m/z ${(A.mz0 + j * A.dmz).toFixed(0)}-${(A.mz0 + (j + 1) * A.dmz).toFixed(0)}</div>` };
+    
+    if (p.view === "cross" && p._cspec && p._cxic) {
+      // Draw mini spectrum (row i)
+      const gs = p._cspec.getContext("2d"), gx = p._cxic.getContext("2d");
+      gs.clearRect(0,0,440,200); gx.clearRect(0,0,440,200);
+      gs.fillStyle = "#1e5abe"; gx.fillStyle = "#1e5abe";
+      
+      const j0 = Math.max(0, Math.floor((y0 - mzA) / A.dmz)), j1 = Math.min(A.nmz - 1, Math.ceil((y1 - mzA) / A.dmz));
+      const idxSpec = i * A.nmz;
+      gs.beginPath(); gs.moveTo(0,200);
+      for(let k = j0; k <= j1; k++) {
+         let val = im.v[idxSpec + k] || 0;
+         let scaled = im.T(val);
+         gs.lineTo((k - j0)/(j1 - j0)*440, 200 - scaled*180);
+      }
+      gs.lineTo(440,200); gs.fill();
+      gs.fillStyle = "#000"; gs.font = "24px sans-serif"; gs.fillText("Spettro @ RT " + rt.toFixed(2), 10, 30);
+      
+      // Draw mini XIC (col j)
+      const i0 = Math.max(0, Math.floor((x0 - rt0) / (rt1 - rt0) * A.nrt)), i1 = Math.min(A.nrt - 1, Math.ceil((x1 - rt0) / (rt1 - rt0) * A.nrt));
+      gx.beginPath(); gx.moveTo(0,200);
+      for(let k = i0; k <= i1; k++) {
+         let val = im.v[k * A.nmz + j] || 0;
+         let scaled = im.T(val);
+         gx.lineTo((k - i0)/(i1 - i0)*440, 200 - scaled*180);
+      }
+      gx.lineTo(440,200); gx.fill();
+      gx.fillStyle = "#000"; gx.font = "24px sans-serif"; gx.fillText("XIC @ m/z " + mz.toFixed(1), 10, 30);
+    }
+    
+    return { px, rt, html: `<b>RT ${rt.toFixed(2)} min · m/z ${mz.toFixed(1)}</b><div>${B ? "differenza" : "intensità media"}: <b>${B && v > 0 ? "+" : ""}${fmt(v)}</b></div><div class="sm">bin m/z ${(A.mz0 + j * A.dmz).toFixed(0)}-${(A.mz0 + (j + 1) * A.dmz).toFixed(0)}</div>` + (p.view === "cross" ? '<div class="sm">Mirino attivo (grafici a lato)</div>' : '') };
   };
   const bar = B ? "linear-gradient(90deg,rgb(190,60,40),#fafaf6,rgb(30,90,190))" : "linear-gradient(90deg,#fafaf6,rgb(120,190,205),rgb(22,120,160),rgb(28,36,110))";
   p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? " meno " + EH(rf.label) : ""}</span><span class="cbar" style="background:${bar}"></span><span class="sm">${B ? "rosso: più intenso qui · blu: più intenso nel riferimento" : "colore = intensità media (scala " + scTxt + ")"}${nTxt}</span><span class="sm">trascina: spettro su quell'intervallo · clic destro: XIC dell'm/z</span>`;
@@ -1908,7 +2001,9 @@ async function drawSpec(p) {
   p.leg.innerHTML = `<span style="font-variant-numeric:tabular-nums">${scanLine(p, data, d0)}${bgOf(files[0]) ? " · fondo sottratto" : ""}</span>`;       // on the row of the x axis title, to the right
   if (isDda) DDA.caption(p);                                // scan, parent, activation, NCE, isolation
   p.leg.title = p.leg.textContent;
-  if (p.leg2) p.leg2.innerHTML = (data.length > 1 ? data.map(x => `<span><i style="background:${x.f.color}"></i>${EH(x.f.label)}${legPol(x.f)}</span>`).join("") : "") + isoNote;   // inside the graph, top right; one file = no legend
+  const multiFiles = scanFiles(tabFiles(p.tab)).length > 1;
+  const showLabel = data.length > 1 || multiFiles;
+  if (p.leg2) p.leg2.innerHTML = (showLabel ? data.map(x => { const lab = x.f.label.length > 25 ? x.f.label.slice(0, 24) + "…" : x.f.label; return `<span><i style="background:${x.f.color}"></i>${EH(lab)}${legPol(x.f)}</span>`; }).join("") : "") + isoNote;
 }
 
 // ------------------------------------------------------------------ mouse
