@@ -6,18 +6,19 @@ const UIP_KEY = "qqq.prefs"; // kept from the old name: renaming it would lose t
 const uipRead = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const uipWrite = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage not available: the setting lasts until the page is closed */ } };
 function uipLoad() {
-  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if ([90, 100, 115, 130].includes(o.font)) UIP.font = o.font; if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.pal; if (o.merge === false) UIP.merge = false;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
+  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.pal; if (o.merge === false) UIP.merge = false;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
   setPal(UIP.pal);
 }
 function uipSave() {
-  const o = { font: UIP.font, theme: UIP.theme, pal: UIP.pal, merge: UIP.merge };
+  const o = { theme: UIP.theme, pal: UIP.pal, merge: UIP.merge };
   if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;         // high resolution: only what differs from the defaults
   uipWrite(UIP_KEY, JSON.stringify(o));
 }
 function uipApply() {
   const r = document.documentElement;
-  r.style.setProperty("--z", UIP.font / 100);
   if (UIP.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", UIP.theme);
+  const tf = document.getElementById("tframe");                // the Teoria (iframe) follows the theme too (it reads it itself when it loads; this is for a change while it is open)
+  if (tf && tf.contentWindow) { try { tf.contentWindow.postMessage({ type: "qqq-theme", theme: UIP.theme }, location.origin); } catch (_) { /* not loaded yet */ } }
   if (typeof setPal === "function") setPal(UIP.pal);
   if (typeof paintFiles === "function" && typeof E !== "undefined") {
     paintFiles();
@@ -36,8 +37,6 @@ function uipOpen(btn) {
   const old = Q("#uipset"); if (old) { old.remove(); return; }
   const d = document.createElement("div"); d.id = "uipset";
   d.innerHTML = `<div class="sm" style="font-weight:600;margin-bottom:6px">Impostazioni</div>
-    <div class="row">Dimensione testo <span class="fz"><button data-f="-1" title="Più piccolo">A&minus;</button><b>${UIP.font}%</b><button data-f="1" title="Più grande">A+</button></span></div>
-    <div class="sm muted" style="margin:-2px 0 4px">Vale anche dentro i grafici; le immagini esportate restano alla dimensione standard.</div>
     <div class="row">Tema <select id="uip-th"><option value="auto">Come il sistema</option><option value="light">Chiaro</option><option value="dark">Scuro</option></select></div>
     <div class="row">Colori dei grafici <select id="uip-pal" title="Per tempo: i file Full Scan con un tempo vanno dal viola scuro al verde in ordine di tempo. Accessibili: colori distinguibili anche con le forme comuni di daltonismo, più linee tratteggiate. Alto contrasto aggiunge anche lo stile della linea. Arcobaleno: tinte ben separate.">${Object.entries(PALS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join("")}</select></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>Unisci i centroidi della stessa massa nominale</span></label>
@@ -51,8 +50,6 @@ function uipOpen(btn) {
   document.body.appendChild(d);
   d.querySelector("#uip-th").value = UIP.theme; d.querySelector("#uip-pal").value = UIP.pal;
   const r = btn.getBoundingClientRect(); d.style.top = r.bottom + 6 + "px"; d.style.left = Math.max(8, Math.min(r.left, innerWidth - d.offsetWidth - 8)) + "px";
-  const steps = [90, 100, 115, 130];
-  d.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { const i = Math.max(0, Math.min(steps.length - 1, steps.indexOf(UIP.font) + +b.dataset.f)); UIP.font = steps[i]; d.querySelector("b").textContent = UIP.font + "%"; uipSave(); uipApply(); });
   d.querySelector("#uip-merge").onchange = e => {            // spectra are asked again to the server with / without the merge
     UIP.merge = e.target.checked; uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof redrawAll === "function") redrawAll();
