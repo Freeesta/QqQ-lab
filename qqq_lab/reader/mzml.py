@@ -25,6 +25,9 @@ _ANALYZERS = ("FTMS", "ITMS", "TOFMS", "TQMS", "SQMS")      # first token of a T
 _RX_REF = re.compile(r'<precursor\b[^>]*?spectrumRef="([^"]*)"')
 _RX_ICREF = re.compile(r'<scan\b[^>]*?instrumentConfigurationRef="([^"]*)"')
 _RX_ACT = re.compile(r"@(hcd|cid|etd|ecd|pqd|uvpd)", re.I)
+_RX_PATH = re.compile(r"(\d+\.\d+)@([a-z]+)(\d+\.\d+)", re.I)       # one stage of the fragmentation path in a Thermo filter string
+_RX_PREC = re.compile(r"<precursor\b([^>]*)>(.*?)</precursor>", re.S)      # not <precursorList>: \b does not split "precursorList"
+_RX_SREF = re.compile(r'spectrumRef="([^"]*)"')
 
 
 def _cv(header: str, accession: str):
@@ -41,6 +44,46 @@ def _float(s):
         return float(s)
     except (TypeError, ValueError):
         return None
+
+
+_RX_PCV = re.compile(r'accession="(MS:1000(?:827|828|829|744|041|045|042))"[^>]*?value="([^"]*)"')
+
+
+def _precursor_element(e: str, ref: str | None) -> dict:
+    """One <precursor>: isolation target and absolute limits, selected ion, charge, spectrumRef, activation, collision energy, intensity."""
+    v = {acc: _float(val) for acc, val in reversed(_RX_PCV.findall(e))}        # reversed: the first occurrence wins
+    tgt, off_lo, off_hi, ch = v.get("MS:1000827"), v.get("MS:1000828"), v.get("MS:1000829"), v.get("MS:1000041")
+    return {"target": tgt, "lo": None if tgt is None or off_lo is None else tgt - off_lo, "hi": None if tgt is None or off_hi is None else tgt + off_hi,
+            "selected": v.get("MS:1000744"), "charge": int(ch) if ch else None, "ref": ref,
+            "act": "HCD" if 'accession="MS:1000422"' in e else "CID" if 'accession="MS:1000133"' in e else "ETD" if 'accession="MS:1000598"' in e else None,
+            "ce": v.get("MS:1000045"), "pint": v.get("MS:1000042")}
+
+
+def _filter_path(filt: str):
+    """Fragmentation path of a Thermo filter string ("... ms3 317.0000@cid25.00 261.0000@cid30.00 [..]"): ((m/z, "CID", 25.0), ...), or None."""
+    if "@" not in filt:
+        return None
+    return tuple((float(a), b.upper(), float(c)) for a, b, c in _RX_PATH.findall(filt)) or None
+
+
+def _path_key(path) -> tuple:
+    """A path compared on nominal masses (MSn filter strings carry 244.0000, the DDA ones 244.0744)."""
+    return tuple((round(m), a, ce) for m, a, ce in path)
+
+
+def _immediate(precs: list, path, level: int, level_of: dict):
+    """The <precursor> that is the direct parent of the scan. Never trust the order: ThermoRawFileParser writes the nearest generation first,
+    MSConvert can write it last, and the list is incomplete (generations without a spectrum in the file are missing)."""
+    if not precs:
+        return None
+    if path:
+        for e in precs:
+            if any(v is not None and abs(v - path[-1][0]) <= 0.01 for v in (e["target"], e["selected"])):
+                return e
+    for e in precs:
+        if e["ref"] and level_of.get(e["ref"]) == level - 1:
+            return e
+    return precs[0]
 
 
 # Files above this size, or mounted from a browser Blob (WORKERFS, which cannot be memory-mapped), are read with _FileBuf
@@ -128,6 +171,10 @@ class Scan:
     res: float | None = None           # mass resolving power of the scan (MS:1000800)
     an: str | None = None              # analyzer: FTMS / ITMS / TOFMS / TQMS / SQMS, or "?" (see Run._analyzer)
     pint: float | None = None          # intensity of the selected ion in the survey scan (MS:1000042)
+    # --- MSn (levels >= 2): the whole fragmentation path and every <precursor> of the file ---
+    path: tuple | None = None          # ((m/z, "HCD"|"CID"|..., collision energy), ...) from the filter string, one item per stage; None = the filter has none
+    precursors: list = field(default_factory=list)   # every <precursor>, in file order: {target, lo, hi, selected, charge, ref, act, ce, pint}
+    charge: int | None = None          # charge of the immediate precursor, when the file says it
 
 
 @dataclass
@@ -198,17 +245,28 @@ class Run:
         return self._ic.get(ic_ref or "", self._ic.get(self._ic_default or "", "?"))
 
     def _link_parents(self, refs: dict):
-        """Parent of every MS2: the Full Scan its spectrumRef names; when that is missing, the last MS1 before it with the same polarity."""
+        """Parent of every MSn scan. MS2: the Full Scan its spectrumRef names; when that is missing, the last MS1 before it with the same polarity.
+        MS3 and above: the last scan of the level below whose path is this path without its last stage (nominal masses); without a path, the scan the
+        spectrumRef names if it is one level below; otherwise None (in a direct infusion the generations between are often not in the file)."""
         by_native = {s.native: s.index for s in self.scans}
         last: dict = {}
+        last_path: dict = {}
         for s in self.scans:
             if s.level == 1:
                 last[s.polarity] = s.index
-            elif s.level > 1:
+                continue
+            if s.level == 2:
                 ref = refs.get(s.index)
                 s.parent = by_native.get(ref) if ref else None
                 if s.parent is None:
                     s.parent = last.get(s.polarity, last.get(0))
+            elif s.path:
+                s.parent = last_path.get((s.level - 1, _path_key(s.path[:-1])))
+            else:
+                j = by_native.get(refs.get(s.index))
+                s.parent = j if j is not None and self.scans[j].level == s.level - 1 else None
+            if s.path:
+                last_path[(s.level, _path_key(s.path))] = s.index
         self.hr1 = bool(mass_profile([s for s in self.scans if s.level == 1])["hr"])        # high-resolution survey scans (used to size the peak table)
 
     def _count(self, pat: bytes) -> int:
@@ -224,7 +282,7 @@ class Run:
 
     # ------------------------------------------------------------------ index
     def _index(self):
-        mm, pos, refs = self._mm, 0, {}
+        mm, pos, refs, level_of = self._mm, 0, {}, {}
         while True:
             a = mm.find(b"<spectrum ", pos)
             if a < 0:
@@ -243,35 +301,45 @@ class Run:
             m_rt = re.search(r'accession="MS:1000016"[^>]*unitName="([^"]*)"', h)
             if m_rt and m_rt.group(1).startswith("second"):
                 rt /= 60.0
-            prec = _float(_cv(h, "MS:1000744"))
-            if prec is None:
-                prec = _float(_cv(h, "MS:1000827"))
             lvl_i = int(float(lvl)) if lvl else 1
             hs = h.split("<precursorList", 1)[0]                   # what belongs to the scan itself, not to its precursor (a "ms level" there is the parent's)
             filt = _cv(hs, "MS:1000512") or ""
-            iso = act = pint = None
+            prec = iso = act = pint = path = imm = None
+            precs, ce = [], None
             if lvl_i > 1:
-                tgt = _float(_cv(h, "MS:1000827"))
-                tgt = prec if tgt is None else tgt
-                if tgt is not None:
-                    lo, hi = _float(_cv(h, "MS:1000828")), _float(_cv(h, "MS:1000829"))
-                    iso = (tgt - (0.5 if lo is None else lo), tgt + (0.5 if hi is None else hi))
-                act = "HCD" if 'accession="MS:1000422"' in h else "CID" if 'accession="MS:1000133"' in h else "ETD" if 'accession="MS:1000598"' in h else None
+                path = _filter_path(filt)
+                precs = [_precursor_element(me.group(2), (_RX_SREF.search(me.group(1)) or [None, None])[1]) for me in _RX_PREC.finditer(h)]
+                if not precs and ("MS:1000744" in h or "MS:1000827" in h):      # precursor values outside any <precursor> element
+                    precs = [_precursor_element(h, None)]
+                imm = _immediate(precs, path, lvl_i, level_of)
+                if imm is not None:
+                    prec = imm["selected"] if imm["selected"] is not None else imm["target"]
+                    tgt = imm["target"] if imm["target"] is not None else prec
+                    if tgt is not None:
+                        lo = 0.5 if imm["lo"] is None or imm["target"] is None else imm["target"] - imm["lo"]
+                        hi = 0.5 if imm["hi"] is None or imm["target"] is None else imm["hi"] - imm["target"]
+                        iso = (tgt - lo, tgt + hi)
+                    act, pint = imm["act"], imm["pint"]
+                    ce = imm["ce"]
                 if act is None:
                     ma = _RX_ACT.search(filt)
-                    act = ma.group(1).upper() if ma else None
-                pint = _float(_cv(h, "MS:1000042"))
-                mr = _RX_REF.search(h)
-                if mr:
-                    refs[len(self.scans)] = mr.group(1)
+                    act = (path[-1][1] if path else ma.group(1).upper() if ma else None)
+                ref = next((e["ref"] for e in precs if e["ref"]), None)
+                if ref:
+                    refs[len(self.scans)] = ref
+            if ce is None and "MS:1000045" in h:
+                ce = _float(_cv(h, "MS:1000045"))
             mi = _RX_ICREF.search(hs)
             self.scans.append(Scan(
                 index=len(self.scans), native=m.group(1) if m else "", start=a, end=b,
                 level=lvl_i, rt=rt, polarity=pol,
                 tic=_float(_cv(h, "MS:1000285")) or 0.0, precursor=prec,
-                collision_energy=_float(_cv(h, "MS:1000045")), filter=filt,
+                collision_energy=ce, filter=filt,
                 profile='accession="MS:1000128"' in h, iso=iso, act=act, res=_float(_cv(hs, "MS:1000800")), pint=pint,
-                an=self._analyzer(filt, mi.group(1) if mi else None)))
+                an=self._analyzer(filt, mi.group(1) if mi else None),
+                path=path, precursors=precs, charge=imm["charge"] if imm else None))
+            if m:
+                level_of[m.group(1)] = lvl_i
             pos = b
         self._link_parents(refs)
 
