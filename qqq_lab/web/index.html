@@ -194,9 +194,12 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
 <div id="loading"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><div id="ldmsg"></div><div id="ldsub"></div></div>
 <script>
 const PHRASES = [
-  "Ignorando i warning", "Schivando gli ftalati", "Minando crypto di nascosto", "Litigando coi file", "Allineando i quadrupoli",
-  "Compilando preghiere", "Aggiornando Matrix", "Cercando il segnale perduto", "Riavviando l'universo", "Ansia da separazione",
-  "Contaminando la sorgente", "Accecando l'elettromoltiplicatore", "Maledicendo la matrice", "Cuocendo sui quadrupoli"];
+  "Ignorando i warning", "Schivando gli ftalati", "Minando crypto di nascosto", "Litigando coi raw",
+  "Aggiornando Matrix", "Riavviando l'universo", "Ansia da separazione", "Contaminando la sorgente",
+  "Accecando l'elettromoltiplicatore", "Maledicendo la matrice", "Cuocendo i quadrupoli",
+  "Contando fino a 6,022 × 10²³", "Non accettando Δx · Δp ≥ ℏ/2", "Iniettando H₂O nel GC",
+  "Contaminando con PEG", "Sporcando la sorgente"
+];
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
 let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
 function ldNext() {
