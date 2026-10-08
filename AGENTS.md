@@ -69,6 +69,7 @@ Unico documento per gli agenti. Descrive lo STATO ATTUALE (la storia è in git: 
 
 ### Caricamenti (misurati sul sito costruito, linea simulata 20 Mbit/s)
 - Subito: solo il motore (~10 MB compressi, serve alla vista Dati); durante l'avvio c'è «Intanto leggi la Teoria». Dopo, nei momenti liberi: le cose sotto 1 MB (Teoria, OpenChemLib). Ketcher (8,7 MB compressi) quando il mouse passa su «Disegno», o da libero solo con connessione veloce e senza risparmio dati. File di esempio solo col pulsante. L'avvio resta ~4-5 s anche alla seconda visita: è la compilazione di Python, non la rete.
+- Le frasi della schermata di caricamento (`PHRASES`, `ldNext`) sono in uno script in linea subito dopo `#loading` in `index.html`: compaiono al primo disegno della pagina, prima dei ~600 kB di script classici. Non spostarle in `explore.js`.
 
 ## 6. Fatti sui dati
 - Analyst 1.6.3; il programma legge solo mzML (conversione con ProteoWizard MSConvert su Windows, istruzioni nella schermata di carico; consigliato il profilo).
@@ -89,7 +90,7 @@ Unico documento per gli agenti. Descrive lo STATO ATTUALE (la storia è in git: 
 - Le anteprime dei link (WhatsApp ecc.) restano in cache presso l'app di messaggistica: provare con `?v=2`.
 
 ## 9. Lavori aperti
-- **CI rossa su WebKit-macOS** (`e2e3`, anche su `main`): ora il job stampa il log del test: leggerlo e correggere. Firefox: l'avviso «Layout was forced…» è ignorato da `BENIGN`; controllare che il giro torni verde.
+- **CI**: verde su tutti i browser dall'8/10/2026 (Firefox e WebKit-macOS lo sono tornati dopo la PR #18). Se un giro di prova torna rosso, il job stampa la coda del log: leggerlo con `get_job_logs`.
 - **Compatibilità e velocità** (C3-C4 del vecchio prompt 4): tasti scritti giusti per sistema (⌘ sul Mac, Ctrl altrove), canvas nitidi con `devicePixelRatio` 1,25/1,5, nomi di file con caratteri accentati, funzioni JS assenti in Safari 16.4; poi accelerare partendo dai tempi più lunghi misurati con `?perf` (file in profilo: XIC dei 7 Full Scan 2,9 s in profilo contro 0,6 s in centroidi).
 - **Librerie, D6**: «Cerca tutte le MS2 del file» (comando `searchAll` del worker già pronto; manca l'interfaccia che legge le MS2 con `/api/dda` e `/api/scan`).
 - **Test più veloci**: sostituire le pause fisse rimaste negli e2e più lunghi (e2e6, e2e24, e2e7, e2e_hr_dda, e2e_studenti) con `ready(pg)` o attese di condizioni; accorpare i test piccoli nati per sessione che caricano gli stessi file (ognuno paga ~10 s di avvio).
