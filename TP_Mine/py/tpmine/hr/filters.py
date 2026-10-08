@@ -37,7 +37,7 @@ def split_columns(times, types=None) -> tuple[np.ndarray, np.ndarray]:
     return np.flatnonzero(ref), np.flatnonzero(tr)
 
 
-def reference_area(al: Alignment, ref_feats: list[Features], ppm: float = 5.0, rt_tol: float = 0.3) -> np.ndarray:
+def reference_area(al: Alignment, ref_feats: list[Features], ppm: float = 5.0, rt_tol: float = 0.15) -> np.ndarray:
     """For every group, the largest area of a feature of the reference files within `ppm` and `rt_tol` minutes of the group (artefacts excluded).
     Independent of how the groups were cut: a feature of the dark file that sits beside the group counts as 'already there'."""
     out = np.zeros(len(al))
@@ -108,12 +108,12 @@ def flat_mask(treated_area: np.ndarray, ratio: float = 3.0, min_present: int = 2
 
 
 def run_filters(al: Alignment, feats: list[Features], times, types=None, parent_ion: dict | None = None, *, fold: float = 5.0, min_treated: int = 2,
-                rt_min: float = 0.7, min_height: float = 2e5, ppm: float = 5.0, rt_tol: float = 0.3, feasible_ppm: float = 3.0, flat_ratio: float = 3.0, flat_min_present: int = 2) -> Funnel:
+                rt_min: float = 0.7, min_height: float = 2e5, ppm: float = 5.0, rt_tol: float = 0.15, feasible_ppm: float = 3.0, flat_ratio: float = 3.0, flat_min_present: int = 2, isf_masses=None, parent_rt: float | None = None) -> Funnel:
     """Steps (the count after each is in `Funnel.steps`):
     1. fold = largest treated area / (largest reference area + eps) > `fold`, in at least `min_treated` treated samples, RT after `rt_min`;
     2. isotopologues (13C, 34S, 18O of a stronger feature with the same apex) removed;
     3. formula feasibility against the parent (if a parent ion is given): a formula within 3 ppm that a product can have;
-    4. flat profiles (max / min over the treated < `flat_ratio`) removed."""
+    4. flat profiles (max / min over the treated < `flat_ratio`) removed, except the masses of the parent's fragments next to the parent (`isf_masses`, `parent_rt`)."""
     ref_c, tr_c = split_columns(times, types)
     if len(tr_c) == 0:
         raise ValueError("servono campioni trattati (tempo > 0) per cercare ciò che compare con il trattamento")
@@ -135,7 +135,10 @@ def run_filters(al: Alignment, feats: list[Features], times, types=None, parent_
         space, _ = tp_space(parent_ion)
         idx = idx[formula_feasible(al.mz[idx], space, feasible_ppm)]
         steps.append({"name": "formula", "text": f"con una formula possibile derivata dal progenitore ({feasible_ppm:g} ppm)", "n": int(len(idx))})
-    idx = idx[~flat_mask(al.area[idx][:, tr_c], flat_ratio, flat_min_present)]
+    flat = flat_mask(al.area[idx][:, tr_c], flat_ratio, flat_min_present)
+    if isf_masses is not None and len(isf_masses) and parent_rt is not None:
+        flat &= ~isf_coincident(al, idx, isf_masses, parent_rt)       # a mass of the parent's fragments beside the parent: a product seen in two samples is not told from noise, it is flagged
+    idx = idx[~flat]
     steps.append({"name": "piatti", "text": f"senza profili piatti (massimo/minimo < {flat_ratio:g})", "n": int(len(idx))})
     return Funnel(idx=idx, steps=steps, fold=fl, reference=ref, n_treated=ntr, isotopologue=isomask)
 

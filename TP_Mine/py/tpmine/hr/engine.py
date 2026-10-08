@@ -170,7 +170,8 @@ class ExperimentHR:
         if self.sess_factors["applied"]:
             self.warnings.append("le sessioni di misura differiscono: le aree sono state riportate alla sessione di riferimento")
         self.funnel = FL.run_filters(self.al, self.feats, self.times, types, self.ion, fold=self.s["fold"], min_treated=self.s["min_treated"], rt_min=self.s["rt_min"],
-                                     min_height=self.s["min_height"], flat_min_present=self.s["flat_min_present"])
+                                     min_height=self.s["min_height"], flat_min_present=self.s["flat_min_present"],
+                                     isf_masses=self.isf_masses, parent_rt=self.parent_rt_hint)
         self.ref_c, self.tr_c = FL.split_columns(self.times, types)
         self.timing["filtri"] = round(time.perf_counter() - t, 2)
         # parent: area per file (saturation), peak limits
