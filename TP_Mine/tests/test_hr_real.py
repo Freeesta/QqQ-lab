@@ -270,3 +270,47 @@ def test_ms2_of_a_feature_and_coeluting_isomers():
         assert ok, f"no component matches {exp}"
         remaining.remove(ok[0])
     assert not remaining
+
+
+# ---------------------------------------------------------------------------------------------------------------------- WP8: similarity
+@need
+def test_similarity_hcd_against_hcd_and_against_cid(msn_tree):
+    import glob
+    import re
+    import numpy as np
+    from tpmine.hr import similarity as SM
+    from tpmine.hr import spectra as SP
+    cfg = json.loads(MSN_TRUTH.read_text(encoding="utf-8"))["similarity"]
+    truth = json.loads(TRUTH.read_text(encoding="utf-8"))
+    _, _, tree, _ = msn_tree
+    files = sorted(glob.glob(str(DATI / "HRMS" / "*" / "*TiO2*.mzML")), key=lambda f: float(re.search(r"t(\d+)min", f).group(1)) if re.search(r"t(\d+)min", f) else -1.0)
+    runs = [Run(f) for f in files]
+    ixs = [SP.index_ms2(r) for r in runs]
+
+    def cons(mz, lo, hi):
+        sel = SP.select_ms2(ixs, mz, [(lo, hi)] * len(files))
+        a, b, _ = SP.read_spectra(runs, sel)
+        return SP.ms2_consensus(a, b)
+    pm = truth["parent"]["mz"]
+    c = cons(pm, *cfg["parent_window"])
+    names, specs, precs = ["parent"], [SM.prepare(c["mz"], c["rel"], pm)], [pm]
+    for tp in truth["tps"]:
+        if tp["id"] in cfg["modified_ids"]:
+            rt = tp["rt_obs"][0]
+            cc = cons(tp["mz"], rt - cfg["window"], rt + cfg["window"])
+            names.append(tp["id"]); specs.append(SM.prepare(cc["mz"], cc["rel"], tp["mz"])); precs.append(tp["mz"])
+    M, W, P = SM.pad(specs, precs)
+    others, sc, nm = SM.one_against_all(M, W, P, 0)
+    print("\nTP vs parent (HCD, HCD):", {names[i]: round(float(s), 2) for i, s in zip(others, sc)})
+    lo, hi = cfg["modified_range"]
+    assert len(sc) == len(cfg["modified_ids"]) and (sc >= lo).all() and (sc <= hi).all() and (nm >= 4).all()
+    nd = tree.node(cfg["cid_node"])
+    cid = SM.prepare([p["mz"] for p in nd["peaks"]], [p["rel"] for p in nd["peaks"]], nd["prec_mz"])
+    M2, W2, P2 = SM.pad([specs[0], cid], [pm, nd["prec_mz"]])
+    parent_cos = float(SM.modified_cosine(M2, W2, P2, [0], [1])[0][0])
+    a, b = cfg["parent_hcd_vs_cid"]
+    print(f"parent HCD vs parent CID (infusion): {parent_cos:.2f}")
+    assert a <= parent_cos <= b
+    M3, W3, P3 = SM.pad([cid] + specs[1:], [nd["prec_mz"]] + precs[1:])
+    _, sc3, _ = SM.one_against_all(M3, W3, P3, 0)
+    assert (sc3 <= cfg["vs_cid_max"]).all() and np.median(sc3) < np.median(sc)
