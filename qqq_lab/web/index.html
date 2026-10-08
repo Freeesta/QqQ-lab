@@ -203,7 +203,7 @@ const PHRASES = [
   "Ignorando i warning", "Schivando gli ftalati", "Minando crypto di nascosto", "Litigando coi raw",
   "Aggiornando Matrix", "Riavviando l'Universo", "Ansia da separazione", "Contaminando la sorgente",
   "Accecando l'elettromoltiplicatore", "Maledicendo la matrice", "Cuocendo i quadrupoli",
-  "Contando fino a 6,022 × 10²³", "Non accettando Δx · Δp ≥ ℏ/2", "Iniettando H₂O nel GC",
+  "Contando fino a 6,022 &times; 10<sup>23</sup>", "Non accettando &Delta;x &middot; &Delta;p &ge; ℏ/2", "Iniettando H<sub>2</sub>O nel GC",
   "Contaminando con PEG", "Niente panico", "Sporcando la sorgente"
 ];
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
@@ -215,7 +215,7 @@ function ldNext() {
     if (ldBag[ldBag.length - 1] === ldLast) ldBag.unshift(ldBag.pop());
   }
   ldLast = ldBag.pop();
-  const el = document.getElementById("ldmsg"); el.textContent = PHRASES[ldLast];
+  const el = document.getElementById("ldmsg"); el.innerHTML = PHRASES[ldLast];
   const dots = document.createElement("span");
   for (let i = 0; i < 3; i++) { const d = document.createElement("span"); d.textContent = "."; dots.appendChild(d); }   // the phrase appears at once with its three dots (a fast load must still show them)
   el.appendChild(dots);
