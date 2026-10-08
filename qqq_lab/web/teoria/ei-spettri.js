@@ -70,20 +70,30 @@ const EISPEC = (() => {
     return `<ul class="eikeys">${it.keys.map(k => `<li><b style="color:${col(TCOL[k.type] || 1)}">m/z ${k.mz}</b> ${ionHtml(k.ion)} <span class="pill">${TYPE[k.type] || k.type}</span> ${EH(k.text)}</li>`).join("")}</ul>`;
   }
 
+  // Each spectrum of a chapter is drawn only when it comes near the screen (chapter 16 has ~40: drawing all of them at once on a
+  // high-density screen would take tens of MB of canvas memory). Before printing, the ones not yet drawn are drawn.
+  function render(el) {
+    if (el.dataset.done) return;
+    el.dataset.done = "1";
+    const it = byId(el.dataset.ei);
+    if (!it) { el.innerHTML = `<p class="note">Spettro «${EH(el.dataset.ei)}» non trovato nei dati (pratica/ei-dati.js).</p>`; return; }
+    const hide = el.dataset.hide === "1", keys = el.dataset.keys === "1";
+    el.innerHTML = `<h4>${hide ? "Composto incognito" : EH(it.name[0].toUpperCase() + it.name.slice(1)) + " · " + ionHtml(it.formula) + " · M = " + it.M}</h4>`;
+    const c = TP.canvas(el, +(el.dataset.h || 230));
+    const draw = () => plot(c, it, { keys });
+    c.onresize = draw; draw();
+    if (el.dataset.table === "1") el.insertAdjacentHTML("beforeend", table(it));
+    if (keys) el.insertAdjacentHTML("beforeend", keysHtml(it));
+    el.insertAdjacentHTML("beforeend", `<p class="src">${source(it)}</p>`);
+    if (hide) el.insertAdjacentHTML("beforeend", `<details class="q"><summary>Soluzione</summary><p><b>${EH(it.name)}</b>, ${ionHtml(it.formula)}.</p>${keysHtml(it)}</details>`);
+  }
   function auto() {
-    document.querySelectorAll(".eispec[data-ei]").forEach(el => {
-      const it = byId(el.dataset.ei);
-      if (!it) { el.innerHTML = `<p class="note">Spettro «${EH(el.dataset.ei)}» non trovato nei dati (pratica/ei-dati.js).</p>`; return; }
-      const hide = el.dataset.hide === "1", keys = el.dataset.keys === "1";
-      el.innerHTML = `<h4>${hide ? "Composto incognito" : EH(it.name[0].toUpperCase() + it.name.slice(1)) + " · " + ionHtml(it.formula) + " · M = " + it.M}</h4>`;
-      const c = TP.canvas(el, +(el.dataset.h || 230));
-      const draw = () => plot(c, it, { keys });
-      c.onresize = draw; draw();
-      if (el.dataset.table === "1") el.insertAdjacentHTML("beforeend", table(it));
-      if (keys) el.insertAdjacentHTML("beforeend", keysHtml(it));
-      el.insertAdjacentHTML("beforeend", `<p class="src">${source(it)}</p>`);
-      if (hide) el.insertAdjacentHTML("beforeend", `<details class="q"><summary>Soluzione</summary><p><b>${EH(it.name)}</b>, ${ionHtml(it.formula)}.</p>${keysHtml(it)}</details>`);
-    });
+    const els = [...document.querySelectorAll(".eispec[data-ei]")];
+    els.forEach(el => { if (!el.style.minHeight) el.style.minHeight = (+(el.dataset.h || 230) + 70) + "px"; });   // keeps the page length stable
+    if (!("IntersectionObserver" in window)) return els.forEach(render);
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); render(e.target); } }), { rootMargin: "600px 0px" });
+    els.forEach(el => io.observe(el));
+    addEventListener("beforeprint", () => els.forEach(render));
   }
   document.addEventListener("DOMContentLoaded", () => { try { auto(); } catch (e) { console.error(e); } });
   return { byId, items, plot, table, source, keysHtml, ionHtml, range, TYPE, TCOL };

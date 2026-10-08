@@ -34,3 +34,5 @@
 .printonly{display:none}
 @media print{.gbar,.wk button,.noprint,#side,#top,.pn{display:none!important}.printonly{display:block}.wk{border:0}}
 .wk .st:empty{display:none}
+.gbar button.pri{background:#0e7490;border-color:#0e7490;color:#fff}
+.wk .duo>div{min-width:0}

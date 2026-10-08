@@ -3,7 +3,9 @@
 // OpenChemLib (same molecule, isomer or wrong formula). Levels 1-4 give feedback at every step; "Modalità orale" asks for the written
 // reasoning and corrects only at the end. Globals from classic scripts: TP (teoria.js), EI_DATA, EISPEC, PAL.
 // These exercises use library compounds with a known answer: they never look at the student's own data files.
-import * as OCL from "../../vendor/openchemlib.js";
+// OpenChemLib (1.1 MB) is loaded only when a structure has to be checked or drawn, Ketcher (30 MB) only when the editor is opened.
+let OCL = null;
+const ocl = async () => OCL || (OCL = await import("../../vendor/openchemlib.js"));
 
 const $ = (q, el = document) => el.querySelector(q);
 const EH = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -84,7 +86,7 @@ function start(it) {
   $("#pts").textContent = "100 punti";
   const g = $("#game"); g.innerHTML = "";
   if (S.chall) g.insertAdjacentHTML("beforeend", `<p class="pill">Sfida ${S.chall.code}: problema ${S.chall.k + 1} di ${S.chall.list.length}</p>`);
-  S.spec = spectrumCard(g, it, { table: S.level !== 4 });
+  S.spec = spectrumCard(g, it, S.oral ? { table: $("#fmt") && $("#fmt").value === "tab", click: false, title: "Spettro EI (70 eV) da interpretare", h: 340 } : { table: S.level !== 4 });
   if (S.oral) return oral(g, it);
   const wk = document.createElement("div"); wk.className = "wk"; g.appendChild(wk);
   wk.innerHTML = `<h3>Scheda di lavoro</h3>
@@ -224,7 +226,8 @@ function stepIons(el) {
 
 // ---- step 4: structure (Ketcher + OpenChemLib)
 function startKetcher(fr) {
-  if (kStart) return kStart;
+  if (kStart && K && fr.contentWindow && fr.contentWindow.ketcher === K) return kStart;
+  K = null;
   kStart = new Promise((resolve, reject) => {
     const on = e => { if (e.source === fr.contentWindow && e.data && e.data.type === "ketcher-ready") { removeEventListener("message", on); K = fr.contentWindow.ketcher; try { const st = fr.contentDocument.createElement("style"); st.textContent = '[data-testid="polymer-toggler"]{display:none!important}'; fr.contentDocument.head.appendChild(st); } catch (_) { /* cosmetic */ } resolve(K); } };
     addEventListener("message", on);
@@ -259,7 +262,7 @@ function stepStructure(el) {
   let wrong = 0;
   $("#k-ok").onclick = async () => {
     let mol;
-    try { mol = await proposal(); } catch (e) { return fb($("#k-fb"), "hi", EH(e.message)); }
+    try { await ocl(); mol = await proposal(); } catch (e) { return fb($("#k-fb"), "hi", EH(e.message)); }
     const want = idOf(it.smiles), got = norm(mol), gf = mol.getMolecularFormula().formula;
     $("#k-mirror").innerHTML = "";
     if (got === want) { fb($("#k-fb"), "ok", `Esatto: <b>${EH(it.name)}</b>.`); return done(el, true, "struttura", wrong ? Math.max(0.4, 1 - 0.2 * wrong) : 1), finish(); }
@@ -279,7 +282,8 @@ function stepStructure(el) {
 }
 
 // ------------------------------------------------------------------ end of a problem
-function solutionSvg(it, w = 260, h = 170) { try { return OCL.Molecule.fromSmiles(it.smiles).toSVG(w, h); } catch (_) { return ""; } }
+const solutionSvg = it => `<div class="solsvg" data-smi="${EH(it.smiles)}"></div>`;
+function fillSvg(root) { ocl().then(O => root.querySelectorAll(".solsvg").forEach(d => { try { d.innerHTML = O.Molecule.fromSmiles(d.dataset.smi).toSVG(260, 170); } catch (_) { /* no drawing */ } })).catch(() => { /* offline file: no drawing */ }); }
 function finish() {
   const it = S.item, R = S.res, total = S.pts;
   const sc = { M: R.M ?? 0, formula: R.formula ?? 0, iso: R.formula ?? 0, meccanismi: R.ioni ?? 0, serie: R.ioni ?? 0, struttura: R.struttura ?? 0 };
@@ -295,6 +299,7 @@ function finish() {
   $("#e-next").onclick = () => { if (S.chall && S.chall.k >= S.chall.list.length) return challengeEnd(); next(); };
   $("#e-fam").onclick = () => { $("#fam").value = it.family; S.chall = null; next(); };
   $("#e-print").onclick = () => print();
+  fillSvg(end);
   S.spec.redraw();
   end.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -306,11 +311,15 @@ function oral(g, it) {
     ["o3", "3. Aspetto generale e famiglia (passi 3.x): serie di ioni, ioni caratteristici"], ["o4", "4. Meccanismi: spiega due o tre ioni importanti"], ["o5", "5. Struttura proposta e verifica (passi 4.x): che cosa la conferma, che cosa resta incerto"]];
   wk.innerHTML = `<h3>Modalità orale</h3><p>Scrivi il ragionamento come lo diresti all'esame, sempre con i numeri dei passi (capitolo 15). Nessun aiuto: la correzione arriva quando consegni. <span id="o-clock" class="pill"></span></p>
     ${sec.map(([id, t]) => `<div class="st"><h4>${t}</h4><textarea id="${id}"></textarea></div>`).join("")}
-    <div class="st"><h4>Formula molecolare e struttura</h4><div class="row"><label>Formula <input id="o-f" class="mono" size="14" spellcheck="false"></label></div>
-    <iframe class="kframe" title="Editor di strutture" sandbox="allow-scripts allow-same-origin allow-modals allow-downloads"></iframe>
-    <div class="row"><label>oppure SMILES <input id="k-smi" class="mono" size="22" spellcheck="false"></label></div></div>
+    <div class="st"><h4>Formula molecolare e struttura</h4><p>All'orale la struttura si disegna a mano sul foglio: fate lo stesso (anche sul foglio stampato) e poi, per la correzione automatica, ridisegnatela nell'editor o scrivetene lo SMILES.</p>
+    <div class="row"><label>Formula <input id="o-f" class="mono" size="14" spellcheck="false"></label><button id="o-ked" class="noprint">Apri l'editor di strutture</button><label>oppure SMILES <input id="k-smi" class="mono" size="22" spellcheck="false"></label></div>
+    <div id="o-kbox"></div><div class="printonly" style="height:9cm;border:1px dashed #999;border-radius:6px;margin-top:8px"><small>Struttura proposta (a mano)</small></div></div>
     <div class="row noprint"><button class="pri" id="o-done">Consegna</button><button id="o-print">Stampa il foglio</button></div><div id="end"></div>`;
-  startKetcher($("iframe", wk)).catch(() => { /* SMILES field remains */ });
+  $("#o-ked").onclick = () => {
+    $("#o-ked").disabled = true;
+    $("#o-kbox").innerHTML = `<iframe class="kframe" title="Editor di strutture" sandbox="allow-scripts allow-same-origin allow-modals allow-downloads"></iframe>`;
+    startKetcher($("#o-kbox iframe")).catch(() => { /* SMILES field remains */ });
+  };
   const t0 = Date.now(), tick = setInterval(() => { const s = Math.floor((Date.now() - t0) / 1000); const el = $("#o-clock"); if (!el) return clearInterval(tick); el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} (all'orale 10-15 minuti)`; }, 1000);
   $("#o-print").onclick = () => print();
   $("#o-done").onclick = async () => {
@@ -318,7 +327,7 @@ function oral(g, it) {
     const f = PAL.parse(it.formula), g2 = PAL.parse($("#o-f").value.trim());
     const fOk = !!g2 && PAL.fstr(g2) === PAL.fstr(f);
     let sOk = false, sMsg = "nessuna struttura";
-    try { const mol = await proposal(); sOk = norm(mol) === idOf(it.smiles); sMsg = sOk ? "giusta" : `non è ${EH(it.name)}`; } catch (_) { /* nothing drawn */ }
+    try { await ocl(); const mol = await proposal(); sOk = norm(mol) === idOf(it.smiles); sMsg = sOk ? "giusta" : `non è ${EH(it.name)}`; } catch (_) { /* nothing drawn */ }
     const vis = mVisible(it), iso = PAL.isoPattern(f);
     const model = [
       `M+2/M ${vis ? `≈ ${pct(ratio(it, it.M, 2))}` : "(M non visibile)"}: ${(f.Cl || f.Br || f.S) ? ["Cl", "Br", "S"].filter(e => f[e]).map(e => `${f[e]} ${e}`).join(", ") + ` (atteso M+2 ≈ ${pct(iso[2])})` : "nessun Cl, Br, S"}; M+1/M ${vis ? `≈ ${pct(ratio(it, it.M, 1))}` : ""} → ${f.C} C. Formula ${PAL.fhtml(f)}, RDB ${PAL.rdb(f)}.`,
@@ -335,6 +344,7 @@ function oral(g, it) {
       <div class="row"><button class="pri keep" id="o-score">Calcola il punteggio</button></div><div class="fb" id="o-fb"></div></div>`;
     const self = {};
     end.querySelectorAll(".opts").forEach(o => o.querySelectorAll("button").forEach(b => b.onclick = () => { o.querySelectorAll("button").forEach(x => x.classList.toggle("right", x === b)); self[o.dataset.i] = +b.dataset.v; }));
+    fillSvg(end);
     $("#o-score").onclick = () => {
       const vals = sec.map((_, i) => self[i] ?? 0), avg = vals.reduce((a, b) => a + b, 0) / vals.length;
       const total = Math.round(100 * (0.2 * fOk + 0.3 * sOk + 0.5 * avg));
@@ -367,8 +377,11 @@ function init() {
   $("#fam").insertAdjacentHTML("beforeend", fams.map(f => `<option value="${f}">${FAMNAME[f] || f}</option>`).join(""));
   if (P.get("fam") && fams.includes(P.get("fam"))) $("#fam").value = P.get("fam");
   if (P.get("orale")) $("#lv").value = "orale";
+  $("#fmtl").hidden = $("#lv").value !== "orale";
   $("#new").onclick = () => { if (S) S.chall = null; $("#chall").innerHTML = ""; next(); };
-  $("#lv").onchange = () => { if (S) S.chall = null; next(); };
+  const fmtVis = () => { $("#fmtl").hidden = $("#lv").value !== "orale"; };
+  $("#lv").onchange = () => { if (S) S.chall = null; fmtVis(); next(); };
+  $("#fmt").onchange = () => { if (S && S.item) start(S.item); };
   $("#fam").onchange = () => { if (S) S.chall = null; next(); };
   if (P.get("sfida") && challenge(P.get("sfida").toUpperCase())) return;
   next(P.get("id"));

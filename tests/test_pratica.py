@@ -53,3 +53,47 @@ def test_engine_elo_spacing_and_codes():
     assert r["th1"] > 0 and r["th2"] < r["th1"] and r["box"] == 1
     assert r["back"] == 123456789 % (32 ** 5) and len(r["code"]) == 5 and r["same"]
     assert r["pick"] == "a"           # with theta = 0 the easier item has p closer to 0.7
+
+
+def run_games(js: str):
+    """Like run(), with the short games (pratica/giochi.js) and the question bank (pratica/domande.js) loaded."""
+    pre = (f"global.PAL=PAL;const GIOCHI=require({json.dumps(str(WEB / 'teoria' / 'pratica' / 'giochi.js'))});"
+           f"const DOMANDE=require({json.dumps(str(WEB / 'teoria' / 'pratica' / 'domande.js'))});")
+    return run(pre + js)
+
+
+def test_question_bank_of_the_oral():
+    r = run_games("return {d: DOMANDE.map(d=>({id:d.id,area:d.area,skill:d.skill,cap:d.cap,n:d.p.length})), skills: Object.keys(PAL.SKILLS)}")
+    ids = [d["id"] for d in r["d"]]
+    assert len(ids) == len(set(ids)) and len(ids) >= 35
+    for d in r["d"]:
+        assert d["area"] in {"sep", "ion", "anal", "hr", "dati", "ei"}, d
+        assert d["skill"] in r["skills"], d
+        assert (WEB / "teoria" / d["cap"]).is_file(), d
+        assert 3 <= d["n"] <= 7, d
+    for area in ("sep", "ion", "anal", "hr", "dati", "ei"):     # the oral simulation draws one question from each group
+        assert sum(d["area"] == area for d in r["d"]) >= 4, area
+
+
+def test_neutral_losses_and_formula_enumeration():
+    r = run_games("""
+      const L = GIOCHI.LOSSES.map(l => [l.f, l.nom, l.ex, !!l.r]);
+      const m = PAL.exact(PAL.parse('C10H14NO2')) - 0.00054858;           // an [M+H]+ ion
+      const c = GIOCHI.enumerate(m, 5).map(x => PAL.fstr(x.f));
+      return {L, c};
+    """)
+    for f, nom, ex, rad in r["L"]:
+        assert nom == round(mass(parse_formula(f))) and abs(ex - mass(parse_formula(f))) < 1e-4, f
+        assert (sum(n for e, n in dict(parse_formula(f)).items() if e in ("H", "Cl", "Br", "F", "N")) % 2 == 1) == rad, f   # radicals: odd count of odd-valence atoms
+    assert "C10H14NO2" in r["c"]
+
+
+def test_quadrupole_stability_boundaries():
+    r = run_games("""
+      const apex = [0.706, GIOCHI.aTop(0.706)], edge = GIOCHI.aTop(0.908);
+      return {apex, edge, k: GIOCHI.KQ, s1: GIOCHI.stable(0.1, 0.5), s2: GIOCHI.stable(0.25, 0.706), w: GIOCHI.windowQ(0)};
+    """)
+    assert abs(r["apex"][1] - 0.237) < 0.002 and abs(r["edge"]) < 0.002
+    assert abs(r["k"] - 0.611) < 0.002                 # r0 = 4 mm, 1 MHz: q = 0.611 V/(m/z)
+    assert r["s1"] and not r["s2"]
+    assert abs(r["w"][1] - 0.908) < 0.002              # RF only: everything up to q = 0.908

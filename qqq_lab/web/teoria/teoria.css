@@ -130,3 +130,5 @@ details.poe summary{cursor:pointer;font-weight:600;color:#0e7490}details.poe[ope
 .eikeys{margin:8px 0 0;padding-left:18px;font-size:14.5px}.eikeys li{margin:3px 0}
 .eigrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.eigrid .eispec{margin:0}@media (max-width:860px){.eigrid{grid-template-columns:1fr}}
 @media print{.eispec{break-inside:avoid}}
+.eq.shut{filter:blur(7px);cursor:pointer;user-select:none}
+@media print{.eq.shut{filter:none}}

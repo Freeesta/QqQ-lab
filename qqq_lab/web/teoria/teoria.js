@@ -27,8 +27,15 @@ const CHAPTERS = [
   ["19-hr-dda.html", "19", "Alta risoluzione e DDA nel programma", "VI. Dal dato al risultato"],
   ["20-disegno.html", "20", "Disegnare le molecole", "VI. Dal dato al risultato"],
   ["21-glossario.html", "21", "Glossario e bibliografia", "Appendice"],
+  ["22-formulario.html", "22", "Formulario per l'orale", "Appendice"],
   ["pratica.html", "P", "Allenarsi per l'orale", "Pratica"],
   ["pratica-ei.html", "P1", "Dallo spettro alla struttura", "Pratica"],
+  ["pratica-orale.html", "P2", "Domande dell'orale", "Pratica"],
+  ["pratica-perdite.html", "P3", "Che cosa ha perso?", "Pratica"],
+  ["pratica-isotopi.html", "P4", "Indovina gli elementi", "Pratica"],
+  ["pratica-formula.html", "P5", "Formula esatta", "Pratica"],
+  ["pratica-strumento.html", "P6", "Carte dello strumento", "Pratica"],
+  ["pratica-quadrupolo.html", "P7", "Pilota il quadrupolo", "Pratica"],
 ];
 const APP = typeof APP_NAME === "string" ? APP_NAME : "mzLab";        // appname.js is loaded first by every page
 CHAPTERS.forEach(c => { c[2] = c[2].split("{APP}").join(APP); });

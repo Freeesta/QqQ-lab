@@ -26,7 +26,7 @@ const PAL = (() => {
 
   // ------------------------------------------------------------------ Elo per skill and item difficulty
   const prob = (th, d) => 1 / (1 + Math.exp(-(th - d)));
-  const LEVELS = [[-Infinity, "da scoprire"], [-0.6, "in crescita"], [0.4, "solida"], [1.4, "esperta"]];
+  const LEVELS = [[-Infinity, "da rinforzare"], [-0.6, "in crescita"], [0.4, "solida"], [1.4, "esperta"]];
   function levelOf(th, n) { if (!n) return "da scoprire"; let l = LEVELS[0][1]; LEVELS.forEach(([t, name]) => { if (th >= t) l = name; }); return l; }
   function skill(id) { const s = load().skills[id] || { th: 0, n: 0 }; return { ...s, level: levelOf(s.th, s.n), name: SKILLS[id] || id }; }
   /** Record a result. game: game id; item: item id; d0: starting difficulty (-1, 0, 1, 2); scores: {skill: 0..1}; total 0..100. */
