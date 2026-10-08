@@ -193,3 +193,37 @@ def test_filters_funnel_recall_and_isf(series_features):
     hits = [m for m in missed for tp in truth["tps"] if tp["id"] == m and res[round(tp["mz"], 4)]["candidate"]]
     assert set(hits) == set(missed), f"products not recovered by the search under the fragment: {set(missed) - set(hits)}"
     assert not res[round(244.0750, 4)]["candidate"]                       # a pure fragment of the parent: not a candidate
+
+
+# ---------------------------------------------------------------------------------------------------------------------- WP6: families
+@need
+def test_families_of_the_parent_and_its_in_source_fragments(msn_tree):
+    import glob
+    import numpy as np
+    from tpmine.hr import iimn
+    _, _, tree, _ = msn_tree
+    truth = json.loads(TRUTH.read_text(encoding="utf-8"))
+    lib = iimn.build_library(tree)
+    assert len(lib) > 100 and all(e["idx"] is not None for e in lib.entries.values())
+    f = [x for x in glob.glob(str(DATI / "HRMS" / "*" / "*TiO2*.mzML")) if "t002min" in x][0]
+    run = Run(f)
+    table = run.table(1, 1)
+    rt0 = truth["parent"]["rt_obs"]
+    t0 = time.perf_counter()
+    win = iimn.window_profiles(table, rt0 - 0.3, rt0 + 0.4)
+    dt = time.perf_counter() - t0
+    pm = truth["parent"]["mz"]
+    fam = iimn.family(win, pm, rt0)
+    c = iimn.collapse(fam)
+    names = {e["name"] for e in c["evidence"]}
+    print(f"\nwindow of {len(win)} profiles in {dt * 1000:.0f} ms; parent family: {sorted(names)}")
+    assert dt < 1.0 and len(win) > 1000 and "[M+Na]+" in names and "13C" in names and c["role"] == "ion"
+    # the fragments of the parent that the MSn tree knows are explained as in-source fragments when they follow the parent
+    found = 0
+    for mz in sorted({round(float(m), 4) for m in lib.masses() if 150 < m < pm - 20}):
+        fm = iimn.family(win, mz, rt0, parent_mz=pm, library=lib)
+        if fm and iimn.collapse(fm)["role"] == "loss":
+            found += 1
+    assert found >= 2
+    # the artefacts of the Fourier transform around the intense parent are recognised
+    assert win.artefact.sum() >= 1
