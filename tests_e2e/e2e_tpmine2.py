@@ -59,7 +59,7 @@ try:
         def hr():
             sys.path[:0] = [str(SRC / "tests"), str(SRC / "py"), str(ROOT)]
             import lc_synth, msn_synth                                          # synthetic caffeine series (TP_Mine/tests): the HR mode end to end
-            d = Path(tempfile.mkdtemp()); fs = lc_synth.write_series(d); mf = msn_synth.write_msn(d / "cafe_msn.mzML", msn_synth.caffeine_nodes())
+            d = Path(tempfile.mkdtemp()); fs = lc_synth.write_series(d, hidden_isf=True); mf = msn_synth.write_msn(d / "cafe_msn.mzML", msn_synth.caffeine_nodes())
             pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
             for _ in range(5): pg.click('button.hq[data-help="header"]')
             pg.wait_for_selector("#qt-dlg[open]"); pg.fill("#qt-pw", pw); pg.click("#qt-go"); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
@@ -75,6 +75,13 @@ try:
             pg.click("#hr-t tr.clk:has-text('C8H11N4O3')"); pg.wait_for_selector("#hr-ms2", timeout=60000); pg.wait_for_timeout(500)
             assert pg.evaluate("document.getElementById('hr-kin').width") > 0 and pg.evaluate("document.getElementById('hr-ms2').width") > 0
             assert "Criteri" in pg.inner_text("#tp-det") and "Cinetica per sessione" in pg.inner_text("#tp-det")
+            neg = pg.evaluate("[...document.querySelectorAll('#hr-t tr.clk')].map(t => +t.dataset.id).filter(i => i < 0).length")
+            assert neg == 1, neg                                                  # the row hidden under an in-source fragment
+            pg.click("#hr-t tr.clk[data-id^='-']"); pg.wait_for_function("document.querySelector('#tp-det').innerText.includes('C6H8N3O')", timeout=60000)
+            assert "possibile TP coeluente con un ISF" in pg.inner_text("#hr-t")
+            pg.select_option("#hr-ord", "level"); pg.wait_for_selector("#hr-t tr.clk")
+            with pg.expect_download(timeout=60000) as dlc: pg.click("#hr-x-csv")
+            assert "C6H8N3O" in Path(dlc.value.path()).read_text(encoding="utf-8")
             with pg.expect_download(timeout=120000) as dl: pg.click("#hr-x-xlsx")
             import zipfile; z = zipfile.ZipFile(dl.value.path()); assert z.testzip() is None and any("sheet" in n for n in z.namelist())
             with pg.expect_download(timeout=60000) as dl2: pg.click("#hr-x-incl")

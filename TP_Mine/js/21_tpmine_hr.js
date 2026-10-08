@@ -16,7 +16,7 @@
     if (!document.getElementById("tp-hr-css")) { const st = document.createElement("style"); st.id = "tp-hr-css"; st.textContent = CSS; document.head.appendChild(st); }
     const { esc, fmtA, chart, hue, call, toast, dl } = h;
     const $ = q => R.querySelector(q);
-    const rows = s.rows, st = { sel: null, minLevel: 5, text: "", onlyLoc: false, det: {} };
+    const rows = s.rows, st = { sel: null, minLevel: 5, text: "", onlyLoc: false, det: {}, order: "score" };
     const lvRank = l => l === "2b" ? 4 : +l;
     const n = l => rows.filter(r => String(r.level) === l).length;
     const nMs2 = rows.filter(r => r.ms2_scans > 0).length;
@@ -28,7 +28,7 @@
       <div class="card hrn">Ogni riga è un'ipotesi, non un'identificazione: il livello dice quante prove la sostengono (5 compare con il trattamento, 4 formula unica e derivabile, 3 MS² legata al progenitore e regione localizzata, 2b sito determinato con margine, RT e cinetica coerenti). I livelli 2a e 1 richiedono uno standard.</div>
       ${s.warnings.length ? `<div class="card">${s.warnings.map(w => `<div class="flag">⚠ ${esc(w)}</div>`).join("")}</div>` : ""}
       <div class="card"><div class="row"><label class="mut">Livello minimo</label><select id="hr-lv"><option value="5">tutti</option><option value="4">4 o più</option><option value="3">3 o più</option><option value="2b">solo 2b</option></select>
-        <input type="text" id="hr-q" placeholder="filtra: formula, m/z, regione" class="grow"><label><input type="checkbox" id="hr-loc"> solo con regione</label><span class="mut" id="hr-cnt"></span></div>
+        <input type="text" id="hr-q" placeholder="filtra: formula, m/z, regione" class="grow"><label class="mut">Ordina per</label><select id="hr-ord"><option value="score">punteggio</option><option value="level">livello, poi punteggio</option></select><label><input type="checkbox" id="hr-loc"> solo con regione</label><span class="mut" id="hr-cnt"></span></div>
         <div class="tbl"><table id="hr-t"></table></div></div>
       <div id="tp-det"></div>
       <details class="card"><summary>Filtri applicati (imbuto) e sessioni</summary>${s.funnel.map(f => `<div class="mut">${f.n.toLocaleString("it")} · ${esc(f.text)}</div>`).join("")}
@@ -40,13 +40,14 @@
       const mx = Math.max(...series) || 1, w = 70, ht = 18, pts = series.map((v, i) => `${(i / Math.max(1, series.length - 1) * (w - 4) + 2).toFixed(1)},${(ht - 2 - v / mx * (ht - 4)).toFixed(1)}`).join(" ");
       return `<svg width="${w}" height="${ht}"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>`;
     }
-    const keep = () => rows.filter(r => (st.minLevel === 5 || lvRank(r.level) >= lvRank(st.minLevel)) && (!st.onlyLoc || r.region) &&
+    const ordered = () => st.order === "level" ? [...rows].sort((x, y) => lvRank(y.level) - lvRank(x.level) || y.score - x.score) : rows;
+    const keep = () => ordered().filter(r => (st.minLevel === 5 || lvRank(r.level) >= lvRank(st.minLevel)) && (!st.onlyLoc || r.region) &&
       (!st.text || [r.formula, String(r.mz), r.region, r.delta, r.derivation].join(" ").toLowerCase().includes(st.text)));
     function table() {
-      const k = keep();
+      const o = ordered(), k = keep();
       $("#hr-cnt").textContent = `${k.length} di ${rows.length}`;
       $("#hr-t").innerHTML = `<tr><th>#</th><th>Liv.</th><th>Punti</th><th><i>m/z</i></th><th>Formula (ppm)</th><th>Variazione</th><th>RT</th><th>t max</th><th>Classe</th><th>Regione</th><th>Cinetica</th></tr>` +
-        k.map((r, i) => `<tr class="clk${r.id === st.sel ? " sel" : ""}" data-id="${r.id}"><td>${rows.indexOf(r) + 1}</td><td><span class="lvl lvl-${r.level}" title="${esc(LV_TEXT[r.level] || "")}">${r.level}</span></td>
+        k.map((r, i) => `<tr class="clk${r.id === st.sel ? " sel" : ""}" data-id="${r.id}"><td>${o.indexOf(r) + 1}</td><td><span class="lvl lvl-${r.level}" title="${esc(LV_TEXT[r.level] || "")}">${r.level}</span></td>
           <td class="n">${r.score}</td><td class="n">${r.mz.toFixed(4)}</td><td>${esc(r.formula || "-")}${r.ppm != null ? ` <span class="mut">${r.ppm >= 0 ? "+" : ""}${r.ppm}</span>` : ""}${r.n_formulas > 1 ? ` <span class="mut" title="formule possibili entro 3 ppm">(${r.n_formulas})</span>` : ""}</td>
           <td>${esc(r.derivation || r.delta || "")}${r.flags.length ? `<div class="flag">${r.flags.map(esc).join("; ")}</div>` : ""}</td><td class="n">${r.rt}</td><td class="n">${r.tmax ?? ""}</td><td>${esc(r.class || "")}</td>
           <td>${esc(r.region || "")}</td><td>${spark(r.series)}</td></tr>`).join("");
@@ -54,6 +55,7 @@
     }
     $("#hr-lv").onchange = e => { st.minLevel = e.target.value === "2b" ? "2b" : +e.target.value; table(); };
     $("#hr-q").oninput = e => { st.text = e.target.value.trim().toLowerCase(); table(); };
+    $("#hr-ord").onchange = e => { st.order = e.target.value; table(); };
     $("#hr-loc").onchange = e => { st.onlyLoc = e.target.checked; table(); };
     table();
 

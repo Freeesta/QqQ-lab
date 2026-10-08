@@ -28,6 +28,8 @@ onmessage = async ev => {
         py.FS.symlink(dir + "/data", dst);
       } else py.FS.writeFile(dst, new Uint8Array(m.buf));
       postMessage({ id: m.id, result: true });
+    } else if (m.type === "mem") {          // size of the WebAssembly memory: it only grows, so at the end it is the peak of the run (used by the tests)
+      postMessage({ id: m.id, result: { wasm: py._module.HEAPU8.length } });
     } else if (m.type === "call") {
       const r = api[m.fn](...(m.args || []));
       postMessage({ id: m.id, result: typeof r === "string" ? r : String(r) });

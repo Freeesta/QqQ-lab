@@ -149,6 +149,10 @@ class _FileBuf:
         self._fh.close()
         self._buf = b""
 
+    def release(self):
+        """Drop the read-ahead window (the next read fills it again)."""
+        self._off, self._buf = 0, b""
+
 
 @dataclass
 class Scan:
@@ -279,6 +283,11 @@ class Run:
 
     def close(self):
         self._mm.close()
+
+    def release(self):
+        """Give back the memory of a file read with plain reads (the read-ahead window); the index stays. A mapped file has nothing to give back."""
+        if hasattr(self._mm, "release"):
+            self._mm.release()
 
     # ------------------------------------------------------------------ index
     def _index(self):
