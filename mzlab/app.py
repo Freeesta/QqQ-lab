@@ -283,6 +283,12 @@ class App:
             mz, y = merge_unit(mz, y)
         return {"mode": item.spectrum_mode(level), "mz": r3(mz), "y": r1(y)}
 
+    def nearest_scan(self, k: int, rt: float, filter: str | None = None, level: int = 1, precursor: float | None = None) -> dict:
+        ans = self._item(k).nearest_scan(rt, level, precursor, filter)
+        if not ans:
+            raise ValueError("Nessuna scansione in questo file.")
+        return ans
+
     def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None, merge: bool = False, hr: bool = True) -> dict:
         if bg is not None:
             bg = {**bg, "item": self._item(bg["k"])}

@@ -13,9 +13,9 @@ r = Run(port=8894, wd="/tmp/wdhr5")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        load(pg, [D / "HR_DDA-Exploris-t30.mzML", D / "B_FullMass-t0.mzML"], 4000, 3)
+        load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         K = pg.evaluate("E.files.find(f=>f.file==='HR_DDA-Exploris-t30.mzML#MS1').k")
-        Q = pg.evaluate("E.files.find(f=>f.file==='B_FullMass-t0.mzML').k")
+        T0 = None                                                 # the ion trace of the first XIC, kept for the low-resolution session at the end
         def via_dialog(txt):
             pg.evaluate("openXic(null,{})"); pg.wait_for_timeout(400)
             pg.fill("#xic-mz", txt); pg.wait_for_timeout(400)
@@ -27,7 +27,7 @@ try:
             return pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid});return p._a.sr.map(s=>{{const n=s.y.length;let b=0;s.y.forEach((v,i)=>{{if(v>s.y[b])b=i}});const at=t=>{{let j=0;s.x.forEach((v,i)=>{{if(Math.abs(v-t)<Math.abs(s.x[j]-t))j=i}});return Math.max(...s.y.slice(Math.max(0,j-2),j+3))}};return {{k:s.k,rt:s.x[b],max:s.y[b],at9:at(9.0),at12:at(12.0)}}}})}})()")
         def isobars():
             sm, pid = via_dialog("305.0702"); print(sm)
-            assert "ppm" in sm and "305.0702" in sm and "bassa risoluzione" in sm, sm               # high resolution window, plus the unit window for the QqQ file of the tab
+            assert "ppm" in sm and "305.0702" in sm, sm               # high resolution window only (a QqQ file cannot be open together)
             tr = pg.evaluate(f"E.panels.find(q=>q.id=={pid}).traces[0]"); assert tr["ion"] and abs(tr["mz"] - 305.0702) < 1e-6 and "± 5 ppm" in tr["label"], tr
             s = {x["k"]: x for x in series(pid)}; print(s)
             ex = s[K]; assert abs(ex["rt"] - 9.0) < 0.15 and ex["at9"] > 1e6 and ex["at12"] < 1e4, ex           # the isobar at 12.0 min is not in the window
@@ -35,12 +35,13 @@ try:
             s2 = {x["k"]: x for x in series(pid2)}[K]; print(s2)
             assert abs(s2["rt"] - 12.0) < 0.15 and s2["at12"] > 1e6 and s2["at9"] < 1e4, s2
         step("XIC 305.0702 gives the peak at 9.0 min only; 305.1066 the peak at 12.0 min only", isobars)
-        def mixed_files():
+        def hr_args():
+            global T0
             pid = pg.evaluate("E.panels.filter(p=>p.type==='xic')[0].id")
-            a = pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid}),t=p.traces[0];return [HR.xicArgs(E.files[{K}],t,p),HR.xicArgs(E.files[{Q}],t,p)]}})()"); print(a)
-            assert abs(a[0][1] - 305.0702 * 5e-6) < 1e-7, a                      # Orbitrap: 5 ppm
-            assert abs(a[1][0] - 305.3) < 1e-6 and abs(a[1][1] - 0.5) < 1e-6, a   # QqQ: the unit window [304.8, 305.8] of today
-        step("each file uses its own tolerance (ppm for the Orbitrap, unit window for the QqQ)", mixed_files)
+            T0 = pg.evaluate(f"E.panels.find(q=>q.id=={pid}).traces[0]")
+            a = pg.evaluate(f"(()=>{{const p=E.panels.find(q=>q.id=={pid}),t=p.traces[0];return HR.xicArgs(E.files[{K}],t,p)}})()"); print(a)
+            assert abs(a[1] - 305.0702 * 5e-6) < 1e-7, a                      # Orbitrap: 5 ppm
+        step("the Orbitrap file uses its ppm tolerance", hr_args)
         def direct():
             pid = pg.evaluate("(()=>{const p=xicDirect(412.1364);return p.id})()"); pg.wait_for_timeout(1500)
             tr = pg.evaluate(f"E.panels.find(q=>q.id=={pid}).traces[0]"); print(tr)
@@ -57,18 +58,23 @@ try:
             t = pg.evaluate(f"E.panels.find(q=>q.id=={pid}).traces[0]"); print(t)
             assert not t.get("ion") and abs(t["w"] - 0.0005) < 1e-6 and abs(t["mz"] - 412.1365) < 1e-6, t      # an explicit window written by the student
         step("the edges can be edited: they become an explicit window", edit_edges)
-        def off():
+        def no_switch():
+            assert pg.evaluate("UIP.hr === undefined && !HR.on") and not pg.evaluate("!!document.querySelector('#uip-hr')")
             pid = pg.evaluate("E.panels.filter(p=>p.type==='xic')[0].id")
-            pg.evaluate("UIP.hr=false;CACHE.clear();redrawAll()"); pg.wait_for_timeout(2500)
             s = {x["k"]: x for x in series(pid)}[K]; print(s)
-            assert s["at9"] > 1e6 and s["at12"] > 1e6, s                          # unit window: both isobars (the classic behaviour)
-            pg.evaluate("UIP.hr=true;CACHE.clear();redrawAll()"); pg.wait_for_timeout(1000)
-        step("switch «spenta»: both isobars are in the window", off)
+            assert s["at9"] < 1e4 or s["at12"] < 1e4, s                          # the ppm window is the only way: the two isobars are never in one window
+        step("no «Alta risoluzione» switch any more: a high-resolution file is always read in ppm", no_switch)
         def reload():
             pg.evaluate("uiSave(true)"); pg.wait_for_timeout(1500); pg.reload(); pg.wait_for_timeout(7000)
             tr = pg.evaluate("E.panels.filter(p=>p.type==='xic')[0].traces[0]"); print(tr)
             assert tr["ion"] and abs(tr["mz"] - 305.0702) < 1e-6, tr
         step("an ion trace comes back after a reload", reload)
+        def lr_session():
+            pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500)
+            load(pg, [D / "B_FullMass-t0.mzML"], 4000, 1)
+            a = pg.evaluate("(t=>HR.xicArgs(E.files[0],t,{tab:E.tab,tol:0.5}))(%s)" % __import__("json").dumps(T0)); print(a)
+            assert abs(a[0] - 305.3) < 1e-6 and abs(a[1] - 0.5) < 1e-6, a   # QqQ: the unit window [304.8, 305.8] of today
+        step("a QqQ file (its own session) keeps the unit window", lr_session)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

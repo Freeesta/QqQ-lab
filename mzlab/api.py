@@ -68,6 +68,12 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             return _json(app.mrm([int(x) for x in q["k"].split(",") if x]))
         if path == "/api/method":
             return _json(app.method(int(q["k"])))
+        if path == "/api/nearest_scan":
+            return _json(app.nearest_scan(
+                int(q["k"]), float(q["rt"]),
+                filter=q.get("filter"), level=int(q.get("level", 1)),
+                precursor=float(q["precursor"]) if q.get("precursor") else None
+            ))
         if path == "/api/spectrum":
             pr = q.get("precursor")
             bg = None
