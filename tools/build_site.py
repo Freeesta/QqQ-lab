@@ -43,7 +43,7 @@ def check_sha256(path: Path, want: str) -> None:
 APP_NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "web" / "appname.js").read_text(encoding="utf-8")).group(1)
 
 # Address of the published site (GitHub Pages): link previews (WhatsApp, Telegram, Slack...) need ABSOLUTE addresses for the page and the picture
-SITE_URL = "https://freeesta.github.io/QqQ-lab/"
+SITE_URL = "https://freeesta.github.io/mzlab/"
 TAGLINE = "Analisi di dati LC-MS/MS direttamente nel browser"
 DESCRIPTION = "Esplora cromatogrammi, spettri, XIC e MRM dei tuoi file LC-MS/MS nel browser. Nessuna installazione: i dati restano sul tuo computer."
 

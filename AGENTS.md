@@ -1,12 +1,12 @@
-# AGENTS.md - mzLab (repository Freeesta/QqQ-lab (diventerà mzlab), pacchetto mzlab)
+# AGENTS.md - mzLab (repository Freeesta/mzlab, pacchetto mzlab)
 
 Unico documento per gli agenti. Descrive lo STATO ATTUALE (la storia è in git: `git log`, PR su GitHub). Leggilo tutto una volta; poi usa `grep -n` sul codice invece di leggere file interi.
 
 **Non leggere né scansionare** (spreco di token): `mzlab/web/vendor/` (Ketcher 30 MB, OpenChemLib), `mzlab/web/teoria/pratica/ei-dati.js` (dati generati), `mzlab/web/elements.js`, `mzlab/web/teoria/glossario-dati.js`, `mzlab/web/tpmine.enc`, `mzlab/web/esempi/`, `.git/`, `.verifica/`, `tests_e2e/shots/`, `__pycache__/`, `.pytest_cache/`, `*.egg-info/`, `site/`, `../_cestino/`.
 
 ## 1. Il progetto
-- **mzLab** (repository `Freeesta/QqQ-lab` (diventerà `mzlab`), pacchetto `mzlab`; nome visibile mzLab scritto SOLO in `mzlab/web/appname.js`): programma DIDATTICO per l'esperienza 3 del laboratorio di analisi degli inquinanti (UniTO; titolare Federico Cristaudo). Gli studenti analizzano dati LC-MS di un triplo quadrupolo SCIEX 3200 QTRAP (risoluzione unitaria, ESI+) per trovare i prodotti di trasformazione (TP) di un inquinante degradato per fotocatalisi su TiO2 (t = 0-60 min). Legge anche file ad alta risoluzione (Orbitrap, Q-TOF) e DDA.
-- **Distribuzione**: SOLO il sito https://freeesta.github.io/QqQ-lab/ (GitHub Pages, workflow `.github/workflows/pages.yml` a ogni push su `main`). Il programma gira tutto nel browser (Pyodide = Python + numpy in WebAssembly); i file degli studenti non lasciano il loro computer. Nessun tracciamento, nessuna statistica sui visitatori (decisione di Federico, 8/10/2026: massima privacy).
+- **mzLab** (repository `Freeesta/mzlab`, pacchetto `mzlab`; nome visibile mzLab scritto SOLO in `mzlab/web/appname.js`): programma DIDATTICO per l'esperienza 3 del laboratorio di analisi degli inquinanti (UniTO; titolare Federico Cristaudo). Gli studenti analizzano dati LC-MS di un triplo quadrupolo SCIEX 3200 QTRAP (risoluzione unitaria, ESI+) per trovare i prodotti di trasformazione (TP) di un inquinante degradato per fotocatalisi su TiO2 (t = 0-60 min). Legge anche file ad alta risoluzione (Orbitrap, Q-TOF) e DDA.
+- **Distribuzione**: SOLO il sito https://freeesta.github.io/mzlab/ (GitHub Pages, workflow `.github/workflows/pages.yml` a ogni push su `main`). Il programma gira tutto nel browser (Pyodide = Python + numpy in WebAssembly); i file degli studenti non lasciano il loro computer. Nessun tracciamento, nessuna statistica sui visitatori (decisione di Federico, 8/10/2026: massima privacy).
 - **Principi da non violare**:
   1. **Il programma NON dà le risposte** (niente «ecco i TP», niente rette di taratura o tabelle della relazione calcolate: gli studenti le fanno in Excel). Unica eccezione: TP Mine (sez. 7), nascosto e cifrato, solo per Federico.
   2. Leggero e senza build: Python ≥ 3.11 + numpy; front end HTML/JS semplice, nessun bundler, nessuna dipendenza pesante.
