@@ -75,8 +75,9 @@ function hideMacro(fr) {
       'grid-template-areas:"toolbar-top toolbar-top toolbar-top toolbar-top" "toolbar-bottom toolbar-left canvas toolbar-right"!important}' +
       '[class*="App-module_app"] [class*="BottomToolbar-module_root"]{flex-direction:column!important;flex-wrap:nowrap!important;align-self:start;height:auto!important;width:auto!important;padding:8px 0 8px 8px!important;margin:0!important}' +
       '[class*="App-module_app"] [class*="BottomToolbar-module_group"]{flex-direction:column!important;height:auto!important;width:auto!important}' +
-      '[class*="App-module_top"] [data-testid="select-drop-down-button"] { height: 28px !important; width: 28px !important; display: flex; align-items: center; justify-content: flex-start; overflow: hidden !important; border-radius: 4px; align-self: center; padding: 0 !important; position: relative; } ' +
-      '[class*="App-module_top"] [data-testid="select-drop-down-button"] button { height: 28px !important; width: 28px !important; min-width: 28px !important; padding: 0 !important; margin: 0 !important; flex: none !important; border: none !important; background: transparent; } ' +
+      '[class*="App-module_top"] [data-testid="select-drop-down-button"] { width: 28px !important; max-width: 28px !important; height: 28px !important; overflow: hidden !important; border-radius: 4px; align-self: center; padding: 0 !important; margin: 0 !important; display: flex !important; align-items: center !important; justify-content: flex-start !important; } ' +
+      '[class*="App-module_top"] [data-testid="select-drop-down-button"] svg { width: 16px !important; height: 16px !important; margin: 0 0 0 6px !important; flex-shrink: 0 !important; } ' +
+      '[class*="App-module_top"] [data-testid="select-drop-down-button"] svg:nth-of-type(n+2), [class*="App-module_top"] [data-testid="select-drop-down-button"] svg ~ svg { display: none !important; } ' +
       '[class*="App-module_top"] [data-testid="hand"], [class*="App-module_top"] [data-testid="erase"], [class*="App-module_top"] [data-testid="text"] { height: 28px !important; width: 28px !important; display: flex; align-items: center; justify-content: center; align-self: center; border-radius: 4px; padding: 0 !important; } ';
       
 
