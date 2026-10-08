@@ -18,7 +18,17 @@ function uipApply() {
   const r = document.documentElement;
   r.style.setProperty("--z", UIP.font / 100);
   if (UIP.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", UIP.theme);
+  if (typeof setPal === "function") setPal(UIP.pal);
+  if (typeof paintFiles === "function" && typeof E !== "undefined") {
+    paintFiles();
+    if (E.files && E.files.length && typeof renderFileList === "function") renderFileList();
+  }
   if (typeof redrawAll === "function") redrawAll();           // canvases read the colours from the CSS variables
+}
+if (typeof window !== "undefined" && window.matchMedia) {
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (UIP.theme === "auto") uipApply();
+  });
 }
 
 // --- popup of the gear
@@ -31,8 +41,9 @@ function uipOpen(btn) {
     <div class="row">Tema <select id="uip-th"><option value="auto">Come il sistema</option><option value="light">Chiaro</option><option value="dark">Scuro</option></select></div>
     <div class="row">Colori dei grafici <select id="uip-pal" title="Per tempo: i file Full Scan con un tempo vanno dal viola scuro al verde in ordine di tempo. Accessibili: colori distinguibili anche con le forme comuni di daltonismo, più linee tratteggiate. Alto contrasto aggiunge anche lo stile della linea. Arcobaleno: tinte ben separate.">${Object.entries(PALS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join("")}</select></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>Unisci i centroidi della stessa massa nominale</span></label>
+    ${(typeof E !== "undefined" && E.files && E.files.some(f => (window.HR && HR.isHr(f)) || f.kind === "ms2" || f.ms2)) ? `
+    <div class="row">Librerie di spettri <button id="uip-lib" title="Carica le librerie (MSP, MGF) con cui confrontare le MS2: clic destro su uno spettro MS2, «Cerca nelle librerie»">Librerie…</button></div>` : ""}
     ${(typeof E !== "undefined" && E.files && E.files.some(f => window.HR && HR.isHr(f))) ? `
-    <div class="row">Librerie di spettri <button id="uip-lib" title="Carica le librerie (MSP, MGF) con cui confrontare le MS2: clic destro su uno spettro MS2, «Cerca nelle librerie»">Librerie…</button></div>
     <div class="row hr-only" title="Finestra di un XIC e confronto fra m/z nei file ad alta risoluzione (predefinito 5 ppm, come in Thermo FreeStyle)">Tolleranza in alta risoluzione &plusmn; <input type="number" id="uip-ppm" min="1" max="50" step="1" value="${UIP.hrPpm}" style="width:56px"> ppm</div>
     <div class="row hr-only" title="Decimali delle m/z nei file ad alta risoluzione">Decimali in alta risoluzione <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
     ` : ""}
