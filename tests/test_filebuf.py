@@ -7,9 +7,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import dati_sintetici as ds  # noqa: E402
-from qqq_lab.explore import Session  # noqa: E402
-from qqq_lab.reader import mzml  # noqa: E402
-from qqq_lab.reader.mzml import Run, _FileBuf  # noqa: E402
+from mzlab.explore import Session  # noqa: E402
+from mzlab.reader import mzml  # noqa: E402
+from mzlab.reader.mzml import Run, _FileBuf  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -108,8 +108,8 @@ def test_high_resolution_table_is_float32_and_xic_agrees(d):
 
 def test_browser_links_a_mounted_file_like_an_upload(d, tmp_path, monkeypatch):
     """browser.link_big: the worker mounted a Blob under /big (here: a plain folder), Python links it into the work folder."""
-    from qqq_lab import browser
-    from qqq_lab.app import App
+    from mzlab import browser
+    from mzlab.app import App
     work = tmp_path / "sessione"
     mount = tmp_path / "big" / "1"
     mount.mkdir(parents=True)

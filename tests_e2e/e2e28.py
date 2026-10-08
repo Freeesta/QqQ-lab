@@ -2,8 +2,8 @@
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from lib import *
-from qqq_lab.chem.elements import ADDUCT_SHIFT, MASS, ELECTRON, round_half_up
-from qqq_lab import ionfamily
+from mzlab.chem.elements import ADDUCT_SHIFT, MASS, ELECTRON, round_half_up
+from mzlab import ionfamily
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))

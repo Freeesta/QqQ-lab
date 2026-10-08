@@ -2,7 +2,7 @@
 // Settings gear: ONLY three controls (text size, theme, chart colours). Classic script, loaded after explore.js/tabs.js
 // (uses UIP, PALS, setPal, paintFiles, Q, redrawAll from there). Everything is stored in localStorage inside try/catch: it may be blocked
 // (private window, strict settings) and the page must work without it.
-const UIP_KEY = "qqq.prefs";
+const UIP_KEY = "qqq.prefs"; // kept from the old name: renaming it would lose the users' data
 const uipRead = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const uipWrite = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage not available: the setting lasts until the page is closed */ } };
 function uipLoad() {

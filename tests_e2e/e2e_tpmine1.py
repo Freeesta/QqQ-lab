@@ -14,7 +14,7 @@ def step(name, fn):
 
 pw = secrets.token_urlsafe(12)
 tmp = Path(tempfile.mkdtemp())
-enc = ROOT / "qqq_lab" / "web" / "tpmine.enc"
+enc = ROOT / "mzlab" / "web" / "tpmine.enc"
 import atexit; _orig_enc = enc.read_bytes() if enc.exists() else None
 atexit.register(lambda: enc.write_bytes(_orig_enc) if _orig_enc is not None else enc.unlink(missing_ok=True))   # the real tpmine.enc is tracked: put it back
 env = dict(os.environ, TPMINE_PASSWORD=pw)

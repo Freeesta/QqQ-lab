@@ -1,4 +1,4 @@
-"""Pratica (qqq_lab/web/teoria/pratica/motore.js): pure functions run with node, compared with qqq_lab.chem.elements."""
+"""Pratica (mzlab/web/teoria/pratica/motore.js): pure functions run with node, compared with mzlab.chem.elements."""
 import json
 import shutil
 import subprocess
@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from qqq_lab.chem.elements import parse_formula, mass
+from mzlab.chem.elements import parse_formula, mass
 
 ROOT = Path(__file__).resolve().parents[1]
-WEB = ROOT / "qqq_lab" / "web"
+WEB = ROOT / "mzlab" / "web"
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node non installato")
 
 

@@ -1,4 +1,4 @@
-from qqq_lab.chem.elements import normalize_formula, parse_formula, formula_mz
+from mzlab.chem.elements import normalize_formula, parse_formula, formula_mz
 
 
 def test_lower_case_formula():

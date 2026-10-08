@@ -1,5 +1,5 @@
-"""Local server FOR THE TESTS ONLY (tests_e2e/lib.py starts it): it serves the page (qqq_lab/web) and the same API the site answers
-with Pyodide (qqq_lab/api.py). The students never use it: they open the site (GitHub Pages).
+"""Local server FOR THE TESTS ONLY (tests_e2e/lib.py starts it): it serves the page (mzlab/web) and the same API the site answers
+with Pyodide (mzlab/api.py). The students never use it: they open the site (GitHub Pages).
 
     python3 tools/dev_server.py --workdir /tmp/wd --port 8790
 """
@@ -14,8 +14,8 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from qqq_lab.api import dispatch  # noqa: E402
-from qqq_lab.app import App  # noqa: E402
+from mzlab.api import dispatch  # noqa: E402
+from mzlab.app import App  # noqa: E402
 
 STATIC_TYPES = {".html": "text/html", ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf",
                 ".wasm": "application/wasm", ".ico": "image/x-icon", ".js": "text/javascript", ".mjs": "text/javascript", ".json": "application/json",
@@ -23,8 +23,8 @@ STATIC_TYPES = {".html": "text/html", ".woff2": "font/woff2", ".woff": "font/wof
 
 
 def _static(rel: str):
-    """A file under qqq_lab/web (never outside it)."""
-    base = resources.files("qqq_lab") / "web"
+    """A file under mzlab/web (never outside it)."""
+    base = resources.files("mzlab") / "web"
     parts = [p for p in rel.split("/") if p]
     if not parts or any(p in (".", "..") or "\\" in p for p in parts):
         return None
@@ -36,7 +36,7 @@ def _static(rel: str):
 
 
 def _page() -> bytes:
-    return (resources.files("qqq_lab") / "web" / "index.html").read_bytes()
+    return (resources.files("mzlab") / "web" / "index.html").read_bytes()
 
 
 def make_handler(app: App):

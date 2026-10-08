@@ -1,4 +1,4 @@
-"""Tests of qqq_lab.ionfamily on synthetic scenes with known truth (demo.isf_scene) and, when the data are there, on the real files."""
+"""Tests of mzlab.ionfamily on synthetic scenes with known truth (demo.isf_scene) and, when the data are there, on the real files."""
 from __future__ import annotations
 
 import json
@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from qqq_lab import demo, ionfamily as f
+from mzlab import demo, ionfamily as f
 
 OFF = demo.ISF_OFFSET
 ISF_NAMES = {"ISF_H2O", "ISF_big", "ISF_small", "M+1", "M+Na"}
@@ -445,7 +445,8 @@ def test_saturated_parent_is_reported():
 
 # ----------------------------------------------------------------------------------------------------------------------- real data
 def _real_dir():
-    for c in (os.environ.get("QQQ_MZML"), str(Path(__file__).resolve().parents[2] / "Data" / "mzML")):
+    mzml = os.environ.get("MZLAB_MZML", os.environ.get("QQQ_MZML"))
+    for c in (mzml, str(Path(__file__).resolve().parents[2] / "Data" / "mzML")):
         if c and (Path(c) / "B_FullMass-t0.mzML").exists():
             return Path(c)
     return None
@@ -455,8 +456,8 @@ def test_real_flufenacet_series_if_available():
     d = _real_dir()
     if d is None:
         pytest.skip("real mzML not available")
-    from qqq_lab.project import guess_sample
-    from qqq_lab.reader.mzml import Run
+    from mzlab.project import guess_sample
+    from mzlab.reader.mzml import Run
     samples = []
     for p in sorted(d.glob("B_FullMass-t*.mzML")):
         lab, t, _ = guess_sample(p.name)
@@ -470,8 +471,8 @@ def test_real_flufenacet_series_if_available():
 
 def test_api_origin_endpoint(tmp_path):
     import io
-    from qqq_lab import api
-    from qqq_lab.app import App
+    from mzlab import api
+    from mzlab.app import App
     folder = demo.make_demo(tmp_path / "d")
     app = App(tmp_path / "w")
     for x in sorted(folder.glob("demo_t*.mzML")):

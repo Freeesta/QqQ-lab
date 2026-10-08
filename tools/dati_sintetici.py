@@ -218,7 +218,7 @@ def full_scan_profile(path: Path, t: float, rng) -> None:
 
 
 # ---------------------------------------------------------------------------------------------- high resolution (Orbitrap) DDA
-HR_PARENT = "C14H13F4N3O2S"       # formula of the invented "parent" of the HR files (m/z computed with qqq_lab.chem.elements)
+HR_PARENT = "C14H13F4N3O2S"       # formula of the invented "parent" of the HR files (m/z computed with mzlab.chem.elements)
 HR_NAMES = {"exploris": "HR_DDA-Exploris-t30.mzML", "fusion": "HR_DDA-Fusion-t30.mzML", "broken": "HR_rotto-t30.mzML"}
 
 
@@ -272,7 +272,7 @@ def hr_dda(path: Path, rng, kind: str = "exploris", broken: bool = False) -> dic
     250.1234 at 3e4 (RT 11.0), never fragmented; a few other ions and two constant background ions to keep the cycles busy."""
     import sys as _sys
     _sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from qqq_lab.chem.elements import ion_mz, mass, parse_formula
+    from mzlab.chem.elements import ion_mz, mass, parse_formula
     fus, sd = kind == "fusion", 0.8e-6
     mz_par = ion_mz(mass(parse_formula(HR_PARENT)), "[M+H]+")
     sys_ppm = 3e-6 if fus else 0.0

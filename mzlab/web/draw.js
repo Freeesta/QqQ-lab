@@ -190,7 +190,7 @@ const TOOLS = [
   ["atoms", "Atomi generici e tavola estesa", false, ["any-atom", "extended-table"]],
   ["bio", "Biologia: monomeri e modalità macromolecole (peptidi, DNA, RNA)", false, ["create-monomer", "polymer-toggler"]],
 ];
-const TKEY = "qqq.disegno.strumenti";
+const TKEY = "qqq.disegno.strumenti"; // kept from the old name: renaming it would lose the users' data
 function toolChoice() {
   let saved = {}; try { saved = JSON.parse(localStorage.getItem(TKEY) || "{}") || {}; } catch (_) { /* default choice */ }
   return Object.fromEntries(TOOLS.map(([k, , on]) => [k, k in saved ? !!saved[k] : on]));
@@ -444,7 +444,7 @@ const labelsOn = () => Q("#lb-f").checked || Q("#lb-m").checked;
 function drawLabels() {
   if (!K) return;
   const svg = K.editor.render.paper.canvas, doc = svg.ownerDocument, ns = "http://www.w3.org/2000/svg", sc = K.editor.render.options.microModeScale || 40;
-  let g = svg.querySelector("#qqq-labels");
+  let g = svg.querySelector("#qqq-labels"); // kept from the old name: renaming it would break DOM lookups/styles
   if (!g) { g = doc.createElementNS(ns, "g"); g.id = "qqq-labels"; g.setAttribute("pointer-events", "none"); }
   svg.appendChild(g);                                     // always last: drawn above the structure
   g.textContent = "";
@@ -553,7 +553,7 @@ function addExportLabels(svgText, ket) {
   const doc = new DOMParser().parseFromString(svgText, "image/svg+xml"), root = doc.documentElement;
   const vb = (root.getAttribute("viewBox") || "").split(/[\s,]+/).map(Number);
   if (vb.length !== 4 || vb.some(isNaN)) return null;
-  const g = doc.createElementNS(svgNS, "g"); g.setAttribute("id", "qqq-labels");
+  const g = doc.createElementNS(svgNS, "g"); g.setAttribute("id", "qqq-labels"); // kept from the old name: renaming it would break DOM lookups/styles
   let [x0, y0, x1, y1] = [vb[0], vb[1], vb[0] + vb[2], vb[1] + vb[3]];
   const put = (lines, x, y, size, color) => lines.forEach((parts, i) => {
     const yy = y + i * size * 1.3;

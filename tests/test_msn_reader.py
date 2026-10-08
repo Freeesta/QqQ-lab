@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from qqq_lab.reader.mzml import Run
+from mzlab.reader.mzml import Run
 
 
 def _arr(name, acc, v):
@@ -107,11 +107,16 @@ def test_dda_ms2_is_unchanged(tmp_path):
 
 
 def _dati():
-    d = os.environ.get("QQQ_DATI")
-    return Path(d) if d else None
+    d = os.environ.get("MZLAB_DATI", os.environ.get("QQQ_DATI"))
+    if d and Path(d).is_dir():
+        return Path(d)
+    for c in (Path(__file__).resolve().parents[2] / "mzlab-dati", Path(__file__).resolve().parents[2] / "QqQ-lab-dati"):
+        if c.is_dir():
+            return c
+    return None
 
 
-@pytest.mark.skipif(_dati() is None or not list((_dati() or Path()).glob("HRMS/Orbitrap_*_DDApos_*.mzML")), reason="QQQ_DATI: files DDA not available")
+@pytest.mark.skipif(_dati() is None or not list((_dati() or Path()).glob("HRMS/Orbitrap_*_DDApos_*.mzML")), reason="MZLAB_DATI / QQQ_DATI: files DDA not available")
 def test_real_dda_precursor_and_isolation_as_before():
     """Independent oracle: the first selected ion / isolation window of the header, which is what the reader gave before WP0."""
     for f in sorted(glob.glob(str(_dati() / "HRMS" / "Orbitrap_*_DDApos_*.mzML"))):

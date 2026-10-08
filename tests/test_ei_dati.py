@@ -1,4 +1,4 @@
-"""The EI spectra of the Teoria and of the Pratica (qqq_lab/web/teoria/pratica/ei-dati.js, built by tools/genera_ei.py).
+"""The EI spectra of the Teoria and of the Pratica (mzlab/web/teoria/pratica/ei-dati.js, built by tools/genera_ei.py).
 
 The teaching notes ("keys") are written by hand: these checks are the guard against chemistry mistakes. For every key ion:
 nominal mass of its formula (+ delta for an isotope peak) = its m/z; odd/even electrons from the rings-plus-double-bonds value
@@ -11,10 +11,10 @@ from pathlib import Path
 
 import pytest
 
-from qqq_lab.chem.elements import parse_formula, mass
+from mzlab.chem.elements import parse_formula, mass
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "qqq_lab" / "web" / "teoria" / "pratica" / "ei-dati.js"
+DATA = ROOT / "mzlab" / "web" / "teoria" / "pratica" / "ei-dati.js"
 NOMINAL = {"H": 1, "C": 12, "N": 14, "O": 16, "F": 19, "Si": 28, "P": 31, "S": 32, "Cl": 35, "Br": 79, "I": 127}
 ODD = {"M", "mclafferty", "rda", "orto"}                 # mechanisms that give odd-electron ions
 EVEN = {"alpha", "i", "sigma", "tropilio", "serie"}      # simple cleavages: even-electron ions
@@ -100,6 +100,6 @@ def test_no_compound_of_the_lab_methods():
 def test_every_spectrum_cited_in_the_theory_exists():
     import re as _re
     ids = {i["id"] for i in load()["items"]}
-    for page in (ROOT / "qqq_lab" / "web" / "teoria").glob("*.html"):
+    for page in (ROOT / "mzlab" / "web" / "teoria").glob("*.html"):
         for ref in _re.findall(r'data-ei="([^"]+)"', page.read_text(encoding="utf-8")):
             assert ref in ids, (page.name, ref)

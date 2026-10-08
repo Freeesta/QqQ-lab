@@ -1,7 +1,7 @@
 """Adduct shifts: the Python table (elements.ADDUCT_SHIFT) against values worked out by hand, and the same rounding rule used everywhere."""
 import pytest
-from qqq_lab.chem.elements import ADDUCT_SHIFT, MASS, ELECTRON, formula_mz, round_half_up
-from qqq_lab import ionfamily
+from mzlab.chem.elements import ADDUCT_SHIFT, MASS, ELECTRON, formula_mz, round_half_up
+from mzlab import ionfamily
 
 HAND = {   # exact shifts, worked out by hand from the monoisotopic masses (adduct mass minus charge x electron)
     "[M+H]+": 1.00782503 - 0.00054858, "[M+Na]+": 22.98976928 - 0.00054858, "[M+K]+": 38.9637064 - 0.00054858,

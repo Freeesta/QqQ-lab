@@ -1,4 +1,4 @@
-"""Builds qqq_lab/web/teoria/glossario-dati.js from the glossary chapter (21-glossario.html).
+"""Builds mzlab/web/teoria/glossario-dati.js from the glossary chapter (21-glossario.html).
 
 The Teoria pages use it to underline every glossary term in the text and show a short definition when the mouse is over it.
 Edit the glossary in 21-glossario.html, then run from the project root:  python3 tools/genera_glossario.py
@@ -9,7 +9,7 @@ does not fit, EXTRA adds plurals and variants.
 import json, re
 from pathlib import Path
 
-D = Path(__file__).resolve().parents[1] / "qqq_lab" / "web" / "teoria"
+D = Path(__file__).resolve().parents[1] / "mzlab" / "web" / "teoria"
 OVERRIDE = {
     "a, q (parametri di Mathieu)": ["parametri di Mathieu"],
     "Mathieu (equazione di)": ["equazione di Mathieu", "Mathieu"],

@@ -181,7 +181,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     try { const h = await (await root()).getFileHandle("probe.tmp", { create: true }); const a = await h.createSyncAccessHandle(); a.close(); opfsOk = true; } catch (e) { opfsOk = false; }
     return opfsOk;
   }
-  const idb = () => new Promise((ok, no) => { const r = indexedDB.open("mzlab-libs", 1); r.onupgradeneeded = () => r.result.createObjectStore("lib"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+  const idb = () => new Promise((ok, no) => { const r = indexedDB.open("mzlab-libs", 1); /* kept as is: renaming would lose users' libraries */ r.onupgradeneeded = () => r.result.createObjectStore("lib"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
   const idbDo = async (mode, fn) => { const db = await idb(); return new Promise((ok, no) => { const t = db.transaction("lib", mode), s = t.objectStore("lib"), r = fn(s); t.oncomplete = () => { db.close(); ok(r && r.result); }; t.onerror = () => no(t.error); }); };
 
   class Sink {                                  // the packed peaks are written while the file is read (little memory)

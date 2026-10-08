@@ -17,7 +17,7 @@ Apri **https://freeesta.github.io/QqQ-lab/** in un browser recente (Chrome, Edge
 
 - **Dati**: cromatogrammi (TIC, BPC, XIC, MRM), spettri, mappa RT×m/z, schede separate Full Scan / MS2 / MRM, file ad alta risoluzione (Orbitrap, Q-TOF) e DDA; integrazione dei picchi con tabella esportabile in Excel (.xlsx), correzione del fondo, calcolatrice m/z, tavola periodica, addotti, perdite neutre, confronto delle MS2 con librerie di spettri. Le tabelle e i grafici della relazione si costruiscono in Excel.
 - **Disegno**: editor chimico Ketcher per molecole, frammenti e vie di trasformazione, con formula e massa sotto ogni struttura e Δm sopra ogni freccia; gli strumenti visibili si scelgono in «Strumenti dell'editor»; esportazione PNG, JPEG, SVG e .ket.
-- **Teoria**: 22 capitoli in sei parti (dal problema dei TP alla cromatografia, alla ionizzazione, agli analizzatori, alla lettura degli spettri EI e MS2), glossario, bibliografia e formulario per l'orale, con figure interattive. Si apre anche da sola, con doppio clic su `qqq_lab/web/teoria/index.html`.
+- **Teoria**: 22 capitoli in sei parti (dal problema dei TP alla cromatografia, alla ionizzazione, agli analizzatori, alla lettura degli spettri EI e MS2), glossario, bibliografia e formulario per l'orale, con figure interattive. Si apre anche da sola, con doppio clic su `mzlab/web/teoria/index.html`.
 - **Pratica**: dallo spettro EI alla struttura (con Modalità orale), domande dell'orale con simulazione d'esame, perdite neutre, isotopi, formula esatta, scelta dello strumento, quadrupolo. Correzione immediata e ripasso distanziato.
 - La **«i»** in alto apre le informazioni; la guida completa è il capitolo A della Teoria («Come si usa mzLab»).
 
@@ -25,14 +25,14 @@ Con risoluzione unitaria **un m/z è un candidato, non un'identificazione**.
 
 ## Sviluppo
 
-Tutto ciò che serve a chi modifica il programma (regole, architettura, test, decisioni prese) è in [`AGENTS.md`](AGENTS.md). In breve: nessuna compilazione; `python3 tools/verifica.py` esegue tutti i controlli (sintassi JS, pytest, prove nel browser con Playwright); il sito si costruisce con `python3 tools/build_site.py` e si pubblica da solo a ogni push su `main`. Per modificare i testi della Teoria: [`qqq_lab/web/teoria/LEGGIMI.md`](qqq_lab/web/teoria/LEGGIMI.md).
+Tutto ciò che serve a chi modifica il programma (regole, architettura, test, decisioni prese) è in [`AGENTS.md`](AGENTS.md). In breve: nessuna compilazione; `python3 tools/verifica.py` esegue tutti i controlli (sintassi JS, pytest, prove nel browser con Playwright); il sito si costruisce con `python3 tools/build_site.py` e si pubblica da solo a ogni push su `main`. Per modificare i testi della Teoria: [`mzlab/web/teoria/LEGGIMI.md`](mzlab/web/teoria/LEGGIMI.md).
 
 ## Licenze e crediti
 
 Il codice è sotto licenza **MIT** (`LICENSE`, Federico Cristaudo). Materiale di terzi, ciascuno con la sua licenza (testi in [`LICENZE-TERZI.md`](LICENZE-TERZI.md), copiato anche nel sito):
 
-- **Ketcher** 3.18.0 (EPAM Systems), Apache-2.0: `qqq_lab/web/vendor/ketcher/`, https://github.com/epam/ketcher
-- **OpenChemLib JS** 9.25.1 (Zakodium / Actelion), BSD-3-Clause: `qqq_lab/web/vendor/openchemlib.js`, https://github.com/cheminfo/openchemlib-js
+- **Ketcher** 3.18.0 (EPAM Systems), Apache-2.0: `mzlab/web/vendor/ketcher/`, https://github.com/epam/ketcher
+- **OpenChemLib JS** 9.25.1 (Zakodium / Actelion), BSD-3-Clause: `mzlab/web/vendor/openchemlib.js`, https://github.com/cheminfo/openchemlib-js
 - **Pyodide** 314.0.7, MPL-2.0 (Python: licenza PSF), scaricato dalla build del sito: https://github.com/pyodide/pyodide
 - **NumPy** (incluso in Pyodide), BSD-3-Clause: https://numpy.org
 - **Spettri EI** della Teoria e della Pratica: MassBank Europe, CC BY-NC-SA (fonte sotto ogni spettro).

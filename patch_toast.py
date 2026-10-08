@@ -1,6 +1,6 @@
 import sys
 
-fpath_js = "qqq_lab/web/explore.js"
+fpath_js = "mzlab/web/explore.js"
 with open(fpath_js, "r", encoding="utf-8") as f:
     js_content = f.read()
 
@@ -31,7 +31,7 @@ if "window.toast =" not in js_content:
         f.write(toast_func + "\n" + js_content)
     print("Added toast to explore.js")
 
-fpath_html = "qqq_lab/web/index.html"
+fpath_html = "mzlab/web/index.html"
 with open(fpath_html, "r", encoding="utf-8") as f:
     html_content = f.read()
 

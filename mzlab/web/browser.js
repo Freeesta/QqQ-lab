@@ -1,9 +1,10 @@
-// Browser version of QqQ lab (GitHub Pages): there is no server. The calls the page makes to api/... are answered by a
+// Browser version of mzLab (GitHub Pages): there is no server. The calls the page makes to api/... are answered by a
 // Web Worker that runs the same Python code inside Pyodide. The student's files stay in the memory of this page (and in
 // the browser's own storage, to resume after a reload): nothing is uploaded anywhere.
 // This script is added to index.html only by tools/build_site.py; the local program does not load it.
 (() => {
-  window.QQQ_BROWSER = true;
+  window.MZLAB_BROWSER = true;
+  window.QQQ_BROWSER = true; // kept from the old name: backward compatibility
   const SRC = document.currentScript.src;
   // an old browser cannot run the engine: say it clearly instead of staying blank
   const modern = !!(window.Worker && window.WebAssembly && window.indexedDB && window.Promise && window.Response);
@@ -21,7 +22,7 @@
   // technical steps go to the console only (the screen shows just the funny phrases); an ERROR replaces the phrase, clearly, in Italian
   // for the ?perf meter (perf.js loads later: what happens before it is kept here and picked up by it)
   const perfMark = t => { if (window.PERF) PERF.mark(t); else if (/[?&]perf\b/.test(location.search)) (window.PERF_EARLY = window.PERF_EARLY || []).push([performance.now(), t]); };
-  const step = t => { window.qqStep = t; console.debug("[QqQ lab]", t); perfMark(t); };
+  const step = t => { window.qqStep = t; console.debug("[mzLab]", t); perfMark(t); };
   const fail = t => { window.qqFailed = t; const show = () => { const m = document.getElementById("ldmsg"), s = document.getElementById("ldsub"); if (m) m.textContent = t; if (s) s.textContent = ""; }; show(); document.addEventListener("DOMContentLoaded", show); };
   document.addEventListener("DOMContentLoaded", () => step(window.qqStep));
 

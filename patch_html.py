@@ -1,7 +1,7 @@
 import sys
 import re
 
-fpath = "qqq_lab/web/index.html"
+fpath = "mzlab/web/index.html"
 with open(fpath, "r", encoding="utf-8") as f:
     content = f.read()
 

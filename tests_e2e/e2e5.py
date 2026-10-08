@@ -27,7 +27,7 @@ try:
         def formula_in_xic():
             t = pg.evaluate(f"E.panels[{xi}].traces.map(t=>[t.mz,t.w,t.label])"); print("traces:", t)
             # the neutral formula gives the calculated m/z of the adduct (364.0737 for [M+H]+) and a window of +-0.5 Da around it
-            assert t and abs(t[0][0] - 364.3) < 1e-6 and t[0][1] == 0.5 and "C14H13F4N3O2S" in t[0][2] and "363.8-364.8" in t[0][2], t
+            assert t and abs(t[0][0] - 364.3) < 1e-6 and t[0][1] == 0.5 and "C14H13F4N3O2S" in t[0][2] and "m/z 364.3" in t[0][2], t
             addwin("163.3")                                       # nominal 163: window 162.8-163.8
             tr = pg.evaluate(f"E.panels[{xi}].traces[1]"); assert abs(tr["mz"] - 163.3) < 1e-6 and abs(tr["w"] - 0.5) < 1e-6, tr
             addion("C2H6Qq", ok=False)

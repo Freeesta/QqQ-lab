@@ -6,13 +6,17 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from qqq_lab import api
-from qqq_lab.demo import make_demo
-from qqq_lab.app import App
+from mzlab import api
+from mzlab.demo import make_demo
+from mzlab.app import App
 
 
 def _real_files():
-    for c in (os.environ.get("QQQ_MZML"), (os.environ.get("QQQ_DATI") or "") + "/mzML", str(Path(__file__).resolve().parents[2] / "QqQ-lab-dati" / "mzML")):
+    dati = os.environ.get("MZLAB_DATI", os.environ.get("QQQ_DATI"))
+    mzml = os.environ.get("MZLAB_MZML", os.environ.get("QQQ_MZML"))
+    for c in (mzml, (dati + "/mzML") if dati else None,
+              str(Path(__file__).resolve().parents[2] / "mzlab-dati" / "mzML"),
+              str(Path(__file__).resolve().parents[2] / "QqQ-lab-dati" / "mzML")):
         if c and Path(c).is_dir():
             return sorted(Path(c).glob("B_*.mzML"))
     return []

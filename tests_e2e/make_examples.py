@@ -1,6 +1,6 @@
 """Builds the two example drawings of the Disegno tab WITH the program itself (Ketcher + the automatic labels + the PNG export of the tab).
 
-    python3 tests_e2e/make_examples.py            # writes qqq_lab/web/esempio-trasformazione.png and esempio-frammentazione.png
+    python3 tests_e2e/make_examples.py            # writes mzlab/web/esempio-trasformazione.png and esempio-frammentazione.png
 
 Why a script: the pictures must be exactly what a student can export, so they are never drawn by hand. The structures are loaded into Ketcher as
 SMILES, placed on one canvas (.ket built in the page), the text objects above the structures are the ones a student writes with Ketcher's text
@@ -75,11 +75,11 @@ def png_b64(pg):
 def main():
     import urllib.request
     r = Run(port=8822, wd="/tmp/wdF_ex")
-    web = ROOT / "qqq_lab" / "web"
+    web = ROOT / "mzlab" / "web"
     try:
         with sync_playwright() as p:
             pg = r.page(p)
-            # masses from the server's own element table (qqq_lab/chem/elements.py), not from memory
+            # masses from the server's own element table (mzlab/chem/elements.py), not from memory
             def fm(f, ad):
                 return json.load(urllib.request.urlopen(f"http://127.0.0.1:8822/api/formula?f={f}&adduct={urllib.parse.quote(ad)}"))
             import urllib.parse

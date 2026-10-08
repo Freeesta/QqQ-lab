@@ -1,4 +1,4 @@
-"""Encrypts the private TP Mine sources into qqq_lab/web/tpmine.enc (the only thing of TP Mine that is published).
+"""Encrypts the private TP Mine sources into mzlab/web/tpmine.enc (the only thing of TP Mine that is published).
 
     TPMINE_PASSWORD=... python tools/build_tpmine.py [--src DIR] [--out FILE]      # or type the password when asked
 
@@ -8,7 +8,7 @@ Sources (plain text, in this repository under TP_Mine/; never copied into the si
     py/**/*.py     the Python of the tools, zipped and handed to Pyodide at run time (any other file in py/ is included as is)
 Every .js and .py source must carry the marker TPMINE-PRIVATE (a comment): build_site.py refuses to publish a site in which the
 marker appears in plain text. The password is never written anywhere (not in files, not in the output).
-Format: see the header of qqq_lab/web/tpmine-loader.js. Needs the 'cryptography' package (pip install cryptography).
+Format: see the header of mzlab/web/tpmine-loader.js. Needs the 'cryptography' package (pip install cryptography).
 """
 from __future__ import annotations
 
@@ -67,7 +67,7 @@ def encrypt(payload: dict, password: str, iterations: int = ITER) -> bytes:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", type=Path, default=ROOT / "TP_Mine")
-    ap.add_argument("--out", type=Path, default=ROOT / "qqq_lab" / "web" / "tpmine.enc")
+    ap.add_argument("--out", type=Path, default=ROOT / "mzlab" / "web" / "tpmine.enc")
     ap.add_argument("--iterations", type=int, default=ITER)
     a = ap.parse_args()
     if not (a.src / "js").is_dir():

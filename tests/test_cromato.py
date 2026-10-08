@@ -1,4 +1,4 @@
-"""Chromatographic figures (qqq_lab/web/cromato.js) on synthetic peaks with known width, plates, tailing and noise."""
+"""Chromatographic figures (mzlab/web/cromato.js) on synthetic peaks with known width, plates, tailing and noise."""
 import json
 import shutil
 import subprocess
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-JS = Path(__file__).resolve().parent.parent / "qqq_lab" / "web" / "cromato.js"
+JS = Path(__file__).resolve().parent.parent / "mzlab" / "web" / "cromato.js"
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 

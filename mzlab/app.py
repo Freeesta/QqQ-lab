@@ -199,7 +199,7 @@ class App:
     def session_state(self) -> dict:
         return {"session": self.session.info() if self.session else None, "app": bool(self.workdir),
                 "workdir": str(self.workdir) if self.workdir else None, "files": self.files(), "methods": self.methods(),
-                "version": __import__("qqq_lab").__version__}
+                "version": __import__("mzlab").__version__}
 
     def perf(self) -> dict:
         """How each open file was read (mode, size, seconds per step): for the ?perf meter of the page."""
@@ -246,7 +246,7 @@ class App:
         return m
 
     def origin(self, k: int, mz: float, parent: float, rt0: float | None = None, rt1: float | None = None, formula: str | None = None) -> dict:
-        """"Da dove viene questo ione?": the evidence of qqq_lab.ionfamily for the ion at mz against the candidate precursor `parent`,
+        """"Da dove viene questo ione?": the evidence of mzlab.ionfamily for the ion at mz against the candidate precursor `parent`,
         over every full-scan file of the session (k = the file the student is looking at, used as the reference). No verdict."""
         from . import ionfamily
         if not self.session:
@@ -344,4 +344,4 @@ class App:
 
     def state(self):
         return {"error": None, "phase": "start", "app": bool(self.workdir), "workdir": str(self.workdir) if self.workdir else None,
-                "files": self.files(), "methods": self.methods(), "version": __import__("qqq_lab").__version__}
+                "files": self.files(), "methods": self.methods(), "version": __import__("mzlab").__version__}

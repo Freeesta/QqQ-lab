@@ -6,12 +6,13 @@
   let force = null;
   try {
     const q = /[?&]telefono=([01])/.exec(location.search);
-    if (q) sessionStorage.setItem("qqq.telefono", q[1]);
+    if (q) sessionStorage.setItem("qqq.telefono", q[1]); // kept from the old name: renaming it would lose the users' data
     force = sessionStorage.getItem("qqq.telefono");
   } catch (_) { /* storage blocked: automatic choice */ }
   const ua = navigator.userAgent || "";
   const coarse = !!(window.matchMedia && matchMedia("(pointer:coarse)").matches);
   const auto = /iPhone|iPod|Android.+Mobile|Windows Phone|Mobile.+Firefox|Opera Mini/i.test(ua) || (coarse && Math.min(screen.width, screen.height) < 500);
-  window.QQQ_PHONE = force === null ? auto : force === "1";
-  if (window.QQQ_PHONE) document.documentElement.classList.add("phone");
+  window.MZLAB_PHONE = force === null ? auto : force === "1";
+  window.QQQ_PHONE = window.MZLAB_PHONE; // kept from the old name: backward compatibility
+  if (window.MZLAB_PHONE) document.documentElement.classList.add("phone");
 })();

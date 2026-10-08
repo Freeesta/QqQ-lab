@@ -1,4 +1,4 @@
-"""Validation of qqq_lab.ionfamily on the real flufenacet series (B_FullMass-t*.mzML), with the best truth the data allow.
+"""Validation of mzlab.ionfamily on the real flufenacet series (B_FullMass-t*.mzML), with the best truth the data allow.
 
 No full-scan file of the pure standard exists, so t0 (before irradiation: only the parent is in the vial) plays its role:
   positive (parent-derived: ISF / isotope / adduct / detector artefact of the strong parent) = ion with its own peak (SNR >= 10,
@@ -19,9 +19,9 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from qqq_lab import ionfamily as f  # noqa: E402
-from qqq_lab.project import guess_sample  # noqa: E402
-from qqq_lab.reader.mzml import Run  # noqa: E402
+from mzlab import ionfamily as f  # noqa: E402
+from mzlab.project import guess_sample  # noqa: E402
+from mzlab.reader.mzml import Run  # noqa: E402
 
 
 def _peaks_near(tb, key, ap, half_s, hmin=2e5, snr=10.0, span=1.0):
@@ -98,7 +98,7 @@ def main(folder: Path, parent: float = 364.35):
 def synthetic(n_seeds: int = 12):
     """Same table on synthetic truth (demo.isf_scene): positives = ISF/isotope/adduct, negatives = the three products
     (one of them co-eluting 6 s after the parent with another shape)."""
-    from qqq_lab import demo
+    from mzlab import demo
     sc, lab = {k: [] for k in ("pearson", "spearman", "deriv", "cosine", "apex", "fwhm", "pshift", "cv")}, []
     pos = {"ISF_H2O", "ISF_big", "ISF_small", "M+1", "M+Na"}
     neg = {"TP_early", "TP_late", "TP_coelute"}

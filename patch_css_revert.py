@@ -1,6 +1,6 @@
 import sys
 
-fpath = "qqq_lab/web/draw.js"
+fpath = "mzlab/web/draw.js"
 with open(fpath, "r", encoding="utf-8") as f:
     content = f.read()
 

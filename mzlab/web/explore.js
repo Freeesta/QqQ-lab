@@ -977,7 +977,7 @@ function addTrace(p, mz, label, w) {
   ctl(p); draw(p);
 }
 const numMz = t => { const v = parseFloat(String(t).replace(",", ".")); return isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : null; };
-// ONE rounding rule everywhere (half up on the decimal text, like qqq_lab.chem round_half_up): 364.15 gives 364.2 although 364.15*10 is 3641.4999... in binary
+// ONE rounding rule everywhere (half up on the decimal text, like mzlab.chem round_half_up): 364.15 gives 364.2 although 364.15*10 is 3641.4999... in binary
 const rh = (v, d = 1) => { const n = Number(v); if (!isFinite(n)) return n; const sg = n < 0 ? -1 : 1; return sg * Number(Math.round(Number(Number(Math.abs(n).toFixed(9)) + "e" + d)) + "e-" + d); };   // the 9-digit prefilter is the same as round_half_up in elements.py
 window.rh = rh;
 const numMz1 = t => { const v = parseFloat(String(t).replace(",", ".")); return isFinite(v) && v > 0 ? rh(v, 1) : null; };   // XIC fields: one decimal only

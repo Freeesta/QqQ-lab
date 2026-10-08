@@ -1,6 +1,6 @@
 "use strict";
 // "Da dove viene questo ione?" (Origin of an ion). Classic script, loaded after explore.js.
-// ONE window (like openXic) that shows the EVIDENCE computed by qqq_lab/ionfamily.py (/api/origin) and never a verdict:
+// ONE window (like openXic) that shows the EVIDENCE computed by mzlab/ionfamily.py (/api/origin) and never a verdict:
 //   (a) normalised XICs of the ion, of the candidate precursor and of the co-eluting ions the student picks,
 //   (b) table of the co-eluting ions sorted by correlation, with the difference in apex time and in mass (neutral losses are hints),
 //   (c) F against P (area of the ion against area of the candidate precursor, one point per scan) with the fitted line and R2,

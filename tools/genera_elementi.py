@@ -1,4 +1,4 @@
-"""Write qqq_lab/web/elements.js (data of the "Tavola periodica" dialog).
+"""Write mzlab/web/elements.js (data of the "Tavola periodica" dialog).
 
 Sources, all already in the program (no internet):
 - exact isotope masses: the isotope table inside OpenChemLib (web/vendor/openchemlib.js);
@@ -10,7 +10,7 @@ Run from the project root:  python3 tools/genera_elementi.py
 import glob, json, re
 from pathlib import Path
 
-WEB = Path(__file__).resolve().parents[1] / "qqq_lab" / "web"
+WEB = Path(__file__).resolve().parents[1] / "mzlab" / "web"
 
 NAMES = ("Idrogeno Elio Litio Berillio Boro Carbonio Azoto Ossigeno Fluoro Neon Sodio Magnesio Alluminio Silicio Fosforo Zolfo "
          "Cloro Argon Potassio Calcio Scandio Titanio Vanadio Cromo Manganese Ferro Cobalto Nichel Rame Zinco Gallio Germanio "

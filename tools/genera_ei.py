@@ -1,4 +1,4 @@
-"""Builds qqq_lab/web/teoria/pratica/ei-dati.js: real 70 eV EI spectra for the Teoria (chapters 15-16) and the Pratica game
+"""Builds mzlab/web/teoria/pratica/ei-dati.js: real 70 eV EI spectra for the Teoria (chapters 15-16) and the Pratica game
 «Dallo spettro alla struttura». Run by the developer (needs internet), the result is committed; the site never calls MassBank.
 
     python3 tools/genera_ei.py            # downloads into .verifica/cache_massbank/ (kept between runs), writes ei-dati.js
@@ -12,7 +12,7 @@ if one of its names is exactly a synonym AND its formula is the expected one), d
 only the records that contain every key ion, and take the most representative one = highest mean cosine (square-root
 intensities) to the other records of the same compound. The number of records and the cosine are stored: EI spectra are
 reproducible, not identical. The "keys" (teaching notes: which ion, which formula, which mechanism) are written here by hand and
-checked by tests/test_ei_dati.py with qqq_lab.chem.elements (nominal mass, odd/even electrons, sub-formula of the compound).
+checked by tests/test_ei_dati.py with mzlab.chem.elements (nominal mass, odd/even electrons, sub-formula of the compound).
 """
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "qqq_lab" / "web" / "teoria" / "pratica" / "ei-dati.js"
+OUT = ROOT / "mzlab" / "web" / "teoria" / "pratica" / "ei-dati.js"
 CACHE = ROOT / ".verifica" / "cache_massbank"
 API = "https://massbank.eu/MassBank-api/records"
 MIN_REL = 2          # peaks kept in the file: >= 0.2 % of the base peak (relative intensities in per mille, base = 999)
@@ -393,7 +393,7 @@ def fetch(url: str):
 
 
 def canon(formula: str) -> dict:
-    from qqq_lab.chem.elements import parse_formula
+    from mzlab.chem.elements import parse_formula
     return dict(parse_formula(formula))
 
 
@@ -436,7 +436,7 @@ def records_for(item) -> list:
                 continue
             if not r.get("license") or "TMS" in r.get("title", "") or "DERIVATIVE" in r.get("title", "").upper():
                 continue
-            from qqq_lab.chem.elements import mass, parse_formula
+            from mzlab.chem.elements import mass, parse_formula
             if max(p["mz"] for p in r["peak"]["peak"]["values"]) > round(mass(parse_formula(item["f"]))) + 12:
                 continue                                   # peaks far above the molecular ion: impurity or wrong record
             recs.append(r)
@@ -444,7 +444,7 @@ def records_for(item) -> list:
 
 
 def mass_of(formula: str) -> float:
-    from qqq_lab.chem.elements import mass, parse_formula
+    from mzlab.chem.elements import mass, parse_formula
     return mass(parse_formula(formula))
 
 
@@ -495,7 +495,7 @@ def build(item) -> dict | None:
     iso = {"m1": round(s.get(M0 + 1, 0) / m0 * 100, 1) if m0 else None, "m2": round(s.get(M0 + 2, 0) / m0 * 100, 1) if m0 else None,
            "m1_exp": round(exp1, 1), "m2_exp": round(exp2, 1)}
     iso["ok"] = bool(m0 >= 30 and iso_bad(s) < 0.45)     # False: M too weak or cluster distorted (e.g. [M+H]+ from self-protonation)
-    from qqq_lab.chem.elements import mass, parse_formula
+    from mzlab.chem.elements import mass, parse_formula
     out = {
         "id": item["id"], "name": item["it"], "name_en": item["en"][0].capitalize(), "formula": item["f"],
         "M": round(mass(parse_formula(item["f"]))), "smiles": r["compound"].get("smiles", ""), "inchikey": link.get("INCHIKEY", ""),
