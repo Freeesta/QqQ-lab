@@ -9,13 +9,17 @@ from pathlib import Path
 import numpy as np
 
 from qqq_lab.chem import elements as E
+from qqq_lab.reader.mzml import Run
 
 from . import chem
 from .demo import make_demo
 from .engine import Experiment, Sample, guess_sample
+from .hr import engine as hr_engine
 
 DATA = Path("/tp_data")
 _ex: Experiment | None = None
+_hr: hr_engine.ExperimentHR | None = None
+_kinds: dict = {}         # name -> 'hr' | 'msn' | 'other' (filled by classify)
 _progress = None          # set by the worker: callable(text, frac)
 
 
@@ -37,7 +41,9 @@ def classify(names_json: str) -> str:
     for n in json.loads(names_json):
         try:
             x = Sample({"name": n, "path": str(DATA / n)})
-            out.append({"name": n, "kind": x.kind, "type": x.type, "time": x.time, "label": x.label, "scans": len(x.run.scans)})
+            hk = hr_engine.classify(x.run)
+            _kinds[n] = hk
+            out.append({"name": n, "kind": x.kind, "hr_kind": hk, "type": x.type, "time": x.time, "label": x.label, "scans": len(x.run.scans)})
         except Exception as e:      # noqa: BLE001
             out.append({"name": n, "kind": "error", "error": str(e)[:160], "type": "sample", "time": None, "label": n})
     return _out(out)
@@ -66,18 +72,48 @@ def demo() -> str:
                  "parent": {"name": "Bentazone", "neutral": "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O", "adduct": "[M+H]+"}})
 
 
+def is_hr(files: list[dict]) -> bool:
+    """High-resolution path when the series is high resolution (LC files) or a direct-infusion MSn file is among the files."""
+    for f in files:
+        if f["name"] not in _kinds:
+            r = Run(f["path"])
+            _kinds[f["name"]] = hr_engine.classify(r)
+            r.close()
+    k = [_kinds[f["name"]] for f in files if f.get("type", "sample") in ("sample", "blank", "control")]
+    return any(v == "hr" for v in k) and all(v in ("hr", "msn") for v in k)
+
+
 def run(files_json: str, parent_json: str, settings_json: str, transf_text: str) -> str:
-    global _ex
+    global _ex, _hr
     files = json.loads(files_json)
     for f in files:
         f["path"] = str(DATA / f["name"])
+    if is_hr(files):
+        for f in files:
+            f["kind"] = _kinds[f["name"]]
+        _ex = None
+        _hr = hr_engine.ExperimentHR(files, json.loads(parent_json), json.loads(settings_json) or None, progress=_progress)
+        return _out(_hr.run())
+    _hr = None
     transf = chem.parse_transformations(transf_text) if transf_text.strip() else None
     _ex = Experiment(files, json.loads(parent_json), json.loads(settings_json), None, transf, progress=_progress)
     return _out(_ex.run())
 
 
 def detail(cid: int) -> str:
-    return _out(_ex.detail(int(cid)))
+    return _out((_hr or _ex).detail(int(cid)))
+
+
+def msn_tree() -> str:
+    if _hr is None:
+        raise ValueError("nessun esperimento ad alta risoluzione in memoria")
+    return _out(_hr.msn_tree())
+
+
+def inclusion_csv(n: int = 50) -> str:
+    if _hr is None:
+        raise ValueError("nessun esperimento ad alta risoluzione in memoria")
+    return _hr.inclusion_csv(int(n))
 
 
 def transitions(ids_json: str) -> str:
