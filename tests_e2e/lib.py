@@ -16,6 +16,27 @@ def _wff(self, expression, arg=None, polling=None, timeout=30000):
         self.wait_for_timeout(100)
 from playwright.sync_api import Page as _Page
 _Page.wait_for_function = _wff
+# Every page counts its fetches in flight (window.__qqF) and the time of the last start/end (window.__qqT): ready() below waits for them
+# instead of a fixed pause (the fixed pauses were more than half of the time of the e2e).
+_TRACK = ("(()=>{if(window.__qqF!==undefined)return;window.__qqF=0;window.__qqT=Date.now();const f=window.fetch;"
+          "window.fetch=function(...a){window.__qqF++;window.__qqT=Date.now();const done=()=>{window.__qqF--;window.__qqT=Date.now()};"
+          "return f.apply(this,a).then(r=>{done();return r},e=>{done();throw e})}})()")
+from playwright.sync_api import Browser as _Br, BrowserContext as _Ctx
+_np, _nc = _Br.new_page, _Br.new_context
+def _new_page(self, *a, **k):
+    pg = _np(self, *a, **k); pg.add_init_script(_TRACK); return pg
+def _new_context(self, *a, **k):
+    c = _nc(self, *a, **k); c.add_init_script(_TRACK); return c
+_Br.new_page, _Br.new_context = _new_page, _new_context
+def ready(pg, timeout=90000, settle=400):
+    """Wait until the page is quiet: no loading screen, no request to the server in flight, nothing started or ended for `settle` ms."""
+    import time as _t
+    t0 = _t.time()
+    while True:
+        q = pg.evaluate("() => { const l = document.querySelector('#loading'); return (!l || l.hidden) && (window.__qqF || 0) === 0 ? Date.now() - (window.__qqT || 0) : -1; }")
+        if q >= settle: return
+        if _t.time() - t0 > timeout / 1000: raise TimeoutError("ready: the page is still loading")
+        pg.wait_for_timeout(50)
 # Browser of the tests: QQQ_BROWSER=chromium (default) | firefox | webkit (the engine of Safari); tools/verifica.py --browser sets it.
 # Every script asks for `p.chromium`: here it is pointed at the chosen browser, so no test has to change.
 BROWSER = os.environ.get("QQQ_BROWSER", "chromium")

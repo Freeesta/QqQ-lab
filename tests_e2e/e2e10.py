@@ -11,9 +11,9 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
+        pg.click("text=Carica dati"); ready(pg)
         def missing():
-            pg.click("#np-method"); pg.wait_for_timeout(1000)
+            pg.click("#np-method"); ready(pg)
             t = pg.inner_text("#bigdlg")
             assert "Manca il metodo di acquisizione" in t and "3200 QTRAP" in t, t[:200]
             assert "Parametri del metodo" not in t and "Curtain gas" not in t, "no built-in method may appear"

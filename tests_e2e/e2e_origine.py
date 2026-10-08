@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t10", "B_FullMass-t15", "B_FullMass-t30 (2)", "B_FullMass-t60"]]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(5000)
+        pg.click("text=Carica dati"); ready(pg)
         pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(600)
         def entry():
             pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:194.3,w:0.5,label:'m/z 194'}]})"); pg.wait_for_timeout(1500)

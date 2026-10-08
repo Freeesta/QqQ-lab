@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); pg.wait_for_timeout(5000)
+        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
         pg.screenshot(path=SH + "60_default.png")
         def layout():
             P = pg.evaluate("E.panels.map(p=>({t:p.type,x:p.x,y:p.y,w:p.w,full:p.full,r0:p.r0,k:p.k,cur:p.cur}))"); W = pg.evaluate("Q('#dpanels').clientWidth")
@@ -32,7 +32,7 @@ try:
             assert "Doppio clic per rinominare" in pg.evaluate("document.querySelector('.pnl.chrom .ttl').title")
         step("only the general (i) is left: it opens the info box; the guide is the first Teoria chapter; panel titles carry the short explanation", helpq)
         def xlsxexcel():
-            pg.click("#dtabs [data-t=mrm]"); pg.wait_for_timeout(2500)
+            pg.click("#dtabs [data-t=mrm]"); ready(pg)
             with pg.expect_download() as d: pg.locator(".pnl.mrm [data-a=xlsx]").first.click()
             f = d.value; assert f.suggested_filename.endswith(".xlsx"), f.suggested_filename
             rows = xlsx_rows(f.path()); head = [c[1] for c in rows[0] if c]

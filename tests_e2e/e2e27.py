@@ -14,7 +14,7 @@ try:
         pg = r.page(p)
         shutil.rmtree("/tmp/s27", ignore_errors=True)
         pg.set_input_files("#pick", synth.make_series("/tmp/s27", [0, 15, 60])); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
+        pg.click("text=Carica dati"); ready(pg)
         sm = lambda: pg.inner_text("#xic-sum")
         def dialog():
             pg.click("#np-xic"); t = pg.inner_text("#xicdlg")
@@ -25,7 +25,7 @@ try:
             pg.fill("#xic-mz", "364.15"); assert "363.8 - 364.8" in sm()
             pg.fill("#xic-mz", "C14H13F4N3O2S"); pg.wait_for_timeout(1300)
             assert "363.8 - 364.8" in sm(), sm()
-            pg.click("#xic-go"); pg.wait_for_timeout(2500)
+            pg.click("#xic-go"); ready(pg)
             tr = pg.evaluate("E.panels.find(p=>p.type==='xic').traces[0]"); assert tr["mz"] == 364.3 and tr["w"] == 0.5 and "363.8-364.8" in tr["label"], tr
         step("dialog: text, one value or formula, unit window, one decimal", dialog)
         def obs():

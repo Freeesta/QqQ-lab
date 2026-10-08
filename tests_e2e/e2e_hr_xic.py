@@ -20,7 +20,7 @@ try:
             pg.evaluate("openXic(null,{})"); pg.wait_for_timeout(400)
             pg.fill("#xic-mz", txt); pg.wait_for_timeout(400)
             summ = pg.inner_text("#xic-sum")
-            pg.click("#xic-go"); pg.wait_for_timeout(2500)
+            pg.click("#xic-go"); ready(pg)
             return summ, pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().id")
         def series(pid):
             pg.wait_for_function(f"(()=>{{const p=E.panels.find(q=>q.id=={pid});return p&&p._a&&p._a.sr&&p._a.sr.length}})()", timeout=20000)

@@ -12,7 +12,7 @@ try:
         pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(1000)
         pg.set_input_files("#pickdam", str(DAM)); pg.wait_for_timeout(800)
         assert DAM.name in pg.inner_text("#mlist"), "the .dam is listed on the start screen"
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
+        pg.click("text=Carica dati"); ready(pg)
         def pda():
             pg.locator('.pnl.chrom [data-o="kind"]').first.select_option("pda"); pg.wait_for_timeout(2500)
             n = pg.evaluate("E.panels[0]._a.sr.length"); assert n >= 3, n          # one trace per Full Scan file (other types live in their own tab)
@@ -50,7 +50,7 @@ try:
         step("fixed slots: dragging a panel up swaps the others down", slots)
         pg.screenshot(path=SH + "92_after_swap.png")
         def metodo():
-            pg.click("#np-method"); pg.wait_for_timeout(1200)
+            pg.click("#np-method"); ready(pg)
             t = pg.inner_text("body")
             assert "Metodo cromatografico (LC)" in t and "<sub>" not in t and "H2O + 0.1% FA" in t and "% A" in t and "Flusso iniziale" not in t and "PDA: canali" not in t
             assert pg.locator("svg polyline").count() >= 1

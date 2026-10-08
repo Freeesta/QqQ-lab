@@ -16,7 +16,7 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
         pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
+        pg.click("text=Carica dati"); ready(pg)
         pg.screenshot(path=SH + "10_opened.png")
         # find the TIC apex of the first full-scan file
         info = pg.evaluate("""()=>{const p=E.panels[0];const s=p._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});return {rt:s.x[m],n:p._a.sr.length}}""")
@@ -41,7 +41,7 @@ try:
         def add_ion():
             xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')")
             el = pg.locator(".pnl.xic").first
-            pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))"); pg.fill("#xic-mz", "200"); pg.click("#xic-go"); pg.wait_for_timeout(2000)
+            pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))"); pg.fill("#xic-mz", "200"); pg.click("#xic-go"); ready(pg)
             assert pg.evaluate(f"E.panels[{xi}].traces.length") == 2
         step("add second ion", add_ion)
         def split_merge():
@@ -68,11 +68,11 @@ try:
             pg.screenshot(path=SH + "14_ints.png"); pg.click("#bigx")
         step("integration table", ints_tbl)
         def method():
-            pg.click("#np-method"); pg.wait_for_timeout(1500)
+            pg.click("#np-method"); ready(pg)
             txt = pg.inner_text("#bigdlg"); assert "Metodo" in txt or len(txt) > 50
             pg.screenshot(path=SH + "15_method_full.png"); pg.click("#bigx")
             pg.evaluate("E.cur=1;E.browse=true;renderFileList();renderNav()")   # MRM file
-            pg.click("#np-method"); pg.wait_for_timeout(1500)
+            pg.click("#np-method"); ready(pg)
             pg.screenshot(path=SH + "16_method_mrm.png"); pg.click("#bigx")
             pg.evaluate("E.browse=false;E.cur=0;renderFileList();renderNav();redrawAll()")
         step("method popup (full + mrm)", method)
@@ -83,7 +83,7 @@ try:
         step("BioTransformer popup", bt)
         def nav():
             pg.evaluate("E.browse=true;renderNav();redrawAll()"); pg.wait_for_timeout(800)      # the file arrows work with "Solo il file selezionato" (with "Tutti sovrapposti" they are disabled)
-            pg.click("#fnext"); pg.wait_for_timeout(1500); c1 = pg.evaluate("E.cur"); pg.click("#fnext"); pg.wait_for_timeout(1500)
+            pg.click("#fnext"); ready(pg); c1 = pg.evaluate("E.cur"); pg.click("#fnext"); ready(pg)
             pg.keyboard.press("ArrowLeft"); pg.wait_for_timeout(1000)
             assert pg.evaluate("E.panels.some(p=>p.type==='xic'&&p.traces.length>=1)")
         step("file arrows keep XIC", nav)

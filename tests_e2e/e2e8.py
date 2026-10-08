@@ -14,7 +14,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
+        pg.click("text=Carica dati"); ready(pg)
         rt = pg.evaluate("()=>{const s=E.panels[0]._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});return s.x[m]}")
         def arrows():
             c = pt(pg, 0, rt); pg.mouse.click(c["px"], c["py"]); pg.wait_for_timeout(1500)

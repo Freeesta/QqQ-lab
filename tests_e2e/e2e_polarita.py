@@ -22,7 +22,7 @@ try:
             t = pg.inner_text("#flist"); assert "ESI+" in t and "ESI−" in t, t
             assert pg.evaluate("[...document.querySelectorAll('#flist .pol')].map(x=>x.title)") == ["ESI negativo", "ESI positivo"] or set(pg.evaluate("[...document.querySelectorAll('#flist .pol')].map(x=>x.title)")) == {"ESI positivo", "ESI negativo"}
         step("loading table: ESI+ / ESI− badges (mixed polarities) next to the names", load_signs)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
+        pg.click("text=Carica dati"); ready(pg)
         def list_signs():
             assert pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.ghost) .pol')].map(x=>x.textContent).sort().join('')") == "ESI+ESI−"
         step("file list: signs", list_signs)
@@ -37,10 +37,10 @@ try:
             ov = pg.evaluate("(()=>{const l=document.querySelector('#flst');return [...l.querySelectorAll('.fl')].every(e=>e.getBoundingClientRect().right<=l.getBoundingClientRect().right+1)})()"); assert ov, "nothing sticks out of the list"
             pg.evaluate("E.files.forEach(f=>{f.gone=false})"); pg.evaluate("renderFileList()")
         def simboli():
-            pg.click("#dtabs [data-t=ms2]"); pg.wait_for_timeout(500)
+            pg.click("#dtabs [data-t=ms2]"); ready(pg)
             assert pg.locator("#dtabs sup").count() >= 1 and pg.inner_text("#dtabs").count("\u00b2") == 0, "MS<sup>2</sup>: a real superscript on the tab"
             t = pg.inner_text("body"); bad = [c for c in "\u00b2\u00b3\u207a\u207b\u2080\u2081\u2082\u2083\u2084\u00bd" if c in t]; assert not bad, bad
-            pg.click("#dtabs [data-t=full]"); pg.wait_for_timeout(300)
+            pg.click("#dtabs [data-t=full]"); ready(pg)
         step("7.2 MS2 has a real superscript, no Unicode superscripts in the visible text of the Dati tab", simboli)
         step("one polarity only: no badge per file, ESI+ once in the group heading, nothing out of the row", uniform)
         def adduct():

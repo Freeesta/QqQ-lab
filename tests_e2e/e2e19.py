@@ -15,8 +15,8 @@ try:
             assert pg.locator("#ldmsg").count() == 1
         step("only the loading screen with the funny phrases exists", load)
         pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(5000)
-        pg.click("#dtabs [data-t=ms2]"); pg.wait_for_timeout(2500)
+        pg.click("text=Carica dati"); ready(pg)
+        pg.click("#dtabs [data-t=ms2]"); ready(pg)
         def pair():
             n = pg.locator("#dpanels .parr").count(); assert n >= 1, n
             c = pg.evaluate("E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom')"); 
@@ -54,18 +54,7 @@ try:
             sel = pg.evaluate("(()=>{const c=E.panels.find(p=>p.tab==='ms2'&&p.type==='chrom').el.querySelector('[data-o=prec]');return c?c.getBoundingClientRect().width:0})()"); assert sel > 90, sel     # the precursor menu is wide enough to read
             pg.screenshot(path=SH + "19_ms2b.png")
         step("sidebar precursors: click switches the one pair, tick adds a second pair, readable menu", toggle)
-        def steps_():
-            pg.evaluate("setActive(null)")
-            res = pg.evaluate("""async ()=>{
-              const c=E.panels.find(q=>q.tab==='ms2'&&q.type==='chrom'), sp=E.panels.find(q=>q.link===c.id);
-              await draw(c); const s=c._a.sr[0]; let m=0; s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});
-              c.cur=s.x[m]; setActive(c); const out=[], seen=new Set();
-              for(let n=0;n<40;n++){ const before=c.cur; stepScan(c,1); await new Promise(r=>setTimeout(r,250));
-                const msg=sp.cv.parentElement.innerText; out.push([before,c.cur,s.y[nearIdx(s.x,c.cur)]]); if(c.cur===before) break; }
-              return {out, sp: sp._a? 'ok':'none'};}""")
-            ys = [o[2] for o in res["out"]]; assert all(y > 0 for y in ys), res
-            assert res["sp"] == "ok", res
-        step("arrows on MS2 land only on scans with data and the spectrum is never empty", steps_)
+        # MS2 arrows (nearest scan with data): covered by e2e_scroll «MS2: arrows jump over empty scans»
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

@@ -15,7 +15,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
+        pg.click("text=Carica dati"); ready(pg)
         pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(500)
         def ctx_items(x, y):
             pg.mouse.click(x, y, button="right"); pg.wait_for_timeout(300)

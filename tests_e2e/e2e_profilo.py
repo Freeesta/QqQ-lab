@@ -26,7 +26,7 @@ try:
             assert not pg.evaluate("document.querySelector('#modenote').hidden"), "profile + centroid: the note appears"
             assert "non sono confrontabili" in pg.inner_text("#modenote")
         step("mixed formats: the note on the loading screen", note)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
+        pg.click("text=Carica dati"); ready(pg)
         pk = pg.evaluate("E.files.findIndex(f=>f.file.startsWith('P_'))"); ck = pg.evaluate("E.files.findIndex(f=>f.file.startsWith('C_'))")
         def show(k, a=14.6, b=14.8):
             pg.evaluate(f"(()=>{{const p={SPEC};p.all=false;p.k={k};p.r0={a};p.r1={b};p.zoom=null;p.si=null;draw(p)}})()"); pg.wait_for_timeout(1500)

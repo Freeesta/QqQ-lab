@@ -10,15 +10,15 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
+        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
         def addion(t, ok=True):                       # t: neutral formula (the adduct comes from the selector)
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic')||null)")
             pg.fill("#xic-mz", t); pg.wait_for_timeout(1300)
-            if ok: pg.click("#xic-go"); pg.wait_for_timeout(1200)
+            if ok: pg.click("#xic-go"); ready(pg)
         def addwin(v):                                # write ONE m/z value: the unit window [n-0.2, n+0.8] is built around its nominal mass
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic')||null)")
             pg.fill("#xic-mz", v)
-            pg.click("#xic-go"); pg.wait_for_timeout(1200)
+            pg.click("#xic-go"); ready(pg)
         addion("C14H13F4N3O2S")
         xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')")
         sel = lambda o: f'.pnl.xic [data-o="{o}"]'
@@ -35,7 +35,7 @@ try:
             # one decimal only: the value is rounded half up to 0.1, commas are accepted, and the window comes from the nominal mass (100.6 -> n = 101 -> 100.8-101.8)
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))"); pg.fill("#xic-mz", "100,26"); assert "99.8 - 100.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
             pg.fill("#xic-mz", "100.6"); assert "100.8 - 101.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
-            pg.click("#xic-go"); pg.wait_for_timeout(1200)
+            pg.click("#xic-go"); ready(pg)
             tr = pg.evaluate(f"E.panels[{xi}].traces[2]"); assert abs(tr["mz"] - 101.3) < 1e-6 and abs(tr["w"] - 0.5) < 1e-6, tr
             pg.evaluate(f"E.panels[{xi}].traces.pop()"); pg.evaluate(f"E.panels[{xi}].traces.pop()")
         step("XIC window: formula (neutral) and one m/z value (unit window around the nominal mass)", formula_in_xic)
@@ -84,7 +84,7 @@ try:
             pg.screenshot(path=SH + "53_calc.png")
             pg.locator("#calcout button[data-m]").first.click(); pg.wait_for_timeout(1500)          # the XIC button opens THE XIC window, formula and window already filled in
             assert pg.evaluate("document.querySelector('#xicdlg').open") and pg.input_value("#xic-mz") == "C14H13F4N3O2S" and "363.8 - 364.8" in pg.inner_text("#xic-sum"), (pg.input_value("#xic-mz"), pg.inner_text("#xic-sum"))
-            n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)"); pg.click("#xic-go"); pg.wait_for_timeout(1200)
+            n0 = pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)"); pg.click("#xic-go"); ready(pg)
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').reduce((a,p)=>a+p.traces.length,0)") == n0 + 1
         step("calculator", calc)
         def draw_ion():

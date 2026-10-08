@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
+        pg.click("text=Carica dati"); ready(pg)
         pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(500)
         for sel in ["#np-chrom", "#np-spec", "#np-map"]: pg.click(sel); pg.wait_for_timeout(1000)
         dis = lambda s: pg.evaluate("s=>[...document.querySelectorAll(s)].map(x=>x.disabled)", s)
@@ -25,7 +25,7 @@ try:
             pg.click("#fmode [data-m=sel]"); pg.wait_for_timeout(600)
             assert not any(dis("#fprev,#fnext,#fsel"))
             assert all(dis("[data-o=k]")) and all(dis("[data-o=all]")), (dis("[data-o=k]"), dis("[data-o=all]"))
-            pg.click("#fnext"); pg.wait_for_timeout(1500)
+            pg.click("#fnext"); ready(pg)
             cur = pg.evaluate("E.cur"); assert pg.evaluate("[...document.querySelectorAll('.pnl [data-o=k]')].every(s=>+s.value===E.cur)")
         step("Solo il selezionato: arrows on, per-panel file choosers follow and are off", selmode)
         def norm():

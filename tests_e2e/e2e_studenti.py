@@ -40,7 +40,7 @@ try:
             assert pg.evaluate("document.activeElement && document.activeElement.dataset && document.activeElement.dataset.k") == "conc", "focus kept after the table is sorted again"
             pg.fill("#flist [data-k=conc] >> nth=0", "0.6"); pg.press("#flist [data-k=conc] >> nth=0", "Enter"); pg.wait_for_timeout(200)
         step("B-4 yellow cells go back to normal when edited; focus stays in the field", guess)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(5000)
+        pg.click("text=Carica dati"); ready(pg)
         def fit720():
             c = pg.evaluate("(()=>{const f=[...document.querySelectorAll('#dpanels .pnl')].filter(e=>e.style.display!=='none').map(e=>e.getBoundingClientRect());return f.map(r=>[Math.round(r.top),Math.round(r.bottom)])})()")
             print("   panel rects at 1280x720:", c, "scrollY", pg.evaluate("scrollY"), "innerHeight", pg.evaluate("innerHeight"))
@@ -92,7 +92,7 @@ try:
             pg.evaluate("E.browse=false;redrawAll()"); 
         step("B-12 note on the spectrum row (checked in the unit below)", note12)
         def xicleg():
-            pg.evaluate("openXic(null,{formula:'C14H13F4N3O2S',adduct:'[M+H]+'})"); pg.wait_for_timeout(700); pg.click("#xic-go"); pg.wait_for_timeout(2500)
+            pg.evaluate("openXic(null,{formula:'C14H13F4N3O2S',adduct:'[M+H]+'})"); pg.wait_for_timeout(700); pg.click("#xic-go"); ready(pg)
             t = pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().el.querySelector('.ttl').textContent"); assert t.startswith("XIC · C14H13F4N3O2S") and "m/z 363.8-364.8" in t, t
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().leg.querySelectorAll('b[data-t]').length") == 0
             assert "B_FullMass-t0" in pg.evaluate("E.panels.filter(p=>p.type==='xic').pop().leg.textContent")
@@ -114,7 +114,7 @@ try:
             z0 = pg.evaluate(f"{SPEC}.zoom"); c0 = pg.evaluate("E.active.cur")
             pg.click("#nav [data-v=draw]"); pg.wait_for_timeout(700); pg.click("#nav [data-v=data]"); pg.wait_for_timeout(900)
             assert pg.evaluate("E.active&&E.active.type")=="chrom" and pg.evaluate(f"{SPEC}.zoom") == z0 and pg.evaluate("E.active.cur") == c0
-            pg.click("#dtabs [data-t=ms2]"); pg.wait_for_timeout(2500); pg.click("#dtabs [data-t=full]"); pg.wait_for_timeout(1200)
+            pg.click("#dtabs [data-t=ms2]"); ready(pg); pg.click("#dtabs [data-t=full]"); ready(pg)
             assert pg.evaluate("E.active&&E.active.type")=="chrom"
         step("B-19 back to Data / back to a tab: same active graph, zoom, cursor (no automatic scroll since A3)", back)
         def mrm():
@@ -147,7 +147,7 @@ def sizes():
         try:
             with sync_playwright() as p:
                 pg = rr.page(p); pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(400)
-                pg.set_input_files("#pick", [mz(f) for f in FILES[:3]]); pg.wait_for_timeout(1200); pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
+                pg.set_input_files("#pick", [mz(f) for f in FILES[:3]]); pg.wait_for_timeout(1200); pg.click("text=Carica dati"); ready(pg)
                 c = pg.evaluate("[...document.querySelectorAll('#dpanels .pnl')].filter(e=>e.style.display!=='none').slice(0,2).map(e=>{const r=e.getBoundingClientRect();return [Math.round(r.top),Math.round(r.bottom)]})")
                 assert len(c) == 2 and c[1][1] <= h + 2 and pg.evaluate("scrollY") == 0, (w, h, c)
                 print(f"   {w}x{h}: panels", c)

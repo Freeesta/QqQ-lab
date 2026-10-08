@@ -12,7 +12,7 @@ try:
         assert pg.locator("#demo a").count() == 0, "no download links any more"
         assert pg.evaluate("(()=>{const b=document.querySelector('#demobtn').getBoundingClientRect(),d=document.querySelector('#drop').getBoundingClientRect(),c=document.querySelector('#drop').closest('.card').getBoundingClientRect();return b.top>=d.bottom&&b.bottom<=c.bottom&&b.left>=c.left})()"), "button inside box 1, under the drop zone"
         assert "flufenacet" not in pg.inner_text("body").lower() and "flufenacet" not in (pg.get_attribute("#demobtn", "title") or "").lower()
-        pg.click("text=Carica dati"); pg.wait_for_timeout(5000)
+        pg.click("text=Carica dati"); ready(pg)
         assert pg.evaluate("tabFiles('full').length") == 5 and pg.evaluate("E.panels.some(p=>p.type==='spec'&&p._a)")
         assert "flufenacet" not in pg.inner_text("body").lower(), "the compound is never named after the files are open"
         steps.append(("demo button loads 5 files with times 0/5/10/15/30, no links, button in box 1, no compound name, data open", "ok"))
