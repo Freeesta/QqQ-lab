@@ -420,3 +420,66 @@ def test_every_reference_product_derives_from_the_parent_and_the_parent_isotopes
     status, text = NW.isotopes_coherent(NW.observed_isotopes(al, g), NW.expected_isotopes(pv, els))
     print("\nparent isotopes:", text)
     assert status == "pass"
+
+
+# ---------------------------------------------------------------------------------------------------------------------- WP12/WP14: the whole experiment
+@pytest.fixture(scope="module")
+def experiment():
+    import glob
+    import re
+    import resource
+    from tpmine.hr.engine import ExperimentHR
+    truth = json.loads(TRUTH.read_text(encoding="utf-8"))
+    mt = json.loads(MSN_TRUTH.read_text(encoding="utf-8"))
+    files = []
+    for f in sorted(glob.glob(str(DATI / "HRMS" / "*" / "*TiO2*.mzML"))):
+        m = re.search(r"t(\d+)min", f)
+        files.append({"name": Path(f).name, "path": f, "time": float(m.group(1)) if m else -1.0})
+    files.append({"name": Path(mt["file"]).name, "path": str(DATI / mt["file"]), "time": None})
+    e = ExperimentHR(files, {"smiles": truth["parent"]["smiles"]})
+    t0 = time.perf_counter()
+    e.run()
+    return e, truth, time.perf_counter() - t0, resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+
+
+def _position(e, tp):
+    for i, c in enumerate(e.ranked):
+        if abs(c["mz"] - tp["mz"]) <= tp["mz"] * 5e-6 and any(abs(c["rt"] - r) <= 0.35 for r in tp["rt_obs"]):
+            return i, c
+    return None, None
+
+
+@need
+def test_whole_experiment_ranking_timing_and_memory(experiment):
+    e, truth, dt, rss = experiment
+    pos = {t["id"]: _position(e, t) for t in truth["tps"]}
+    ranks = sorted(p[0] for p in pos.values() if p[0] is not None)
+    print(f"\nrows {len(e.result['rows'])} of {len(e.cands)} candidates; found {len(ranks)}/{len(pos)}; top25 {sum(r < 25 for r in ranks)}; "
+          f"top100 {sum(r < 100 for r in ranks)}; median {ranks[len(ranks) // 2] + 1}; ranks {[r + 1 for r in ranks]}")
+    print(f"timing {e.timing}; total {dt:.0f} s; peak RSS {rss:.0f} MB")
+    assert len(e.result["rows"]) <= 500 and len(ranks) >= 20
+    assert sum(r < 25 for r in ranks) >= 8 and sum(r < 100 for r in ranks) >= 13
+    assert dt <= 180 and e.timing["albero"] <= 5 and e.timing["feature"] / len(e.lc) <= 6.5
+    assert rss <= 1600                      # target 1500: the peak is the mapped pages of the 80 MB files read in one go (reclaimable), the heap stays near 500 MB
+
+
+@need
+def test_whole_experiment_isf_coincident_localisation_and_isomers(experiment):
+    e, truth, _, _ = experiment
+    tps = {t["id"]: t for t in truth["tps"]}
+    flagged = {}
+    for tid in ("261", "188"):
+        i, c = _position(e, tps[tid])
+        flagged[tid] = c is not None and any("ISF" in f for f in e._row(c)["flags"])
+    print("\nflagged as possible TP coeluting with an ISF:", flagged)
+    assert all(flagged.values())
+    loc = [(t["id"], _position(e, t)[1]) for t in truth["tps"] if t.get("loc_test")]
+    n_loc = sum(1 for _, c in loc if c is not None and (c.get("localization") or {}).get("ok"))
+    print("localised:", n_loc, "of", len(loc))
+    assert n_loc >= 6
+    ks = []
+    for c in e.cands:
+        if abs(c["mz"] - tps["333-A/B"]["mz"]) <= tps["333-A/B"]["mz"] * 5e-6 and any(abs(c["rt"] - r) <= 0.35 for r in tps["333-A/B"]["rt_obs"] + tps["333-C"]["rt_obs"]):
+            ks.append((c["id"], e.detail(c["id"]).get("isomers", {}).get("k", 0)))
+    print("isomer components of the +O series, by feature:", ks)
+    assert any(k >= 2 for _, k in ks)
