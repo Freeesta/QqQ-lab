@@ -22,8 +22,8 @@ try:
             pg.screenshot(path=SH + "90_pda.png")
         step("PDA kind: one trace per file incl. MRM", pda)
         def noxls():
-            assert pg.locator(".pnl.chrom [data-a=xlsx]").count() >= 1       # since 7/10 also on the total chromatograms (TIC / BPC / PDA)
-            assert pg.locator(".pnl.spec [data-a=xlsx]").count() >= 1
+            assert pg.locator(".pnl.chrom [data-a=dl]").count() >= 1       # since 7/10 also on the total chromatograms (TIC / BPC / PDA)
+            assert pg.locator(".pnl.spec [data-a=dl]").count() >= 1
         step("Excel button on the chromatogram and on the spectrum", noxls)
         def edge():
             # no coloured pixel of the trace in the 1.5 px left of the plot area except the axis itself

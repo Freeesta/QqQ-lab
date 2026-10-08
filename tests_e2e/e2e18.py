@@ -62,7 +62,7 @@ try:
             assert t[2].startswith("m/z ") and abs(t[1] - 0.5) < 1e-9, t          # default unit window [n-0.2, n+0.8]
         step("right click on a peak of the spectrum extracts the XIC at once, no window", spec_menu)
         def groups():
-            for sel, expect in [(".pnl.chrom", ["izoom", "fit", "tlink", "iauto", "iman", "xic", "up", "down", "png", "xlsx", "max"]), (".pnl.xic", ["izoom", "fit", "tlink", "iauto", "iman", "up", "down", "png", "xlsx", "max"]), (".pnl.spec", ["fit", "rul", "par", "up", "down", "png", "xlsx", "max"])]:
+            for sel, expect in [(".pnl.chrom", ["izoom", "fit", "tlink", "iauto", "iman", "xic", "up", "down", "dl", "max"]), (".pnl.xic", ["izoom", "fit", "tlink", "iauto", "iman", "up", "down", "dl", "max"]), (".pnl.spec", ["fit", "rul", "par", "up", "down", "dl", "max"])]:
                 got = pg.evaluate(f"[...document.querySelector('{sel}').querySelectorAll('.tbs [data-a]')].filter(b=>b.tagName==='BUTTON'&&!b.hidden).map(b=>b.dataset.a)"); assert got == expect, (sel, got)
             # hidden until needed
             assert pg.evaluate("[...document.querySelectorAll('.pnl.xic [data-a=intf], .pnl.xic [data-a=iclr], .pnl.xic [data-a=itab]')].every(b=>b.hidden)")
@@ -76,7 +76,7 @@ try:
         step("button groups in order, zoom next to reset, one row at 1500/1100/700 px", groups)
         def xlsx():
             xp = pg.locator(".pnl.xic").first
-            with pg.expect_download() as d: xp.locator("[data-a=xlsx]").click()
+            with pg.expect_download() as d: (xp.locator("[data-a=dl]").click(), pg.locator("#ctx div", has_text="Excel").first.click())
             f = d.value.path(); rows = xlsx_rows(f); assert xlsx_sheets(f) and rows[0][0][0] == "s" and "RT (min)" in rows[0][0][1]
             nums = [c[1] for r_ in rows[1:] for c in r_ if c and c[0] == "n"]; assert len(nums) > 400 and max(nums) > 1000, len(nums)
             xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')"); xp.locator("[data-a=iauto]").click()

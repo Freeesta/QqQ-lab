@@ -87,7 +87,7 @@ try:
             n = pg.evaluate(f"(()=>{{const p=addPanel('xic',{{yz:10,traces:[]}});return p.zoomY}})()"); assert n is None, n
         step("an old 'yz' in a notebook is ignored", old_notebook)
         def excel_tic():
-            with pg.expect_download() as d: pg.locator(".pnl.chrom [data-a=xlsx]").first.click()
+            with pg.expect_download() as d: dlmenu(pg, ".pnl.chrom", "xlsx")
             f = d.value; assert f.suggested_filename.endswith(".xlsx"), f.suggested_filename
             rows = xlsx_rows(f.path()); head = [c[1] for c in rows[0] if c]
             assert all(h.startswith("RT (min)") or h.startswith("Intensità (cps)") for h in head) and sum(h.startswith("Intensità") for h in head) == 2, head   # one intensity column per file
