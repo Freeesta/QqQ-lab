@@ -175,8 +175,8 @@ def family(win: Window, mz: float, apex_rt: float, r_min: float = 0.85, apex_sca
 def collapse(fam: dict) -> dict:
     """Neutral mass and representative [M+H]+ of a family, and what the candidate is.
 
-    The candidate X is *explained* when a member Y shows X as its adduct, isotopologue (Y at least 1.5 times higher), in-source fragment or as the
-    [2M+H]+ of its monomer; then Y is the representative and X is kept with its role. Otherwise X is the representative ([M+H]+, or an unexplained
+    The candidate X is *explained* when a member Y shows X as its adduct, in-source fragment (Y at least 2 times higher: two co-eluting products
+    that differ by a neutral loss are not a fragment and its precursor), isotopologue (Y at least 1.5 times higher) or as the [2M+H]+ of its monomer; then Y is the representative and X is kept with its role. Otherwise X is the representative ([M+H]+, or an unexplained
     ion taken as such) and the members are its evidence (adducts, isotopes, dimer).
 
     NH4 / NH3 ambiguity: +17.02655 is both [M+NH4]+ of an [M+H]+ and [M+H]+ of a fragment that lost NH3. Both readings are kept in `ambiguous`;
@@ -195,8 +195,8 @@ def collapse(fam: dict) -> dict:
                     continue                                                   # undecided: neither evidence nor explanation
             if rel["of"] == "x":                                              # Y derives from X: evidence for X
                 evidence.append({"kind": rel["role"], "name": rel["name"], "mz": m["mz"], "r": m["r"], "text": f"{rel['name']} a {m['delta']:+.4f} (r={m['r']:.2f})"})
-            elif rel["role"] != "isotope" or m["height"] >= 1.5 * fam["height"]:
-                explained.append((m, rel))
+            elif (m["height"] >= 1.5 * fam["height"]) if rel["role"] == "isotope" else (m["height"] >= 2.0 * fam["height"]):
+                explained.append((m, rel))                          # an isotopologue, adduct or in-source fragment is weaker than the ion it comes from
         if m["dimer_of_x"]:
             evidence.append({"kind": "dimer", "name": "[2M+H]+", "mz": m["mz"], "r": m["r"], "text": f"[2M+H]+ a {m['mz']:.4f} (r={m['r']:.2f})"})
         if m["x_is_dimer_of_y"]:

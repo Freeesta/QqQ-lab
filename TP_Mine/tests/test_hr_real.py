@@ -398,3 +398,25 @@ def test_kinetics_generation_saturation_and_sessions(series_features):
     print("\ngeneration of the late aliphatic series:", verdict)
     assert sum(v[0] == "seconda" for v in verdict.values()) >= len(verdict) - 1
     assert all(verdict[t][1] == "tardivo" for t in cfg["late_ids"])
+
+
+# ---------------------------------------------------------------------------------------------------------------------- WP11: derivations and isotopes
+@need
+def test_every_reference_product_derives_from_the_parent_and_the_parent_isotopes_fit(series_features):
+    import numpy as np
+    from qqq_lab.chem import elements as E
+    from tpmine.hr import features as FT
+    from tpmine.hr import formula as F
+    from tpmine.hr import network as NW
+    feats, times, al, _, _, _ = series_features
+    truth = json.loads(TRUTH.read_text(encoding="utf-8"))
+    parent = E.parse_formula(truth["parent"]["ion"])
+    els = F.element_order(parent)
+    pv = F.vec(parent, els)
+    table = NW.transformation_table(els)
+    names = {t["id"]: NW.derivation_name(F.vec(t["ion"], els), pv, els, table) for t in truth["tps"]}
+    assert all(names.values()), [k for k, v in names.items() if not v]
+    g = int(np.argmin(np.abs(al.mz - truth["parent"]["mz"]) + (np.abs(al.rt - truth["parent"]["rt_obs"]) > 0.15) * 10))
+    status, text = NW.isotopes_coherent(NW.observed_isotopes(al, g), NW.expected_isotopes(pv, els))
+    print("\nparent isotopes:", text)
+    assert status == "pass"
