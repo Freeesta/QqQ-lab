@@ -52,7 +52,12 @@ function hideMacro(fr) {
       '[class*="App-module_app"]{grid-template-columns:auto auto minmax(0,1fr) auto!important;grid-template-rows:auto minmax(0,1fr)!important;' +
       'grid-template-areas:"toolbar-top toolbar-top toolbar-top toolbar-top" "toolbar-bottom toolbar-left canvas toolbar-right"!important}' +
       '[class*="App-module_app"] [class*="BottomToolbar-module_root"]{flex-direction:column!important;flex-wrap:nowrap!important;align-self:start;height:auto!important;width:auto!important;padding:8px 0 8px 8px!important;margin:0!important}' +
-      '[class*="App-module_app"] [class*="BottomToolbar-module_group"]{flex-direction:column!important;height:auto!important;width:auto!important}';
+      '[class*="App-module_app"] [class*="BottomToolbar-module_group"]{flex-direction:column!important;height:auto!important;width:auto!important}' +
+      '[class*="App-module_top"] [data-testid="select-drop-down-button"] { height: 28px !important; width: 28px !important; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 4px; align-self: center; } ' +
+      '[class*="App-module_top"] [data-testid="select-drop-down-button"] > div { display: none !important; } ' +
+      '[class*="App-module_top"] [data-testid="select-drop-down-button"] svg { margin: auto; } ' +
+      '[class*="App-module_top"] [data-testid="hand"], [class*="App-module_top"] [data-testid="erase"], [class*="App-module_top"] [data-testid="text"] { height: 28px !important; width: 28px !important; display: flex; align-items: center; justify-content: center; align-self: center; border-radius: 4px; } ';
+      
 
     // Move Hand, Select, Erase, Text to top toolbar right after Cut
     const cutBtn = d.querySelector('[class*="App-module_top"] [data-testid="cut-button"]');
