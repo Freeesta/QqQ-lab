@@ -34,7 +34,7 @@ try:
         step("the guide is the first chapter of the Teoria", chapter)
         def correzione():
             pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t60")]); pg.wait_for_timeout(1000)
-            pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
+            pg.click("text=Carica dati"); ready(pg)
             pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_timeout(2000)
             pg.evaluate("document.querySelector('.pnl.xic [data-a=cpar]').click()"); pg.wait_for_timeout(200)
             b = pg.locator('.pnl.xic [data-o="corr"]'); assert b.locator("svg").count() == 1 and "Correzione" in b.inner_text()

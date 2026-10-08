@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t15", "B_MS2-t15", "B_MS2-t45"]]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
+        pg.click("text=Carica dati"); ready(pg)
         def cx(x):   # screen point of RT x on the first chromatogram of the current tab
             return pg.evaluate("""x=>{const p=E.panels.find(q=>q.tab===E.tab&&q.type==='chrom');p.el.scrollIntoView({block:'start'});const r=p.cv.getBoundingClientRect();return {px:r.left+p._a.X(x),py:r.top+r.height*0.4}}""", x)
         order = lambda: pg.evaluate("E.panels.filter(p=>p.tab===E.tab).sort((a,b)=>a.y-b.y).map(p=>p.type+(p.link?'*':'')+(p.type==='spec'?'@'+(+((p.r0+p.r1)/2).toFixed(1)):''))")
@@ -57,20 +57,7 @@ try:
         def reload():
             pg.wait_for_timeout(1200); o1 = order(); pg.reload(); pg.wait_for_timeout(4000); o2 = order(); print(o1, o2); assert o1 == o2, (o1, o2)
         step("reload restores order, link and src", reload)
-        def ms2():
-            pg.click("#dtabs [data-t=ms2]"); pg.wait_for_timeout(2500)
-            ci = pg.evaluate("E.panels.findIndex(p=>p.tab==='ms2'&&p.type==='chrom')"); sp = pg.evaluate("E.panels.findIndex(p=>p.tab==='ms2'&&p.type==='spec')")
-            c = cx(10.0); pg.mouse.click(c["px"], c["py"]); pg.wait_for_timeout(700)
-            seen = []
-            for _ in range(8):
-                pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(350)
-                leg = pg.evaluate(f"E.panels[{sp}].leg.textContent"); seen.append(leg[:40]); assert "Nessuno scan" not in pg.evaluate(f"E.panels[{sp}].p||''") and leg.strip()
-            rts = pg.evaluate(f"E.panels[{sp}].r0"); print(seen, rts)
-            c0 = pg.evaluate(f"E.panels[{ci}].cur")
-            for _ in range(3): pg.keyboard.press("ArrowLeft"); pg.wait_for_timeout(350)
-            c1 = pg.evaluate(f"E.panels[{ci}].cur"); assert c1 < c0
-            assert all("precursore" in x for x in seen), seen
-        step("MS2: arrows jump to the nearest scan with data (never an empty spectrum)", ms2)
+        # MS2 arrows (nearest scan with data): covered by e2e_scroll «MS2: arrows jump over empty scans»
         pg.screenshot(path=SH + "200_ms2.png", full_page=True)
     r.close()
 except Exception as e:

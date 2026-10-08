@@ -15,7 +15,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1280, "height": 1000})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
+        pg.click("text=Carica dati"); ready(pg)
         def header():
             h = pg.evaluate(f"(()=>{{const p={CH},hd=p.el.querySelector('.hd').getBoundingClientRect();return [hd.height,p.el.querySelector('.cpop').hidden,!!p.el.querySelector('[data-o=kind]'),p.el.querySelector('.ttl').offsetParent===null]}})()"); print(h)
             assert h[0] < 46 and h[1] and h[2] and h[3], h          # one row, popover closed, the kind menu is the title

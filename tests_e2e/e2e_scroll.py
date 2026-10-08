@@ -13,7 +13,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
+        pg.click("text=Carica dati"); ready(pg)
         def lockclick():             # the click on the lock makes the spectrum the active panel: give the chromatogram the focus back
             pg.click(".pnl.spec [data-a=lock]"); pg.evaluate("setActive(E.panels.find(p=>p.type==='chrom'&&p.tab==='full'))")
         st = lambda: pg.evaluate(f"(()=>{{const s={SPEC};return {{si:s.si,x0:s._a&&s._a.x0,x1:s._a&&s._a.x1,ymax:s._a&&s._a.ymax,lock:!!s.lock,r0:s.r0,r1:s.r1,cur:E.active&&E.active.cur,leg:s.leg.textContent}}}})()")

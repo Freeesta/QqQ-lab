@@ -14,7 +14,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
+        pg.click("text=Carica dati"); ready(pg)
         dlg = lambda: pg.evaluate("document.querySelector('#xicdlg').open")
         def window_():
             pg.click("#dpanels .pnl.chrom [data-a=xic]"); assert dlg()
@@ -25,7 +25,7 @@ try:
             assert "363.8 - 364.8" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "C14H13F4N3O2S", pg.inner_text("#xic-sum")
             pg.select_option("#xic-ad", "[M+Na]+"); pg.wait_for_timeout(600)
             assert "385.8 - 386.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
-            pg.fill("#xic-mz", "364"); pg.click("#xic-go"); pg.wait_for_timeout(2500)
+            pg.fill("#xic-mz", "364"); pg.click("#xic-go"); ready(pg)
             assert not dlg() and pg.evaluate("E.panels.some(p=>p.type==='xic' && p.traces[0].w===0.5 && p._a && p._a.sr.length>0)")
             assert "cifra" not in pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').closest('label').title")
         step("XIC window: one m/z value, oppure, neutral formula, unit window around the nominal mass", window_)

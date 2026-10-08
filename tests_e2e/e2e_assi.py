@@ -14,7 +14,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
+        pg.click("text=Carica dati"); ready(pg)
         def rect(expr):   # canvas rectangle + margins of a panel
             return pg.evaluate(f"(()=>{{const p={expr},r=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});const q=p.cv.getBoundingClientRect();return {{l:q.left,t:q.top,w:q.width,h:q.height,M:M}}}})()")
         def pt(expr, xs, ys):  # pixel of axis values
@@ -96,7 +96,7 @@ try:
         def xic_below():
             sp = pg.evaluate(f"(()=>{{const s={SPEC};return {{y:s.y,h:s.h,id:s.id}}}})()")
             n0 = pg.evaluate("E.panels.length"); pg.evaluate(f"openXic(null, {{mz:364.4, obs:true, after:{SPEC}}})"); pg.wait_for_timeout(300)
-            pg.click("#xic-go"); pg.wait_for_timeout(1500)
+            pg.click("#xic-go"); ready(pg)
             xp = pg.evaluate("(()=>{const x=E.panels.find(p=>p.type==='xic'&&p.traces.length===1);return {y:x.y,full:x.full}})()")
             assert abs(xp["y"] - (sp["y"] + sp["h"] + 10)) < 3, (xp, sp)
         step("XIC from the spectrum menu sits right under that spectrum", xic_below)

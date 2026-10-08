@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
-        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
+        pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
         pg.screenshot(path=SH + "40_start.png")
         # --- hover tooltip on the chromatogram
         def hover_chrom():
@@ -65,7 +65,7 @@ try:
         step("ctrl+wheel zoom, shift pan, fit button reset", wheelpan)
         # --- ion map
         def mapadd():
-            pg.click("#np-map"); pg.wait_for_timeout(3000)
+            pg.click("#np-map"); ready(pg)
             i = pg.evaluate("E.panels.findIndex(p=>p.type==='map')"); assert i >= 0 and pg.evaluate(f"E.panels[{i}]._a !== null")
             pg.screenshot(path=SH + "47_map.png")
         step("add ion map", mapadd)
@@ -76,7 +76,7 @@ try:
         step("map hover", maphover)
         def mapxic():
             i = mi(); c = pt(pg, i, 14.33, ymz=194.5); pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
-            pg.locator("#ctx div", has_text="Estrai l'XIC").first.click(); pg.wait_for_timeout(300); pg.click("#xic-go"); pg.wait_for_timeout(2500)
+            pg.locator("#ctx div", has_text="Estrai l'XIC").first.click(); pg.wait_for_timeout(300); pg.click("#xic-go"); ready(pg)
             assert pg.evaluate("E.panels.some(p=>p.type==='xic'&&p.traces.length===1&&Math.abs(p.traces[0].mz-194.5)<2.5)")
         step("map right-click -> XIC", mapxic)
         def mapdrag():

@@ -12,7 +12,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t15", "B_MS2-t15"]]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
+        pg.click("text=Carica dati"); ready(pg)
         def label_hover():
             pg.wait_for_timeout(800)
             sp = pg.evaluate("(()=>{const p=E.panels.find(q=>q.tab===E.tab&&q.type==='spec');p.el.scrollIntoView({block:'center'});return p.id})()"); pg.wait_for_timeout(500)

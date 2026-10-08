@@ -14,7 +14,7 @@ try:
         pg = r.page(p)
         shutil.rmtree("/tmp/s26", ignore_errors=True)
         pg.set_input_files("#pick", synth.make_series("/tmp/s26", [0, 15, 60])); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
+        pg.click("text=Carica dati"); ready(pg)
         def header():
             assert "mzLab" not in pg.inner_text("header").replace("\n", " ").split("Dati")[0]
             assert pg.get_attribute("header .logo", "alt") == "mzLab"

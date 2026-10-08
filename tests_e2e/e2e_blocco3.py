@@ -13,7 +13,7 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1400, "height": 1000})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
+        pg.click("text=Carica dati"); ready(pg)
         XP = "E.panels.filter(p=>p.type==='xic')"
         rows = lambda: pg.locator("#xic-rows .xrw")
         def two():
@@ -21,12 +21,12 @@ try:
             t = pg.inner_text("#xic-rows"); assert "Ione 1" in t and "Ione 2 (facoltativo)" in t, t
             pg.locator("#xic-rows input").nth(0).fill("194.2"); pg.locator("#xic-rows input").nth(1).fill("152"); pg.wait_for_timeout(300)
             s = pg.locator("#xic-rows .xr-sum").all_inner_texts(); print(s); assert "193.8 - 194.8" in s[0] and "151.8 - 152.8" in s[1], s
-            n0 = pg.evaluate(f"{XP}.length"); pg.click("#xic-go"); pg.wait_for_timeout(2500)
+            n0 = pg.evaluate(f"{XP}.length"); pg.click("#xic-go"); ready(pg)
             assert pg.evaluate(f"{XP}.length") == n0 + 1 and pg.evaluate(f"{XP}.pop().traces.length") == 2
         step("3.1: two ions -> one panel with two traces", two)
         def one():
             pg.click("#np-xic"); pg.locator("#xic-rows input").nth(0).fill("364"); pg.locator("#xic-rows input").nth(1).fill("")
-            n0 = pg.evaluate(f"{XP}.length"); pg.click("#xic-go"); pg.wait_for_timeout(2000)
+            n0 = pg.evaluate(f"{XP}.length"); pg.click("#xic-go"); ready(pg)
             assert pg.evaluate(f"{XP}.pop().traces.length") == 1 and pg.evaluate(f"{XP}.length") == n0 + 1
         step("3.1: row 2 empty -> only ion 1", one)
         def limit():
@@ -49,7 +49,7 @@ try:
             ins = pg.locator("#xic-rows input")
             for i, v in enumerate(["100", "110", "120", "130"]): ins.nth(i).fill(v)
             pg.select_option("#xic-file", index=2); n = pg.evaluate("E.files[+document.querySelector('#xic-file').value].label")
-            pg.click("#xic-go"); pg.wait_for_timeout(2500)
+            pg.click("#xic-go"); ready(pg)
             hid = pg.evaluate(f"(()=>{{const p={XP}.pop();return Object.keys(p.hid).filter(k=>p.hid[k]).map(k=>+k.split('|')[1])}})()")
             keep = pg.evaluate("+document.querySelector('#xic-file').value") if False else None
             ks = pg.evaluate("tabFiles('full').map(f=>f.k)"); print(n, hid, ks); assert len(set(hid)) == len(ks) - 1, (hid, ks)

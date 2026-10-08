@@ -13,7 +13,7 @@ try:
         pg = r.page(p)
         pg.set_viewport_size({"width": 1280, "height": 700})
         pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_MS2-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
+        pg.click("text=Carica dati"); ready(pg)
         pg.evaluate("setTab('full',true)"); pg.wait_for_timeout(600)
         for sel in ["#np-chrom", "#np-spec", "#np-chrom"]: pg.click(sel); pg.wait_for_timeout(900)
         top = lambda: pg.evaluate("document.querySelector('header').getBoundingClientRect().top")

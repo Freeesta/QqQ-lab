@@ -22,7 +22,7 @@ with sync_playwright() as p:
         assert d["B_MRM-t0.mzML"][0] == "mrm" and d["B_MS2-t15.mzML"][0] == "ms2" and d["B_FullMass-t0.mzML"] == ("full",), d
         assert "Esperimento" in pg.inner_text("#flist") and "MS2 (Product Ion)" in pg.inner_text("#flist") and "MRM" in pg.inner_text("#flist") and "Full Scan" in pg.inner_text("#flist") and "EMS" not in pg.inner_text("#flist")
     step("start screen detects the experiment from the content", column)
-    pg.click("text=Carica dati"); pg.wait_for_timeout(5000)
+    pg.click("text=Carica dati"); ready(pg)
     pg.screenshot(path=SH + "121_data.png")
     def side():
         t = flst_own(pg); assert "scan MS1" not in t and "RT 0.5" not in t and "Doppio clic" not in pg.inner_text("#dfiles"), t
@@ -45,7 +45,7 @@ with sync_playwright() as p:
         z = pg.evaluate("E.panels[0].zoom"); assert z and abs(z[0] - 13) < 0.1 and abs(z[1] - 16) < 0.1, z
         assert c.locator('[data-a=fit]').is_enabled(); c.locator('[data-a=fit]').click(); c.locator('[data-a=izoom]').click(); assert c.locator('[data-a=fit]').is_disabled()
         # XIC panel with a chosen window, then auto + manual integration on a chosen file
-        pg.click("#np-xic"); pg.fill("#xic-mz", "364"); pg.click("#xic-go"); pg.wait_for_timeout(2500)
+        pg.click("#np-xic"); pg.fill("#xic-mz", "364"); pg.click("#xic-go"); ready(pg)
         xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')"); xp = pg.locator('.pnl.xic').first
         assert pg.evaluate(f"E.panels[{xi}].traces[0].w") == 0.5
         xp.locator('[data-a=iauto]').click(); assert xp.locator('[data-a=intf]').is_visible()
@@ -74,7 +74,7 @@ with sync_playwright() as p:
         assert pg.evaluate(f"E.panels[{xi}].ints.length") == 0 and not xp.locator('[data-a=iclr]').is_visible()
     step("zoom tool, TIC refuses, XIC window da-a, integration of a chosen file", integ)
     def ms2():
-        pg.click("#dtabs [data-t=ms2]"); pg.wait_for_timeout(3500)
+        pg.click("#dtabs [data-t=ms2]"); ready(pg)
         assert pg.locator("#expbar").count() == 0
         ch = pg.evaluate("tabPanels().filter(p=>p.type==='chrom').map(p=>[p.prec,p._a.sr[0].x.length])")
         assert len(ch) == 1 and ch[0][1] > 0, ch      # one pair of graphs (since 7/10); the precursor is chosen in the list
@@ -95,9 +95,9 @@ with sync_playwright() as p:
     def method():
         pg.evaluate("E.cur=E.files.findIndex(f=>f.kind==='mrm');E.browse=true;renderFileList();renderNav()")
         pg.set_input_files("input[type=file][accept*='.dam']", []) if False else None
-        pg.click("#np-method"); pg.wait_for_timeout(1500); t = pg.inner_text("#bigdlg"); assert "MRM" in t and "transizione" in t.lower(), t[:300]
+        pg.click("#np-method"); ready(pg); t = pg.inner_text("#bigdlg"); assert "MRM" in t and "transizione" in t.lower(), t[:300]
         pg.screenshot(path=SH + "124_method_mrm.png"); pg.click("#bigx")
-        pg.evaluate("E.cur=E.files.findIndex(f=>f.kind==='ms2');renderFileList();renderNav()"); pg.click("#np-method"); pg.wait_for_timeout(1500)
+        pg.evaluate("E.cur=E.files.findIndex(f=>f.kind==='ms2');renderFileList();renderNav()"); pg.click("#np-method"); ready(pg)
         assert "ioni prodotto" in pg.inner_text("#bigdlg"); pg.screenshot(path=SH + "125_method_ms2.png"); pg.click("#bigx")
     step("Metodo: MRM and MS2 explained", method)
     def ital():

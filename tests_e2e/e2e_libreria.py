@@ -13,7 +13,7 @@ try:
         pg = r.page(p)
         pg.set_viewport_size({"width": 1400, "height": 1000})
         pg.set_input_files("#pick", [mz("B_MS2-t15")]); pg.wait_for_timeout(1000)
-        pg.click("text=Carica dati"); pg.wait_for_timeout(4500)
+        pg.click("text=Carica dati"); ready(pg)
         pg.evaluate("setTab('ms2',true)"); pg.wait_for_timeout(2500)
         SPEC = "E.panels.find(p => p.type === 'spec' && p.level === 2)"
         q = pg.evaluate(f"(() => {{ const p = {SPEC}, d = p._a.data[0].d; return {{mz: d.mz, y: d.y0 || d.y, prec: p.prec, pol: p._a.data[0].f.polarity}}; }})()")

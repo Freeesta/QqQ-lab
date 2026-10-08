@@ -20,7 +20,7 @@ COLORS = "E.files.filter(f=>f.kind==='full'&&f.type==='sample'&&f.time!=null).so
 def load(pg, times, name):
     shutil.rmtree("/tmp/s25_" + name, ignore_errors=True)
     files = synth.make_series("/tmp/s25_" + name, times)
-    pg.set_input_files("#pick", files); pg.wait_for_timeout(1000); pg.click("text=Carica dati"); pg.wait_for_timeout(4000)
+    pg.set_input_files("#pick", files); pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
 try:
     with sync_playwright() as p:
         pg = r.page(p)

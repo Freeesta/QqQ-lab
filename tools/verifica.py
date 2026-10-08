@@ -197,6 +197,57 @@ def judge(out: str, rc: int) -> list[str]:
     return probs
 
 
+# --cambiati: which e2e cover which files. A changed file that matches no rule (the core: explore.js, index.html, app.py, api.py,
+# explore.py, tabs.js, ...) means "all of them". Documents only: no e2e. Keep it short and update it with a new e2e of a new area.
+AREE = [
+    ("qqq_lab/web/teoria/", {"e2e7", "e2e_pratica", "e2e_telefono", "e2e_header", "e2e_nome"}),
+    ("qqq_lab/web/draw.js", {"e2e24", "e2e6", "e2e_decimali", "e2e_ketcher_grandi", "e2e_strumenti_ketcher", "e2e_tocco"}),
+    ("qqq_lab/web/telefono.js", {"e2e_telefono"}),
+    ("qqq_lab/web/tables.js", {"e2e28", "e2e_perdite", "e2e6"}), ("qqq_lab/web/elements.js", {"e2e28", "e2e6"}),
+    ("qqq_lab/web/perdite.js", {"e2e_perdite"}), ("qqq_lab/web/calcola.js", {"e2e_calc"}), ("qqq_lab/web/cromato.js", {"e2e_cromato"}),
+    ("qqq_lab/web/hr.js", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_ui"}), ("qqq_lab/web/dda.js", {"e2e_hr_dda", "e2e_hr_dda2"}),
+    ("qqq_lab/reader/profile.py", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_dda", "e2e_hr_ui"}),
+    ("qqq_lab/web/libreria", {"e2e_libreria"}), ("qqq_lab/web/touch.js", {"e2e_tocco"}), ("qqq_lab/web/perf.js", {"e2e_perf"}),
+    ("qqq_lab/web/origine.js", {"e2e_origine"}), ("qqq_lab/ionfamily.py", {"e2e_origine"}),
+    ("qqq_lab/web/settings.js", {"e2e22", "e2e25"}), ("qqq_lab/web/spettro.js", {"e2e_spettro", "e2e_assi"}),
+    ("qqq_lab/web/scroll.js", {"e2e_scroll", "e2e8"}), ("qqq_lab/web/xlsx.js", {"e2e6", "e2e8", "e2e15", "e2e18"}),
+    ("qqq_lab/web/tpmine-loader.js", {"e2e_tpmine1", "e2e_tpmine2"}), ("TP_Mine/", {"e2e_tpmine1", "e2e_tpmine2"}),
+    ("qqq_lab/web/browser", {"e2e13"}), ("qqq_lab/web/sw.js", {"e2e13"}), ("qqq_lab/browser.py", {"e2e13"}), ("tools/build_site.py", {"e2e13"}),
+    ("tools/genera_", set()), ("tools/prova_hr.py", set()), ("tools/validate_ionfamily.py", set()), ("tests/", set()),
+]
+DOCS = (".md", ".txt", "LICENSE", ".github/", ".gitignore", ".gitattributes", "pyproject.toml")
+
+
+def changed_tests(files: set[str] | None = None) -> tuple[set[str] | None, str]:
+    """E2E to run for the files changed against origin/main (committed or not): (names, explanation); None = all; {"-"} = none."""
+    def git(*a):
+        p = subprocess.run(["git", *a], cwd=ROOT, capture_output=True, text=True)
+        return p.stdout.split("\n") if p.returncode == 0 else []
+    if files is None:
+        files = {f for f in git("diff", "--name-only", "origin/main...HEAD") + [l[3:] for l in git("status", "--porcelain")] if f.strip()}
+    if not files:
+        return {"-"}, "nessun file cambiato rispetto a origin/main: nessun e2e"
+    tests: set[str] = set()
+    for f in sorted(files):
+        if f.endswith(DOCS) or any(f.startswith(d) for d in DOCS if d.endswith("/")):
+            continue
+        if f.startswith("tests_e2e/"):
+            n = Path(f).stem
+            if n in ("lib", "lib_hr", "synth"):
+                return None, f"{f} è un aiuto comune: tutti gli e2e"
+            if n.startswith("e2e"):
+                tests.add(n)
+            continue
+        hit = [t for pre, t in AREE if f.startswith(pre)]
+        if not hit:
+            return None, f"{f} è del nucleo: tutti gli e2e"
+        for t in hit:
+            tests |= t
+    if not tests:
+        return {"-"}, "solo documenti o file senza e2e: nessun e2e"
+    return tests | ({"e2e3"} if any(f.startswith("qqq_lab/") for f in files) else set()), "e2e: " + ", ".join(sorted(tests))
+
+
 def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
     names = sorted(p.stem for p in E2E.glob("e2e*.py") if p.stem not in NOT_TESTS)
     if only:
@@ -248,6 +299,8 @@ def main() -> None:
     ap.add_argument("--setup", action="store_true", help="installa pytest, playwright e chromium se mancano")
     ap.add_argument("--timeout", type=int, default=600, help="secondi per ogni e2e (predefinito 600)")
     ap.add_argument("--paralleli", type=int, default=3, help="e2e eseguiti insieme (predefinito 3; 1 = uno alla volta, come prima)")
+    ap.add_argument("--cambiati", action="store_true", help="solo gli e2e che riguardano i file cambiati rispetto a origin/main (vedi AREE); con file del nucleo li fa tutti")
+    ap.add_argument("--tutto", action="store_true", help="stampa anche le righe OK (altrimenti solo FAIL/SKIP e il conteggio)")
     a = ap.parse_args()
     if a.browser:
         os.environ["QQQ_BROWSER"] = a.browser
@@ -263,7 +316,13 @@ def main() -> None:
             prova_hr(results)
     if not a.senza_e2e:
         only = {s.strip().removesuffix(".py") for s in a.solo.split(",") if s.strip()} or (set(SMOKE) if a.rapida or a.fumo else set())
-        e2e(results, only, a.timeout, "", a.paralleli)
+        run = True
+        if a.cambiati and not only:
+            sel, why = changed_tests()
+            results.append(("e2e scelti da --cambiati", "INFO", 0, [why]))
+            run, only = sel != {"-"}, (sel if sel not in (None, {"-"}) else set())
+        if run:
+            e2e(results, only, a.timeout, "", a.paralleli)
     fails = [r for r in results if r[1] == "FAIL"]
     lines = [f"# Verifica QqQ lab ({time.strftime('%Y-%m-%d %H:%M')}, {time.time() - t0:.0f} s, browser {browser_name()}): "
              + ("TUTTO OK" if not fails else f"{len(fails)} FAIL"), ""]
@@ -272,7 +331,12 @@ def main() -> None:
     lines += ["", "Log completi: .verifica/log/<nome>.log (leggili solo per i FAIL)."]
     text = "\n".join(lines)
     (OUT / "ultimo.md").write_text(text + "\n", encoding="utf-8")
-    print(text)
+    if a.tutto:
+        print(text)
+    else:          # fewer tokens for whoever reads it: only what is not OK, plus how many are OK (the full list is in .verifica/ultimo.md)
+        ok = [r for r in results if r[1] == "OK"]
+        print("\n".join([lines[0], ""] + [l for l in lines[2:] if not l.startswith("- OK")] +
+                         [f"OK: {len(ok)} controlli (elenco in .verifica/ultimo.md)"]))
     sys.exit(1 if fails else 0)
 
 
