@@ -34,7 +34,7 @@ try:
         step("no old name in the DOM, attributes, credits and help texts", interface)
         def png_meta():
             assert pg.evaluate("plotMeta({title:'x', traces:[]}, []) ? true : true") or True
-            src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "qqq_lab", "web", "explore.js"), encoding="utf-8").read(); assert '["Software", APP_NAME]' in src
+            src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mzlab", "web", "explore.js"), encoding="utf-8").read(); assert '["Software", APP_NAME]' in src
         step("PNG metadata use the constant", png_meta)
         def teoria():
             for ch in ("index.html", "00-uso.html", "12-dati.html"):
@@ -44,7 +44,7 @@ try:
         step("Teoria: no old name in the text and in the titles", teoria)
         def only_one():
             import re, pathlib
-            web = pathlib.Path(__file__).resolve().parent.parent / "qqq_lab" / "web"
+            web = pathlib.Path(__file__).resolve().parent.parent / "mzlab" / "web"
             hits = [f.name for f in web.glob("*.js") if re.search(r'"mzLab"', f.read_text(encoding="utf-8")) and f.name != "appname.js"]
             assert not hits, hits
         step("the name is written in appname.js only", only_one)

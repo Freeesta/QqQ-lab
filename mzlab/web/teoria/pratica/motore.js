@@ -1,4 +1,4 @@
-/* QqQ lab - Pratica: shared engine of the exercises and games (classic script; also loadable by node for the tests).
+/* mzLab - Pratica: shared engine of the exercises and games (classic script; also loadable by node for the tests).
    - progress kept ONLY in this browser (localStorage "qqq.pratica"): nothing is sent anywhere, no leaderboard;
    - a level per skill with an Elo-like rule (Pelánek 2016): p = 1/(1+e^-(theta-d)), theta += K (s - p), K = 0.4/(1+0.05 n);
    - spaced repetition of the items that went badly (1, 3, 7, 21 days: Leitner boxes);
@@ -6,7 +6,7 @@
    - pure chemistry helpers (formula, nominal and exact mass, rings plus double bonds, unit-resolution isotope pattern). */
 "use strict";
 const PAL = (() => {
-  const KEY = "qqq.pratica", DAY = 864e5;
+  const KEY = "qqq.pratica", DAY = 864e5; // kept from the old name: renaming it would lose the users' data
   const SKILLS = {
     M: "Ione molecolare", iso: "Isotopi ed elementi", formula: "Formula, azoto e RDB", serie: "Serie e ioni caratteristici",
     perdite: "Perdite neutre", meccanismi: "Meccanismi di frammentazione", struttura: "Struttura dallo spettro EI",

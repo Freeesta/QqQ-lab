@@ -26,7 +26,7 @@ try:
             pg.fill("#xic-mz", "C14H13F4N3O2S"); pg.wait_for_timeout(1300)
             assert "363.8 - 364.8" in sm(), sm()
             pg.click("#xic-go"); ready(pg)
-            tr = pg.evaluate("E.panels.find(p=>p.type==='xic').traces[0]"); assert tr["mz"] == 364.3 and tr["w"] == 0.5 and "363.8-364.8" in tr["label"], tr
+            tr = pg.evaluate("E.panels.find(p=>p.type==='xic').traces[0]"); assert tr["mz"] == 364.3 and tr["w"] == 0.5 and "m/z 364.3" in tr["label"], tr
         step("dialog: text, one value or formula, unit window, one decimal", dialog)
         def obs():
             pg.evaluate("openXic(null,{mz:364.37,obs:true})"); assert "363.8 - 364.8" in sm() and pg.input_value("#xic-mz") == "364.4", sm()

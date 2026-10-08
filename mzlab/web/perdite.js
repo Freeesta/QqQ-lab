@@ -1,6 +1,6 @@
 "use strict";
 // Neutral losses (window «Perdite neutre», tables.js): the list and the search for combinations. Pure data and functions, also run by node in tests/test_perdite.py.
-// The exact masses are NOT written here: tables.js computes them from the formulas with the element data (elements.js), the test with qqq_lab/chem/elements.py.
+// The exact masses are NOT written here: tables.js computes them from the formulas with the element data (elements.js), the test with mzlab/chem/elements.py.
 // Sources (primary literature): Levsen et al., J. Mass Spectrom. 42 (2007) 1024-1044; Holcapek, Jirasko, Lisa, J. Chromatogr. A 1217 (2010) 3908-3921;
 // Demarque et al., Nat. Prod. Rep. 33 (2016) 432-455; De Vijlder et al., Mass Spectrom. Rev. 37 (2018) 607-629. The column «si vede in» and the mechanisms are
 // textbook summaries of what those reviews describe; no percentages (none was checked against the full texts). Peptide / lipid specific losses are left out on purpose.

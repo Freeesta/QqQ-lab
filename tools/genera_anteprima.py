@@ -1,6 +1,6 @@
-"""Make the picture shown when the link of the site is shared (WhatsApp, Telegram, Slack, social networks): qqq_lab/web/anteprima.png, 1200 x 630: just the logo and the name.
+"""Make the picture shown when the link of the site is shared (WhatsApp, Telegram, Slack, social networks): mzlab/web/anteprima.png, 1200 x 630: just the logo and the name.
 
-The name is read from qqq_lab/web/appname.js (the only place where it is written). Only Pillow is needed (the logo is qqq_lab/web/logo.png).
+The name is read from mzlab/web/appname.js (the only place where it is written). Only Pillow is needed (the logo is mzlab/web/logo.png).
 WhatsApp shows the large preview only if the picture is below ~300 KB: the script checks it."""
 import re
 from pathlib import Path
@@ -8,7 +8,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
-WEB = ROOT / "qqq_lab" / "web"
+WEB = ROOT / "mzlab" / "web"
 NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (WEB / "appname.js").read_text(encoding="utf-8")).group(1)
 W, H, S = 1200, 630, 2                                    # drawn at double size, then reduced (smooth edges)
 BOLD, REG = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"

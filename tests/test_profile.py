@@ -8,10 +8,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import dati_sintetici as ds  # noqa: E402
-from qqq_lab import explore  # noqa: E402
-from qqq_lab.explore import Item  # noqa: E402
-from qqq_lab.reader.mzml import Run  # noqa: E402
-from qqq_lab.reader.profile import LOW, analyzer_from_components, mass_profile  # noqa: E402
+from mzlab import explore  # noqa: E402
+from mzlab.explore import Item  # noqa: E402
+from mzlab.reader.mzml import Run  # noqa: E402
+from mzlab.reader.profile import LOW, analyzer_from_components, mass_profile  # noqa: E402
 
 sc = lambda an, res=None, n=3: [NS(an=an, res=res) for _ in range(n)]
 

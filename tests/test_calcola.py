@@ -1,4 +1,4 @@
-"""Arithmetic of the header calculator (qqq_lab/web/calcola.js): expression or formula, Italian signs and commas, results with 4 decimals."""
+"""Arithmetic of the header calculator (mzlab/web/calcola.js): expression or formula, Italian signs and commas, results with 4 decimals."""
 import json
 import shutil
 import subprocess
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-JS = Path(__file__).resolve().parent.parent / "qqq_lab" / "web" / "calcola.js"
+JS = Path(__file__).resolve().parent.parent / "mzlab" / "web" / "calcola.js"
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 

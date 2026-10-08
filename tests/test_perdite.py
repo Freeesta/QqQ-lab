@@ -1,4 +1,4 @@
-"""Neutral losses table (qqq_lab/web/perdite.js): the exact masses shown by the program are the ones computed by qqq_lab/chem/elements.py,
+"""Neutral losses table (mzlab/web/perdite.js): the exact masses shown by the program are the ones computed by mzlab/chem/elements.py,
 and the search for combinations of a mass difference (Cerca Δm) finds the right pairs and repetitions."""
 import json
 import shutil
@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from qqq_lab.chem.elements import parse_formula, formula_mz
+from mzlab.chem.elements import parse_formula, formula_mz
 
-WEB = Path(__file__).resolve().parent.parent / "qqq_lab" / "web"
+WEB = Path(__file__).resolve().parent.parent / "mzlab" / "web"
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 
 

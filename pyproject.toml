@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "qqq_lab"
+name = "mzlab"
 version = "0.1.0"
-description = "QqQ lab: viewer for triple quadrupole mzML data, runs in the browser (teaching lab, environmental pollutants)"
+description = "mzLab: viewer for triple quadrupole and HRMS mzML data, runs in the browser (teaching lab, environmental pollutants)"
 requires-python = ">=3.11"
 dependencies = ["numpy>=1.24"]
 license = { text = "MIT" }
@@ -14,7 +14,7 @@ license = { text = "MIT" }
 test = ["pytest"]
 
 [tool.setuptools.packages.find]
-include = ["qqq_lab*"]
+include = ["mzlab*", "qqq_lab"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

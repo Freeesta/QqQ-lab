@@ -184,7 +184,7 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
    <label class="muted sm" title="PNG e SVG con sfondo trasparente (il JPEG non lo supporta: con questa spunta il pulsante JPEG è disattivato). Senza spunta lo sfondo è bianco."><input type="checkbox" id="ex-nobg" autocomplete="off"> Sfondo trasparente</label>
    <div class="bar" style="margin-top:6px"><label class="muted sm" title="Nome dei file scaricati (senza estensione). Predefinito: disegno_data_ora. Solo lettere minuscole senza accento, numeri, trattino e trattino basso.">Nome file <input id="ex-name" autocomplete="off" spellcheck="false" style="width:200px"></label></div>
    <div id="ex-warn" class="sm" style="color:#b3261e;margin-top:4px" hidden></div>
-</div>   <!-- Ketcher (EPAM, Apache-2.0) and OpenChemLib (BSD-3) are bundled: see README.md and qqq_lab/web/vendor/README.md -->
+</div>   <!-- Ketcher (EPAM, Apache-2.0) and OpenChemLib (BSD-3) are bundled: see README.md and mzlab/web/vendor/README.md -->
  </aside>
 </section>
 <dialog id="refdlg"><div class="top" style="display:flex;align-items:center;gap:8px"><nav id="reftabs"></nav><span class="sp"></span><button id="refx" class="x" title="Chiudi">&times;</button></div><div id="refbody"></div></dialog>
@@ -418,6 +418,7 @@ function renderLoaded(){const el=$("#loaded"),on=!!(S.sess&&S.adding&&typeof E!=
 // (the server or, in the web version, the worker's IndexedDB stores via api/new), localStorage (preferences), the drawing and the settings. The service
 // worker's cache holds only the program itself (no student data) and stays, so the page keeps working offline.
 async function wipeLocal(){
+  // qqq.* kept from the old name: renaming it would lose the users' data
   try{const ks=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith("qqq."))ks.push(k)}ks.forEach(k=>localStorage.removeItem(k));sessionStorage.clear()}catch(e){}
   UIP.font=100;UIP.theme="auto";setPal("time");
   Object.keys(NB).forEach(k=>delete NB[k]);NB.ui=null;NB.session=null;

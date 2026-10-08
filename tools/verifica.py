@@ -5,11 +5,11 @@
     python3 tools/verifica.py --solo e2e6,e2e18
     python3 tools/verifica.py --setup         # first install what is missing (pytest, playwright + chromium), then check
 
-Data, in this order: QQQ_MZML; the PRIVATE data repository "QqQ-lab-dati" (Freeesta/QqQ-lab-dati: mzML/ + dam/, real lab
-files; found by itself next to this repository, in a parent folder, in the home or in /workspace, or with QQQ_DATI=<path>);
+Data, in this order: MZLAB_MZML (or legacy QQQ_MZML); the PRIVATE data repository "mzlab-dati" or "QqQ-lab-dati" (Freeesta/mzlab-dati or Freeesta/QqQ-lab-dati: mzML/ + dam/, real lab
+files; found by itself next to this repository, in a parent folder, in the home or in /workspace, or with MZLAB_DATI=<path> or QQQ_DATI=<path>);
 Federico's Mac folders (../Data/mzML); otherwise synthetic look-alikes written by tools/dati_sintetici.py into
 .verifica/dati_sintetici/ (then the summary says "sintetici": a pass on synthetic data is weaker than on real data).
-Some e2e only make sense with the real data or with a .dam method (QQQ_DAM): they are reported as SKIP, with why.
+Some e2e only make sense with the real data or with a .dam method (MZLAB_DAM or QQQ_DAM): they are reported as SKIP, with why.
 
 Output: one line per check on stdout (OK / FAIL / SKIP, seconds, first error lines), the same summary in
 .verifica/ultimo.md, and the full output of every check in .verifica/log/<name>.log. Read the logs only for a FAIL.
@@ -63,9 +63,14 @@ def has(mod: str) -> bool:
     return subprocess.run([sys.executable, "-c", f"import {mod}"], capture_output=True).returncode == 0
 
 
+def get_env(suffix: str, default: str | None = None) -> str | None:
+    """Read MZLAB_<suffix> or QQQ_<suffix> (MZLAB_* takes precedence)."""
+    return os.environ.get(f"MZLAB_{suffix}", os.environ.get(f"QQQ_{suffix}", default))
+
+
 def browser_name() -> str:
-    """chromium (default), firefox or webkit (the engine of Safari): --browser or QQQ_BROWSER; tests_e2e/lib.py reads the same variable."""
-    return os.environ.get("QQQ_BROWSER", "chromium")
+    """chromium (default), firefox or webkit (the engine of Safari): --browser or MZLAB_BROWSER / QQQ_BROWSER; tests_e2e/lib.py reads the same variable."""
+    return get_env("BROWSER", "chromium")
 
 
 def setup() -> None:
@@ -86,7 +91,7 @@ def browser_ok() -> bool:
 
 
 def js_syntax(results) -> None:
-    web = ROOT / "qqq_lab" / "web"
+    web = ROOT / "mzlab" / "web"
     tmp = OUT / "js"; tmp.mkdir(parents=True, exist_ok=True)
     if not shutil.which("node"):
         results.append(("sintassi JS", "SKIP", 0, ["node non installato"])); return
@@ -126,22 +131,23 @@ def pytest(results, timeout) -> None:
 
 
 def dati_repo() -> Path | None:
-    """The private data repository QqQ-lab-dati (real lab files: mzML/ and dam/), wherever it was cloned."""
-    env = os.environ.get("QQQ_DATI")
+    """The private data repository mzlab-dati / QqQ-lab-dati (real lab files: mzML/ and dam/), wherever it was cloned."""
+    env = get_env("DATI")
     cands = [Path(env)] if env else []
     for base in (ROOT.parent, ROOT.parent.parent, Path.home(), Path("/workspace"), Path("/workspaces"), Path("/repos"), Path("/tmp")):
-        cands += [base / "QqQ-lab-dati", base / "Data" / "QqQ-lab-dati"]
-        try:
-            cands += sorted(base.glob("*/QqQ-lab-dati"))
-        except OSError:
-            pass
+        for name in ("mzlab-dati", "QqQ-lab-dati"):
+            cands += [base / name, base / "Data" / name]
+            try:
+                cands += sorted(base.glob(f"*/{name}"))
+            except OSError:
+                pass
     return next((c for c in cands if (c / "mzML" / "B_FullMass-t0.mzML").exists()), None)
 
 
 def data_dir() -> tuple[Path, str]:
-    """Real lab mzML if found (QQQ_MZML, the data repository, the Mac folders), otherwise synthetic look-alikes."""
+    """Real lab mzML if found (MZLAB_MZML / QQQ_MZML, the data repository, the Mac folders), otherwise synthetic look-alikes."""
     repo = dati_repo()
-    for cand in (os.environ.get("QQQ_MZML"), repo / "mzML" if repo else None, ROOT.parent / "Data" / "mzML",
+    for cand in (get_env("MZML"), repo / "mzML" if repo else None, ROOT.parent / "Data" / "mzML",
                  ROOT.parent / "esempio_conversione" / "mzml"):
         if cand and (Path(cand) / "B_FullMass-t0.mzML").exists():
             return Path(cand), "veri"
@@ -156,7 +162,8 @@ def data_dir() -> tuple[Path, str]:
 def hrms_dirs() -> list[Path]:
     """Folders with high-resolution Orbitrap files: the two cuttings of the private data repository (HRMS/) and, on Federico's Mac, the whole files."""
     repo = dati_repo()
-    c = [repo / "HRMS" if repo else None, Path(os.environ["QQQ_HRMS"]) if os.environ.get("QQQ_HRMS") else None, ROOT.parent / "Data" / "HRMS"]
+    hrms_env = get_env("HRMS")
+    c = [repo / "HRMS" if repo else None, Path(hrms_env) if hrms_env else None, ROOT.parent / "Data" / "HRMS"]
     return [d for d in c if d and d.is_dir() and any(d.glob("*.mzML"))]
 
 
@@ -164,7 +171,7 @@ def prova_hr(results) -> None:
     """Technical numbers of the real Orbitrap files (tools/prova_hr.py); nothing to check, only information."""
     dirs = hrms_dirs()
     if not dirs:
-        results.append(("prova_hr", "SKIP", 0, ["nessuna cartella HRMS (QqQ-lab-dati/HRMS o ../Data/HRMS)"])); return
+        results.append(("prova_hr", "SKIP", 0, ["nessuna cartella HRMS (mzlab-dati/HRMS o ../Data/HRMS)"])); return
     for d in dirs:
         rc, out, dt = sh([sys.executable, str(ROOT / "tools" / "prova_hr.py"), str(d)], LOG / "prova_hr.log", 900)
         results.append((f"prova_hr {d.parent.name}/{d.name}", "OK" if rc == 0 and "ERRORE" not in out else "FAIL", dt,
@@ -174,7 +181,7 @@ def prova_hr(results) -> None:
 def dam_file() -> Path | None:
     repo = dati_repo()
     name = "Lab_inq_FullMass_pos_max480.dam"            # e2e15 also wants Lab_inq_MRM_Flufe.dam in the same folder
-    for cand in (os.environ.get("QQQ_DAM"), repo / "dam" / name if repo else None, ROOT.parent / "Data" / "dam - Metodi" / name,
+    for cand in (get_env("DAM"), repo / "dam" / name if repo else None, ROOT.parent / "Data" / "dam - Metodi" / name,
                  ROOT.parent / "QqQ" / "Metodi inquinanti" / name):
         if cand and Path(cand).exists():
             return Path(cand)
@@ -200,19 +207,19 @@ def judge(out: str, rc: int) -> list[str]:
 # --cambiati: which e2e cover which files. A changed file that matches no rule (the core: explore.js, index.html, app.py, api.py,
 # explore.py, tabs.js, ...) means "all of them". Documents only: no e2e. Keep it short and update it with a new e2e of a new area.
 AREE = [
-    ("qqq_lab/web/teoria/", {"e2e7", "e2e_pratica", "e2e_telefono", "e2e_header", "e2e_nome"}),
-    ("qqq_lab/web/draw.js", {"e2e24", "e2e6", "e2e_decimali", "e2e_ketcher_grandi", "e2e_strumenti_ketcher", "e2e_tocco"}),
-    ("qqq_lab/web/telefono.js", {"e2e_telefono"}),
-    ("qqq_lab/web/tables.js", {"e2e28", "e2e_perdite", "e2e6"}), ("qqq_lab/web/elements.js", {"e2e28", "e2e6"}),
-    ("qqq_lab/web/perdite.js", {"e2e_perdite"}), ("qqq_lab/web/calcola.js", {"e2e_calc"}), ("qqq_lab/web/cromato.js", {"e2e_cromato"}),
-    ("qqq_lab/web/hr.js", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_ui"}), ("qqq_lab/web/dda.js", {"e2e_hr_dda", "e2e_hr_dda2"}),
-    ("qqq_lab/reader/profile.py", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_dda", "e2e_hr_ui"}),
-    ("qqq_lab/web/libreria", {"e2e_libreria"}), ("qqq_lab/web/touch.js", {"e2e_tocco"}), ("qqq_lab/web/perf.js", {"e2e_perf"}),
-    ("qqq_lab/web/origine.js", {"e2e_origine"}), ("qqq_lab/ionfamily.py", {"e2e_origine"}),
-    ("qqq_lab/web/settings.js", {"e2e22", "e2e25"}), ("qqq_lab/web/spettro.js", {"e2e_spettro", "e2e_assi"}),
-    ("qqq_lab/web/scroll.js", {"e2e_scroll", "e2e8"}), ("qqq_lab/web/xlsx.js", {"e2e6", "e2e8", "e2e15", "e2e18"}),
-    ("qqq_lab/web/tpmine-loader.js", {"e2e_tpmine1", "e2e_tpmine2"}), ("TP_Mine/", {"e2e_tpmine1", "e2e_tpmine2"}),
-    ("qqq_lab/web/browser", {"e2e13"}), ("qqq_lab/web/sw.js", {"e2e13"}), ("qqq_lab/browser.py", {"e2e13"}), ("tools/build_site.py", {"e2e13"}),
+    ("mzlab/web/teoria/", {"e2e7", "e2e_pratica", "e2e_telefono", "e2e_header", "e2e_nome"}),
+    ("mzlab/web/draw.js", {"e2e24", "e2e6", "e2e_decimali", "e2e_ketcher_grandi", "e2e_strumenti_ketcher", "e2e_tocco"}),
+    ("mzlab/web/telefono.js", {"e2e_telefono"}),
+    ("mzlab/web/tables.js", {"e2e28", "e2e_perdite", "e2e6"}), ("mzlab/web/elements.js", {"e2e28", "e2e6"}),
+    ("mzlab/web/perdite.js", {"e2e_perdite"}), ("mzlab/web/calcola.js", {"e2e_calc"}), ("mzlab/web/cromato.js", {"e2e_cromato"}),
+    ("mzlab/web/hr.js", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_ui"}), ("mzlab/web/dda.js", {"e2e_hr_dda", "e2e_hr_dda2"}),
+    ("mzlab/reader/profile.py", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_dda", "e2e_hr_ui"}),
+    ("mzlab/web/libreria", {"e2e_libreria"}), ("mzlab/web/touch.js", {"e2e_tocco"}), ("mzlab/web/perf.js", {"e2e_perf"}),
+    ("mzlab/web/origine.js", {"e2e_origine"}), ("mzlab/ionfamily.py", {"e2e_origine"}),
+    ("mzlab/web/settings.js", {"e2e22", "e2e25"}), ("mzlab/web/spettro.js", {"e2e_spettro", "e2e_assi"}),
+    ("mzlab/web/scroll.js", {"e2e_scroll", "e2e8"}), ("mzlab/web/xlsx.js", {"e2e6", "e2e8", "e2e15", "e2e18"}),
+    ("mzlab/web/tpmine-loader.js", {"e2e_tpmine1", "e2e_tpmine2"}), ("TP_Mine/", {"e2e_tpmine1", "e2e_tpmine2"}),
+    ("mzlab/web/browser", {"e2e13"}), ("mzlab/web/sw.js", {"e2e13"}), ("mzlab/browser.py", {"e2e13"}), ("tools/build_site.py", {"e2e13"}),
     ("tools/genera_", set()), ("tools/prova_hr.py", set()), ("tools/validate_ionfamily.py", set()), ("tests/", set()),
 ]
 DOCS = (".md", ".txt", "LICENSE", ".github/", ".gitignore", ".gitattributes", "pyproject.toml")
@@ -245,7 +252,7 @@ def changed_tests(files: set[str] | None = None) -> tuple[set[str] | None, str]:
             tests |= t
     if not tests:
         return {"-"}, "solo documenti o file senza e2e: nessun e2e"
-    return tests | ({"e2e3"} if any(f.startswith("qqq_lab/") for f in files) else set()), "e2e: " + ", ".join(sorted(tests))
+    return tests | ({"e2e3"} if any(f.startswith("mzlab/") or f.startswith("qqq_lab/") for f in files) else set()), "e2e: " + ", ".join(sorted(tests))
 
 
 def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
@@ -256,16 +263,18 @@ def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
         results.append(("e2e", "SKIP", 0, ["Playwright/Chromium non disponibili: python3 tools/verifica.py --setup"])); return
     mz, src = data_dir()
     dam = dam_file()
-    env = dict(os.environ, QQQ_MZML=str(mz), PYTHONUNBUFFERED="1")
+    env = dict(os.environ, MZLAB_MZML=str(mz), QQQ_MZML=str(mz), PYTHONUNBUFFERED="1")
     if dam:
+        env["MZLAB_DAM"] = str(dam)
         env["QQQ_DAM"] = str(dam)
     crypto = has("cryptography")
     if jobs > 1:
+        env["MZLAB_E2E_PARALLEL"] = "1"
         env["QQQ_E2E_PARALLEL"] = "1"          # tests_e2e/lib.py: every test takes a free port and its own work folder
     todo, out_by = [], {}
     for n in names:
         need = NEEDS.get(n, set())
-        why = ("serve un file .dam (QQQ_DAM)" if "dam" in need and not dam else
+        why = ("serve un file .dam (MZLAB_DAM / QQQ_DAM)" if "dam" in need and not dam else
                "solo con i dati veri del laboratorio" if "veri" in need and src != "veri" else
                "serve il pacchetto cryptography" if "crypto" in need and not crypto else
                "costruisce il sito con Pyodide: lancialo a parte (--solo)" if "sito" in need and not only else "")
@@ -303,6 +312,7 @@ def main() -> None:
     ap.add_argument("--tutto", action="store_true", help="stampa anche le righe OK (altrimenti solo FAIL/SKIP e il conteggio)")
     a = ap.parse_args()
     if a.browser:
+        os.environ["MZLAB_BROWSER"] = a.browser
         os.environ["QQQ_BROWSER"] = a.browser
     LOG.mkdir(parents=True, exist_ok=True)
     if a.setup:

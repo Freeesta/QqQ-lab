@@ -8,7 +8,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import dati_sintetici as ds  # noqa: E402
-from qqq_lab.reader.mzml import Run  # noqa: E402
+from mzlab.reader.mzml import Run  # noqa: E402
 
 
 @pytest.fixture(scope="module")

@@ -99,7 +99,7 @@ def make_demo(folder: Path) -> Path:
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Synthetic in-source-fragmentation scene with known truth (for tests/test_ionfamily.py and for calibrating qqq_lab/ionfamily.py)
+# Synthetic in-source-fragmentation scene with known truth (for tests/test_ionfamily.py and for calibrating mzlab/ionfamily.py)
 # ----------------------------------------------------------------------------------------------------------------------
 ISF_PARENT_MZ = 364.0          # nominal; centroids are written at nominal + ISF_OFFSET (the real instrument is ~ +0.3 Da off)
 ISF_OFFSET = 0.3

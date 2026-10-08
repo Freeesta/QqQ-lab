@@ -1,4 +1,4 @@
-"""The home-made .xlsx writer (qqq_lab/web/xlsx.js): build a workbook with node, read it back with zipfile + XML (and openpyxl if installed)."""
+"""The home-made .xlsx writer (mzlab/web/xlsx.js): build a workbook with node, read it back with zipfile + XML (and openpyxl if installed)."""
 import re
 import shutil
 import subprocess
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-JS = Path(__file__).resolve().parent.parent / "qqq_lab" / "web" / "xlsx.js"
+JS = Path(__file__).resolve().parent.parent / "mzlab" / "web" / "xlsx.js"
 NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
 

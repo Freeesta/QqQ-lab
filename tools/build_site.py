@@ -3,7 +3,7 @@
     python tools/build_site.py                      # downloads Pyodide from the jsDelivr CDN (needs internet)
     python tools/build_site.py --pyodide-dir DIR    # uses an already downloaded copy (tests)
 
-site/index.html + site/static/ (the web folder as is) + site/static/qqq_lab.zip (the Python code) + site/static/pyodide/
+site/index.html + site/static/ (the web folder as is) + site/static/mzlab.zip (the Python code) + site/static/pyodide/
 (Python + numpy compiled to WebAssembly). GitHub Pages serves it as it is (.github/workflows/pages.yml).
 """
 from __future__ import annotations
@@ -39,8 +39,8 @@ def check_sha256(path: Path, want: str) -> None:
         raise SystemExit(f"{path.name}: SHA-256 {got} is not the expected {want}: build stopped")
 
 
-# The visible name of the program lives only in qqq_lab/web/appname.js
-APP_NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (ROOT / "qqq_lab" / "web" / "appname.js").read_text(encoding="utf-8")).group(1)
+# The visible name of the program lives only in mzlab/web/appname.js
+APP_NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "web" / "appname.js").read_text(encoding="utf-8")).group(1)
 
 # Address of the published site (GitHub Pages): link previews (WhatsApp, Telegram, Slack...) need ABSOLUTE addresses for the page and the picture
 SITE_URL = "https://freeesta.github.io/QqQ-lab/"
@@ -102,7 +102,7 @@ def main() -> None:
     if out.exists():
         shutil.rmtree(out)
     static = out / "static"
-    shutil.copytree(ROOT / "qqq_lab" / "web", static)
+    shutil.copytree(ROOT / "mzlab" / "web", static)
     for lic in ("LICENSE", "LICENZE-TERZI.md"):            # the licences travel with the site (Apache-2.0, BSD-3, MPL-2.0 ask for the notices)
         if (ROOT / lic).exists():
             shutil.copy2(ROOT / lic, out / lic)
@@ -121,13 +121,18 @@ def main() -> None:
     (out / "index.html").write_text(html, encoding="utf-8")
     (static / "index.html").unlink()
     (out / ".nojekyll").write_text("", encoding="utf-8")
-    # the Python code (everything but the web folder and the pieces that need a real computer)
-    with zipfile.ZipFile(static / "qqq_lab.zip", "w", zipfile.ZIP_DEFLATED) as z:
-        for f in sorted((ROOT / "qqq_lab").rglob("*.py")):
+    # the Python code (mzlab package + qqq_lab transitional bridge package)
+    with zipfile.ZipFile(static / "mzlab.zip", "w", zipfile.ZIP_DEFLATED) as z:
+        for f in sorted((ROOT / "mzlab").rglob("*.py")):
             rel = f.relative_to(ROOT)
             if "web" in rel.parts or "__pycache__" in rel.parts:
                 continue
             z.write(f, rel.as_posix())
+        bridge = ROOT / "qqq_lab" / "__init__.py"
+        if bridge.exists():
+            z.write(bridge, bridge.relative_to(ROOT).as_posix())
+    # identical copy for already published encrypted TP Mine (remove in Phase 3)
+    shutil.copy2(static / "mzlab.zip", static / "qqq_lab.zip")
     # Pyodide: core + numpy
     py = static / "pyodide"
     py.mkdir()

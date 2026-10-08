@@ -3,7 +3,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pathlib import Path
 import numpy as np
-from qqq_lab import demo
+from mzlab import demo
 
 
 def write_full(path, t, blank=False, std=False, seed=1):

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <title>mzLab - Reindirizzamento</title>
+  <script>
+    const path = window.location.pathname.replace(/^\/QqQ-lab\/?/, "");
+    const target = "https://freeesta.github.io/mzlab/" + path + window.location.search + window.location.hash;
+    window.location.replace(target);
+  </script>
+</head>
+<body>
+  <p>Reindirizzamento a <a href="https://freeesta.github.io/mzlab/">mzLab</a>...</p>
+</body>
+</html>

@@ -91,7 +91,7 @@ Menu laterale, indice della pagina e pulsanti avanti/indietro si aggiornano da s
 - Pagina vuota o figure sparite: di solito un tag non chiuso o un `"` mancante vicino all'ultima modifica.
 - In Visual Studio Code i tag non chiusi sono evidenziati.
 - Prima di modifiche grosse, fai un commit git (o copia il file): così puoi sempre tornare indietro.
-- Controllo automatico (opzionale): `python3 -m pytest -q tests` dalla cartella `qqq_lab` verifica che link, script e capitoli esistano.
+- Controllo automatico (opzionale): `python3 -m pytest -q tests` dalla cartella del programma verifica che link, script e capitoli esistano.
 
 ## La Pratica
 

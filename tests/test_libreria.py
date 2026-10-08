@@ -1,9 +1,9 @@
-"""Part D: reading MSP / MGF libraries and the scores (cosine, spectral entropy), run by node on qqq_lab/web/libreria-worker.js."""
+"""Part D: reading MSP / MGF libraries and the scores (cosine, spectral entropy), run by node on mzlab/web/libreria-worker.js."""
 import json
 import subprocess
 from pathlib import Path
 
-JS = Path(__file__).resolve().parent.parent / "qqq_lab" / "web" / "libreria-worker.js"
+JS = Path(__file__).resolve().parent.parent / "mzlab" / "web" / "libreria-worker.js"
 
 
 def run(code):

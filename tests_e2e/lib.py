@@ -37,18 +37,23 @@ def ready(pg, timeout=90000, settle=400):
         if q >= settle: return
         if _t.time() - t0 > timeout / 1000: raise TimeoutError("ready: the page is still loading")
         pg.wait_for_timeout(50)
-# Browser of the tests: QQQ_BROWSER=chromium (default) | firefox | webkit (the engine of Safari); tools/verifica.py --browser sets it.
+def get_env(suffix: str, default=None):
+    """Read MZLAB_<suffix> or legacy QQQ_<suffix> (MZLAB_* takes precedence)."""
+    return os.environ.get(f"MZLAB_{suffix}", os.environ.get(f"QQQ_{suffix}", default))
+
+
+# Browser of the tests: MZLAB_BROWSER / QQQ_BROWSER=chromium (default) | firefox | webkit (the engine of Safari); tools/verifica.py --browser sets it.
 # Every script asks for `p.chromium`: here it is pointed at the chosen browser, so no test has to change.
-BROWSER = os.environ.get("QQQ_BROWSER", "chromium")
+BROWSER = get_env("BROWSER", "chromium")
 if BROWSER != "chromium":
     from playwright.sync_api import Playwright as _PW
     _PW.chromium = property(lambda self: getattr(self, BROWSER))
 FILES = ["B_FullMass-t0", "B_FullMass-t15", "B_FullMass-t60", "B_MS2-t15", "B_MRM-t0"]
-# Paths are relative to this folder: code = parent of tests_e2e, mzML = ../esempio_conversione/mzml (or $QQQ_MZML)
+# Paths are relative to this folder: code = parent of tests_e2e, mzML = ../esempio_conversione/mzml (or $MZLAB_MZML / $QQQ_MZML)
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-MZ = Path(os.environ.get("QQQ_MZML", ROOT.parent / "esempio_conversione" / "mzml"))
-DAM = Path(os.environ.get("QQQ_DAM", ROOT.parent / "QqQ" / "Metodi inquinanti" / "Lab_inq_FullMass_pos_max480.dam"))   # a lab method (not in git)
+MZ = Path(get_env("MZML", ROOT.parent / "esempio_conversione" / "mzml"))
+DAM = Path(get_env("DAM", ROOT.parent / "QqQ" / "Metodi inquinanti" / "Lab_inq_FullMass_pos_max480.dam"))   # a lab method (not in git)
 SH = str(HERE / "shots") + "/"
 os.makedirs(SH, exist_ok=True)
 def mz(f): return str(MZ / f"{f}.mzML")
@@ -56,9 +61,9 @@ def free_port() -> int:
     import socket
     with socket.socket() as so:
         so.bind(("127.0.0.1", 0)); return so.getsockname()[1]
-# tools/verifica.py runs several tests at once (QQQ_E2E_PARALLEL=1): then every Run takes a free port and its own work folder,
+# tools/verifica.py runs several tests at once (MZLAB_E2E_PARALLEL=1 / QQQ_E2E_PARALLEL=1): then every Run takes a free port and its own work folder,
 # because a few tests share the fixed ones (they were written to run one after the other)
-PARALLEL = os.environ.get("QQQ_E2E_PARALLEL") == "1"
+PARALLEL = get_env("E2E_PARALLEL") == "1"
 class Run:
     def __init__(s, port=8811, wd="/tmp/wd1", fresh=True, extra=()):
         if PARALLEL:

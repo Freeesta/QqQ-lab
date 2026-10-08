@@ -1,11 +1,11 @@
-// Web Worker of the browser version: Pyodide (Python + numpy in WebAssembly) running the same qqq_lab package as the local program.
+// Web Worker of the browser version: Pyodide (Python + numpy in WebAssembly) running the same mzlab package as the local program.
 import { loadPyodide } from "./pyodide/pyodide.mjs";
 
 const say = text => postMessage({ type: "step", text });
 const WORK = "/work/sessione";
 
 // ---- the browser's own storage (IndexedDB): files and notebook survive a reload, like the work folder of the local program
-const DB = "qqq_lab";
+const DB = "qqq_lab"; // kept from the old name: renaming it would lose the users' data
 const idb = () => new Promise((res, rej) => {
   const r = indexedDB.open(DB, 1);
   r.onupgradeneeded = () => { r.result.createObjectStore("files"); r.result.createObjectStore("kv"); };
@@ -35,7 +35,7 @@ let py = null, handle = null, linkBig = null;
 // waited for numpy (about 3 s lost on a 20 Mbit/s line). The numpy wheel is only fetched here to warm the HTTP cache (and the
 // service worker): loadPackage then finds it there instead of starting the download late.
 const IDX = new URL("./pyodide/", import.meta.url).href;
-const zipP = fetch(new URL("./qqq_lab.zip", import.meta.url)).then(r => r.arrayBuffer());
+const zipP = fetch(new URL("./mzlab.zip", import.meta.url)).then(r => r.arrayBuffer());
 zipP.catch(() => {});
 fetch(IDX + "pyodide-lock.json").then(r => r.json()).then(l => fetch(IDX + l.packages.numpy.file_name)).then(r => r.arrayBuffer()).catch(() => {});
 async function start() {
@@ -60,8 +60,8 @@ async function start() {
     }
     const nb = await safe(() => tx("kv", "readonly", s => s.get("notebook")));
     if (nb) py.FS.writeFile(`${WORK}/taccuino.json`, nb);
-    for (const [n, blob] of bigs) { try { py.FS.symlink(mountBig(blob), `${WORK}/${n}`); } catch (e) { console.debug("[QqQ lab] file grande non riaperto", n, e); } }
-    py.runPython("import sys; sys.path.insert(0, '/qqq')\nfrom qqq_lab import browser\nbrowser.start()");
+    for (const [n, blob] of bigs) { try { py.FS.symlink(mountBig(blob), `${WORK}/${n}`); } catch (e) { console.debug("[mzLab] file grande non riaperto", n, e); } }
+    py.runPython("import sys; sys.path.insert(0, '/qqq')\nfrom mzlab import browser\nbrowser.start()");
     handle = py.runPython("browser.handle");
     linkBig = py.runPython("browser.link_big");
     postMessage({ type: "ready" });

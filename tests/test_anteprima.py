@@ -11,7 +11,7 @@ spec.loader.exec_module(bs)
 
 
 def test_picture_is_1200x630_and_light():
-    png = (ROOT / "qqq_lab" / "web" / "anteprima.png").read_bytes()
+    png = (ROOT / "mzlab" / "web" / "anteprima.png").read_bytes()
     assert png[:8] == b"\x89PNG\r\n\x1a\n"
     w, h = struct.unpack(">II", png[16:24])
     assert (w, h) == (1200, 630) and len(png) < 300_000            # WhatsApp shows the large preview only below ~300 KB
@@ -27,7 +27,7 @@ def test_tags_have_the_name_and_absolute_addresses():
 
 
 def test_the_page_has_one_title_placeholder_and_one_head_to_close():
-    html = (ROOT / "qqq_lab" / "web" / "index.html").read_text(encoding="utf-8")
+    html = (ROOT / "mzlab" / "web" / "index.html").read_text(encoding="utf-8")
     assert len(re.findall(r"<title>\{APP\}[^<]*</title>", html)) == 1 and html.count("</head>") == 1
     out = re.sub(r"<title>\{APP\}[^<]*</title>", f"<title>{bs.APP_NAME} · {bs.TAGLINE}</title>", html, count=1).replace("</head>", bs.preview_tags() + "\n</head>", 1)
     assert "{APP}</title>" not in out and out.index("og:image") < out.index("</head>")

@@ -8,9 +8,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from qqq_lab import api
-from qqq_lab.app import App
-from qqq_lab.peaks import XIC_BELOW, XIC_DRIFT, merge_unit, nominal, pad_zeros, profile_peaks
+from mzlab import api
+from mzlab.app import App
+from mzlab.peaks import XIC_BELOW, XIC_DRIFT, merge_unit, nominal, pad_zeros, profile_peaks
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -24,7 +24,7 @@ def _gauss_profile(centres, heights, sigma=0.3, lo=300.0, hi=372.0, step=0.06, f
 
 
 def test_xic_constants_are_shared_with_the_front_end():
-    js = (ROOT / "qqq_lab" / "web" / "explore.js").read_text(encoding="utf-8")
+    js = (ROOT / "mzlab" / "web" / "explore.js").read_text(encoding="utf-8")
     assert float(re.search(r"XIC_BELOW\s*=\s*([0-9.]+)", js).group(1)) == XIC_BELOW
     assert float(re.search(r"XIC_DRIFT\s*=\s*([0-9.]+)", js).group(1)) == XIC_DRIFT
 
@@ -68,7 +68,7 @@ def test_zeros_put_back_next_to_gaps():
 
 
 def _real_profile():
-    for c in (os.environ.get("QQQ_DATI"), str(ROOT.parent / "QqQ-lab-dati")):
+    for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), str(ROOT.parent / "mzlab-dati"), str(ROOT.parent / "QqQ-lab-dati")):
         if c and (Path(c) / "mzML_profilo").is_dir():
             return sorted((Path(c) / "mzML_profilo").glob("B_FullMass-t0.mzML"))
     return []
@@ -78,7 +78,7 @@ def test_real_profile_file_isotopes_of_the_t0_are_separate():
     f = _real_profile()
     if not f:
         pytest.skip("profile files of the lab not available")
-    from qqq_lab.explore import Item
+    from mzlab.explore import Item
     it = Item("x", None, 0, "sample", f[0])
     assert it.spectrum_mode() == "profile" and it._step(1) == 0.06
     rt, tic = it.total("tic")

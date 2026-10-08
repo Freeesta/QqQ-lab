@@ -1,6 +1,6 @@
 import sys
 
-fpath_js = "qqq_lab/web/explore.js"
+fpath_js = "mzlab/web/explore.js"
 with open(fpath_js, "r", encoding="utf-8") as f:
     js_content = f.read()
 
@@ -17,7 +17,7 @@ if old_js in js_content:
 else:
     print("Could not patch explore.js loading()")
 
-fpath_html = "qqq_lab/web/index.html"
+fpath_html = "mzlab/web/index.html"
 with open(fpath_html, "r", encoding="utf-8") as f:
     html_content = f.read()
 

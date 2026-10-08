@@ -1,6 +1,6 @@
 """Make the logo and every icon from the picture of the quadrupole field (tools/logo_sorgente.jpg).
 
-Writes into qqq_lab/web/: logo.png (transparent), logo.svg / favicon.svg / app-icon.svg (the PNG embedded, so they work as
+Writes into mzlab/web/: logo.png (transparent), logo.svg / favicon.svg / app-icon.svg (the PNG embedded, so they work as
 <img> and as icons), favicon-32.png, favicon.ico, apple-touch-icon.png, app-icon-192/512.png (site and PWA icons). Only needs Pillow and numpy. From the project root:  python3 tools/genera_icone.py
 The picture is the field of a quadrupole (equipotential contours of the four rods: blue negative, red positive)."""
 import base64, io
@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw
 from scipy import ndimage as ndi
 
 ROOT = Path(__file__).resolve().parents[1]
-WEB = ROOT / "qqq_lab" / "web"
+WEB = ROOT / "mzlab" / "web"
 SRC = Path(__file__).parent / "logo_sorgente.jpg"
 
 

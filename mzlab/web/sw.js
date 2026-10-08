@@ -1,7 +1,7 @@
 // Service worker of the browser version (added to the site root by tools/build_site.py; the local program does not use it).
 // After the first visit the whole program works offline: the app files are fetched from the network first (so a new
 // version is picked up as soon as there is one) and the big, rarely changing ones (Pyodide, Ketcher) come from the cache.
-const APP = "qqq-app-__APP__", BIG = "qqq-big-__BIG__";
+const APP = "qqq-app-__APP__", BIG = "qqq-big-__BIG__"; // kept from the old name: renaming it would lose the users' data
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => e.waitUntil((async () => {
   for (const k of await caches.keys()) if (k.startsWith("qqq-") && k !== APP && k !== BIG) await caches.delete(k);

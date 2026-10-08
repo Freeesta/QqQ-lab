@@ -1,6 +1,6 @@
 import sys
 
-fpath = "qqq_lab/web/appname.js"
+fpath = "mzlab/web/appname.js"
 with open(fpath, "r", encoding="utf-8") as f:
     content = f.read()
 

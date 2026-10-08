@@ -11,4 +11,4 @@
 *.wasm binary
 
 # Third-party bundles (Ketcher, OpenChemLib): no diffs, not counted as project code
-qqq_lab/web/vendor/** -diff linguist-vendored
+mzlab/web/vendor/** -diff linguist-vendored

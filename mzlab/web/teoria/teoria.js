@@ -55,7 +55,7 @@ const TP = (() => {
   const embedded = window.self !== window.top;
   // smartphone: same rule as ../telefono.js (which the program loads before everything; the Teoria pages do not load it)
   const PHONE = typeof QQQ_PHONE === "boolean" ? QQQ_PHONE : (() => {
-    let f = null; try { f = sessionStorage.getItem("qqq.telefono"); } catch (_) { /* automatic */ }
+    let f = null; try { f = sessionStorage.getItem("qqq.telefono"); } catch (_) { /* automatic */ } // kept from the old name: renaming it would lose the users' data
     if (f !== null) return f === "1";
     const coarse = !!(window.matchMedia && matchMedia("(pointer:coarse)").matches);
     return /iPhone|iPod|Android.+Mobile|Windows Phone|Mobile.+Firefox|Opera Mini/i.test(navigator.userAgent || "") || (coarse && Math.min(screen.width, screen.height) < 500);
