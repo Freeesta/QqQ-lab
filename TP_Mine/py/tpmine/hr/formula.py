@@ -60,9 +60,10 @@ class FormulaSpace:
     """All formulas with 0 <= n_i <= upper_i (and the chemical filters below), sorted by ion m/z.
 
     upper: element-count vector. h_rule: H + halogens <= 2C + N + 3 (formulas of a transformation product; not for fragments, whose
-    limit is the precursor itself). min_rdbe: lowest RDBE kept (-0.5 keeps the even-electron cations)."""
+    limit is the precursor itself). min_rdbe: lowest RDBE kept (-0.5 keeps the even-electron cations); closed_only keeps only those."""
 
-    def __init__(self, upper, els: list[str], h_rule: bool = False, min_rdbe: float = -0.5, max_rdbe: float | None = None, need_carbon: bool = True):
+    def __init__(self, upper, els: list[str], h_rule: bool = False, min_rdbe: float = -0.5, max_rdbe: float | None = None, need_carbon: bool = True,
+                 closed_only: bool = False):
         self.els = list(els)
         upper = np.asarray(upper, dtype=np.int64)
         grids = np.meshgrid(*[np.arange(u + 1) for u in upper], indexing="ij")
@@ -79,6 +80,8 @@ class FormulaSpace:
         ok &= r >= min_rdbe
         if max_rdbe is not None:
             ok &= r <= max_rdbe
+        if closed_only:
+            ok &= closed_shell(G, self.els)
         G = G[ok]
         mass = ion_mass(G, self.els)
         o = np.argsort(mass, kind="stable")

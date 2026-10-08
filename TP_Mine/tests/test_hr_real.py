@@ -145,3 +145,51 @@ def test_features_drift_of_a_strong_trace_is_small(series_features):
                 if len(a) >= 5:
                     spreads.append(float(np.ptp(a)))
     assert spreads and max(spreads) <= 0.4 and np.median(spreads) <= 0.2
+
+
+# ---------------------------------------------------------------------------------------------------------------------- WP5: filters
+@need
+def test_filters_funnel_recall_and_isf(series_features):
+    import glob
+    import re
+    import numpy as np
+    from qqq_lab.chem import elements as E
+    from tpmine.hr import features as FT
+    from tpmine.hr import filters as FL
+    feats, times, al, _, _, _ = series_features
+    truth = json.loads(TRUTH.read_text(encoding="utf-8"))
+    parent = E.parse_formula(truth["parent"]["ion"])
+    fu = FL.run_filters(al, feats, times, None, parent)
+    n = [s["n"] for s in fu.steps]
+    print("\nfunnel:", n)
+    assert n[0] > 50_000 and 5_000 < n[1] < 30_000 and n[2] <= n[1] and 800 < n[3] < 4_000 and n[4] <= n[3]
+    keep = np.zeros(len(al), bool)
+    keep[fu.idx] = True
+    missed, n_tp = [], 0
+    for tp in truth["tps"]:
+        for rt in tp["rt_obs"]:
+            if rt <= 0.7:
+                continue
+            n_tp += 1
+            if not (keep & (np.abs(al.mz - tp["mz"]) <= tp["mz"] * 5e-6) & (np.abs(al.rt - rt) <= 0.15)).any():
+                missed.append(tp["id"])
+    print("reference traces kept by the filters:", n_tp - len(missed), "/", n_tp, "missed", missed)
+    ntr = n_tp
+    assert len(missed) <= 1 and ntr >= 20                      # the one lost is the product under the in-source fragment of the parent (next step)
+
+    # hidden under an in-source fragment: XICs of the exact masses in the window of the parent, file by file
+    files = sorted(glob.glob(str(DATI / "HRMS" / "*" / "*TiO2*.mzML")), key=lambda f: float(re.search(r"t(\d+)min", f).group(1)) if re.search(r"t(\d+)min", f) else -1.0)
+    masses = [tp["mz"] for tp in truth["tps"] if tp["id"] in missed or tp["id"] in ("188", "315")]
+    isf_lib = [261.1016, 188.0488, 244.0750]
+    allm = sorted(set(masses) | set(isf_lib))
+    ms = []
+    for f in files:
+        r = Run(f)
+        ms.append(FL.isf_measure(r.table(1, 1), allm, truth["parent"]["mz"], rt_hint=truth["parent"]["rt_obs"]))
+        r.close()
+    t_arr = [float(re.search(r"t(\d+)min", f).group(1)) if re.search(r"t(\d+)min", f) else -1.0 for f in files]
+    sess = ["b" if t in (0.0, 5.0, 7.0, 120.0) else "a" for t in t_arr]          # the two measurement sessions (WP10 reads them from the file header)
+    res = {round(d["mz"], 4): d for d in FL.isf_hidden(ms, t_arr, None, allm, sess)}
+    hits = [m for m in missed for tp in truth["tps"] if tp["id"] == m and res[round(tp["mz"], 4)]["candidate"]]
+    assert set(hits) == set(missed), f"products not recovered by the search under the fragment: {set(missed) - set(hits)}"
+    assert not res[round(244.0750, 4)]["candidate"]                       # a pure fragment of the parent: not a candidate
