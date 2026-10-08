@@ -113,7 +113,7 @@ def main() -> None:
     assert tel in html
     html = html.replace(tel, tel + '\n<script src="static/browser.js"></script>', 1)
     # the name in the title is written here, not by appname.js: the apps that build link previews do not run JavaScript
-    html = html.replace("<title>{APP}</title>", f"<title>{APP_NAME} · {TAGLINE}</title>", 1)
+    html = re.sub(r"<title>\{APP\}[^<]*</title>", lambda m: f"<title>{APP_NAME} · {TAGLINE}</title>", html, count=1)
     html = html.replace("</head>", preview_tags() + "\n</head>", 1)
     # installable app (PWA): manifest at the site root + theme colour; the local program does not use it
     html = html.replace("</head>", '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#ffffff"></head>', 1)

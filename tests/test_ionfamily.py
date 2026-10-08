@@ -341,6 +341,53 @@ def test_ms2_similarity_cosine_and_modified_cosine():
     assert f.ms2_similarity(346.0, sh, 364.0, p_spec)["modified_cosine"] > f.ms2_similarity(346.0, sh, 364.0, p_spec)["cosine"]
 
 
+def _greedy_reference(a, ya, b, yb, tol, shifts):
+    """Plain global greedy (the definition): heaviest candidate pair first, each peak used once."""
+    cand = sorted(((ya[i] * yb[j], -i, -j) for i in range(len(a)) for j in range(len(b)) if any(abs(b[j] - a[i] - d) <= tol for d in shifts)), reverse=True)
+    ua, ub, out = set(), set(), []
+    for w, i, j in cand:
+        if -i not in ua and -j not in ub:
+            ua.add(-i)
+            ub.add(-j)
+            out.append((-i, -j))
+    return out
+
+
+def test_modified_cosine_matches_shifted_peaks_jointly():
+    # X has one strong peak (102). Unshifted it could take P's weak 102.2; shifted by the precursor difference (18) it takes P's strong 120.
+    # The old order (everything at shift 0 first) paired it with 102.2 and left the strong shared fragment unmatched.
+    p = (np.array([102.2, 120.0]), np.array([1.0, 100.0]))
+    x = (np.array([102.0]), np.array([100.0]))
+    r = f.ms2_similarity(300.0, x, 318.0, p, tol=0.3)
+    # joint matching pairs X(102) with P(120) (weight 10*10), not with P(102.2) (weight 10*1)
+    assert r["modified_cosine"] == pytest.approx(10 * 10 / (10 * math.sqrt(1 + 100)))
+    assert r["cosine"] == pytest.approx(10 * 1 / (10 * math.sqrt(1 + 100)))
+    assert r["modified_cosine"] > 5 * r["cosine"]
+
+
+def test_match_is_the_global_greedy_and_the_dense_kernel_agrees():
+    rng = np.random.default_rng(5)
+    for _ in range(40):
+        a, b = np.sort(rng.uniform(50, 60, 14)), np.sort(rng.uniform(50, 60, 17))
+        ya, yb = rng.uniform(0.1, 5, 14), rng.uniform(0.1, 5, 17)
+        for shifts in ((0.0,), (0.0, 1.7)):
+            got = f._match(a, ya, b, yb, 0.4, shifts[0], shifts[1] if len(shifts) > 1 else None)
+            assert got == _greedy_reference(a, ya, b, yb, 0.4, shifts)
+            S = np.zeros((14, 17))
+            ci, cj = f._candidates(a, b, 0.4, shifts)
+            S[ci, cj] = ya[ci] * yb[cj]
+            tot, n = f.greedy_match(S)
+            assert n == len(got) and tot == pytest.approx(sum(ya[i] * yb[j] for i, j in got), rel=1e-9)
+
+
+def test_greedy_match_batched_and_empty():
+    S = np.zeros((3, 4, 5))
+    S[1, 0, 0], S[1, 1, 0], S[2, 2, 3] = 3.0, 2.0, 7.0
+    tot, n = f.greedy_match(S)
+    assert n.tolist() == [0, 1, 1] and tot == pytest.approx([0.0, 3.0, 7.0])
+    assert f._match([], [], [1.0], [1.0], 0.5) == [] and f._match([1.0], [1.0], [9.0], [1.0], 0.5) == []
+
+
 def test_roc_auc_and_thresholds():
     rng = np.random.default_rng(0)
     y = np.r_[np.ones(60), np.zeros(60)].astype(int)
