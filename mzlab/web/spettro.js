@@ -71,7 +71,7 @@ function specParams(p, btn) {
     const k = x.dataset.s;
     if (k === "reset") x.onclick = () => { p.rel = null; p.sticks = false; p.thr = SPEC_DEF.thr; p.nlab = SPEC_DEF.nlab; p.dec = null; pop.remove(); specParams(p, btn); apply(); };
     else x.onchange = () => {
-      if (k === "rel") p.rel = x.value === "1";
+      if (k === "rel") { const was = p.rel; p.rel = x.value === "1"; if (was !== p.rel) p.lock = null; }
       else if (k === "sticks") p.sticks = x.value === "1";
       else p[k] = Math.max(k === "nlab" ? 1 : 0, Math.min(k === "thr" ? 100 : k === "nlab" ? 60 : 5, Math.round(+x.value || 0)));
       apply();

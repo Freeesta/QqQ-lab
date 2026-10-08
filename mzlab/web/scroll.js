@@ -60,7 +60,7 @@ function lockSync(p, k, x0a, x1a, ymaxA, inRange, one) {
     return m * 1.12;
   };
   if (lk.ymax == null) { Object.assign(lk, { z: zk, k, pending: false, ymax: Math.max(ymaxA, nb(x0a, x1a)) }); return lk; }
-  if (lk.k !== k) { p.lock = null; return null; }                  // another file: free axis
+  if (lk.k !== k) { lk.k = k; return lk; }
   if (zk !== lk.z) { Object.assign(lk, { z: zk, ymax: Math.max(ymaxA, nb(x0a, x1a)) }); return lk; }   // zoom changed by the student: new top for the new m/z range
   if (lk.fresh) { lk.fresh = false; lk.ymax = Math.max(lk.ymax, ymaxA, nb(x0a, x1a)); return lk; }
   const need = inRange(x0a, x1a) * 1.12; if (need > lk.ymax) lk.ymax = need;
