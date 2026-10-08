@@ -11,7 +11,7 @@ const IC_PARAM = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" st
 const IC_LINK = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.8 9.2a2.6 2.6 0 0 0 3.7 0l2.4-2.4a2.6 2.6 0 0 0-3.7-3.7l-.7.7"/><path d="M9.2 6.8a2.6 2.6 0 0 0-3.7 0L3.1 9.2a2.6 2.6 0 0 0 3.7 3.7l.7-.7"/></svg>';
 
 // y axis in % of the highest peak: the default is % for the MS2 spectra (the relative intensities of the fragments are what is compared), cps for Full Scan
-const specRel = p => p.rel ?? p.level === 2;
+const specRel = p => p.rel ?? false;
 const SPEC_DEF = { thr: 5, nlab: 10, dec: 1 };
 const sgn1 = (v, d = 1) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(d);
 
@@ -58,8 +58,7 @@ function specParams(p, btn) {
   const old = p.el.querySelector(".sp-pop"); if (old) { old.remove(); return; }
   const pop = document.createElement("div"); pop.className = "sp-pop";
   const cur = { rel: specRel(p), thr: p.thr ?? SPEC_DEF.thr, nlab: p.nlab ?? SPEC_DEF.nlab, dec: p.dec ?? (p._a ? p._a.dec : SPEC_DEF.dec) };
-  pop.innerHTML = `<label>Asse y <select data-s="rel"><option value="0" ${cur.rel ? "" : "selected"}>assoluto (cps)</option><option value="1" ${cur.rel ? "selected" : ""}>% del picco più alto</option></select></label>
-    <label title="Si etichettano solo i picchi sopra questa percentuale del picco più alto; gli altri restano disegnati">Etichette: oltre <input data-s="thr" type="number" min="0" max="100" step="1" value="${cur.thr}"> %</label>
+  pop.innerHTML = `<label title="Si etichettano solo i picchi sopra questa percentuale del picco più alto; gli altri restano disegnati">Etichette: oltre <input data-s="thr" type="number" min="0" max="100" step="1" value="${cur.thr}"> %</label>
     <label title="Numero massimo di etichette m/z">al massimo <input data-s="nlab" type="number" min="1" max="60" step="1" value="${cur.nlab}"></label>
     <label>Decimali di <i>m/z</i> <select data-s="dec">${(p._a && p._a.hrp ? [0, 1, 2, 3, 4, 5] : [0, 1, 2]).map(n => `<option ${cur.dec === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>
     ${(p._a && p._a.data || []).some(x => x.d.pmz) ? `<label title="File in profilo: la linea è lo spettro com'è registrato; i bastoncini sono le cime, una per massa nominale (grafico pulito per la relazione). Le etichette e la tabella usano sempre le cime.">Spettro <select data-s="sticks"><option value="0" ${p.sticks ? "" : "selected"}>Profilo (linea)</option><option value="1" ${p.sticks ? "selected" : ""}>Bastoncini (un picco per massa nominale)</option></select></label>` : ""}
@@ -69,10 +68,9 @@ function specParams(p, btn) {
   const apply = () => { draw(p); uiSave(); };
   pop.querySelectorAll("[data-s]").forEach(x => {
     const k = x.dataset.s;
-    if (k === "reset") x.onclick = () => { p.rel = null; p.sticks = false; p.thr = SPEC_DEF.thr; p.nlab = SPEC_DEF.nlab; p.dec = null; pop.remove(); specParams(p, btn); apply(); };
+    if (k === "reset") x.onclick = () => { p.sticks = false; p.thr = SPEC_DEF.thr; p.nlab = SPEC_DEF.nlab; p.dec = null; pop.remove(); specParams(p, btn); apply(); };
     else x.onchange = () => {
-      if (k === "rel") p.rel = x.value === "1";
-      else if (k === "sticks") p.sticks = x.value === "1";
+      if (k === "sticks") p.sticks = x.value === "1";
       else p[k] = Math.max(k === "nlab" ? 1 : 0, Math.min(k === "thr" ? 100 : k === "nlab" ? 60 : 5, Math.round(+x.value || 0)));
       apply();
     };
