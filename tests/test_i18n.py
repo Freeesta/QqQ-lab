@@ -63,7 +63,7 @@ def test_the_checker_catches_what_it_promises():
     with pytest.raises(ValueError):
         c.icu_signature("{n")
     assert c.italian_in("Carica i file") and not c.italian_in("Load the files")
-    assert c.has_form("The Precursor ion", ["precursor ion"]) and not c.has_form("precursors", ["precursor"])
+    assert c.has_form("The Precursor ion", ["precursor ion"]) and c.has_form("precursors", ["precursor"]) and not c.has_form("precursory", ["precursor"])
     strings = list(c.js_strings('const a = "x"; // "no"\n/* "no" */ const b = `y`;'))
     assert [s for _, s in strings] == ["x", "y"]
 
