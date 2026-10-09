@@ -29,6 +29,7 @@ EXTRA = {
     "[M+CF3COO]-": (_CF3COO, 1),
 }
 PATH = Path(__file__).with_name("contaminants.json")
+PATH_EN = Path(__file__).with_name("contaminants_en.json")       # English names and classes, same ids (the page shows them when it is in English)
 
 
 def ion_shift(adduct: str) -> tuple[float, int]:
@@ -43,20 +44,23 @@ def _mass(formula: str) -> float:
     return mass(parse_formula(formula)) if formula else 0.0
 
 
-def expand(entry: dict, list_id: str = "keller") -> list[dict]:
+def expand(entry: dict, list_id: str = "keller", en: dict | None = None) -> list[dict]:
     """The ions of one entry of the list (a polymer gives one set of ions for each n)."""
     out = []
     base = {"list": list_id, "id": entry["id"], "cls": entry.get("class", ""), "source": entry.get("source", ""), "note": entry.get("note")}
+    name_en = (en or {}).get("names", {}).get(entry["id"])
+    if en:
+        base["cls_en"] = en["classes"].get(entry.get("class", ""))
     pol_of = lambda ad, p: 1 if ad.endswith("+") else -1                         # noqa: E731
     if entry.get("formula") is None:                                             # only an m/z (no formula): lower reliability
         mz = float(entry["mz"]); pol = {"positive": 1, "negative": -1}.get(entry.get("polarity"), 1)
-        return [{**base, "name": entry["name"], "formula": None, "adduct": None, "z": 1, "mz": mz, "pol": pol, "series": None, "mzonly": True}]
+        return [{**base, "name": entry["name"], "name_en": name_en, "formula": None, "adduct": None, "z": 1, "mz": mz, "pol": pol, "series": None, "mzonly": True}]
     ser = entry.get("series")
     units = [(n, n * _mass(ser["unit"]) + _mass(ser.get("end", "")), f"{ser['unit']}x{n}") for n in range(ser["n"][0], ser["n"][1] + 1)] if ser else [(None, _mass(entry["formula"]), entry["formula"])]
     for n, m, fm in units:
         for ad in entry["ions"]:
             sh, z = ion_shift(ad)
-            out.append({**base, "name": entry["name"] + (f" n={n}" if n is not None else ""), "formula": fm, "adduct": ad, "z": z, "mz": round((m + sh) / z, 5), "pol": pol_of(ad, 0),
+            out.append({**base, "name": entry["name"] + (f" n={n}" if n is not None else ""), "name_en": name_en and name_en + (f" n={n}" if n is not None else ""), "formula": fm, "adduct": ad, "z": z, "mz": round((m + sh) / z, 5), "pol": pol_of(ad, 0),
                         "series": {"id": entry["id"] + "|" + ad, "n": n} if ser else None, "mzonly": False})
     return out
 
@@ -64,5 +68,6 @@ def expand(entry: dict, list_id: str = "keller") -> list[dict]:
 @lru_cache(maxsize=1)
 def builtin() -> dict:
     d = json.loads(PATH.read_text(encoding="utf-8"))
-    items = [i for e in d["entries"] for i in expand(e, d["id"])]
-    return {"id": d["id"], "name": d["name"], "source": d["source"], "license": d["license"], "builtin": True, "items": items}
+    en = json.loads(PATH_EN.read_text(encoding="utf-8"))
+    items = [i for e in d["entries"] for i in expand(e, d["id"], en)]
+    return {"id": d["id"], "name": d["name"], "name_en": en["list"]["name"], "source": d["source"], "license": d["license"], "license_en": en["list"]["license"], "builtin": True, "items": items}

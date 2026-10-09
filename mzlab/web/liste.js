@@ -13,8 +13,11 @@ const LISTE = (() => {
     (lists || []).forEach(L => {
       if (!L) return;
       if (active && active[L.id] === false) return;
+      const en = I18N.lang === "en";                       // the built-in list carries English names and classes (name_en, cls_en); the lists of the user are shown as written
       (L.items || []).forEach(it => {
-        const x = { ...it, list: L.id, listName: L.name || L.id };
+        const x = { ...it, list: L.id, listName: (en && L.name_en) || L.name || L.id };
+        if (en && it.name_en) x.name = it.name_en;
+        if (en && it.cls_en) x.cls = it.cls_en;
         if (it.pol !== -1) pos.push(x);
         if (it.pol !== 1) neg.push(x);
       });
@@ -563,7 +566,7 @@ const LISTE = (() => {
       elChecks.innerHTML = allLists.map(L => {
         const on = act[L.id] !== false;
         return `<label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer">
-          <input type="checkbox" data-lid="${EH(L.id)}" ${on ? "checked" : ""}> <span>${EH(L.name)}</span>
+          <input type="checkbox" data-lid="${EH(L.id)}" ${on ? "checked" : ""}> <span>${EH((I18N.lang === "en" && L.name_en) || L.name)}</span>
         </label>`;
       }).join("");
       elChecks.querySelectorAll("input[data-lid]").forEach(chk => {
