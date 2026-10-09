@@ -2287,6 +2287,12 @@ function ctxFor(p, e, x, px, py) {
         p.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; p._isoKey = JSON.stringify(p.zoom); draw(p); }   // zoom on the pattern (double click: whole spectrum); a later change of zoom switches the simulation off
       catch (e) { info("Non riesco a calcolare il profilo: " + EH(e.message)); }
     } });
+    if (p.iso && window.HR && a.hrp) items.push({ label: "Risoluzione del profilo isotopico…", fn: async () => {
+      const v = await ask("Potere risolutivo a m/z 200 per la simulazione (come lo scrive Thermo: nei file Orbitrap scende con la radice di m/z). «auto» = quello della scansione; 0 = tutta la struttura fine, senza fondere i picchi vicini.", p.iso.R != null ? String(p.iso.R) : "auto");
+      if (v == null) return; const t = String(v).trim().replace(",", ".");
+      if (t === "auto") delete p.iso.R; else { const r = parseFloat(t); if (!(r >= 0)) { info("Scrivi un numero (0 = struttura fine)."); return; } p.iso.R = r; }
+      draw(p);
+    } });
     if (p.iso) items.push({ label: "Togli il profilo isotopico", fn: () => { p.iso = null; draw(p); } });
     if (window.LIB && p.level === 2) items.push("-", { label: "Cerca nelle librerie…", fn: () => LIB.searchFrom(p) });
     const srcP = p.src && E.panels.find(q => q.id === p.src && q.el);
