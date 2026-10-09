@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./mzlab/web/vendor/**)",
+      "Read(./mzlab/web/teoria/pratica/ei-dati.js)",
+      "Read(./mzlab/web/elements.js)",
+      "Read(./mzlab/web/teoria/glossario-dati.js)",
+      "Read(./mzlab/web/tpmine.enc)",
+      "Read(./mzlab/web/esempi/**)",
+      "Read(./tests_e2e/shots/**)",
+      "Read(./.verifica/cache_massbank/**)",
+      "Read(./site/**)"
+    ]
+  }
+}
