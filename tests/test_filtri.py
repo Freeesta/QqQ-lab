@@ -95,3 +95,30 @@ def test_msn_paths(tmp_path):
     assert top and top[0]["level"] == 4
     c = call(a, f"/api/chrom?k={k}&kind=tic&level=4&filt={top[0]['key'].replace(' ', '%20').replace('>', '%3E')}")
     assert len(c["rt"]) == top[0]["n"]
+
+
+# ---- information bar of the bench: header of a scan, list of scans, what the file says
+def test_scan_list_matches_the_chromatogram(hr):
+    for lv in (1, 2):
+        t = call(hr, f"/api/scanlist?k=0&level={lv}")
+        c = call(hr, f"/api/chrom?k=0&kind=tic&level={lv}")
+        assert t["n"] == len(c["rt"]) == len(t["sid"]) == len(t["bpint"])
+        assert all(a <= b for a, b in zip(t["rt"], t["rt"][1:]))
+        assert abs(sum(t["tic"]) - sum(c["y"])) / max(sum(c["y"]), 1) < 1e-3
+        assert min(t["bpint"]) > 0 and all(m > 0 for m in t["bpmz"])
+    g = [x for x in call(hr, "/api/filters?k=0")["filters"] if x["level"] == 2][0]
+    assert call(hr, "/api/scanlist?k=0&level=2&filt=" + g["key"].replace(" ", "%20"))["n"] == g["n"]
+
+
+def test_scan_header_has_the_pairs_of_the_file(hr):
+    sid = call(hr, "/api/scanlist?k=0&level=2")["sid"][0]
+    h = call(hr, f"/api/scaninfo?k=0&sid={sid}")
+    names = [p["name"] for p in h["pairs"]]
+    assert "ms level" in names and h["level"] == 2 and h["filter"] and h["prec"] and h["iso"] and h["act"] == "HCD"
+    assert call(hr, "/api/scaninfo?k=0&sid=99999999").get("error")
+
+
+def test_file_info(hr):
+    f = call(hr, "/api/fileinfo?k=0")
+    assert f["instrument"] and f["scans"] == len(hr._item(0).run.scans) and f["levels"]["1"] > 0 and f["filters"]
+    assert f["mz_range"]["1"][0] < f["mz_range"]["1"][1]

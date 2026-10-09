@@ -318,6 +318,25 @@ class App:
         """The scan types of the physical file of item k (what the filter menu of a cell lists), with their counts: see Item.filter_groups."""
         return {"filters": self._item(k).filter_groups()}
 
+    def scaninfo(self, k: int, sid: int) -> dict:
+        return self._item(k).scan_header(sid)
+
+    def scanlist(self, k: int, level: int, filt: str | None = None) -> dict:
+        return self._item(k).scan_table(level, filt)
+
+    def fileinfo(self, k: int) -> dict:
+        it = self._item(k)
+        out = it.file_info()
+        for lv in (1, 2):                                    # m/z range of the survey and of the product ions, as the page already knows it
+            try:
+                tb = it._tbl(lv)
+                if len(tb.mz):
+                    out.setdefault("mz_range", {})[str(lv)] = [round(float(tb.mz[0]), 4), round(float(tb.mz[-1]), 4)]
+            except Exception:  # noqa: BLE001
+                pass
+        out.pop("mz", None)
+        return out
+
     def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None, merge: bool = False, hr: bool = True, filt: str | None = None) -> dict:
         if bg is not None:
             bg = {**bg, "item": self._item(bg["k"])}

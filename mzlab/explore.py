@@ -198,6 +198,69 @@ class Item:
                 out.append("MS2")
         return out
 
+    # ------------------------------------------------------------------ what the file says (information bar of the bench)
+    def scan_header(self, sid: int) -> dict:
+        """Every name / value pair of the header of one scan as the mzML has it (the cvParam and userParam up to the arrays), plus the known fields."""
+        r = self.run
+        if not 0 <= sid < len(r.scans):
+            raise ValueError("scansione fuori dal file")
+        sc = r.scans[sid]
+        head = bytes(r._mm[sc.start:sc.end]).decode("utf-8", "replace").split("<binaryDataArrayList", 1)[0]
+        pairs = []
+        for m in re.finditer(r"<(cvParam|userParam)\b([^>]*?)/?>", head):
+            a = dict(re.findall(r'(\w+)="([^"]*)"', m.group(2)))
+            if a.get("name"):
+                pairs.append({"name": a["name"], "value": a.get("value", ""), "unit": a.get("unitName", "")})
+        return {"sid": sid, "no": self._no(sc), "filter": sc.filter, "rt": round(float(sc.rt), 4), "level": sc.level,
+                "polarity": {1: "positivo", -1: "negativo"}.get(sc.polarity, "?"), "profile": bool(sc.profile),
+                "prec": round(float(sum(sc.iso) / 2), 5) if sc.iso else round(float(sc.precursor), 5) if sc.precursor else None,
+                "iso": [round(float(sc.iso[0]), 4), round(float(sc.iso[1]), 4)] if sc.iso else None, "act": sc.act, "ce": sc.collision_energy,
+                "res": sc.res, "analyzer": sc.an, "tic": sc.tic, "key": scan_key(sc), "pairs": pairs}
+
+    def scan_table(self, level: int, filt: str | None = None) -> dict:
+        """The scans of one level (and scan type), in columns: file index, scan number, RT, TIC, precursor, base peak m/z and intensity."""
+        t = self._tbl(level)
+        ids = t.scan_ids
+        if filt and len(ids):
+            ids = ids[self._fkeep(ids, filt)]
+        sc = self.run.scans
+        n = len(ids)
+        bpm = np.zeros(n); bpi = np.zeros(n)
+        if n and len(t.pos):
+            cache = self.run.__dict__.setdefault("_bpk", {})
+            if level not in cache:                                    # per scan: the highest peak (computed once per level)
+                o = np.lexsort((t.inten, t.pos))
+                ps = t.pos[o]
+                last = np.r_[np.flatnonzero(ps[1:] != ps[:-1]), len(ps) - 1]
+                m = np.zeros(len(t.scan_ids)); y = np.zeros(len(t.scan_ids))
+                m[ps[last]] = t.mz[o][last]; y[ps[last]] = t.inten[o][last]
+                cache[level] = (m, y)
+            m, y = cache[level]
+            at = {int(i): k for k, i in enumerate(t.scan_ids)}
+            sel = np.array([at[int(i)] for i in ids])
+            bpm, bpi = m[sel], y[sel]
+        pr = lambda x: (float(sum(x.iso) / 2) if x.iso else float(x.precursor) if x.precursor else None)
+        return {"level": level, "n": int(n), "sid": [int(i) for i in ids], "no": [self._no(sc[int(i)]) for i in ids],
+                "rt": [round(float(sc[int(i)].rt), 4) for i in ids], "tic": [float(sc[int(i)].tic) for i in ids],
+                "prec": [None if pr(sc[int(i)]) is None else round(pr(sc[int(i)]), 5) for i in ids],
+                "bpmz": [round(float(v), 5) for v in bpm], "bpint": [round(float(v), 1) for v in bpi]}
+
+    def file_info(self) -> dict:
+        """What the mzML says about the file and the instrument (not the status log nor the method of Xcalibur: they are not in an mzML)."""
+        r = self.run
+        md = r.__dict__.get("_md") or r.metadata()
+        head = bytes(r._mm[:max(r._mm.find(b"<run "), 0) + 3000]).decode("utf-8", "replace")
+        ts = re.search(r'<run\b[^>]*startTimeStamp="([^"]*)"', head)
+        proc = re.findall(r'<dataProcessing id="([^"]*)"', head)
+        conv = [m.group(1) for m in re.finditer(r'<processingMethod\b[^>]*softwareRef="([^"]*)"', head)]
+        sc = r.scans
+        return {"file": Path(self.path).name, "instrument": md.get("instrument", ""), "serial": md.get("serial", ""), "components": md.get("components", []),
+                "analyzers": md.get("analyzers", []), "software": md.get("software", []), "source_files": md.get("source_files", []),
+                "conversion": sorted(set(conv)), "processing": proc, "start": ts.group(1) if ts else "", "scans": len(sc),
+                "rt": [round(float(min((s.rt for s in sc), default=0.0)), 3), round(float(max((s.rt for s in sc), default=0.0)), 3)],
+                "levels": {str(l): sum(1 for s in sc if s.level == l) for l in sorted({s.level for s in sc})}, "filters": self.filter_groups(),
+                "mz": [self.__dict__.get("_mzr") or None][0]}
+
     def scan_params(self) -> dict | None:
         """What the scans say about how they were acquired (the method itself is not in the mzML): for the window «Metodo» of a high-resolution / DDA
         file that has no .dam. Survey: scan window, resolving power, injection time; product ions: activation, collision energy (relative NCE for Thermo),
