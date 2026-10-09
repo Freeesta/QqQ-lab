@@ -1946,6 +1946,7 @@ async function drawSpec(p) {
   });
   const data = await Promise.all(reqs.map(q => (isDda ? DDA.scanData(p) : one ? scData(p, q.f.k) : getSpec(q.f.k, p.r0, p.r1, p.level, prk(q.prec, p.filt), bgOf(q.f))).then(d => ({ f: q.f, prec: q.prec, multi: q.multi, idx: q.idx, d: rel ? relScale(d) : d }))));
   if (tok !== p._tok) return false;                      // a newer request is on its way: this one is dropped
+  if (p.iso && p.iso.only && hrp && window.QQQRef) data.forEach(x => { try { x.d = HR.isoAsSpectrum(p, x.f, x.d); } catch (e) { /* the observed spectrum stays */ } });      // «Sostituisci»: the simulation takes the place of the spectrum
   const mzs = data.flatMap(x => x.d.mz);
   if (!mzs.length) return say("Nessuno scan in questo intervallo (per MS2: scegli il precursore e il livello giusto).");
   // everything is known: only now the canvas is cleared and drawn again, in one go (until then the previous spectrum stays on the screen)
@@ -2024,7 +2025,7 @@ async function drawSpec(p) {
   if (window.DDA) DDA.decorate(p, g, X, Y, W, { x0, x1, ymax, d0, data, files });       // DDA: flags of the precursors, isolation band, line of the precursor
   // theoretical isotope pattern of a formula chosen by the student (red circles), aligned on the nearest observed peak
   let isoNote = "";
-  if (p.iso && window.QQQRef) {
+  if (p.iso && !p.iso.only && window.QQQRef) {
     try {
       if (hrp) isoNote = HR.drawIso(p, g, X, Y, d0, ymax, W, files[0]);          // high resolution: fine structure, error in ppm (hr.js)
       else {
