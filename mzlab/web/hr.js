@@ -40,15 +40,15 @@ const HR = (() => {
     if (!f) return "";
     const hr = !!((f.prof1 && f.prof1.hr) || (f.prof2 && f.prof2.hr)), t = EH(label(f) || f.instrument || "");
     const pill = (txt, tip) => `<span class="hrb" title="${EH(tip || t || txt)}">${EH(txt)}</span>`;
-    const TIPS = { DDA: "Acquisizione dipendente dai dati: lo strumento sceglie da solo gli ioni da frammentare", DIA: "Acquisizione indipendente dai dati: finestre larghe che si ripetono", AIF: "Frammentazione di tutti gli ioni, senza isolamento",
-      PRM: "Parallel reaction monitoring: sempre gli stessi precursori", SIM: "Selected ion monitoring", MSn: "Più stadi di frammentazione (MS3 e oltre)" };
+    const TIPS = { DDA: I18N.t("hr.tip.DDA"), DIA: I18N.t("hr.tip.DIA"), AIF: I18N.t("hr.tip.AIF"),
+      PRM: I18N.t("hr.tip.PRM"), SIM: "Selected ion monitoring", MSn: I18N.t("hr.tip.MSn") };
     const acq = (f.acq && f.acq.length ? f.acq.filter(x => x !== "MS1" && x !== "MS2") : f.dda && f.kind !== "mrm" ? ["DDA"] : []);
     const hrw = hr && f.kind !== "mrm";
     const lvl = hrw && f.max_level >= 3 ? `MS${f.max_level}` : "";
     const mode = hrw ? (f.kind === "ms2" ? f.mode2 : f.mode1) : null;
     const pol = hrw && f.polarity && f.polarity !== "unknown" ? { positive: "+", negative: "\u2212", mixed: "\u00b1" }[f.polarity] : "";
     return (hr ? pill("HR") : "") + acq.map(x => pill(x, TIPS[x])).join("") + (lvl && !acq.includes("MSn") ? pill(lvl, TIPS.MSn) : "")
-      + (mode ? pill(mode === "profile" ? "profilo" : "centroidi", mode === "profile" ? "Spettri in profilo" : "Spettri a centroidi") : "") + (pol ? pill(pol, "Polarità: " + f.polarity) : "");
+      + (mode ? pill(I18N.t(mode === "profile" ? "hr.mode.profile" : "hr.mode.centroid"), I18N.t(mode === "profile" ? "hr.mode.profile.tip" : "hr.mode.centroid.tip")) : "") + (pol ? pill(pol, I18N.t("hr.pol.tip", { pol: f.polarity })) : "");
   };
   // a file whose high-resolution reading failed on the server opens as low resolution: say it once
   const told = new Set();
@@ -58,7 +58,7 @@ const HR = (() => {
     bad.forEach(f => { told.add(f.file); console.info("HR", f.file, f.hr_err); });
     let d = document.querySelector("#hrerr");
     if (!d) { d = document.createElement("div"); d.id = "hrerr"; d.style.cssText = "position:fixed;z-index:20000;left:50%;bottom:18px;transform:translateX(-50%);max-width:520px;padding:8px 14px;border-radius:6px;background:#333;color:#fff;font:13px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.35)"; document.body.appendChild(d); }
-    d.textContent = "Alta risoluzione non disponibile per " + bad.map(f => f.label || f.file).join(", ") + ": aperto come bassa risoluzione."; d.hidden = false;
+    d.textContent = I18N.t("hr.notice", { files: bad.map(f => f.label || f.file).join(", ") }); d.hidden = false;
     clearTimeout(d._t); d._t = setTimeout(() => { d.hidden = true; }, 7000);
   }
   // ---------------------------------------------------------------- isotope pattern with the fine structure (high resolution)
@@ -68,7 +68,7 @@ const HR = (() => {
   let ELMAP = null;
   const elIso = s => {
     if (!ELMAP) ELMAP = Object.fromEntries(ELEMENTS.map(e => [e.s, e]));
-    const e = ELMAP[s]; if (!e || !e.iso.length) throw new Error(`abbondanze isotopiche non disponibili per ${s}`);
+    const e = ELMAP[s]; if (!e || !e.iso.length) throw new Error(I18N.t("tbl.iso.unavailable", { s }));
     return e.iso.filter(i => i[1] != null && i[2] > 0).map(i => [i[1], i[2] / 100]);
   };
   const joinMasses = list => {                             // list of [mass, probability]: sort, and merge masses within FINE_TOL
@@ -145,13 +145,13 @@ const HR = (() => {
       if (st === "barre") { g.lineWidth = 3; g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, py); g.stroke(); g.lineWidth = 1.5; }
       else if (st === "centroidi") { g.setLineDash([3, 2]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, py); g.stroke(); g.setLineDash([]); g.beginPath(); g.arc(px, py, 3.5, 0, 7); g.stroke(); }
       if (r.rel >= 1) {
-        const off = Math.round(r.mz - m0), t = (off ? "M+" + off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%" + (ob ? ` · ${ob.e >= 0 ? "+" : "−"}${Math.abs(ob.e).toFixed(1)} ppm` : " · non trovato");
+        const off = Math.round(r.mz - m0), t = (off ? "M+" + off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%" + (ob ? ` · ${ob.e >= 0 ? "+" : "−"}${Math.abs(ob.e).toFixed(1)} ppm` : " · " + I18N.t("hr.iso.notFound"));
         g.font = fpx(10); g.textAlign = "left"; g.fillText(t, px + 5, py - 4);
       }
     }
     g.restore(); g.font = fpx(11);
-    const wtxt = p.iso.fw && p.iso.fw.v > 0 ? ` (larghezza ${p.iso.fw.v} ${p.iso.fw.mode === "ppm" ? "ppm" : "Da"}${p.iso.def && p.iso.def !== "fwhm" ? ` al ${p.iso.def}%` : ""})` : R ? ` (R ${Math.round(R)} a m/z 200)` : "";
-    return `<span><i style="background:#d62728"></i>profilo teorico ${fmtFormula(p.iso.formula)} ${fmtAdduct(p.iso.ad)}${wtxt}${obsTop ? ` (M: ${obsTop.e >= 0 ? "+" : "−"}${Math.abs(obsTop.e).toFixed(1)} ppm)` : ` (nessun picco osservato entro ${+tol.toFixed(1)} ppm da m/z ${top.mz.toFixed(HR.prof(f, p.level).dec)})`}</span>`;
+    const wtxt = p.iso.fw && p.iso.fw.v > 0 ? " " + (p.iso.def && p.iso.def !== "fwhm" ? I18N.t("hr.iso.widthDef", { v: p.iso.fw.v, unit: p.iso.fw.mode === "ppm" ? "ppm" : "Da", def: p.iso.def }) : I18N.t("hr.iso.width", { v: p.iso.fw.v, unit: p.iso.fw.mode === "ppm" ? "ppm" : "Da" })) : R ? " " + I18N.t("hr.iso.res", { R: Math.round(R) }) : "";
+    return `<span><i style="background:#d62728"></i>${I18N.t("hr.iso.legend", { formula: fmtFormula(p.iso.formula), adduct: fmtAdduct(p.iso.ad), w: wtxt, obs: obsTop ? ` (M: ${obsTop.e >= 0 ? "+" : "−"}${Math.abs(obsTop.e).toFixed(1)} ppm)` : " " + I18N.t("hr.iso.noPeak", { tol: +tol.toFixed(1), mz: top.mz.toFixed(HR.prof(f, p.level).dec) }) })}</span>`;
   }
   // ---------------------------------------------------------------- XIC of an ion
   // A trace {mz, ion: true} is an ion: its exact m/z. Each file reads it with ITS tolerance: ppm of the profile for a high-resolution file,
