@@ -8,8 +8,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import msn_synth as S  # noqa: E402
-from qqq_lab.chem import elements as E  # noqa: E402
-from qqq_lab.reader.mzml import Run  # noqa: E402
+from mzlab.chem import elements as E  # noqa: E402
+from mzlab.reader.mzml import Run  # noqa: E402
 from tpmine.hr import formula as F  # noqa: E402
 from tpmine.hr import molgraph as MG  # noqa: E402
 from tpmine.hr import msn  # noqa: E402

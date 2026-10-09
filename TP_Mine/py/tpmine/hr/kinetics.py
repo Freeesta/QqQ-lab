@@ -14,7 +14,7 @@ from functools import lru_cache
 
 import numpy as np
 
-from qqq_lab import ionfamily
+from mzlab import ionfamily
 
 _PADE = [1.0, 1 / 2, 5 / 44, 1 / 66, 1 / 792, 1 / 15840, 1 / 665280]            # Pade (6,6)
 GRID = np.geomspace(0.003, 3.0, 28)                                                # rate constants, 1/min
