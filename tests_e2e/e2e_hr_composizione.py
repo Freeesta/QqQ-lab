@@ -1,0 +1,50 @@
+"""H5: «Formule compatibili» (elemental composition): the dialog gives the formula of the infusion progenitor, shows the checks, keeps the elements in use; the menu entry is only on high-resolution spectra."""
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib import *
+from lib_hr import synth, load
+steps = []
+def step(name, fn):
+    try: fn(); steps.append((name, "ok"))
+    except Exception as e:
+        import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_hr_composizione.py")][-1]
+        steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
+D = synth("hrcomp")
+r = Run(port=8968, wd="/tmp/wd_hrcomp")
+try:
+    with sync_playwright() as p:
+        pg = r.page(p); pg.set_viewport_size({"width": 1500, "height": 1400})
+        load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
+        def dialog():
+            pg.evaluate("COMP.open({mz: 317.1639, polarity: 'positive'})"); pg.wait_for_timeout(400)
+            pg.fill("#cmp-els", "C:0-13,H:0-25,N:0-4,O:0-3,S:0-1"); pg.click("#cmp-go"); pg.wait_for_selector("#cmp-out table", timeout=15000)
+            t = pg.inner_text("#cmp-out"); print(t[:300])
+            assert "C13H25N4O3S" in t.replace("\n", "").replace(" ", "") or "C13H25N4O3S" in pg.inner_text("#cmp-out tr:nth-child(2)").replace("\t", ""), t
+            row = pg.inner_text("#cmp-out tr:nth-child(2)").replace("\t", " "); assert "C13H25N4O3S" in row.replace(" ", ""), row
+            assert "non identificazioni" in pg.inner_text("#bigbody")
+        step("317.1639 gives C13H25N4O3S with the elements of the infusion file", dialog)
+        def narrow():
+            pg.fill("#cmp-els", "C:0-5,H:0-10"); pg.click("#cmp-go"); pg.wait_for_timeout(1500)
+            assert "Nessuna formula" in pg.inner_text("#cmp-out"), pg.inner_text("#cmp-out")
+            pg.fill("#cmp-els", "C:5-2"); pg.click("#cmp-go"); pg.wait_for_timeout(1000)
+            assert pg.is_visible("#cmp-out .fail")
+        step("no candidate and a wrong range are said clearly", narrow)
+        def keep():
+            pg.evaluate("document.querySelector('#bigdlg').close()"); pg.evaluate("COMP.open({mz: 200.1})"); pg.wait_for_timeout(300)
+            assert pg.input_value("#cmp-els") == "C:5-2", pg.input_value("#cmp-els")      # the elements in use are remembered
+            pg.evaluate("document.querySelector('#bigdlg').close()")
+        step("the elements in use are remembered", keep)
+        def menu():
+            pg.evaluate("localStorage.removeItem('qqq.comp')")
+            sp = pg.evaluate("(()=>{const s=E.panels.find(q=>q.type==='spec'&&q._a&&q._a.hrp);return s?s.id:null})()"); assert sp is not None, "an HR spectrum panel"
+            xy = pg.evaluate(f"(()=>{{const s=E.panels.find(q=>q.id=={sp}),a=s._a,d=a.data[0].d;let b=0;d.y.forEach((v,i)=>{{if(v>d.y[b])b=i}});const r=s.cv.getBoundingClientRect();return {{x:r.left+a.X(d.mz[b]),y:r.top+a.Y(d.y[b])+6}}}})()")
+            pg.evaluate(f"E.panels.find(q=>q.id=={sp}).el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
+            xy = pg.evaluate(f"(()=>{{const s=E.panels.find(q=>q.id=={sp}),a=s._a,d=a.data[0].d;let b=0;d.y.forEach((v,i)=>{{if(v>d.y[b])b=i}});const r=s.cv.getBoundingClientRect();return {{x:r.left+a.X(d.mz[b]),y:r.top+a.Y(d.y[b])+6}}}})()")
+            pg.mouse.click(xy["x"], xy["y"], button="right"); pg.wait_for_timeout(400)
+            t = pg.inner_text("#ctx"); assert "Formule compatibili con m/z" in t, t
+        step("right click on a peak of a high-resolution spectrum: «Formule compatibili…»", menu)
+    r.close()
+except Exception as e:
+    steps.append(("run", "FAIL " + str(e)[:300]))
+    try: r.close()
+    except Exception: pass
+for n, s in steps: print(s.split(" ")[0].upper(), n, s if s != "ok" else "")

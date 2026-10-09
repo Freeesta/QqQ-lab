@@ -144,6 +144,61 @@ function searchIndex(idx, q, opts, getSpec, meta) {
   }
   return out;
 }
+// ---------------------------------------------------------------- analogues: modified cosine (match at shift 0 and at shift delta = precursor difference)
+const AN_TOP = 32;                               // peaks used for the modified cosine: the most intense, sorted by m/z
+function top32(s, prec) {                        // the precursor region (within 1.5 of it) and the noise (< 1% of the highest) are left out, then the 32 most intense
+  const mx = Math.max(0, ...s.it);
+  let idx = Array.from(s.mz.keys()).filter(i => s.mz[i] < prec - 1.5 && s.it[i] >= 0.01 * mx && s.it[i] > 0);
+  if (idx.length > AN_TOP) idx = idx.sort((a, b) => s.it[b] - s.it[a]).slice(0, AN_TOP);
+  idx.sort((a, b) => s.mz[a] - s.mz[b]);
+  return { mz: Float64Array.from(idx, i => s.mz[i]), it: Float64Array.from(idx, i => s.it[i]) };
+}
+// prefilter at linear cost: fragments in common (within tol) + neutral losses in common (precursor - m/z), two pointers on sorted arrays
+function sharedCount(aMz, bMz, tol) {
+  let i = 0, j = 0, n = 0;
+  while (i < aMz.length && j < bMz.length) { const d = aMz[i] - bMz[j]; if (Math.abs(d) <= tol) { n++; i++; j++; } else if (d < 0) i++; else j++; }
+  return n;
+}
+function lossesOf(mz, prec) { const l = Float64Array.from(mz, m => prec - m); l.reverse(); return l; }       // ascending: mz is ascending
+function coincidences(q, lib, tol) { return sharedCount(q.mz, lib.mz, tol) + sharedCount(lossesOf(q.mz, q.prec), lossesOf(lib.mz, lib.prec), tol); }
+// modified cosine: candidate pairs at shift 0 and shift delta, one-to-one greedy by decreasing weight sqrt(Iq*Il), normalised as the cosine of the square roots
+function modCosine(q, lib, tol) {
+  const a = top32(q, q.prec), b = top32(lib, lib.prec), delta = q.prec - lib.prec, c = [];
+  for (let i = 0; i < a.mz.length; i++) for (const sh of (Math.abs(delta) < 1e-6 ? [0] : [0, delta])) {
+    const t = a.mz[i] - sh;
+    for (let j = lowerBound(b.mz, t - tol); j < b.mz.length && b.mz[j] <= t + tol; j++) c.push([i, j, Math.sqrt(a.it[i] * b.it[j]), sh !== 0]);
+  }
+  c.sort((x, y) => y[2] - x[2]);
+  const ua = new Uint8Array(a.mz.length), ub = new Uint8Array(b.mz.length), pairs = []; let dot = 0, shifted = 0;
+  for (const [i, j, w, sh] of c) if (!ua[i] && !ub[j]) { ua[i] = ub[j] = 1; dot += w; pairs.push([i, j, sh]); if (sh) shifted++; }
+  let na = 0, nb = 0; for (const v of a.it) na += v; for (const v of b.it) nb += v;
+  return { cos: na > 0 && nb > 0 ? dot / Math.sqrt(na * nb) : 0, matched: pairs.length, shifted, delta, pairs, a, b };
+}
+// analogues of the query q = {prec, pol, mz, it} in an index: candidates with |delta precursor| <= maxDelta and the same polarity, the 300 best after the prefilter
+// (>= 3 coincidences), then the exact modified cosine (>= 4 matched peaks). getSpec(position) -> {mz, it}
+function analogIndex(idx, q, opts, getSpec, meta) {
+  const maxD = opts.maxDelta ?? 200, frag = opts.frag ?? 0.01, lo = lowerBound(idx.prec, q.prec - maxD), cand = [];
+  const qs = { mz: q.mz, prec: q.prec };
+  for (let k = lo; k < idx.n && idx.prec[k] <= q.prec + maxD; k++) {
+    const pos = idx.ord[k], lp = idx.pol[pos];
+    if (opts.pol && lp && lp !== opts.pol) continue;
+    if (Math.abs(idx.prec[k] - q.prec) < (opts.minDelta ?? 0.5)) continue;                // the same mass is an identity, not an analogue
+    const s = getSpec(pos); if (!s) continue;
+    const n = coincidences(qs, { mz: s.mz, prec: idx.prec[k] }, frag);
+    if (n >= 3) cand.push({ pos, k, n, s });
+  }
+  cand.sort((x, y) => y.n - x.n); cand.length = Math.min(cand.length, 300);
+  const out = [];
+  for (const c of cand) {
+    const lib = { mz: c.s.mz, it: c.s.it, prec: idx.prec[c.k] }, r = modCosine({ mz: q.mz, it: q.it, prec: q.prec }, lib, frag);
+    if (r.matched < 4) continue;
+    const m = meta ? meta[c.pos] : null;
+    out.push({ pos: c.pos, name: m ? m[0] : "", type: m ? m[1] : "", ce: m ? m[2] : "", inst: m ? m[3] : "", formula: m ? m[4] : "", ik: m ? m[5] : "", mcos: r.cos, matched: r.matched, shifted: r.shifted,
+      delta: r.delta, prec: idx.prec[c.k], coinc: c.n, mz: Array.from(c.s.mz), it: Array.from(c.s.it), pairs: r.pairs.map(p => [p[0], p[1], p[2]]), qa: { mz: Array.from(r.a.mz), it: Array.from(r.a.it) }, la: { mz: Array.from(r.b.mz), it: Array.from(r.b.it) } });
+  }
+  out.sort((x, y) => y.mcos - x.mcos);
+  return out;
+}
 function queryOf(peaks, prec, pol) {            // peaks: [[mz, intensity], ...] -> the query, with the same normalisation as the library
   const mz = peaks.map(p => p[0]), it = peaks.map(p => p[1]).map(Number);
   if (!mz.length || !(Math.max(...it) > 0)) return null;
@@ -151,7 +206,7 @@ function queryOf(peaks, prec, pol) {            // peaks: [[mz, intensity], ...]
   return { prec, pol, mz: t.mz, it: t.it };
 }
 
-if (typeof module !== "undefined") module.exports = { LibParser, formatOf, topPeaks, matchPeaks, cosine, entropySimilarity, score, searchIndex, queryOf, lowerBound, buildIndex: (...a) => buildIndex(...a), packIndex: (...a) => packIndex(...a), unpackIndex: (...a) => unpackIndex(...a), polFrom };
+if (typeof module !== "undefined") module.exports = { modCosine, analogIndex, coincidences, LibParser, formatOf, topPeaks, matchPeaks, cosine, entropySimilarity, score, searchIndex, queryOf, lowerBound, buildIndex: (...a) => buildIndex(...a), packIndex: (...a) => packIndex(...a), unpackIndex: (...a) => unpackIndex(...a), polFrom };
 
 // ---------------------------------------------------------------- index (built after reading a library)
 function buildIndex(prec, pol, offsets) {       // prec/pol/offsets in file order -> the sorted arrays
@@ -230,7 +285,11 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
   }
   async function peaksOf(lib, pos) {            // the peaks of the spectrum at `pos` (file order)
     const a = lib.idx.off[pos], b = lib.idx.off[pos + 1]; let buf;
-    if (lib.peaks) buf = lib.peaks.slice(a * 8, b * 8); else buf = await lib.file.slice(a * 8, b * 8).arrayBuffer();
+    if (lib.peaks) buf = lib.peaks.slice(a * 8, b * 8);
+    else {
+      if (!lib.pall && lib.file.size < 150e6) lib.pall = await lib.file.arrayBuffer();       // a library up to 150 MB is read once: a search touches thousands of its spectra
+      buf = lib.pall ? lib.pall.slice(a * 8, b * 8) : await lib.file.slice(a * 8, b * 8).arrayBuffer();
+    }
     const f = new Float32Array(buf), mz = new Float32Array(b - a), it = new Float32Array(b - a);
     for (let i = 0; i < b - a; i++) { mz[i] = f[2 * i]; it[i] = f[2 * i + 1]; }
     return { mz, it };
@@ -272,6 +331,18 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     out.sort((a, b) => b.ent - a.ent || b.cos - a.cos);
     return { results: out.slice(0, 50), libs: ids.length, query: { mz: Array.from(q.mz), it: Array.from(q.it) } };
   }
+  async function runAnalogs(m) {                 // analogues of one MS2 spectrum in every library (H9): the 10 best by modified cosine
+    const ids = m.ids && m.ids.length ? m.ids : (await listLibraries()).map(i => i.id), q = queryOf(m.peaks, m.prec, m.pol), out = [];
+    if (!q) return { results: [], libs: ids.length };
+    const maxD = m.maxDelta ?? 200;
+    for (const id of ids) {
+      const lib = await loadLibrary(id), cache = new Map(), lo = lowerBound(lib.idx.prec, q.prec - maxD);
+      for (let k = lo; k < lib.idx.n && lib.idx.prec[k] <= q.prec + maxD; k++) { const pos = lib.idx.ord[k]; const lp = lib.idx.pol[pos]; if (m.pol && lp && lp !== m.pol) continue; cache.set(pos, await peaksOf(lib, pos)); }
+      analogIndex(lib.idx, q, { maxDelta: maxD, frag: m.frag, pol: m.pol }, pos => cache.get(pos), lib.meta).forEach(r => { r.lib = lib.info.name; out.push(r); });
+    }
+    out.sort((a, b) => b.mcos - a.mcos);
+    return { results: out.slice(0, m.max || 10), libs: ids.length, query: { mz: Array.from(q.mz), it: Array.from(q.it) } };
+  }
   async function runAll(m, reqId) {             // every MS2 of a file: the best result of each (the query list comes from the page)
     const ids = m.ids && m.ids.length ? m.ids : (await listLibraries()).map(i => i.id), libs = []; for (const id of ids) libs.push(await loadLibrary(id));
     const rows = []; let last = 0;
@@ -282,7 +353,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
         for (let k = lo; k < lib.idx.n && lib.idx.prec[k] <= q.prec + tol; k++) { const pos = lib.idx.ord[k]; cache.set(pos, await peaksOf(lib, pos)); }
         for (const r of searchIndex(lib.idx, q, { ppm: m.tol.unit === "ppm" ? m.tol.v : null, da: m.tol.unit === "ppm" ? null : m.tol.v, frag: m.frag, pol: Q.pol }, pos => cache.get(pos), lib.meta)) if (!best || r.ent > best.ent) best = { ...r, lib: lib.info.name };
       }
-      rows.push({ key: Q.key, rt: Q.rt, prec: Q.prec, name: best ? best.name : "", lib: best ? best.lib : "", ent: best ? best.ent : null, cos: best ? best.cos : null, shared: best ? best.shared : null });
+      rows.push({ key: Q.key, rt: Q.rt, prec: Q.prec, name: best ? best.name : "", formula: best ? best.formula : "", dprec: best ? best.dprec : null, lib: best ? best.lib : "", ent: best ? best.ent : null, cos: best ? best.cos : null, shared: best ? best.shared : null });
       if (Date.now() - last > 200) { last = Date.now(); postMessage({ type: "progress", reqId, read: n + 1, total: m.queries.length }); }
     }
     return { rows };
@@ -297,6 +368,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
       else if (m.cmd === "remove") { await removeLibrary(m.id); r = {}; }
       else if (m.cmd === "search") r = await runSearch(m);
       else if (m.cmd === "searchAll") r = await runAll(m, reqId);
+      else if (m.cmd === "analogs") r = await runAnalogs(m);
       else throw new Error("comando sconosciuto: " + m.cmd);
       postMessage({ type: "done", reqId, ...r });
     } catch (err) { postMessage({ type: "error", reqId, error: String(err && err.message || err) }); }

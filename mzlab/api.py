@@ -112,6 +112,18 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                 return _json(formula_mz(q.get("f", ""), q.get("adduct") or None))
             except ValueError as e:      # a typo in the formula is the user's, not a server fault
                 return _json({"error": str(e)}, 400)
+        if path == "/api/composition":    # formulas that fit an exact m/z (mzlab.chem.composition): candidates, never a verdict
+            try:
+                from .chem.composition import compose, parse_elements
+                rdb = [float(x) for x in (q.get("rdb") or "-1,100").split(",")]
+                el = parse_elements(q["elements"]) if q.get("elements") else None
+                return _json(compose(float(q["mz"]), elements=el, ion=q.get("ion") or "[M+H]+", z=int(q["z"]) if q.get("z") else None,
+                                     tol=float(q.get("tol", 5)), unit=q.get("unit", "ppm"), rdb=(rdb[0], rdb[1]), nitrogen=q.get("n", "none"),
+                                     rules=[x for x in (q.get("rules") or "").split(",") if x], max_results=min(int(q.get("max", 10)), 200),
+                                     parent=q.get("parent") or None, m1=float(q["m1"]) if q.get("m1") else None, m2=float(q["m2"]) if q.get("m2") else None,
+                                     iso_tol=float(q.get("isotol", 0.2))))
+            except (ValueError, KeyError, IndexError) as e:
+                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante o non valido: {e}"}, 400)
         if path == "/api/map":
             return _json(app.ionmap(int(q["k"]), int(q.get("level", 1))))
         return _json({"error": "unknown endpoint"}, 404)

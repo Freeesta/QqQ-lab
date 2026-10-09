@@ -2267,6 +2267,7 @@ function ctxFor(p, e, x, px, py) {
     const has = m != null, lab = has ? m.toFixed(mzd(p, p.level)) : "…", mi = o => has ? o : { label: o.label, dim: true };
     items.push({ label: has ? `m/z ${lab}` : "nessun picco qui: clic destro su un picco", dim: true }, "-");
     items.push(mi({ label: `Estrai l'XIC di m/z ${lab}`, fn: () => xicDirect(m, p) }));
+    if (a.hrp && window.COMP) items.push(mi({ label: `Formule compatibili con m/z ${lab}…`, fn: () => COMP.open({ mz: m, spec: a.data[0].d, polarity: a.data[0].f && a.data[0].f.polarity }) }));
     const xs = tabPanels().filter(q => q.type === "xic"), TIPX = "Aggiunge questo ione nello stesso grafico: per vedere se due ioni escono allo stesso tempo";
     const ov = q => ({ label: `Sovrapponi all'XIC di ${xicName(q)} (pannello ${q.num || "?"})`, tip: TIPX, fn: () => xicDirect(m, p, q) });
     if (xs.length > 3) items.push(mi({ label: "Sovrapponi a un XIC…", tip: TIPX, fn: () => menu({ preventDefault() {}, clientX: e.clientX, clientY: e.clientY }, xs.map(ov)) }));
@@ -2302,6 +2303,7 @@ function ctxFor(p, e, x, px, py) {
     }
     if (p.type === "chrom") items.push({ label: "Estrai uno ione (XIC)…", fn: () => openXic(null, { after: p }) });
     if (p.type === "chrom" && window.DDA) { const q = DDA.menuShow(p); if (q) items.push(q); }
+    if (p.type === "chrom" && window.LIB && window.HR && HR.isHr(E.files[k], 2) && E.files.some(x => x.file.split("#")[0] === E.files[k].file.split("#")[0] && x.kind === "ms2")) items.push({ label: "Identifica tutte le MS2 del file…", fn: () => LIB.identifyAll(k) });
     if (p.type === "xic") {
       items.push({ label: "Aggiungi un altro ione…", fn: () => openXic(p) });
     }
