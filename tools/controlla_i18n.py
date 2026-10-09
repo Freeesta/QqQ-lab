@@ -33,7 +33,7 @@ ECCEZIONI = ROOT / "tools" / "i18n_eccezioni.txt"
 MIGRATED = {"mzlab/web/i18n.js", "mzlab/web/draw.js", "mzlab/web/index.html", "mzlab/web/browser.js", "mzlab/web/browser-worker.js", "mzlab/web/settings.js"}
 # not checked for Italian words: third-party code, the Teoria (Italian only, by decision), TP Mine, the catalogs themselves
 SKIP_DIRS = ("mzlab/web/vendor/", "mzlab/web/teoria/", "mzlab/web/lang/", "mzlab/web/esempi/", "TP_Mine/")
-SKIP_FILES = {"mzlab/web/elements.js", "mzlab/web/tpmine.enc"}
+SKIP_FILES = {"mzlab/web/elements.js"}
 
 # frequent Italian words (those that are also English words are left out: a, e, per, in, ...)
 ITALIAN_WORDS = set("""il lo la le gli dei del della delle degli dello nel nella nelle nei negli sul sulla sulle sui con una uno

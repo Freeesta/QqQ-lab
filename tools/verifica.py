@@ -33,12 +33,12 @@ E2E = ROOT / "tests_e2e"
 
 # What each e2e needs besides a browser. "veri" = the asserts depend on the real lab data (skipped with synthetic data);
 # "dam" = needs a .dam method file (QQQ_DAM); "sito" = builds the static site with Pyodide (network to jsDelivr or PYODIDE_DIR);
-# "crypto" = needs the 'cryptography' package. Keep this table up to date when you add an e2e (default: no needs).
+# Keep this table up to date when you add an e2e (default: no needs).
 NEEDS: dict[str, set[str]] = {
     "e2e9": {"dam"}, "e2e10": {"dam"}, "e2e15": {"dam"}, "e2e_dam_incoerente": {"dam"},
     "e2e_studenti": {"veri"},          # needs the whole series B (7 times, 6 standards): the synthetic files are only a few
-    "e2e13": {"sito"}, "e2e_tpmine1": {"sito", "crypto"}, "e2e_tpmine2": {"sito", "crypto"},
-    "e2e_tpmine_mem": {"sito", "crypto", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes
+    "e2e13": {"sito"}, "e2e_tpmine1": {"sito"}, "e2e_tpmine2": {"sito"},
+    "e2e_tpmine_mem": {"sito", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes
 }
 NOT_TESTS = {"lib", "synth", "lat_arrows", "make_examples"}          # helpers and measurements, not tests
 # e2e3 plus the e2e that were red on main without anybody seeing it (the CI used to run only e2e3): download menu, buttons, settings, axes, spectra.
@@ -284,7 +284,6 @@ def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
     if dam:
         env["MZLAB_DAM"] = str(dam)
         env["QQQ_DAM"] = str(dam)
-    crypto = has("cryptography")
     if jobs > 1:
         env["MZLAB_E2E_PARALLEL"] = "1"
         env["QQQ_E2E_PARALLEL"] = "1"          # tests_e2e/lib.py: every test takes a free port and its own work folder
@@ -293,7 +292,6 @@ def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
         need = NEEDS.get(n, set())
         why = ("serve un file .dam (MZLAB_DAM / QQQ_DAM)" if "dam" in need and not dam else
                "solo con i dati veri del laboratorio" if "veri" in need and src != "veri" else
-               "serve il pacchetto cryptography" if "crypto" in need and not crypto else
                "costruisce il sito con Pyodide: lancialo a parte (--solo)" if "sito" in need and not only else "")
         if why:
             out_by[n] = (n, "SKIP", 0, [why])
