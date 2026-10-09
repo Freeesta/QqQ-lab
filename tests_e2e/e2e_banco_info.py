@@ -18,7 +18,9 @@ try:
         tab = lambda t: (pg.click(f"#hri-tabs [data-t={t}]"), pg.wait_for_timeout(900))
         body = lambda: pg.inner_text("#hri-body")
         def visible():
-            assert pg.is_visible("#hrinfo") and pg.locator("#hri-tabs button").count() == 9
+            assert pg.locator("#hri-tabs button").count() == 9 and not pg.is_visible("#hrinfo"), "the sidebar opens on the File tab"
+            tab("hdr")                                       # an info tab of the sidebar brings the bar up
+            assert pg.is_visible("#hrinfo") and pg.evaluate("BARRA.curTab") == "hdr"
             assert pg.evaluate("getComputedStyle(document.querySelector('#dfiles')).position") == "sticky", "the sidebar stays on screen while the page scrolls"
         step("information bar with its 9 tabs, in the sticky sidebar", visible)
         def hdr():

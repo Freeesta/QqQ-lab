@@ -51,7 +51,7 @@ try:
             ids = pg.evaluate("[...document.querySelectorAll('#nl-list .nlr')].map(r=>r.dataset.f)"); assert "NO2" in ids and "SO3" in ids and "NH3" not in ids, ids
             pg.click("#nl-pol [data-p='+']"); pg.wait_for_timeout(200)
             ids = pg.evaluate("[...document.querySelectorAll('#nl-list .nlr')].map(r=>r.dataset.f)"); assert "NH3" in ids and "SO3" not in ids and "H2O" in ids, ids
-            pg.click("#refx")
+            shut(pg, "#refx")
         step("4.6: +/-/tutte filter", polarity)
         def a2():
             pg.click("#np-nl"); pg.wait_for_timeout(300); pg.click("#nl-pol [data-p='']"); pg.wait_for_timeout(200)
@@ -67,7 +67,7 @@ try:
             row = pg.locator('#nl-list [data-f="Cl"]'); assert row.count() == 1
             assert row.locator(".nlm").inner_text() == "35" and "•Cl" in row.inner_text() and "radicale" in row.inner_text() and "aromatico" in row.inner_text()
             pg.locator('#nl-list [data-d="Cl"]').click(); d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" in d and "HCl (36)" in d and "37Cl" in d, d
-            pg.fill("#nl-q", "62"); pg.wait_for_timeout(300); assert "H2O" in pg.inner_text("#nl-res").replace("H₂O", "H2O"); pg.fill("#nl-q", ""); pg.click("#refx")
+            pg.fill("#nl-q", "62"); pg.wait_for_timeout(300); assert "H2O" in pg.inner_text("#nl-res").replace("H₂O", "H2O"); pg.fill("#nl-q", ""); shut(pg, "#refx")
         step("A2: intro, Più dettagli, ESI+/ESI-, •Cl", a2)
         def ruler():
             pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
@@ -77,8 +77,8 @@ try:
             its = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>d.textContent)"); print(its)
             assert "Cerca 170.2 nelle perdite neutre" in its, its
             pg.locator("#ctx div", has_text="Cerca 170.2").click(); pg.wait_for_timeout(500)
-            assert pg.evaluate("document.querySelector('#refdlg').open") and pg.input_value("#nl-q") == "170.2"
-            pg.click("#refx")
+            assert pg.evaluate("BARRA.curTab === 'losses' && !document.querySelector('#sb-panel-losses').hidden") and pg.input_value("#nl-q") == "170.2"
+            shut(pg, "#refx")
         step("4.7: from the ruler: «Cerca 170.2 nelle perdite neutre»", ruler)
     r.close()
 except Exception as e:

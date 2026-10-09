@@ -573,8 +573,9 @@ function menu(ev, items) {
     m.appendChild(d);
   });
   m.hidden = false;
-  m.style.left = Math.min(ev.clientX, innerWidth - 270) + "px";
-  m.style.top = Math.max(4, Math.min(ev.clientY, innerHeight - m.offsetHeight - 8)) + "px";
+  const off = document.documentElement.classList.contains("touch") ? 16 : 0;      // with a finger the menu opens beside it: lifting the finger must not click an item
+  m.style.left = Math.min(ev.clientX + off, innerWidth - 270) + "px";
+  m.style.top = Math.max(4, Math.min(ev.clientY + off, innerHeight - m.offsetHeight - 8)) + "px";
 }
 document.addEventListener("click", () => { Q("#ctx").hidden = true; });
 document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });      // the Correzione menu closes when the click is elsewhere

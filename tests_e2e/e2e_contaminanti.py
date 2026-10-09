@@ -90,11 +90,11 @@ try:
         step("window of the laboratory contaminants", win_lab)
 
         def header_btn():
-            pg.click("#np-liste"); pg.wait_for_selector("#listedlg", timeout=5000)
-            assert pg.is_visible("#listedlg") and "Liste di riferimento" in pg.inner_text("#listedlg")
+            pg.click("#np-liste"); pg.wait_for_selector("#sb-panel-lists", timeout=5000)
+            assert pg.is_visible("#sb-panel-lists") and pg.evaluate("BARRA.curTab") == "lists" and "Risoluzione unitaria" in pg.inner_text("#sb-panel-lists")
             # Close dialog
-            pg.click("#listex"); pg.wait_for_timeout(400)
-        step("header button: #np-liste opens #listedlg", header_btn)
+            shut(pg, "#listex"); pg.wait_for_timeout(400)
+        step("header button: #np-liste opens the Liste tab of the sidebar", header_btn)
 
         def user_csv():
             # CSV with 5 compounds, semicolon and decimal comma, matching one observed peak
@@ -105,10 +105,10 @@ try:
             h = hov(pg, 279.1591)
             assert h and "Sospetto Acque" in h, h
             # Open lists dialog and verify the user list is listed
-            pg.click("#np-liste"); pg.wait_for_selector("#listedlg", timeout=5000)
-            txt = pg.inner_text("#listedlg")
+            pg.click("#np-liste"); pg.wait_for_selector("#sb-panel-lists", timeout=5000)
+            txt = pg.inner_text("#sb-panel-lists")
             assert "sospetti_acque" in txt or "Sospetto Acque" in txt
-            pg.click("#listex"); pg.wait_for_timeout(300)
+            shut(pg, "#listex"); pg.wait_for_timeout(300)
         step("user CSV suspect list: uploaded, visible in dialog, matched in HR hover tip", user_csv)
 
         pg.evaluate("localStorage.removeItem('qqq.contaminanti')")
@@ -132,18 +132,18 @@ try:
             m0 = pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='spec'&&p._a);return p._a.data[0].d.mz[0]})()")
             # Open the search via LISTE.open directly or menu click
             pg.evaluate(f"LISTE.open({{ mz: {m0}, polarity: 'positive', hr: false }})")
-            pg.wait_for_selector("#listedlg", timeout=5000)
-            assert pg.is_visible("#listedlg")
+            pg.wait_for_selector("#sb-panel-lists", timeout=5000)
+            assert pg.is_visible("#sb-panel-lists")
             # Verify nominal mode is active with ±0.5 Da tolerance and educational text is present
             mode_btn = pg.evaluate("document.querySelector('#lst-mode-seg button.on').dataset.m")
             assert mode_btn == "da", f"expected 'da', got {mode_btn}"
             tol_val = pg.evaluate("document.querySelector('#lst-tol').value")
             assert float(tol_val) == 0.5
-            body_txt = pg.inner_text("#listedlg")
+            body_txt = pg.inner_text("#sb-panel-lists")
             assert "Risoluzione unitaria" in body_txt and "PEG" in body_txt and "silossani" in body_txt
             # Results table is populated and sorted
             assert pg.locator("#lst-tbody tr").count() > 0
-            pg.click("#listex")
+            shut(pg, "#listex")
         step("low resolution: context menu search opens nominal ±0.5 Da search with educational text", lr_context_menu_search)
 
     r2.close()

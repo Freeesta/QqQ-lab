@@ -66,11 +66,11 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 #nav{display:flex;gap:2px}#nav button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:6px 12px;font-weight:600;color:var(--muted)}
 #nav button.on{color:var(--ink);border-bottom-color:var(--accent)}#nav button:hover{color:var(--ink)}
 :root{--sb-w:260px}
-#v-data{display:grid;grid-template-columns:var(--sb-col-w,var(--sb-w,260px)) 1fr;gap:10px;padding:10px 14px;align-items:start}
+#v-data{display:grid;grid-template-columns:var(--sb-col-w,var(--sb-w,260px)) minmax(0,1fr);gap:10px;padding:10px 14px;align-items:start}
 #v-data.sb-unpinned{--sb-col-w:42px}
 #v-data.fold{grid-template-columns:1fr!important}
 #v-data.fold #dfiles{display:none!important}
-#dfiles{position:sticky;top:calc(var(--hh,48px) + 8px);height:calc(100vh - var(--hh,48px) - 20px);max-height:calc(100vh - var(--hh,48px) - 20px);display:flex;flex-direction:row;align-items:stretch;z-index:40;box-sizing:border-box}
+#dfiles{position:sticky;top:calc(var(--hh,48px) + 8px);height:calc(100vh - var(--hh,48px) - 32px);max-height:calc(100vh - var(--hh,48px) - 32px);display:flex;flex-direction:row;align-items:stretch;z-index:40;box-sizing:border-box}
 #sidebar-tablist{flex:0 0 42px;width:42px;display:flex;flex-direction:column;align-items:center;padding:4px 0;gap:2px;border:1px solid var(--line);border-right:none;background:var(--bg);border-radius:8px 0 0 8px;overflow-y:auto;overflow-x:hidden;box-sizing:border-box}
 #sidebar-tablist button{width:36px;height:38px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:1px solid transparent;border-radius:6px;background:transparent;padding:2px;cursor:pointer;color:var(--muted);font-size:8.5px;line-height:1;text-align:center;box-sizing:border-box}
 #sidebar-tablist button svg{flex:none}
@@ -82,6 +82,13 @@ button.imp{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var
 #sb-pane{flex:1 1 0;min-width:0;display:flex;flex-direction:column;position:relative;border:1px solid var(--line);border-radius:0 8px 8px 0;overflow:hidden;background:var(--panel);box-sizing:border-box;padding:0}
 #v-data.sb-unpinned #sb-pane{position:absolute;left:42px;top:0;width:calc(var(--sb-w,260px) - 42px);height:100%;z-index:50;box-shadow:4px 6px 22px rgba(0,0,0,.22);border:1px solid var(--line);border-left:none;border-radius:0 8px 8px 0;background:var(--panel)}
 #v-data.sb-unpinned:not(.sb-overlay-open) #sb-pane{display:none!important}
+@media (max-width:900px){      /* narrow window: the rail is a strip above the panels (a column would take room the panels need), its pane opens right under it */
+#v-data,#v-data.sb-unpinned{grid-template-columns:minmax(0,1fr)}
+#dfiles{position:relative;height:auto;max-height:none;flex-direction:column}
+#sidebar-tablist{flex:none;width:auto;flex-direction:row;flex-wrap:wrap;justify-content:flex-start;padding:2px 4px;border-right:1px solid var(--line);border-radius:8px;overflow:visible}
+#sidebar-tablist .sb-sep{width:1px;height:24px;margin:auto 4px}
+#v-data.sb-unpinned #sb-pane{left:0;top:100%;width:100%;height:auto;max-height:70vh;border-left:1px solid var(--line);border-radius:8px}
+}
 #sb-header{display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--line);flex:none;margin:0}
 #sb-title{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sb-pin-btn{background:transparent;border:0;padding:2px 4px;cursor:pointer;color:var(--muted);border-radius:4px;display:inline-flex;align-items:center;justify-content:center}

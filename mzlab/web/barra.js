@@ -214,15 +214,10 @@ const BARRA = (() => {
   function ensureListsMounted(opt = {}) {
     const pnl = document.querySelector("#sb-panel-lists");
     if (!pnl) return;
-    if (!pnl.dataset.mounted) {
-      if (window.LISTE && typeof LISTE.mount === "function") {
-        LISTE.mount(pnl, opt);
-        pnl.dataset.mounted = "1";
-      }
-    } else if (opt && (opt.mz != null || opt.q != null)) {
-      if (window.LISTE && typeof LISTE.mount === "function") {
-        LISTE.mount(pnl, opt);
-      }
+    // mounted again at every opening (as the old window was): a list added meanwhile shows up
+    if (window.LISTE && typeof LISTE.mount === "function") {
+      LISTE.mount(pnl, opt);
+      pnl.dataset.mounted = "1";
     }
   }
 
