@@ -73,3 +73,16 @@ def test_user_error_to_json():
     from mzlab.i18n import UserError
     e = UserError("err.file.notMzml", {"name": "a.raw"}, "not an mzML file")
     assert e.to_json() == {"error": "not an mzML file", "error_key": "err.file.notMzml", "params": {"name": "a.raw"}}
+
+
+def test_api_answers_with_keys():
+    """A UserError reaches the page as error_key + params; the old HR_MIX marker and the Italian error texts are gone."""
+    sys.path.insert(0, str(ROOT))
+    import json
+    from mzlab.api import dispatch
+    from mzlab.app import App
+    app = App(None)
+    code, _, body, _ = dispatch(app, "GET", "/api/chrom", {"k": "0"})
+    assert code == 500 or code == 400
+    j = json.loads(body)
+    assert j["error_key"] == "err.session.noSuchFile" and "params" in j

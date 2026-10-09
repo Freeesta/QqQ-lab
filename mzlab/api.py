@@ -7,12 +7,20 @@ from __future__ import annotations
 
 import json
 
-from .bigfiles import TOO_BIG
+from .bigfiles import too_big
+from .i18n import UserError
 from .chem.elements import formula_mz
 
 
 def _json(obj, code=200):
     return code, "application/json", json.dumps(obj).encode("utf-8"), {}
+
+
+def _fail(e, code=400):
+    """The answer for an exception: a UserError carries its message key and parameters; the text is for developers (the page translates the key)."""
+    if isinstance(e, UserError):
+        return _json(e.to_json(), code)
+    return _json({"error": str(e) if isinstance(e, ValueError) else f"missing or invalid parameter: {e}"}, code)
 
 
 MAX_BODY = 8 << 20  # bytes accepted for a JSON request
@@ -26,7 +34,7 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                 app.save_upload(q.get("name", ""), stream, length)
                 return _json({"files": app.files(), "methods": app.methods()})
             if length > MAX_BODY:  # a JSON body is small; refuse anything huge instead of reading it into memory
-                raise ValueError("request too large")
+                raise UserError("err.request.tooLarge", text="request too large")
             body = json.loads((stream.read(length) if stream is not None else b"") or b"{}")
             if path == "/api/explore":
                 app.open_session(body)
@@ -42,9 +50,9 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                 return _json(app.state())
             return _json({"error": "unknown endpoint"}, 404)
         except MemoryError:
-            return _json({"error": TOO_BIG}, 507)
+            return _json(too_big(), 507)
         except Exception as e:  # noqa: BLE001
-            return _json({"error": f"{type(e).__name__}: {e}" if not isinstance(e, ValueError) else str(e)}, 400)
+            return _fail(e) if isinstance(e, ValueError) else _json({"error": f"{type(e).__name__}: {e}"}, 400)
     try:
         if path == "/api/state":
             return _json(app.state())
@@ -64,17 +72,17 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             try:
                 return _json(app.scaninfo(int(q["k"]), int(q["sid"])))
             except (ValueError, KeyError) as e:
-                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
+                return _fail(e)
         if path == "/api/scanlist":      # the scans of a level / scan type in columns (the list of scans of the bench)
             try:
                 return _json(app.scanlist(int(q["k"]), int(q.get("level", 1)), q.get("filt") or None))
             except (ValueError, KeyError) as e:
-                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
+                return _fail(e)
         if path == "/api/fileinfo":      # what the mzML says about the file and the instrument
             try:
                 return _json(app.fileinfo(int(q["k"])))
             except (ValueError, KeyError) as e:
-                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
+                return _fail(e)
         if path == "/api/xic":
             return _json(app.xic([int(x) for x in q["k"].split(",") if x], float(q["mz"]),
                                  float(q.get("tol", 0.35)), int(q.get("level", 1))))
@@ -106,7 +114,7 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                 return _json(app.spectra(int(q["k"]), int(q["i0"]), int(q["i1"]), int(q.get("level", 1)),
                                          float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), q.get("merge") == "1", q.get("hr") != "0", q.get("filt") or None))
             except (ValueError, KeyError) as e:
-                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
+                return _fail(e)
         if path == "/api/scanbin":       # the same scans as /api/spectra, as a binary block (no JSON, no decimals): see App.scanbin
             pr = q.get("prec", q.get("precursor"))
             try:
@@ -114,7 +122,7 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                                    q.get("filt") or q.get("filter") or None, q.get("hr") != "0", q.get("merge") == "1")
                 return 200, "application/octet-stream", body, {}
             except (ValueError, KeyError) as e:
-                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
+                return _fail(e)
         if path in ("/api/dda", "/api/scan", "/api/scanavg"):       # DDA and single scans as stored in the file (high resolution, B2)
             try:
                 if path == "/api/dda":
@@ -123,12 +131,12 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                     return _json(app.scan(int(q["k"]), int(q["sid"]), q.get("hr") != "0"))
                 return _json(app.scanavg(int(q["k"]), [int(x) for x in q["sids"].split(",") if x], q.get("hr") != "0"))
             except (ValueError, KeyError) as e:
-                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
+                return _fail(e)
         if path == "/api/formula":
             try:
                 return _json(formula_mz(q.get("f", ""), q.get("adduct") or None))
             except ValueError as e:      # a typo in the formula is the user's, not a server fault
-                return _json({"error": str(e)}, 400)
+                return _fail(e)
         if path == "/api/composition":    # formulas that fit an exact m/z (mzlab.chem.composition): candidates, never a verdict
             try:
                 from .chem.composition import compose, parse_elements
@@ -140,7 +148,7 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                                      parent=q.get("parent") or None, m1=float(q["m1"]) if q.get("m1") else None, m2=float(q["m2"]) if q.get("m2") else None,
                                      iso_tol=float(q.get("isotol", 0.2))))
             except (ValueError, KeyError, IndexError) as e:
-                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante o non valido: {e}"}, 400)
+                return _fail(e)
         if path == "/api/contaminants":   # built-in list of known contaminants, expanded into ions (mzlab.chem.contaminants); matching is done in the browser (web/liste.js)
             from .chem.contaminants import builtin
             return _json({"lists": [builtin()]})
@@ -148,11 +156,11 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             try:
                 return _json(app.msn_tree(int(q["k"]), q.get("formula") or None, float(q.get("ppm", 5))))
             except (ValueError, KeyError) as e:
-                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
+                return _fail(e)
         if path == "/api/map":
             return _json(app.ionmap(int(q["k"]), int(q.get("level", 1))))
         return _json({"error": "unknown endpoint"}, 404)
     except MemoryError:   # a file too big for the browser's memory: say what to do, not a bare exception name
-        return _json({"error": TOO_BIG}, 507)
+        return _json(too_big(), 507)
     except Exception as e:  # noqa: BLE001
-        return _json({"error": f"{type(e).__name__}: {e}"}, 500)
+        return _fail(e, 500) if isinstance(e, UserError) else _json({"error": f"{type(e).__name__}: {e}"}, 500)

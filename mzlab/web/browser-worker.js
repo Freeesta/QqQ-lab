@@ -25,7 +25,6 @@ const safe = async f => { try { return await f(); } catch (_) { return undefined
 // Big files are not copied into the memory of the engine: the Blob is mounted read-only with WORKERFS (/big/N/data) and linked into the work folder.
 // Above KEEP the file is not saved in IndexedDB either (it has to be opened again after a reload).
 const BIG = 50 << 20, KEEP = 300 << 20, MAX = 4 * 1024 * 1024 * 1024;
-const RECIPE = 'msconvert file.raw --mzML --zlib --filter "peakPicking vendor msLevel=1-"  (per alleggerire: --filter "scanTime [600,1500]" in secondi, --filter "threshold count 300 most-intense")';
 let bigN = 0;
 const baseName = n => String(n || "").split(/[\\/]/).pop();
 function mountBig(blob) {
@@ -45,16 +44,16 @@ zipP.catch(() => {});
 fetch(IDX + "pyodide-lock.json").then(r => r.json()).then(l => fetch(IDX + l.packages.numpy.file_name)).then(r => r.arrayBuffer()).catch(() => {});
 async function start() {
   try {
-    say("Carico Python...");
+    say("Loading Python...");
     py = await loadPyodide({ indexURL: IDX });
-    say("Carico numpy...");
+    say("Loading numpy...");
     await py.loadPackage("numpy");
-    say("Carico il programma...");
+    say("Loading the program...");
     const zip = await zipP;
     py.FS.mkdirTree("/qqq");
     py.unpackArchive(zip, "zip", { extractDir: "/qqq" });
     py.FS.mkdirTree(WORK);
-    say("Riapro i file della volta scorsa...");
+    say("Reopening the files of the last visit...");
     const names = await safe(() => tx("files", "readonly", s => s.getAllKeys()));
     const bigs = [];
     for (const n of names || []) {
@@ -65,7 +64,7 @@ async function start() {
     }
     const nb = await safe(() => tx("kv", "readonly", s => s.get("notebook")));
     if (nb) py.FS.writeFile(`${WORK}/taccuino.json`, nb);
-    for (const [n, blob] of bigs) { try { py.FS.symlink(mountBig(blob), `${WORK}/${n}`); } catch (e) { console.debug("[mzLab] file grande non riaperto", n, e); } }
+    for (const [n, blob] of bigs) { try { py.FS.symlink(mountBig(blob), `${WORK}/${n}`); } catch (e) { console.debug("[mzLab] big file not reopened", n, e); } }
     py.runPython("import sys; sys.path.insert(0, '/qqq')\nfrom mzlab import browser\nbrowser.start()");
     handle = py.runPython("browser.handle");
     linkBig = py.runPython("browser.link_big");
@@ -77,13 +76,13 @@ const started = start();
 onmessage = async ev => {
   const { id, method, url, body, blob } = ev.data;
   await started;
-  if (!handle) return postMessage({ id, status: 500, text: JSON.stringify({ error: "motore di calcolo non avviato" }) });
+  if (!handle) return postMessage({ id, status: 500, text: JSON.stringify({ error: "calculation engine not started", error_key: "err.engine.notStarted" }) });
   let status, text, ctype;
   const t0 = performance.now();
   try {
     if (blob) {                                                                       // a big upload: mount the Blob, do not copy it
       const name = new URL(url, "http://x/").searchParams.get("name");
-      if (blob.size > MAX) throw new Error("file oltre 4 GB: troppo grande. Riducilo con MSConvert: " + RECIPE);
+      if (blob.size > MAX) throw Object.assign(new Error("file over 4 GB: too big"), { key: "err.memory.over4gb" });
       const r = linkBig(name, mountBig(blob));
       [status, text] = r.toJs(); r.destroy();
       if (status === 200 && blob.size <= KEEP) await safe(() => tx("files", "readwrite", s => s.put(blob, baseName(name))));
@@ -93,7 +92,7 @@ onmessage = async ev => {
     }
   } catch (e) {
     const m = String(e && e.message || e);
-    status = 500; text = JSON.stringify({ error: /memory|alloc|RangeError/i.test(m) ? "Questo file è troppo grande per la memoria del browser. Riducilo con MSConvert: " + RECIPE : m });
+    status = 500; text = JSON.stringify(e && e.key ? { error: m, error_key: e.key } : /memory|alloc|RangeError/i.test(m) ? { error: "this file is too big for the memory of the browser", error_key: "err.memory.tooBig" } : { error: m });
   }
   if (text instanceof Uint8Array) postMessage({ id, status, buf: text, ctype, ms: performance.now() - t0 }, [text.buffer]);       // a binary block (api/scanbin): moved, not copied
   else postMessage({ id, status, text, ms: performance.now() - t0 });

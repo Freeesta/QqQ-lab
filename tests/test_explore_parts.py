@@ -25,7 +25,7 @@ def d(tmp_path_factory):
 
 
 def test_which_files_are_mixed(d):
-    assert file_parts(Run(d / "plain.mzML")) == [] and mixed_text(Run(d / "plain.mzML")) == ""
+    assert file_parts(Run(d / "plain.mzML")) == [] and mixed_text(Run(d / "plain.mzML")) == []
     assert [p["tag"] for p in file_parts(Run(d / "ida.mzML"))] == ["MS1", "MS2"]
     assert [p["tag"] for p in file_parts(Run(d / "epi.mzML"))] == ["MS2", "MRM"]
     assert [p["tag"] for p in file_parts(Run(d / "pol.mzML"))] == ["MS1 pos", "MS1 neg"]
@@ -70,6 +70,7 @@ def test_mrm_part_has_the_transitions(d):
 
 
 def test_hr_lr_mix_raises_error(d):
-    with pytest.raises(ValueError, match="HR_MIX"):
+    with pytest.raises(ValueError) as e:
         Session([{"file": "q.mzML"}, {"file": "e.mzML"}], d)
+    assert e.value.key == "err.hr.mix"
 

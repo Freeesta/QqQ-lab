@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 
 from .explore import Session, sniff
+from .i18n import UserError, message
 from .peaks import merge_unit, pad_zeros, profile_peaks
 from .reader.methodinfo import check_against, method_kind, read_methods
 from .project import guess_conc, guess_sample
@@ -21,19 +22,19 @@ from .project import guess_conc, guess_sample
 UPLOAD_SUFFIXES = (".mzml", ".dam")
 
 
-def _method_summary(m: dict | None) -> str:
-    """One line for the list of methods: what the .dam says it acquires."""
+def _method_summary(m: dict | None) -> dict | str:
+    """One line for the list of methods, as a message for the page ({"key", "params"}; "" when there is nothing to say): what the .dam acquires."""
     if not m or m.get("error"):
-        return "non leggibile" if m else ""
+        return message("load.method.unreadable") if m else ""
     ex = m.get("experiments") or []
     if not ex:
         return ""
     if all(e["kind"] == "mrm" for e in ex):
-        n = sum(len(e["transitions"]) for e in ex)
-        return f"MRM, {n} transizion{'e' if n == 1 else 'i'}"
+        return message("load.method.mrm", n=sum(len(e["transitions"]) for e in ex))
     rng = [e["range"] for e in ex if e.get("range")]
-    txt = "scansione" if len(ex) == 1 else f"{len(ex)} scansioni"
-    return txt + (f", m/z {rng[0][0]:g}-{rng[0][1]:g}" if rng and len(ex) == 1 else "")
+    if len(ex) != 1:
+        return message("load.method.scans", n=len(ex))
+    return message("load.method.scanRange", lo=f"{rng[0][0]:g}", hi=f"{rng[0][1]:g}") if rng else message("load.method.scan")
 
 
 MAX_UPLOAD = 4 << 30  # bytes: one mzML upload
@@ -109,7 +110,7 @@ class App:
                     r["name"] = p.name
                     cache[key] = r
                 except Exception as e:  # noqa: BLE001 -- a broken file must not break the page
-                    cache[key] = {"name": p.name, "error": f"non riesco a leggere questo file ({e})", "source": [], "compound": [], "file": {}}
+                    cache[key] = {"name": p.name, "error": f"cannot read this file ({e})", "error_key": "err.dam.unreadable", "params": {"message": str(e)}, "source": [], "compound": [], "file": {}}
             out.append(cache[key])
         return out
 
@@ -117,17 +118,17 @@ class App:
     def safe_name(name: str) -> str:
         n = Path(name.replace("\\", "/")).name.strip()
         if not n or n.startswith(".") or Path(n).suffix.lower() not in UPLOAD_SUFFIXES:
-            raise ValueError(f"file type not accepted: {name!r} (use .mzML, or a method .dam; convert a .wiff to .mzML first)")
+            raise UserError("err.file.notAccepted", {"name": name}, f"file type not accepted: {name!r} (use .mzML, or a method .dam; convert a .wiff to .mzML first)")
         return re.sub(r"[\x00-\x1f<>:\"|?*]", "_", n)
 
     def save_upload(self, name: str, stream, length: int) -> str:
         if not self.workdir:
-            raise ValueError("no work folder")
+            raise UserError("err.upload.noWorkFolder", text="no work folder")
         n = self.safe_name(name)
         if length > MAX_UPLOAD:
-            raise ValueError("file too large")
+            raise UserError("err.upload.tooLarge", text="file too large")
         if length > shutil.disk_usage(self.workdir).free - (200 << 20):
-            raise ValueError("not enough free disk space")
+            raise UserError("err.upload.noSpace", text="not enough free disk space")
         dest = self.workdir / n
         tmp = dest.with_name(dest.name + ".part")
         left = length
@@ -140,7 +141,7 @@ class App:
                 left -= len(chunk)
         if left:
             tmp.unlink(missing_ok=True)
-            raise ValueError("upload interrupted")
+            raise UserError("err.upload.interrupted", text="upload interrupted")
         os.replace(tmp, dest)
         return n
 
@@ -176,7 +177,7 @@ class App:
     def save_notebook(self, data: dict):
         p = self.notebook_path()
         if not p:
-            raise ValueError("no work folder: use the download button")
+            raise UserError("err.notebook.noWorkFolder", text="no work folder: use the download button")
         tmp = p.with_suffix(".tmp")
         tmp.write_text(json.dumps(data), encoding="utf-8")
         os.replace(tmp, p)
@@ -187,13 +188,13 @@ class App:
         for s_ in payload.get("samples", []):
             n = self.safe_name(s_["file"])
             if not (self.workdir / n).exists():
-                raise ValueError(f"file not found: {n}")
+                raise UserError("err.session.fileNotFound", {"name": n}, f"file not found: {n}")
             t = s_.get("time")
             c = s_.get("conc")
             samples.append({"file": n, "label": s_.get("label"), "type": s_.get("type", "sample"),
                             "time": None if t in (None, "") else float(t), "conc": None if c in (None, "") else float(c), "cunit": s_.get("cunit")})
         if not samples:
-            raise ValueError("add at least one file")
+            raise UserError("err.session.noFiles", text="add at least one file")
         self.session = Session(samples, self.workdir)
 
     def session_state(self) -> dict:
@@ -213,7 +214,7 @@ class App:
 
     def _item(self, k: int):
         if not self.session or not 0 <= k < len(self.session.items):
-            raise ValueError("no such file in the session")
+            raise UserError("err.session.noSuchFile", text="no such file in the session")
         return self.session.items[k]
 
     def chrom(self, k: int, kind: str, level: int, mz0: float | None = None, mz1: float | None = None, prec: float | None = None, filt: str | None = None) -> dict:

@@ -17,6 +17,7 @@ The catalogs are plain JSON inside `I18N.add("xx", { ... });`: the first and the
 """
 from __future__ import annotations
 
+import html
 import json
 import re
 import sys
@@ -29,7 +30,7 @@ LANG = WEB / "lang"
 ECCEZIONI = ROOT / "tools" / "i18n_eccezioni.txt"
 
 # JS files whose strings must already be free of Italian (grows as the parts of the work migrate files)
-MIGRATED = {"mzlab/web/i18n.js", "mzlab/web/draw.js"}
+MIGRATED = {"mzlab/web/i18n.js", "mzlab/web/draw.js", "mzlab/web/index.html", "mzlab/web/browser.js", "mzlab/web/browser-worker.js", "mzlab/web/settings.js"}
 # not checked for Italian words: third-party code, the Teoria (Italian only, by decision), TP Mine, the catalogs themselves
 SKIP_DIRS = ("mzlab/web/vendor/", "mzlab/web/teoria/", "mzlab/web/lang/", "mzlab/web/esempi/", "TP_Mine/")
 SKIP_FILES = {"mzlab/web/elements.js", "mzlab/web/tpmine.enc"}
@@ -153,7 +154,8 @@ class _Static(HTMLParser):
                 self.found.append((d[a], target, d.get(target, "")))
         if tag in ("br", "img", "input", "meta", "link", "hr"):
             return
-        self.stack.append([tag, d.get("data-i18n"), []])
+        key = d.get("data-i18n") or d.get("data-i18n-html")
+        self.stack.append([tag, key, [], "data-i18n-html" in d])
 
     def handle_data(self, data):
         for fr in self.stack:
@@ -166,7 +168,7 @@ class _Static(HTMLParser):
                 fr = self.stack[i]
                 del self.stack[i:]
                 if fr[1]:
-                    self.found.append((fr[1], None, "".join(fr[2])))
+                    self.found.append((fr[1], "html" if fr[3] else None, "".join(fr[2])))
                 return
 
 
@@ -175,7 +177,13 @@ def check_static_html(it: dict, errs: list) -> None:
         ps = _Static()
         ps.feed(p.read_text(encoding="utf-8"))
         for key, attr, text in ps.found:
-            if key in it and re.sub(r"\s+", " ", text).strip() != it[key]:
+            if key not in it:
+                continue
+            want = it[key]
+            if attr == "html":                       # data-i18n-html: compare the visible text (tags and entities removed)
+                want = html.unescape(re.sub(r"<[^>]+>", "", want))
+            norm = lambda x: re.sub(r"\s+", " ", x.replace("{APP}", "{app}")).strip()      # {APP} in the page is {app} in the catalog
+            if norm(text) != norm(want):
                 errs.append(f"HTML {p.name}: «{key}»{' (' + attr + ')' if attr else ''} shows «{text.strip()[:50]}» but it.js has «{it[key][:50]}»")
 
 
@@ -249,6 +257,16 @@ def check_italian(errs: list, listing: bool) -> None:
                 errs.append(f"Italian outside the catalogs: {rel}:{ln} «{w}» in «{s}»")
         elif hits:
             summary.append((len(hits), rel))
+    for p in source_files((".html",)):                     # inline <script> blocks of the pages
+        rel = p.relative_to(ROOT).as_posix()
+        if rel not in MIGRATED:
+            continue
+        for m in re.finditer(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", p.read_text(encoding="utf-8"), re.S):
+            base = p.read_text(encoding="utf-8")[:m.start(1)].count("\n")
+            for ln, s in js_strings(m.group(1)):
+                w = italian_in(s)
+                if w and not any(f == rel and sn in s for f, sn in exc):
+                    errs.append(f"Italian outside the catalogs: {rel}:{base + ln} «{w[0]}» in «{s[:60]}»")
     if listing:
         print("Files not yet migrated (strings with Italian words):")
         for n, rel in sorted(summary, reverse=True):
