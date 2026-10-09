@@ -114,7 +114,7 @@ def test_few_scans_are_flagged():
     ions = {i["name"]: i for i in ions}
     s = _sim(tb, ions, "ISF_big")
     assert not s["reliable"] or s["n_scans"] < 8
-    assert any("scansion" in w for w in s["warnings"]) or not s["reliable"]
+    assert any(w["key"] == "of.warn.fewScans" for w in s["warnings"]) or not s["reliable"]
 
 
 def test_p_shift_and_ci_are_present_and_in_range():
@@ -215,7 +215,7 @@ def test_kinetics_few_points_warns_and_does_not_crash():
 def test_roles_isotope_adduct_fragment_and_formula_constraint():
     P = 364.35
     roles = {r["label"]: r for r in f.annotate_roles(P + 1.0, P)}
-    assert "M+1 di P" in roles and roles["M+1 di P"]["role"] == "isotope"
+    assert "M+1 of P" in roles and roles["M+1 of P"]["role"] == "isotope"
     assert any(r["label"] == "[M+Na]+" for r in f.annotate_roles(P + 21.98, P))
     assert any(r["label"] == "[2M+H]+" and r["role"] == "dimer" for r in f.annotate_roles(2 * (P - 1.007) + 1.007, P))
     fr = f.annotate_roles(P - 18.01, P, "C14H13F4N3O2S2")
@@ -417,7 +417,7 @@ def test_origin_report_is_serializable_and_has_no_verdict():
     assert any(c["mz"] > 340 for c in rep["candidates"])
     for banned in ("verdict", "is_isf", "classification", "probability"):
         assert banned not in json.dumps(rep).lower()
-    assert "unitaria" in rep["note"]
+    assert rep["note"]["key"] == "of.note"
     assert rep["timing"]["total_s"] < 10
 
 
@@ -440,7 +440,7 @@ def test_origin_report_robust_to_missing_parent_and_empty_window():
 def test_saturated_parent_is_reported():
     tb, ions = demo.isf_scene(0.0, 5, saturate=1.2e6)
     rep = f.origin_report([{"label": "t0", "time": 0.0, "table": tb, "key": "sat"}], 194.0 + OFF, 364.0 + OFF)
-    assert any("satura" in w.lower() for w in rep["warnings"])
+    assert any(w["key"] == "of.warn.flatTop" for w in rep["warnings"])
 
 
 # ----------------------------------------------------------------------------------------------------------------------- real data

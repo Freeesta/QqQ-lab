@@ -236,5 +236,22 @@
   "tree.xlsx.prefix": "Inizio del nome del file scaricato; solo lettere, numeri e trattino basso.",
   "tree.nodeInfo": "Riga sopra la tabella dei picchi di un nodo dell'albero MSn.",
   "comp.count": "Conteggio dei candidati nella finestra «Formule compatibili»; {n} = numero.",
-  "comp.first": "Seguito di comp.count; {n} = quanti ne sono mostrati."
+  "comp.first": "Seguito di comp.count; {n} = quanti ne sono mostrati.",
+  "og.failed": "{message} = testo dell'errore.",
+  "og.xlsx.prefix": "Nome del file scaricato: origine_<mz>_da_<mz>; solo lettere minuscole senza accento.",
+  "of.role.isoP": "Ruolo di uno ione co-eluente: isotopo del progenitore P; {k} = quanti neutroni in più.",
+  "of.role.isoX": "Ruolo di uno ione co-eluente; X = lo ione studiato, P = il progenitore.",
+  "of.warn.fewScans": "Avviso sull'origine di uno ione; {n} = numero di scansioni nel picco.",
+  "of.warn.fewSamplesCi": "{n} = numero di campioni.",
+  "of.warn.parentFewScans": "{n} = numero di scansioni.",
+  "of.warn.flatTop": "{n} = scansioni al massimo.",
+  "of.warn.massCoincidence": "{mz} = elenco di m/z vicini.",
+  "of.warn.fewRatio": "{n} = numero di punti.",
+  "og.heavier": "Cella «Δm dal candidato»; {dm} = differenza di massa.",
+  "og.lighter": "Cella «Δm dal candidato»; {dm} = differenza di massa.",
+  "og.leg.co": "Legenda del grafico dell'origine; {mz} = m/z di un ione co-eluente scelto.",
+  "og.leg.ion": "Legenda del grafico dell'origine; {mz} = m/z dello ione studiato.",
+  "og.leg.par": "Legenda del grafico dell'origine; {mz} = m/z del progenitore.",
+  "og.lossHint": "Suggerimento su una riga della tabella; {dm} = differenza di massa dal candidato, {lost} = stessa differenza arrotondata.",
+  "og.waitN": "Contatore di secondi durante il calcolo; {s} = secondi trascorsi."
 }

@@ -7,6 +7,8 @@
 //   (d) behaviour across samples (kinetics), each metric with a two-line explanation, honest warnings, the student's own hypothesis
 //       (saved in the notebook) and an Excel export. The only "conclusion" on the page is the one the student writes.
 const OG = { res: null, sel: new Set(), traces: new Map(), busy: 0 };
+const ogMsg = w => (w && w.key ? I18N.t(w.key, w.params) : String(w));                // a warning from the server: {key, params}
+const ogRole = r => (r.label_key ? I18N.t(r.label_key, r.params) : r.label || r.role);   // a role of a co-eluting ion
 (function () {
   const st = document.createElement("style");
   st.textContent = `#ogdlg{width:min(1100px,96vw);max-width:96vw;max-height:92vh;border:1px solid var(--line);border-radius:8px;padding:0;background:var(--panel);color:var(--text)}
@@ -31,16 +33,16 @@ const OG_COLORS = ["#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4
 function ogDialog() {
   let d = document.getElementById("ogdlg"); if (d) return d;
   d = document.createElement("dialog"); d.id = "ogdlg";
-  d.innerHTML = `<div class="ogh"><h3>Da dove viene questo ione?</h3><button id="og-x" title="Chiudi">&times;</button></div>
-<div class="ogb"><p class="why">Qui vedi <b>misure</b>, non risposte. Uno ione che sembra un prodotto di trasformazione può essere un frammento prodotto nella sorgente dello strumento (<i>in-source fragmentation</i>) a partire da un ione più pesante: le misure sotto ti dicono quanto i due ioni si comportano come uno solo. La conclusione la scrivi tu in fondo.</p>
+  d.innerHTML = `<div class="ogh"><h3>${I18N.t("og.title")}</h3><button id="og-x" title="${I18N.t("common.close")}">&times;</button></div>
+<div class="ogb"><p class="why">${I18N.t("og.intro")}</p>
 <div class="ogf">
-<label><span>Ione da studiare (<i>m/z</i> come lo vedi nello spettro)</span><input id="og-mz" class="mzf" inputmode="decimal" autocomplete="off"></label>
-<label><span>Candidato progenitore (<i>m/z</i>)</span><input id="og-par" class="mzf" inputmode="decimal" autocomplete="off" placeholder="es. il composto di partenza"></label>
-<label>Formula neutra del progenitore (facoltativa)<input id="og-f" autocomplete="off" placeholder="es. C9H8ClN5"></label>
-<label>Finestra RT, da (min)<input id="og-r0" class="mzf" inputmode="decimal" autocomplete="off" placeholder="automatica"></label>
-<label>a (min)<input id="og-r1" class="mzf" inputmode="decimal" autocomplete="off"></label>
-<label>File di riferimento<select id="og-k"></select></label>
-<button id="og-go" class="imp">Calcola le evidenze</button></div>
+<label><span>${I18N.t("og.lbl.ion")}</span><input id="og-mz" class="mzf" inputmode="decimal" autocomplete="off"></label>
+<label><span>${I18N.t("og.lbl.par")}</span><input id="og-par" class="mzf" inputmode="decimal" autocomplete="off" placeholder="${I18N.t("og.ph.par")}"></label>
+<label>${I18N.t("og.lbl.f")}<input id="og-f" autocomplete="off" placeholder="${I18N.t("og.ph.f")}"></label>
+<label>${I18N.t("og.lbl.r0")}<input id="og-r0" class="mzf" inputmode="decimal" autocomplete="off" placeholder="${I18N.t("og.ph.auto")}"></label>
+<label>${I18N.t("og.lbl.r1")}<input id="og-r1" class="mzf" inputmode="decimal" autocomplete="off"></label>
+<label>${I18N.t("og.lbl.k")}<select id="og-k"></select></label>
+<button id="og-go" class="imp">${I18N.t("og.go")}</button></div>
 <div id="og-err" class="ogw" hidden></div><div id="og-out"></div></div>`;
   document.body.appendChild(d);
   d.querySelector("#og-x").onclick = () => d.close();
@@ -50,7 +52,7 @@ function ogDialog() {
 }
 function openOrigin(pre = {}) {
   const d = ogDialog(), full = E.files.filter(f => f.kind === "full" && !f.gone && f.type !== "blank");
-  if (!full.length) return info("Servono file Full Scan (non bianchi) per cercare l'origine di uno ione.");
+  if (!full.length) return info(I18N.t("og.needFull"));
   const q = id => d.querySelector(id);
   q("#og-k").innerHTML = full.map(f => `<option value="${f.k}">${EH(f.label)}</option>`).join("");
   const kk = full.find(f => f.k === pre.k) || full[0]; q("#og-k").value = kk.k;
@@ -65,11 +67,11 @@ async function ogRun() {
   const d = document.getElementById("ogdlg"), q = id => d.querySelector(id), err = q("#og-err");
   const mz = numMz(q("#og-mz").value), par = numMz(q("#og-par").value), r0 = parseFloat(q("#og-r0").value.replace(",", ".")), r1 = parseFloat(q("#og-r1").value.replace(",", "."));
   err.hidden = true;
-  if (mz == null || par == null) { err.textContent = "Scrivi i due valori di m/z: lo ione da studiare e il candidato progenitore (lo scegli tu, il programma non lo indovina)."; err.hidden = false; return; }
-  if (mz === par) { err.textContent = "I due m/z devono essere diversi."; err.hidden = false; return; }
-  q("#og-go").disabled = true; const t0 = Date.now(), webNote = window.QQQ_BROWSER ? " Nella versione nel browser può richiedere fino a mezzo minuto con molti file (il calcolo gira sul tuo computer, non su un server)." : "";
-  q("#og-out").innerHTML = `<p class="why" id="og-wait">Calcolo in corso...${webNote}</p>`;
-  const tick = setInterval(() => { const w = document.getElementById("og-wait"); if (w) w.firstChild.textContent = `Calcolo in corso... ${Math.round((Date.now() - t0) / 1000)} s.`; }, 1000);
+  if (mz == null || par == null) { err.textContent = I18N.t("og.needBoth"); err.hidden = false; return; }
+  if (mz === par) { err.textContent = I18N.t("og.differ"); err.hidden = false; return; }
+  q("#og-go").disabled = true; const t0 = Date.now(), webNote = window.QQQ_BROWSER ? " " + I18N.t("og.webNote") : "";
+  q("#og-out").innerHTML = `<p class="why" id="og-wait">${I18N.t("og.wait")}${webNote}</p>`;
+  const tick = setInterval(() => { const w = document.getElementById("og-wait"); if (w) w.firstChild.textContent = I18N.t("og.waitN", { s: Math.round((Date.now() - t0) / 1000) }); }, 1000);
   const my = ++OG.busy;
   try {
     let u = `api/origin?k=${q("#og-k").value}&mz=${mz}&parent=${par}`;
@@ -78,7 +80,7 @@ async function ogRun() {
     const res = await J(u); if (my !== OG.busy) return;
     OG.res = res; OG.k = +q("#og-k").value; OG.sel = new Set(); OG.traces = new Map();
     ogRender();
-  } catch (e) { q("#og-out").innerHTML = ""; err.textContent = "Non riesco a calcolare: " + e.message; err.hidden = false; }
+  } catch (e) { q("#og-out").innerHTML = ""; err.textContent = I18N.t("og.failed", { message: e.message }); err.hidden = false; }
   finally { clearInterval(tick); q("#og-go").disabled = false; }
 }
 
@@ -86,7 +88,7 @@ async function ogRun() {
 function ogPlot(cv, o) {
   const { g, W, H } = setup(cv); g.clearRect(0, 0, W, H);
   const xs = o.series.flatMap(s => s.x), ys = o.series.flatMap(s => s.y).filter(isFinite);
-  if (!xs.length) { g.fillStyle = css("--muted"); g.fillText("nessun dato", M.l, 30); return; }
+  if (!xs.length) { g.fillStyle = css("--muted"); g.fillText(I18N.t("og.noData"), M.l, 30); return; }
   let x0 = o.x0 ?? Math.min(...xs), x1 = o.x1 ?? Math.max(...xs), y0 = o.y0 ?? Math.min(0, ...ys), y1 = o.y1 ?? Math.max(...ys) * 1.05;
   if (x1 === x0) { x0 -= 1; x1 += 1; } if (y1 === y0) y1 = y0 + 1;
   const X = v => M.l + (v - x0) / (x1 - x0) * (W - M.l - M.r), Y = v => H - M.b - (v - y0) / (y1 - y0) * (H - M.t - M.b);
@@ -108,8 +110,8 @@ async function ogXic(k, mz) {
 }
 async function ogDrawXics() {
   const R = OG.res, cv = document.querySelector("#og-xic"), chips = document.querySelector("#og-chips"); if (!cv || !R) return;
-  const items = [{ mz: R.mz, name: `ione ${fmz(R.mz)}`, color: OG_COLORS[0], w: 2.2 }, { mz: R.parent_mz, name: `candidato progenitore ${fmz(R.parent_mz)}`, color: OG_COLORS[1], w: 2.2 }];
-  [...OG.sel].forEach((m, i) => items.push({ mz: m, name: `co-eluente ${fmz(m)}`, color: OG_COLORS[2 + (i % 6)], w: 1.3, dash: [4, 3] }));
+  const items = [{ mz: R.mz, name: I18N.t("og.leg.ion", { mz: fmz(R.mz) }), color: OG_COLORS[0], w: 2.2 }, { mz: R.parent_mz, name: I18N.t("og.leg.par", { mz: fmz(R.parent_mz) }), color: OG_COLORS[1], w: 2.2 }];
+  [...OG.sel].forEach((m, i) => items.push({ mz: m, name: I18N.t("og.leg.co", { mz: fmz(m) }), color: OG_COLORS[2 + (i % 6)], w: 1.3, dash: [4, 3] }));
   const half = Math.max(0.6, (R.parent_fwhm_s || 8) / 60 * 5), c = R.parent_apex_rt ?? ((R.window[0] + R.window[1]) / 2), x0 = c - half, x1 = c + half;
   const series = [];
   for (const it of items) {
@@ -117,45 +119,45 @@ async function ogDrawXics() {
     let mx = 0; t.rt.forEach((v, i) => { if (v >= x0 && v <= x1 && t.y[i] > mx) mx = t.y[i]; });
     series.push({ x: t.rt, y: t.y.map(v => mx > 0 ? v / mx : 0), color: it.color, w: it.w, dash: it.dash, name: it.name });
   }
-  ogPlot(cv, { series, x0, x1, y0: 0, y1: 1.08, xl: "Tempo di ritenzione (min)", yl: "Intensità normalizzata all'apice" });
+  ogPlot(cv, { series, x0, x1, y0: 0, y1: 1.08, xl: I18N.t("og.ax.rt"), yl: I18N.t("og.ax.norm") });
   chips.innerHTML = series.map(s => `<span><i style="background:${s.color}"></i>${EH(s.name)}</span>`).join("");
 }
 
 function ogRender() {
   const R = OG.res, d = document.getElementById("ogdlg"), out = d.querySelector("#og-out"), P = R.profile || {}, F = R.ratio || {}, K = R.kinetics || {}, C = R.ratio_constancy || {};
-  const warn = [...new Set([...(R.warnings || []), ...(P.warnings || []), ...(K.warnings || [])])];
-  if (P.reliable === false) warn.push("Le misure sul profilo sono poco affidabili (pochi punti o picco non chiaro): non fidarti dei numeri senza guardare i cromatogrammi.");
-  if (P.x_has_peak === false) warn.push("Lo ione da studiare non ha un picco riconoscibile nella finestra: le correlazioni descrivono soprattutto rumore.");
+  const warn = [...new Set([...(R.warnings || []), ...(P.warnings || []), ...(K.warnings || [])].map(ogMsg))];
+  if (P.reliable === false) warn.push(I18N.t("og.warn.unreliable"));
+  if (P.x_has_peak === false) warn.push(I18N.t("og.warn.noPeak"));
   const cands = (R.candidates || []).slice().sort((a, b) => (b.pearson ?? -2) - (a.pearson ?? -2));
-  const loss = m => { const dm = R.parent_mz - m; return Math.abs(dm) < 0.5 ? "-" : dm > 0 ? `${ogN(dm, 1)} (il candidato è più pesante)` : `${ogN(dm, 1)} (il candidato è più leggero)`; };
-  const lossHint = m => { const dm = R.parent_mz - m; return dm > 1.5 ? `Δm = ${ogN(dm, 1)} Da: se fosse un frammento, il candidato avrebbe perso ${ogN(dm, 0)} Da` : ""; };
+  const loss = m => { const dm = R.parent_mz - m; return Math.abs(dm) < 0.5 ? "-" : dm > 0 ? I18N.t("og.heavier", { dm: ogN(dm, 1) }) : I18N.t("og.lighter", { dm: ogN(dm, 1) }); };
+  const lossHint = m => { const dm = R.parent_mz - m; return dm > 1.5 ? I18N.t("og.lossHint", { dm: ogN(dm, 1), lost: ogN(dm, 0) }) : ""; };
   out.innerHTML = `${warn.map(w => `<div class="ogw">${EH(w)}</div>`).join("")}
-<section><h4>1. Profili cromatografici confrontati</h4>
-<p class="why">Un frammento in sorgente nasce nello stesso istante dell'ione da cui deriva: i due profili devono coincidere (stessa forma, stesso apice). Un prodotto di trasformazione, invece, di solito esce a un tempo diverso. Clicca una riga della tabella per aggiungere un ione al grafico.</p>
+<section><h4>${I18N.t("og.s1.title")}</h4>
+<p class="why">${I18N.t("og.s1.why")}</p>
 <canvas id="og-xic"></canvas><div id="og-chips" class="chips"></div>
-<div class="kv"><span>correlazione dei profili (Pearson, pesata) <b>${ogN(P.pearson_w)}</b></span><span>intervallo di confidenza 95% <b>${P.corr_ci ? ogN(P.corr_ci[0], 2) + " - " + ogN(P.corr_ci[1], 2) : "-"}</b></span><span>differenza fra gli apici <b>${ogN(P.apex_diff_s, 2)} s</b> (±${ogN(P.apex_diff_sigma_s, 2)})</span><span>rapporto fra le larghezze a metà altezza <b>${ogN(P.fwhm_ratio, 2)}</b></span><span>scansioni nel picco <b>${ogN(P.n_scans, 0)}</b></span></div>
-<p class="why">Pearson vicino a 1 = stessa forma. La differenza fra gli apici va letta insieme alla sua incertezza (±) e al tempo fra due scansioni: sotto una scansione non è distinguibile da zero. Due ioni diversi possono avere profili uguali per caso se co-eluiscono: l'evidenza è compatibile con un frammento, non lo dimostra.</p></section>
-<section><h4>2. Ioni che escono insieme al candidato progenitore</h4>
-<p class="why">Tabella ordinata per correlazione con il candidato. Δm è la differenza di massa dal candidato: una perdita neutra nota (per esempio 18 = acqua) è un indizio, non una prova, a risoluzione unitaria. Le note sono confronti numerici (isotopi, addotti), da verificare.</p>
-<div style="max-height:260px;overflow:auto"><table><thead><tr><th><i>m/z</i></th><th>Δm dal candidato</th><th>Pearson</th><th>Δ apice (s)</th><th>area relativa</th><th>note</th></tr></thead><tbody id="og-tb">${cands.map(c => `<tr data-m="${c.mz}" title="${EH(lossHint(c.mz))}"><td>${ogN(c.mz, 2)}</td><td>${loss(c.mz)}</td><td>${ogN(c.pearson, 3)}</td><td>${ogN(c.apex_diff_s, 2)}</td><td>${ogN(c.area_rel, 3)}</td><td>${(c.roles || []).map(r => EH(r.label || r.role)).join("; ")}</td></tr>`).join("") || `<tr><td colspan="6">nessun ione co-eluente nella finestra</td></tr>`}</tbody></table></div></section>
-<section><h4>3. Area dello ione contro area del candidato (F contro P)</h4>
-<p class="why">Se uno ione è un frammento in sorgente di un candidato, la sua intensità segue quella del candidato scansione per scansione: i punti stanno su una retta per l'origine (pendenza = frazione di candidato che si frammenta). Un prodotto di trasformazione non ha questo vincolo.</p>
+<div class="kv"><span>${I18N.t("og.kv.pearson")} <b>${ogN(P.pearson_w)}</b></span><span>${I18N.t("og.kv.ci")} <b>${P.corr_ci ? ogN(P.corr_ci[0], 2) + " - " + ogN(P.corr_ci[1], 2) : "-"}</b></span><span>${I18N.t("og.kv.apex")} <b>${ogN(P.apex_diff_s, 2)} s</b> (±${ogN(P.apex_diff_sigma_s, 2)})</span><span>${I18N.t("og.kv.fwhm")} <b>${ogN(P.fwhm_ratio, 2)}</b></span><span>${I18N.t("og.kv.scans")} <b>${ogN(P.n_scans, 0)}</b></span></div>
+<p class="why">${I18N.t("og.s1.why2")}</p></section>
+<section><h4>${I18N.t("og.s2.title")}</h4>
+<p class="why">${I18N.t("og.s2.why")}</p>
+<div style="max-height:260px;overflow:auto"><table><thead><tr><th><i>m/z</i></th><th>${I18N.t("og.t2.dm")}</th><th>Pearson</th><th>${I18N.t("og.t2.apex")}</th><th>${I18N.t("og.t2.area")}</th><th>${I18N.t("og.t2.notes")}</th></tr></thead><tbody id="og-tb">${cands.map(c => `<tr data-m="${c.mz}" title="${EH(lossHint(c.mz))}"><td>${ogN(c.mz, 2)}</td><td>${loss(c.mz)}</td><td>${ogN(c.pearson, 3)}</td><td>${ogN(c.apex_diff_s, 2)}</td><td>${ogN(c.area_rel, 3)}</td><td>${(c.roles || []).map(r => EH(ogRole(r))).join("; ")}</td></tr>`).join("") || `<tr><td colspan="6">${I18N.t("og.t2.none")}</td></tr>`}</tbody></table></div></section>
+<section><h4>${I18N.t("og.s3.title")}</h4>
+<p class="why">${I18N.t("og.s3.why")}</p>
 <div class="oggrid"><canvas id="og-fp"></canvas><div>
-<div class="kv"><span>pendenza <b>${ogN(F.r_tls, 3)}</b> ±${ogN(F.r_se, 3)}</span><span>R<sup>2</sup> <b>${ogN(F.r2, 3)}</b></span><span>intercetta (relativa) <b>${ogN(F.intercept_rel, 3)}</b></span><span>punti <b>${ogN(F.n, 0)}</b></span><span>scarto relativo dei residui <b>${ogN(F.resid_rel, 3)}</b></span></div>
-<p class="why">R<sup>2</sup> vicino a 1 con intercetta vicina a 0 = proporzionalità. Con segnali molto intensi il rivelatore può saturare e la retta si piega: guarda anche la forma dei punti, non solo R<sup>2</sup>.</p>
-<div class="kv"><span>rapporto F/P nei campioni: Q di Cochran <b>${ogN(C.q, 2)}</b> (p = <b>${ogN(C.p, 3)}</b>)</span><span>variazione relativa <b>${ogN(C.cv, 3)}</b></span></div>
-<p class="why">Un frammento in sorgente ha F/P costante da un campione all'altro (la frazione che si rompe dipende dallo strumento, non dalla chimica). Un p piccolo indica che il rapporto cambia fra campioni.</p></div></div></section>
-<section><h4>4. Comportamento nei campioni (cinetica)</h4>
-<p class="why">Il candidato scompare con il trattamento. Un ione che scende di pari passo è compatibile con un frammento; un ione che prima sale e poi scende è compatibile con un prodotto intermedio. Sono due descrizioni: scegli tu quella che i dati sostengono.</p>
+<div class="kv"><span>${I18N.t("og.kv.slope")} <b>${ogN(F.r_tls, 3)}</b> ±${ogN(F.r_se, 3)}</span><span>R<sup>2</sup> <b>${ogN(F.r2, 3)}</b></span><span>${I18N.t("og.kv.intercept")} <b>${ogN(F.intercept_rel, 3)}</b></span><span>${I18N.t("og.kv.points")} <b>${ogN(F.n, 0)}</b></span><span>${I18N.t("og.kv.resid")} <b>${ogN(F.resid_rel, 3)}</b></span></div>
+<p class="why">${I18N.t("og.s3.why2")}</p>
+<div class="kv"><span>${I18N.t("og.kv.cochran")} <b>${ogN(C.q, 2)}</b> (p = <b>${ogN(C.p, 3)}</b>)</span><span>${I18N.t("og.kv.cv")} <b>${ogN(C.cv, 3)}</b></span></div>
+<p class="why">${I18N.t("og.s3.why3")}</p></div></div></section>
+<section><h4>${I18N.t("og.s4.title")}</h4>
+<p class="why">${I18N.t("og.s4.why")}</p>
 <div class="oggrid"><canvas id="og-kin"></canvas><div>
-<div class="kv"><span>decadimento del candidato: k <b>${ogN(K.parent_decay && K.parent_decay.k, 4)}</b> /min</span><span>tempo di dimezzamento <b>${ogN(K.parent_decay && K.parent_decay.half_life, 1)}</b> min</span><span>correlazione di rango con il candidato (Spearman) <b>${ogN(K.spearman_parent, 2)}</b></span></div>
-<div class="kv"><span>modello «segue il candidato» AICc <b>${ogN(K.models && K.models.tracks_parent && K.models.tracks_parent.aicc, 1)}</b></span><span>«decade da solo» <b>${ogN(K.models && K.models.decay && K.models.decay.aicc, 1)}</b></span><span>«si forma e decade» <b>${ogN(K.models && K.models.formation_decay && K.models.formation_decay.aicc, 1)}</b></span></div>
-<p class="why">AICc più basso = il modello descrive meglio i dati con pochi parametri; una differenza sotto circa 2 non conta. Con 5-7 tempi i modelli sono pochi punti: prendili come indizio.</p></div></div></section>
-<section><h4>5. La tua ipotesi</h4>
-<p class="why">Scrivi che cosa pensi (frammento in sorgente, prodotto di trasformazione, isotopo, addotto, non so) e perché, citando le misure qui sopra. Resta nel taccuino.</p>
-<textarea id="og-hyp" placeholder="La mia ipotesi e le evidenze a favore e contro..."></textarea>
-<p style="margin:8px 0 0"><button id="og-xlsx">Esporta in Excel</button></p></section>
-<p class="why">${EH(R.note || "")}</p>`;
+<div class="kv"><span>${I18N.t("og.kv.decay")} <b>${ogN(K.parent_decay && K.parent_decay.k, 4)}</b> /min</span><span>${I18N.t("og.kv.half")} <b>${ogN(K.parent_decay && K.parent_decay.half_life, 1)}</b> min</span><span>${I18N.t("og.kv.spearman")} <b>${ogN(K.spearman_parent, 2)}</b></span></div>
+<div class="kv"><span>${I18N.t("og.kv.mTracks")} AICc <b>${ogN(K.models && K.models.tracks_parent && K.models.tracks_parent.aicc, 1)}</b></span><span>${I18N.t("og.kv.mDecay")} <b>${ogN(K.models && K.models.decay && K.models.decay.aicc, 1)}</b></span><span>${I18N.t("og.kv.mForm")} <b>${ogN(K.models && K.models.formation_decay && K.models.formation_decay.aicc, 1)}</b></span></div>
+<p class="why">${I18N.t("og.s4.why2")}</p></div></div></section>
+<section><h4>${I18N.t("og.s5.title")}</h4>
+<p class="why">${I18N.t("og.s5.why")}</p>
+<textarea id="og-hyp" placeholder="${I18N.t("og.hyp.ph")}"></textarea>
+<p style="margin:8px 0 0"><button id="og-xlsx">${I18N.t("og.export")}</button></p></section>
+<p class="why">${EH(R.note ? ogMsg(R.note) : "")}</p>`;
   d.querySelectorAll("#og-tb tr[data-m]").forEach(tr => tr.onclick = () => {
     const m = +tr.dataset.m; if (OG.sel.has(m)) OG.sel.delete(m); else OG.sel.add(m);
     tr.classList.toggle("sel", OG.sel.has(m)); ogDrawXics();
@@ -168,18 +170,18 @@ function ogRender() {
     ogDrawXics();
     const pts = F.points || {}, p = pts.p || [], f = pts.f || [], fit = pts.fit || [];
     const order = p.map((v, i) => i).sort((a, b) => p[a] - p[b]);
-    ogPlot(d.querySelector("#og-fp"), { series: [{ x: p, y: f, color: OG_COLORS[0], pts: true, line: false, r: 2.5 }, { x: order.map(i => p[i]), y: order.map(i => fit[i]), color: OG_COLORS[1], w: 1.6 }], x0: 0, y0: 0, xl: "Area (intensità) del candidato, P", yl: "Ione, F" });
+    ogPlot(d.querySelector("#og-fp"), { series: [{ x: p, y: f, color: OG_COLORS[0], pts: true, line: false, r: 2.5 }, { x: order.map(i => p[i]), y: order.map(i => fit[i]), color: OG_COLORS[1], w: 1.6 }], x0: 0, y0: 0, xl: I18N.t("og.ax.areaP"), yl: I18N.t("og.ax.ionF") });
     const sm = R.samples || [], kt = K.times || sm.map(s => s.time);
-    ogPlot(d.querySelector("#og-kin"), { series: [{ x: kt, y: K.parent_norm || [], color: OG_COLORS[1], pts: true, w: 1.6 }, { x: kt, y: K.ion_norm || [], color: OG_COLORS[0], pts: true, w: 1.6 }], y0: 0, xl: "Tempo di trattamento (min)", yl: `Area relativa (candidato arancione, ione blu)` });
+    ogPlot(d.querySelector("#og-kin"), { series: [{ x: kt, y: K.parent_norm || [], color: OG_COLORS[1], pts: true, w: 1.6 }, { x: kt, y: K.ion_norm || [], color: OG_COLORS[0], pts: true, w: 1.6 }], y0: 0, xl: I18N.t("og.ax.treat"), yl: I18N.t("og.ax.rel") });
   });
 }
 function ogXlsx() {
   const R = OG.res; if (!R) return; const P = R.profile || {}, F = R.ratio || {}, K = R.kinetics || {}, C = R.ratio_constancy || {};
   const key = `${fmz(R.mz)}|${fmz(R.parent_mz)}`, pts = F.points || {};
-  dlx(`origine_${fmz(R.mz)}_da_${fmz(R.parent_mz)}`, [
-    { name: "Riassunto", head: ["Misura", "Valore"], widths: [46, 20], rows: [["m/z ione", R.mz], ["m/z candidato progenitore", R.parent_mz], ["file di riferimento", R.ref_label || ""], ["finestra RT inizio (min)", R.window ? R.window[0] : null], ["finestra RT fine (min)", R.window ? R.window[1] : null], ["apice del candidato (min)", R.parent_apex_rt], ["Pearson pesato dei profili", P.pearson_w], ["differenza fra gli apici (s)", P.apex_diff_s], ["incertezza (s)", P.apex_diff_sigma_s], ["rapporto fra le FWHM", P.fwhm_ratio], ["pendenza F contro P", F.r_tls], ["errore della pendenza", F.r_se], ["R2 F contro P", F.r2], ["intercetta relativa", F.intercept_rel], ["Q di Cochran dei rapporti F/P", C.q], ["p di Cochran", C.p], ["k di decadimento del candidato (1/min)", K.parent_decay ? K.parent_decay.k : null], ["La mia ipotesi", (NB.origin && NB.origin[key]) || ""], ...[...(R.warnings || []), ...(P.warnings || []), ...(K.warnings || [])].map(w => ["Avviso", w])] },
-    { name: "Co-eluenti", head: ["m/z", "Delta m dal candidato", "Pearson", "Delta apice (s)", "Area relativa", "Note"], widths: [10, 20, 10, 14, 14, 40], rows: (R.candidates || []).map(c => [c.mz, R.parent_mz - c.mz, c.pearson, c.apex_diff_s, c.area_rel, (c.roles || []).map(r => r.label || r.role).join("; ")]) },
-    { name: "Campioni", head: ["Campione", "Tempo (min)", "Area candidato", "Area ione", "Rapporto F/P", "Errore"], widths: [24, 12, 16, 16, 14, 12], rows: (R.samples || []).map(s => [s.label, s.time, s.area_parent, s.area_ion, s.ratio, s.ratio_se]) },
-    { name: "F contro P", head: ["P (candidato)", "F (ione)", "F sulla retta"], widths: [16, 16, 16], rows: (pts.p || []).map((v, i) => [v, pts.f[i], (pts.fit || [])[i]]) },
-    { name: "Cinetica", head: ["Tempo (min)", "Candidato (normalizzato)", "Ione (normalizzato)", "Rapporto"], widths: [12, 22, 20, 12], rows: (K.times || []).map((t, i) => [t, (K.parent_norm || [])[i], (K.ion_norm || [])[i], (K.ratio || [])[i]]) }]);
+  dlx(I18N.t("og.xlsx.prefix") + fmz(R.mz) + I18N.t("og.xlsx.from") + fmz(R.parent_mz), [
+    { name: I18N.t("og.x.summary"), head: [I18N.t("og.x.measure"), I18N.t("lib.all.value")], widths: [46, 20], rows: [[I18N.t("og.x.ionMz"), R.mz], [I18N.t("og.x.parMz"), R.parent_mz], [I18N.t("og.x.ref"), R.ref_label || ""], [I18N.t("og.x.rt0"), R.window ? R.window[0] : null], [I18N.t("og.x.rt1"), R.window ? R.window[1] : null], [I18N.t("og.x.apex"), R.parent_apex_rt], [I18N.t("og.x.pearson"), P.pearson_w], [I18N.t("og.x.apexDiff"), P.apex_diff_s], [I18N.t("og.x.sigma"), P.apex_diff_sigma_s], [I18N.t("og.x.fwhm"), P.fwhm_ratio], [I18N.t("og.x.slope"), F.r_tls], [I18N.t("og.x.slopeErr"), F.r_se], [I18N.t("og.x.r2"), F.r2], [I18N.t("og.x.intercept"), F.intercept_rel], [I18N.t("og.x.q"), C.q], [I18N.t("og.x.p"), C.p], [I18N.t("og.x.k"), K.parent_decay ? K.parent_decay.k : null], [I18N.t("og.x.hyp"), (NB.origin && NB.origin[key]) || ""], ...[...(R.warnings || []), ...(P.warnings || []), ...(K.warnings || [])].map(w => [I18N.t("og.x.warning"), ogMsg(w)])] },
+    { name: I18N.t("og.x.coeluting"), head: ["m/z", I18N.t("og.x.dm"), "Pearson", I18N.t("og.x.dApex"), I18N.t("og.x.area"), I18N.t("lst.col.note")], widths: [10, 20, 10, 14, 14, 40], rows: (R.candidates || []).map(c => [c.mz, R.parent_mz - c.mz, c.pearson, c.apex_diff_s, c.area_rel, (c.roles || []).map(ogRole).join("; ")]) },
+    { name: I18N.t("og.x.samples"), head: [I18N.t("og.x.sample"), I18N.t("load.table.time"), I18N.t("og.x.areaCand"), I18N.t("og.x.areaIon"), I18N.t("og.x.ratio"), I18N.t("og.x.error")], widths: [24, 12, 16, 16, 14, 12], rows: (R.samples || []).map(s => [s.label, s.time, s.area_parent, s.area_ion, s.ratio, s.ratio_se]) },
+    { name: I18N.t("og.x.fp"), head: [I18N.t("og.x.pCand"), I18N.t("og.x.fIon"), I18N.t("og.x.fLine")], widths: [16, 16, 16], rows: (pts.p || []).map((v, i) => [v, pts.f[i], (pts.fit || [])[i]]) },
+    { name: I18N.t("og.x.kin"), head: [I18N.t("load.table.time"), I18N.t("og.x.candNorm"), I18N.t("og.x.ionNorm"), I18N.t("og.x.ratio2")], widths: [12, 22, 20, 12], rows: (K.times || []).map((t, i) => [t, (K.parent_norm || [])[i], (K.ion_norm || [])[i], (K.ratio || [])[i]]) }]);
 }
