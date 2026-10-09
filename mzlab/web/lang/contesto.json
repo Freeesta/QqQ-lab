@@ -191,5 +191,6 @@
   "lst.withinPpm": "{tol} = tolleranza, {mz} = valore cercato.",
   "lst.csvError": "{message} = testo tecnico (inglese).",
   "lst.member": "Suggerimento su una riga di una serie omologa (es. PEG); {n} = numero d'ordine del membro nella serie.",
-  "method.name": "Nome di un metodo dentro un file .dam che ne contiene più d'uno (uno per campione); {n} = numero."
+  "method.name": "Nome di un metodo dentro un file .dam che ne contiene più d'uno (uno per campione); {n} = numero.",
+  "mappa.read.scan": "Lettura del mirino della mappa; {n} = numero d'ordine della scansione nel file."
 }

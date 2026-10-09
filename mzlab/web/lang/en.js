@@ -1334,5 +1334,19 @@ I18N.add("en", {
   "xicdlg.add.title": "Adds another ion (up to 10): all end up in the same chart",
   "xicdlg.add": "+ ion",
   "xicdlg.file.title": "Which file to extract from. It applies only at the start: afterwards it is changed from the File selector of the chart",
-  "xicdlg.go": "Extract"
+  "xicdlg.go": "Extract",
+  "mappa.aria": "RT × m/z map: arrows to move, L to lock, M for the sight, F for full screen, 0 for the whole view",
+  "mappa.read.scan": "scan {n}",
+  "mappa.read.int": "intensity",
+  "mappa.read.locked": "locked",
+  "mappa.side.title": "spectrum of the scan",
+  "mappa.side.empty": "no peak in this m/z range",
+  "mappa.bot.title": "XIC of the m/z under the sight",
+  "mappa.btn.mir": "sight",
+  "mappa.btn.mir.title": "Sight (M key): crosshair, readout and, next to the map, the spectrum of the scan and the XIC of the m/z under the cursor",
+  "mappa.btn.all.title": "Whole view (0 key)",
+  "mappa.btn.menu.title": "More actions on the point of the sight: XIC, spectrum",
+  "mappa.leg.help": "wheel: zoom (Shift: m/z only, Alt: RT only) · drag: box zoom · Alt+drag: spectrum of the interval · double click: spectrum · right click: lock the point · Shift+right click: XIC",
+  "help.mappa.title": "Map: mouse and keyboard",
+  "help.mappa.body": "<b>Wheel</b>: zoom on both axes around the cursor (<b>Shift</b>: m/z only; <b>Alt</b>: RT only). <b>Drag</b> a box to enlarge it; <b>⤢</b> or the <b>0</b> key: whole view; <b>Backspace</b>: previous zoom. The zoom is real: after a moment the region is computed again with finer bins.<br><b>Sight</b> (button or <b>M</b> key; on in full screen): crosshair with the readout of file, scan, RT, m/z and intensity; next to the map the spectrum of the scan (same m/z axis) and below it the XIC of the m/z (same RT axis).<br><b>Right click</b> or the <b>L</b> key: lock the point (on touch: long press); again to unlock it. <b>Shift+right click</b> or the <b>⋯</b> menu: XIC.<br>With the cursor on the map: <b>←/→</b> previous/next scan; <b>↑/↓</b> one m/z bin; <b>Shift+↑/↓</b> next peak of the spectrum (above 3 times the noise); <b>Shift+←/→</b> next apex of the XIC; <b>F</b> full screen."
 });

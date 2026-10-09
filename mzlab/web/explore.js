@@ -1124,6 +1124,7 @@ function ctl(p) {
       (p.level === 2 ? `<select data-o="prec" style="min-width:11em"><option value="">${I18N.t("ctl.prec.all")}</option>${[...new Set(f.flatMap(x => x.precursors))].sort((a, b) => a - b).map(v => `<option value="${v}" ${String(p.prec) === String(v) ? "selected" : ""}>${I18N.t("ctl.prec.one", { v })}</option>`).join("")}</select>` : "");
   }
   if (window.BANCO) BANCO.decorate(p, c);
+  if (window.MAPPA && p.type === "map") MAPPA.decorate(p, c);
   const cpB = c.querySelector('[data-a="cpar"]'), cpP = c.querySelector(".cpop");
   const parPlace = () => { if (!cpB || !cpP || cpP.hidden) return; const pr = p.el.getBoundingClientRect(), br = cpB.getBoundingClientRect(); cpP.style.left = Math.max(4, Math.min(br.left - pr.left, p.el.clientWidth - cpP.offsetWidth - 6)) + "px"; cpP.style.top = br.bottom - pr.top + 4 + "px"; };
   const parToggle = on => { p._parOpen = on; if (cpP) { cpP.hidden = !on; if (on) { const q = cpP.querySelectorAll('[data-o="rt0"],[data-o="rt1"]'); if (q.length === 2) { q[0].value = p.zoom ? fmt2(p.zoom[0]) : ""; q[1].value = p.zoom ? fmt2(p.zoom[1]) : ""; } } parPlace(); } };
@@ -1813,16 +1814,19 @@ async function drawMap(p) {
     draw3d(p, g, W, H, A, B, im, f, rf, x0, x1, y0, y1, scTxt);
     const bar3 = B ? "linear-gradient(90deg,rgb(190,60,40),#fafaf6,rgb(30,90,190))" : "linear-gradient(90deg,#fafaf6,rgb(120,190,205),rgb(22,120,160),rgb(28,36,110))";
     p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="cbar" style="background:${bar3}"></span><span class="sm">${I18N.t(B ? "map.leg3d.diff" : "map.leg3d.mean")} ${I18N.t("map.leg3d.scale", { scale: scTxt, norm: nTxt })}</span><span class="sm">${I18N.t("map.leg3d.help")}</span>`;
+    if (window.MAPPA) MAPPA.after(p);
     return;
   }
   g.clearRect(0, 0, W, H); g.imageSmoothingEnabled = false;
-  g.drawImage(im.off, (x0 - rt0) / (rt1 - rt0) * A.nrt, (mzB - y1) / A.dmz, (x1 - x0) / (rt1 - rt0) * A.nrt, (y1 - y0) / A.dmz, M.l, M.t, pw, ph);
+  if (!(window.MAPPA && MAPPA.zoomImg(p, g, { A, B, im, x0, x1, y0, y1, pw, ph, norm: p.norm || "abs" })))        // mappa.js: the zoomed region on new bins
+    g.drawImage(im.off, (x0 - rt0) / (rt1 - rt0) * A.nrt, (mzB - y1) / A.dmz, (x1 - x0) / (rt1 - rt0) * A.nrt, (y1 - y0) / A.dmz, M.l, M.t, pw, ph);
   const X = v => M.l + (v - x0) / (x1 - x0) * pw, Yv = v => H - M.b - (v - y0) / (y1 - y0) * ph;
   frame(g, W, H, nice(x0, x1, 8).map(t => [X(t), +t.toFixed(2)]), nice(y0, y1, 6).map(t => [Yv(t), Math.round(t)]), XT_RT, "m/z");
   if (p.sel && !p._exp) { g.fillStyle = "rgba(43,92,138,.16)"; g.fillRect(X(p.sel[0]), M.t, X(p.sel[1]) - X(p.sel[0]), ph); }
   if (p.cur != null && !p._exp) { g.strokeStyle = css("--muted"); g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(p.cur), M.t); g.lineTo(X(p.cur), H - M.b); g.stroke(); g.setLineDash([]); }
   const mzAt = py => y1 - (py - M.t) / ph * (y1 - y0);
-  p._a = { x0, x1, y0, y1, X, Y: Yv, W, H, full: [rt0, rt1], fullY: [mzA, mzB], f, mzAt, map: true };
+  p._a = { x0, x1, y0, y1, X, Y: Yv, W, H, full: [rt0, rt1], fullY: [mzA, mzB], f, mzAt, map: true, dmz: A.dmz, ref: rf,
+    mapv: (rt, mz) => { const i = Math.floor((rt - rt0) / (rt1 - rt0) * A.nrt), j = Math.floor((mz - A.mz0) / A.dmz); return i >= 0 && i < A.nrt && j >= 0 && j < A.nmz ? im.v[i * A.nmz + j] : null; } };
   p._a.hov = (px, py) => {
     const rt = xOf(p, px), mz = mzAt(py), i = Math.min(A.nrt - 1, Math.max(0, Math.floor((rt - rt0) / (rt1 - rt0) * A.nrt))), j = Math.min(A.nmz - 1, Math.max(0, Math.floor((mz - A.mz0) / A.dmz)));
     const v = im.v[i * A.nmz + j];
@@ -1830,7 +1834,8 @@ async function drawMap(p) {
     return { px, rt, html: I18N.t("map.hov", { rt: rt.toFixed(2), mz: mz.toFixed(mzd(p)), what: I18N.t(B ? "map.hov.diff" : "map.hov.mean"), v: (B && v > 0 ? "+" : "") + fmt(v) }) + `<div class="sm">${I18N.t("map.hov.bin", { lo: (A.mz0 + j * A.dmz).toFixed(0), hi: (A.mz0 + (j + 1) * A.dmz).toFixed(0) })}</div>` };
   };
   const bar = B ? "linear-gradient(90deg,rgb(190,60,40),#fafaf6,rgb(30,90,190))" : "linear-gradient(90deg,#fafaf6,rgb(120,190,205),rgb(22,120,160),rgb(28,36,110))";
-  p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="cbar" style="background:${bar}"></span><span class="sm">${B ? I18N.t("map.leg2d.diff") : I18N.t("map.leg2d.mean", { scale: scTxt })}${nTxt}</span><span class="sm">${I18N.t("map.leg2d.help")}</span>`;
+  p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="cbar" style="background:${bar}"></span><span class="sm">${B ? I18N.t("map.leg2d.diff") : I18N.t("map.leg2d.mean", { scale: scTxt })}${nTxt}</span><span class="sm">${I18N.t(window.MAPPA ? "mappa.leg.help" : "map.leg2d.help")}</span>`;
+  if (window.MAPPA) MAPPA.after(p);
 }
 
 function nearIdx(xs, v) { let lo = 0, hi = xs.length - 1; if (hi < 1) return 0; while (hi - lo > 1) { const m = (lo + hi) >> 1; xs[m] < v ? lo = m : hi = m; } return Math.abs(xs[lo] - v) < Math.abs(xs[hi] - v) ? lo : hi; }
@@ -2281,8 +2286,8 @@ function attach(p) {
       const u = xd(drag.x0), v = xd(drag.x), lo = Math.min(u, v), hi = Math.max(u, v);
       zl.dataset.v = p.type === "spec" ? I18N.t("zoom.mz", { lo: lo.toFixed(mzd(p, p.level)), hi: hi.toFixed(mzd(p, p.level)) }) : I18N.t("zoom.rt", { lo: lo.toFixed(2), hi: hi.toFixed(2) });
     }
-    else if (drag) { drag.x = px; drag.y = py; if (p.type === "spec" || (p.imode === "zoom" && p.type !== "map")) {      // zoom box (x and y together)
-      if (Math.abs(px - drag.x0) > 4) { zr.hidden = false; const yy = canYZ(a) ? [Math.min(py, drag.y0), Math.abs(py - drag.y0)] : [M.t, a.H - M.t - M.b]; zr.style.left = cv.offsetLeft + Math.min(px, drag.x0) + "px"; zr.style.width = Math.abs(px - drag.x0) + "px"; zr.style.top = cv.offsetTop + yy[0] + "px"; zr.style.height = yy[1] + "px"; }
+    else if (drag) { drag.x = px; drag.y = py; const mapBox = p.type === "map" && !a.is3d && !drag.alt; if (p.type === "spec" || mapBox || (p.imode === "zoom" && p.type !== "map")) {      // zoom box (x and y together; on the map Alt + drag is the spectrum of the interval)
+      if (Math.abs(px - drag.x0) > 4 || (mapBox && Math.abs(py - drag.y0) > 4)) { zr.hidden = false; const yy = canYZ(a) || mapBox ? [Math.min(py, drag.y0), Math.abs(py - drag.y0)] : [M.t, a.H - M.t - M.b]; zr.style.left = cv.offsetLeft + Math.min(px, drag.x0) + "px"; zr.style.width = Math.abs(px - drag.x0) + "px"; zr.style.top = cv.offsetTop + yy[0] + "px"; zr.style.height = yy[1] + "px"; }
     } else { p.sel = [Math.min(xd(drag.x0), x), Math.max(xd(drag.x0), x)]; draw(p); } }
     else axisHint(yAxisZone(px, py) ? "v" : xAxisZone(px, py) ? "h" : null, e);
     if (!drag) cv.style.cursor = e.shiftKey ? "grab" : yAxisZone(px, py) ? "ns-resize" : xAxisZone(px, py) ? "ew-resize" : edgeAt(px) ? "col-resize" : onCur(px) ? "ew-resize" : p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair";
@@ -2290,6 +2295,7 @@ function attach(p) {
     if (lh) { cv.style.cursor = "pointer"; lb.hidden = false; lb.style.left = cv.offsetLeft + lh.x + "px"; lb.style.top = cv.offsetTop + lh.y + "px"; lb.style.width = lh.w + "px"; lb.style.height = lh.h + "px"; } else lb.hidden = true;
     p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(a.hrp ? a.dec : 1) : "RT " + x.toFixed(2) + " min" + (a.map && !a.is3d ? " · m/z " + a.mzAt(py).toFixed(mzd(a, a.level)) : "");   // pass-over text: it goes away when the mouse leaves (see onmouseleave)
     showHover(p, px, py); if (drag) p.tip.hidden = true;
+    if (p.type === "map" && window.MAPPA) MAPPA.move(p, px, py);
     if (lh) { p.tip.hidden = false; p.tip.innerHTML = lh.tip; p.vl.hidden = true; const tw = p.tip.offsetWidth; let l = cv.offsetLeft + px + 14; if (l + tw > p.el.clientWidth - 4) l = cv.offsetLeft + px - tw - 14; p.tip.style.left = Math.max(2, l) + "px"; p.tip.style.top = cv.offsetTop + py + 14 + "px"; }
   };
   const lb = document.createElement("div"); lb.className = "lbbox"; lb.hidden = true; p.el.appendChild(lb);   // box around the label under the mouse
@@ -2306,14 +2312,14 @@ function attach(p) {
     const cx = e.clientX, cy = e.clientY;
     hintT = setTimeout(() => { if (!q) return; q.textContent = I18N.t("axis.zoomHint"); q.hidden = false; q._ax = true; q.style.left = Math.max(6, Math.min(innerWidth - q.offsetWidth - 6, cx + 12)) + "px"; q.style.top = Math.min(innerHeight - q.offsetHeight - 6, cy + 16) + "px"; }, TIP_DELAY);
   };   // line being dragged on an axis (zooms that axis only)
-  cv.onmouseleave = () => { axisHint(null, {}); hideHover(p); lb.hidden = true; p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
+  cv.onmouseleave = () => { axisHint(null, {}); hideHover(p); lb.hidden = true; p.rd.textContent = p._msg && p.cur != null ? p._msg : ""; if (p.type === "map" && window.MAPPA) MAPPA.leave(p); };   // no leftover "m/z 289.2": only the useful scan message stays while the cursor is there
   cv.onmousedown = e => {
     if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
     if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
     if (a.is3d) { drag = { rot: true, x0: px, y0: py, az: p.az ?? 25, elv: p.elv ?? 38 }; e.preventDefault(); return; }
     if (yAxisZone(px, py)) { drag = { ya: true, y0: Math.max(M.t, Math.min(a.H - M.b, py)), y: py }; e.preventDefault(); return; }
     if (xAxisZone(px, py)) { drag = { xa: true, x0: px, x: px }; e.preventDefault(); return; }
-    const ed = edgeAt(px); drag = ed ? { edge: ed } : onCur(px) && !p.imode ? { cursor: true } : { x0: px, x: px, y0: py };
+    const ed = edgeAt(px); drag = ed ? { edge: ed } : onCur(px) && !p.imode ? { cursor: true } : { x0: px, x: px, y0: py, y: py, alt: e.altKey };
   };
   p._up = e => {
     if (!drag) return; const d = drag; drag = null; zr.hidden = true;
@@ -2328,6 +2334,7 @@ function attach(p) {
     if (d.xa) { if (a && Math.abs(d.x - d.x0) > 4) { const u = xd(d.x0), v = xd(d.x); zoomTo(p, Math.min(u, v), Math.max(u, v)); } return; }
     const x0 = xd(d.x0), x1 = xd(d.x);
     if (!a || x0 == null) return;
+    if (p.type === "map" && !a.is3d && !d.alt && window.MAPPA && (Math.abs(d.x - d.x0) > 4 || Math.abs(d.y - d.y0) > 4)) { MAPPA.boxZoom(p, d.x0, d.y0, d.x, d.y); return; }   // mappa.js: box = zoom
     if (p._pickNoise && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {          // the noise stretch for S/N of an integration
       const it = p._pickNoise; p._pickNoise = null; p.sel = null; it.noise = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); uiSave(); showInts(); return;
     }
@@ -2366,6 +2373,7 @@ function attach(p) {
   addEventListener("mouseup", p._up);
   // Ctrl/Cmd + rotella (o pizzico sul trackpad): zoom attorno al cursore. La rotella da sola continua a far scorrere la pagina.
   cv.addEventListener("wheel", e => {
+    if (p.type === "map" && window.MAPPA && p._a && MAPPA.wheel(p, e, rect(e), recty(e))) return;     // mappa.js: the wheel alone zooms the map
     if (!(e.ctrlKey || e.metaKey) || !p._a) return;
     e.preventDefault();
     const a = p._a, f = Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * 0.004), x = xd(rect(e));
@@ -2413,7 +2421,8 @@ function attach(p) {
     if (p.type === "spec") { p.lock = null; if (p.meas || p.rul) { p.meas = null; p.rul = false; const rb = p.el.querySelector('[data-a="rul"]'); if (rb) rb.classList.remove("on"); } }                     // double click on a spectrum: whole spectrum, free axes, no measures
     p.zoom = null; p.zoomY = null; p.sel = null; draw(p);
   };
-  cv.oncontextmenu = e => { hideHover(p); ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };
+  cv.oncontextmenu = e => { if (p.type === "map" && window.MAPPA && MAPPA.ctx(p, e, rect(e), recty(e))) return; hideHover(p); ctxFor(p, e, xd(rect(e)), rect(e), recty(e)); };   // map: right click locks (mappa.js)
+  if (p.type === "map" && window.MAPPA) MAPPA.init(p);
 }
 // high resolution only: the scan of the file (survey or product ions) closest in time to x, found by the server; null for any other file (the window around x is used)
 async function nearScan(k, x) {

@@ -512,6 +512,27 @@ class Item:
         cache[key] = out
         return out
 
+    def ionmap_region(self, level: int, rt0: float, rt1: float, nrt: int, mz0: float, mz1: float, nmz: int) -> np.ndarray:
+        """The same mean intensity per scan as ionmap(), on a grid of its own over a region only (the true zoom of the map):
+        shape (nrt, nmz), float32; RT bins of (rt1 - rt0) / nrt, m/z bins of (mz1 - mz0) / nmz."""
+        nrt, nmz = max(1, int(nrt)), max(1, int(nmz))
+        out = np.zeros((nrt, nmz), dtype=np.float32)
+        t = self._tbl(level)
+        if not len(t.rt) or not len(t.mz) or rt1 <= rt0 or mz1 <= mz0:
+            return out
+        a, b = np.searchsorted(t.mz, mz0, side="left"), np.searchsorted(t.mz, mz1, side="left")
+        scan_in = (t.rt >= rt0) & (t.rt < rt1)
+        scan_bin = np.clip(np.floor((t.rt - rt0) / (rt1 - rt0) * nrt).astype(np.int64), 0, nrt - 1)
+        n_scans = np.bincount(scan_bin[scan_in], minlength=nrt)
+        if b > a:
+            pos = t.pos[a:b]
+            ok = scan_in[pos]
+            i = scan_bin[pos[ok]]
+            j = np.clip(np.floor((t.mz[a:b][ok] - mz0) / (mz1 - mz0) * nmz).astype(np.int64), 0, nmz - 1)
+            acc = np.bincount(i * nmz + j, weights=t.inten[a:b][ok], minlength=nrt * nmz).reshape(nrt, nmz)
+            out = (acc / np.maximum(n_scans, 1)[:, None]).astype(np.float32)
+        return out
+
     # ------------------------------------------------------------------ spectra
     def _binned(self, rt0, rt1, level=1, precursor=None, prec_tol=0.6, bin_da=0.1, hr=False, raw1=False, filt=None):
         """Mean spectrum in [rt0, rt1] on a fixed bin grid: (bin ids, centroid m/z, mean intensity, n scans).

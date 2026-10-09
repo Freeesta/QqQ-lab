@@ -1,0 +1,328 @@
+// RT x m/z map: true zoom, sight (crosshair) with the two plots at the margins, lock, keyboard, full screen (classic script, loaded after explore.js).
+// The map itself (colours, difference, 3D) is drawn by drawMap in explore.js; this file adds what lives on top of it. Hooks in explore.js:
+// drawMap (zoomImg before the image is drawn, after at the end), attach (wheel, box zoom, click, right click, mouse move), ctl (decorate).
+// Preferences of this browser in localStorage "qqq.mappa".
+window.MAPPA = (() => {
+  const T = (k, o) => I18N.t(k, o);
+  const PREF_KEY = "qqq.mappa";
+  const PREF = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem(PREF_KEY) || "{}"); } catch (e) { /* no storage */ } return o; })();
+  const prefSave = () => { try { localStorage.setItem(PREF_KEY, JSON.stringify(PREF)); } catch (e) { /* no storage */ } };
+  const SIDE = 180, BOTTOM = 140, NARROW = 700, QUIET = 150;
+  const st = p => p._mz || (p._mz = { lock: null, kp: null, hov: null, mir: null, reg: null, regT: 0, spec: null, xic: null, xicB: null });
+  const is2d = p => p.type === "map" && p.view !== "3d" && p._a && p._a.map && !p._a.is3d;
+  const isMax = p => p.el && p.el.classList.contains("max");
+  const mirOn = p => { const s = st(p); return s.mir != null ? s.mir : isMax(p); };
+  const wide = p => p.el && p.el.clientWidth >= NARROW;
+  const point = p => { const s = st(p); return s.lock || s.kp || s.hov; };
+  const isHrF = f => !!(f && window.HR && HR.isHr(f, f.lv || 1));
+
+  // ---------------------------------------------------------------- DOM: grid with the map, the overlay (crosshair) and the two margin plots
+  function init(p) {
+    if (p._mzInit || !p.cv) return; p._mzInit = true;
+    const cv = p.cv, grid = document.createElement("div");
+    grid.className = "mzgrid"; cv.before(grid); grid.appendChild(cv);
+    const ov = document.createElement("canvas"); ov.className = "mzov"; grid.appendChild(ov);
+    const sp = document.createElement("canvas"); sp.className = "mzside"; sp.hidden = true; grid.appendChild(sp);
+    const xc = document.createElement("canvas"); xc.className = "mzbot"; xc.hidden = true; grid.appendChild(xc);
+    Object.assign(st(p), { ov, sp, xc, grid });
+    cv.tabIndex = 0; cv.setAttribute("aria-label", T("mappa.aria"));
+    cv.addEventListener("keydown", e => key(p, e));
+    p.el.addEventListener("keydown", e => { if (isMax(p) && e.target === p.el) key(p, e); });
+    // long press on a touch screen = lock the point
+    let lp = 0;
+    cv.addEventListener("touchstart", e => { if (e.touches.length !== 1 || !is2d(p)) return; const t = e.touches[0], r = cv.getBoundingClientRect(), px = t.clientX - r.left, py = t.clientY - r.top; clearTimeout(lp); lp = setTimeout(() => { lockAt(p, px, py); }, 550); }, { passive: true });
+    ["touchend", "touchmove", "touchcancel"].forEach(n => cv.addEventListener(n, () => clearTimeout(lp), { passive: true }));
+    const wrap = () => {
+      if (!p._setMax || p._setMax._mz) return;
+      const orig = p._setMax, f = on => { orig(on); onMax(p, on); }; f._mz = true; p._setMax = f;
+    };
+    wrap(); setTimeout(wrap, 0);
+  }
+  let fsByUs = null;
+  function onMax(p, on) {
+    st(p).mir = null;                                                   // the sight follows the view again: off in the page, on in full screen
+    layout(p);
+    if (on) {
+      const de = document.documentElement;       // the whole page goes full screen (menus and dialogs, which live in the page, stay visible); the panel covers it
+      if (!document.fullscreenElement && de.requestFullscreen) de.requestFullscreen().then(() => { fsByUs = p; }).catch(() => { /* iPad and others: the fixed panel is the full screen */ });
+      setTimeout(() => p.cv.focus({ preventScroll: true }), 0);
+    } else if (fsByUs === p && document.fullscreenElement) { fsByUs = null; document.exitFullscreen().catch(() => {}); }
+  }
+  document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && fsByUs) { const p = fsByUs; fsByUs = null; if (isMax(p)) p._setMax(false); } });
+  function layout(p) {
+    const s = st(p); if (!s.grid) return;
+    const m = mirOn(p) && is2dView(p) && wide(p);
+    s.grid.classList.toggle("mir", m); s.sp.hidden = !m; s.xc.hidden = !m;
+    p.el.classList.toggle("mzmir", m);
+    const grow = m && !isMax(p);                                        // in the page the panel grows by the height of the XIC, and shrinks back after
+    if (grow !== !!s.grown) { p.h = Math.max(200, p.h + (grow ? 1 : -1) * (BOTTOM + 80)); s.grown = grow; apply(p); if (typeof relayout === "function") relayout(); fitHost(); uiSave(); }
+  }
+  const is2dView = p => p.type === "map" && p.view !== "3d";
+
+  // ---------------------------------------------------------------- the true zoom: the region in view on new bins, asked 150 ms after the last change
+  function normFactor(m, norm) {
+    if (norm !== "max" && norm !== "tic") return 1;
+    let t = 0; for (let i = 0; i < m.length; i++) t = norm === "max" ? Math.max(t, m[i]) : t + m[i];
+    return t > 0 ? (norm === "max" ? 1 : 1000) / t : 1;
+  }
+  const getRegion = (k, lv, r) => memo(`mzr${k}|${lv}|${r.join("|")}`, () => J(`api/map?k=${k}&level=${lv}&rt0=${r[0]}&rt1=${r[1]}&mz0=${r[2]}&mz1=${r[3]}&nrt=${r[4]}&nmz=${r[5]}`).then(j => {
+    const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return { ...j, m: new Float32Array(u.buffer) };
+  }));
+  function regionGrid(p, A, x0, x1, y0, y1, pw, ph) {
+    const f = E.files[A.k], hr = isHrF(f), step = Math.max(scanStep(), 1e-4);
+    const d = Math.min(2, devicePixelRatio || 1), nrt = Math.max(2, Math.min(1000, Math.max(Math.round(pw * d), Math.ceil((x1 - x0) / (A.rt1 - A.rt0) * A.nrt)), Math.floor((x1 - x0) / step)));   // never more bins than scans: no empty stripes
+    const nmz = Math.max(2, Math.min(1000, Math.max(Math.round(ph * d), Math.ceil((y1 - y0) / A.dmz)), hr ? 1000 : Math.floor((y1 - y0) / 0.1)));  // never coarser than the whole map; low resolution: bins of at least 0.1
+    return [+x0.toFixed(5), +x1.toFixed(5), +y0.toFixed(5), +y1.toFixed(5), nrt, nmz];
+  }
+  // called by drawMap before the image is drawn: true = the region image was drawn (otherwise the whole-map image is stretched, as before)
+  function zoomImg(p, g, o) {
+    const s = st(p); init(p);
+    if (!p.zoom && !p.zoomY) { s.reg = null; return false; }
+    const { A, B, im, x0, x1, y0, y1, pw, ph, norm } = o;
+    const r = regionGrid(p, A, x0, x1, y0, y1, pw, ph), key = `${A.k}|${B ? B.k : ""}|${A.level}|${norm}|${p.scale}|${r.join("|")}`;
+    if (s.reg && s.reg.key === key && s.reg.off) { g.imageSmoothingEnabled = false; g.drawImage(s.reg.off, M.l, M.t, pw, ph); return true; }
+    clearTimeout(s.regT);
+    s.regT = setTimeout(async () => {
+      try {
+        const [a, b] = await Promise.all([getRegion(A.k, A.level, r), B ? getRegion(B.k, B.level, r) : null]);
+        const fa = normFactor(A.m, norm), fb = B ? normFactor(B.m, norm) : 1, n = a.m.length, v = new Float32Array(n);
+        for (let i = 0; i < n; i++) v[i] = a.m[i] * fa - (b ? b.m[i] * fb : 0);
+        s.reg = { key, v, nrt: a.nrt, nmz: a.nmz, rt0: a.rt0, rt1: a.rt1, mz0: a.mz0, dmz: a.dmz, off: paint(v, a.nrt, a.nmz, im, !!B) };
+        draw(p);
+      } catch (e) { /* keep the stretched whole map */ }
+    }, QUIET);
+    return false;
+  }
+  function paint(v, nrt, nmz, im, diff) {
+    const off = document.createElement("canvas"); off.width = nrt; off.height = nmz;
+    const ctx = off.getContext("2d"), d = ctx.createImageData(nrt, nmz), tab = diff ? LUT_DIV : LUT_SEQ;
+    for (let i = 0; i < nrt; i++) for (let j = 0; j < nmz; j++) {
+      const x = v[i * nmz + j], t = im.T(x), q = diff ? Math.round(127.5 + Math.sign(-x) * t * 127.5) : Math.round(t * 255), o = ((nmz - 1 - j) * nrt + i) * 4;
+      d.data[o] = tab[q * 4]; d.data[o + 1] = tab[q * 4 + 1]; d.data[o + 2] = tab[q * 4 + 2]; d.data[o + 3] = 255;
+    }
+    ctx.putImageData(d, 0, 0); return off;
+  }
+  // value of the map at (rt, m/z): from the zoomed region when there is one, otherwise from the whole map
+  function valueAt(p, rt, mz) {
+    const s = st(p), a = p._a; if (!a || !a.mapv) return null;
+    const R = s.reg && p.zoom || s.reg && p.zoomY ? s.reg : null;
+    if (R) { const i = Math.floor((rt - R.rt0) / (R.rt1 - R.rt0) * R.nrt), j = Math.floor((mz - R.mz0) / R.dmz); if (i >= 0 && i < R.nrt && j >= 0 && j < R.nmz) return R.v[i * R.nmz + j]; }
+    return a.mapv(rt, mz);
+  }
+  const binDa = p => { const s = st(p), a = p._a; if (s.reg && (p.zoom || p.zoomY)) return s.reg.dmz; return a && a.dmz ? a.dmz : 1; };
+
+  // ---------------------------------------------------------------- after the map is drawn: overlay and margins
+  function after(p) {
+    init(p); layout(p);
+    const s = st(p), a = p._a; if (!a || !s.ov) return;
+    const r = p.cv.getBoundingClientRect(), d = Math.min(4, devicePixelRatio || 1);
+    s.ov.width = Math.round(r.width * d); s.ov.height = Math.round(r.height * d); s.ov.style.width = r.width + "px"; s.ov.style.height = r.height + "px";
+    s.ovg = s.ov.getContext("2d"); s.ovg.setTransform(d, 0, 0, d, 0, 0);
+    overlay(p); margins(p);
+  }
+  function overlay(p) {
+    const s = st(p), g = s.ovg, a = p._a; if (!g || !a) return;
+    g.clearRect(0, 0, a.W, a.H);
+    if (!is2d(p)) return;
+    const pt = point(p), on = mirOn(p);
+    if (pt && (on || s.lock) && pt.rt >= a.x0 && pt.rt <= a.x1 && pt.mz >= a.y0 && pt.mz <= a.y1) {
+      const x = Math.round(a.X(pt.rt)) + .5, y = Math.round(a.Y(pt.mz)) + .5;
+      g.save(); g.strokeStyle = css("--ink"); g.globalAlpha = s.lock ? .9 : .6; g.lineWidth = 1; if (!s.lock) g.setLineDash([4, 3]);
+      g.beginPath(); g.moveTo(M.l, y); g.lineTo(a.W - M.r, y); g.moveTo(x, M.t); g.lineTo(x, a.H - M.b); g.stroke(); g.setLineDash([]);
+      if (s.lock) {                                                     // the padlock next to the point
+        g.globalAlpha = 1; g.fillStyle = css("--panel"); g.strokeStyle = css("--ink"); g.lineWidth = 1.4;
+        const lx = Math.min(a.W - M.r - 14, x + 6), ly = Math.max(M.t + 12, y - 8);
+        g.fillRect(lx, ly - 6, 10, 8); g.strokeRect(lx, ly - 6, 10, 8); g.beginPath(); g.arc(lx + 5, ly - 6, 3.2, Math.PI, 0); g.stroke();
+      }
+      g.restore();
+    }
+    readout(p);
+  }
+  function readout(p) {
+    const pt = point(p), a = p._a; if (!a || !is2d(p)) return;
+    if (!pt || !(mirOn(p) || st(p).lock)) return;
+    const s = st(p), f = a.f, v = valueAt(p, pt.rt, pt.mz), sc = s.spec && s.spec.sid != null ? T("mappa.read.scan", { n: s.spec.sid + 1 }) + " · " : "";
+    p.rd.textContent = `${f ? f.label + " · " : ""}${sc}RT ${pt.rt.toFixed(2)} min · m/z ${pt.mz.toFixed(mzd(p))} · ${T("mappa.read.int")} ${v == null ? "–" : fmt(v)}${s.lock ? " · " + T("mappa.read.locked") : ""}`;
+  }
+
+  // ---------------------------------------------------------------- the two plots at the margins: spectrum of the scan (m/z aligned with the map) and XIC (RT aligned)
+  let mT = 0;
+  function margins(p) {
+    const s = st(p); if (!s.sp || s.sp.hidden || !is2d(p)) return;
+    const pt = point(p); drawSide(p, pt); drawBottom(p, pt);
+    clearTimeout(mT); if (!pt) return;
+    mT = setTimeout(async () => {
+      const q = point(p); if (!q) return;
+      await Promise.all([fetchSpec(p, q.rt), fetchXic(p, q.mz)]);
+      const r = point(p); drawSide(p, r); drawBottom(p, r); readout(p);
+    }, 60);
+  }
+  const xicTol = (f, mz) => isHrF(f) ? HR.tolDa(f, mz, f.lv || 1) : 0.5;           // LR: window [n - 0.2, n + 0.8] = centre n + 0.3, +-0.5
+  const xicCentre = (f, mz) => isHrF(f) ? mz : Math.round(mz) + 0.3;
+  async function fetchXic(p, mz) {
+    const s = st(p), a = p._a; if (!a) return null; const f = a.f, c = xicCentre(f, mz), tol = xicTol(f, mz), key = `${f.k}|${c.toFixed(4)}|${tol.toFixed(5)}`;
+    if (s.xic && s.xic.key === key) return s.xic;
+    const ks = [f.k, ...(a.ref ? [a.ref.k] : [])].join(",");
+    try { const j = await J(`api/xic?k=${ks}&mz=${c}&tol=${tol}&level=${f.lv || 1}`); s.xic = { key, c, tol, tr: j.traces }; } catch (e) { /* nothing to show */ }
+    return s.xic;
+  }
+  async function fetchSpec(p, rt) {
+    const s = st(p), a = p._a; if (!a) return null; const f = a.f;
+    try {
+      const n = await memo(`mzn${f.k}|${f.lv || 1}|${rt.toFixed(4)}`, () => J(`api/nearest_scan?k=${f.k}&rt=${rt}&level=${f.lv || 1}`));
+      const key = `${f.k}|${n.sid}`; if (s.spec && s.spec.key === key) return s.spec;
+      const j = await memo(`mzs${key}`, () => J(`api/spectrum?k=${f.k}&rt0=${n.rt - NEAR}&rt1=${n.rt + NEAR}&level=${f.lv || 1}&bin=0.1${MERGE()}`));
+      s.spec = { key, sid: n.sid, rt: n.rt, mz: j.mz, y: j.y };
+    } catch (e) { /* nothing to show */ }
+    return s.spec;
+  }
+  function canvasOf(c) {
+    const r = c.getBoundingClientRect(), d = Math.min(4, devicePixelRatio || 1); c.width = Math.round(r.width * d); c.height = Math.round(r.height * d);
+    const g = c.getContext("2d"); g.setTransform(d, 0, 0, d, 0, 0); return { g, W: r.width, H: r.height };
+  }
+  function drawSide(p, pt) {                                            // spectrum turned on its side: m/z upwards like the map, intensity to the right
+    const s = st(p), a = p._a; if (s.sp.hidden || !a) return;
+    const { g, W, H } = canvasOf(s.sp), ink = css("--muted"); g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
+    const Y = v => H - M.b - (v - a.y0) / (a.y1 - a.y0) * (H - M.t - M.b), x0 = 6, x1 = W - 8;
+    g.beginPath(); g.moveTo(x0 + .5, M.t); g.lineTo(x0 + .5, H - M.b); g.stroke();
+    const sp = s.spec; if (!sp || !pt) { g.fillText(T("mappa.side.title"), x0 + 4, M.t + 10); return; }
+    let ymax = 0; const vis = []; for (let i = 0; i < sp.mz.length; i++) if (sp.mz[i] >= a.y0 && sp.mz[i] <= a.y1) { vis.push(i); if (sp.y[i] > ymax) ymax = sp.y[i]; }
+    if (!ymax) { g.fillText(T("mappa.side.empty"), x0 + 4, M.t + 10); return; }
+    g.strokeStyle = a.f.color || css("--accent"); g.beginPath();
+    for (const i of vis) { const y = Math.round(Y(sp.mz[i])) + .5; g.moveTo(x0, y); g.lineTo(x0 + (x1 - x0) * sp.y[i] / ymax, y); }
+    g.stroke();
+    const top = vis.slice().sort((u, v) => sp.y[v] - sp.y[u]), used = [];
+    g.fillStyle = css("--ink"); g.textAlign = "left";
+    for (const i of top) { if (used.length >= 8 || sp.y[i] < ymax * 0.05) break; const y = Y(sp.mz[i]); if (used.some(u => Math.abs(u - y) < 12)) continue; used.push(y); g.fillText(sp.mz[i].toFixed(mzd(p)), Math.min(x1 - 40, x0 + 4 + (x1 - x0) * sp.y[i] / ymax), y + 4); }
+    if (pt.mz >= a.y0 && pt.mz <= a.y1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(x0, Y(pt.mz) + .5); g.lineTo(x1, Y(pt.mz) + .5); g.stroke(); g.setLineDash([]); }
+    g.fillStyle = ink; g.fillText(`${T("mappa.read.scan", { n: sp.sid + 1 })} · RT ${sp.rt.toFixed(2)}`, x0 + 4, H - M.b + 14);
+  }
+  function drawBottom(p, pt) {                                          // XIC under the map: the same RT axis
+    const s = st(p), a = p._a; if (s.xc.hidden || !a) return;
+    const { g, W, H } = canvasOf(s.xc), ink = css("--muted"), mt = 10, mb = 22; g.clearRect(0, 0, W, H); g.font = fpx(11); g.fillStyle = ink; g.strokeStyle = ink;
+    const X = v => M.l + (v - a.x0) / (a.x1 - a.x0) * (W - M.l - M.r);
+    g.beginPath(); g.moveTo(M.l, H - mb + .5); g.lineTo(W - M.r, H - mb + .5); g.stroke();
+    for (const t of nice(a.x0, a.x1, 8)) { const x = X(t); if (x < M.l - 1 || x > W - M.r + 1) continue; g.textAlign = "center"; g.fillText(String(+t.toFixed(2)), x, H - mb + 13); }
+    const xi = s.xic; if (!xi || !pt) { g.textAlign = "left"; g.fillText(T("mappa.bot.title"), M.l + 4, mt + 8); return; }
+    let ymax = 0; const tr = xi.tr || [];
+    for (const t of tr) for (let i = 0; i < t.rt.length; i++) if (t.rt[i] >= a.x0 && t.rt[i] <= a.x1 && t.y[i] > ymax) ymax = t.y[i];
+    const Y = v => H - mb - v / (ymax || 1) * (H - mt - mb);
+    tr.forEach((t, n) => {
+      const f = E.files[t.k]; g.strokeStyle = f ? f.color : ink; g.lineWidth = 1.2; if (n) g.setLineDash([4, 3]); g.beginPath(); let first = true;
+      for (let i = 0; i < t.rt.length; i++) { if (t.rt[i] < a.x0 || t.rt[i] > a.x1) continue; const x = X(t.rt[i]), y = Y(t.y[i]); if (first) { g.moveTo(x, y); first = false; } else g.lineTo(x, y); }
+      g.stroke(); g.setLineDash([]); g.lineWidth = 1;
+    });
+    g.fillStyle = css("--ink"); g.textAlign = "left";
+    const lo = xi.c - xi.tol, hi = xi.c + xi.tol;
+    g.fillText(`XIC ${lo.toFixed(isHrF(a.f) ? 4 : 1)}–${hi.toFixed(isHrF(a.f) ? 4 : 1)} · max ${fmt(ymax)}`, M.l + 4, mt + 8);
+    if (pt.rt >= a.x0 && pt.rt <= a.x1) { g.strokeStyle = css("--ink"); g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(pt.rt) + .5, mt); g.lineTo(X(pt.rt) + .5, H - mb); g.stroke(); g.setLineDash([]); }
+  }
+
+  // ---------------------------------------------------------------- mouse
+  function move(p, px, py) {
+    if (!is2d(p)) return; const s = st(p), a = p._a;
+    if (px < M.l || px > a.W - M.r || py < M.t || py > a.H - M.b) { s.hov = null; } else { s.hov = { rt: xOf(p, px), mz: a.mzAt(py) }; s.kp = null; }
+    if (mirOn(p)) { p.tip.hidden = true; p.vl.hidden = true; }
+    if (!s.lock) { overlay(p); margins(p); } else readout(p);
+  }
+  function leave(p) { const s = st(p); s.hov = null; if (!s.lock && s.ovg) { overlay(p); margins(p); } }
+  function wheel(p, e, px, py) {
+    if (!is2d(p) || e.ctrlKey || e.metaKey) return false;               // Ctrl/Cmd + wheel keeps the old zoom of explore.js
+    e.preventDefault();
+    const a = p._a, dy = e.deltaY || e.deltaX, f = Math.exp(Math.max(-60, Math.min(60, dy)) * 0.004);
+    if (!p._wz || Date.now() - p._wz > 600) pushZh(p); p._wz = Date.now();
+    const x = xOf(p, px), y = a.mzAt(py);
+    if (!e.altKey) p.zoomY = clampView(y - (y - a.y0) * f, y + (a.y1 - y) * f, a.fullY[0], a.fullY[1]);       // Maiusc = m/z only
+    if (!e.shiftKey) p.zoom = clampView(x - (x - a.x0) * f, x + (a.x1 - x) * f, a.full[0], a.full[1]);         // Alt = RT only
+    draw(p); return true;
+  }
+  function boxZoom(p, ax, ay, bx, by) {
+    const a = p._a, u = [xOf(p, ax), xOf(p, bx)].sort((m, n) => m - n), v = [a.mzAt(ay), a.mzAt(by)].sort((m, n) => m - n);
+    pushZh(p);
+    if (Math.abs(bx - ax) > 4) p.zoom = clampView(u[0], u[1], a.full[0], a.full[1]);
+    if (Math.abs(by - ay) > 4) p.zoomY = clampView(v[0], v[1], a.fullY[0], a.fullY[1]);
+    draw(p); uiSave();
+  }
+  function whole(p) { pushZh(p); p.zoom = null; p.zoomY = null; p.sel = null; draw(p); uiSave(); }
+  function lockAt(p, px, py) { const s = st(p), a = p._a; if (!a) return; s.lock = { rt: xOf(p, px), mz: a.mzAt(py) }; s.kp = null; overlay(p); margins(p); }
+  function unlock(p) { const s = st(p); s.lock = null; overlay(p); margins(p); if (!mirOn(p)) p.rd.textContent = ""; }
+  // right click: lock / unlock the point; Maiusc + right click: the XIC of that m/z (the old right-click entry, also in the «⋯» menu)
+  function ctx(p, e, px, py) {
+    if (!is2d(p)) return false;
+    e.preventDefault(); hideHover(p);
+    const a = p._a;
+    if (e.shiftKey) { if (px >= M.l && px <= a.W - M.r && py >= M.t && py <= a.H - M.b) openXic(null, { mz: a.mzAt(py), obs: true }); return true; }
+    const s = st(p); if (s.lock) unlock(p); else if (px >= M.l && px <= a.W - M.r && py >= M.t && py <= a.H - M.b) lockAt(p, px, py);
+    return true;
+  }
+  // the «⋯» menu: the old right-click menu, at the point of the sight (locked, keyboard or the middle of the map)
+  function menuAt(p, btn) {
+    const a = p._a; if (!a) return; const pt = point(p) || { rt: (a.x0 + a.x1) / 2, mz: (a.y0 + a.y1) / 2 }, r = btn.getBoundingClientRect();
+    ctxFor(p, { preventDefault() {}, clientX: r.left, clientY: r.bottom + 4 }, pt.rt, a.X(pt.rt), a.Y(pt.mz));
+  }
+
+  // ---------------------------------------------------------------- keyboard (focus on the map, or the map in full screen; never inside a text field)
+  function key(p, e) {
+    if (p.type !== "map" || e.target.closest && e.target.closest("input,textarea,select,[contenteditable='true']")) return;
+    if (e.ctrlKey || e.metaKey) return;
+    const k = e.key, s = st(p), a = p._a; if (!a) return;
+    const done = () => { e.preventDefault(); e.stopPropagation(); };
+    if (k === "f" || k === "F") { done(); p._setMax(!isMax(p)); return; }
+    if (k === "0") { done(); whole(p); return; }
+    if (k === "Backspace") { done(); undoZoom(p); return; }
+    if (!is2d(p)) return;
+    if (k === "m" || k === "M") { done(); s.mir = !mirOn(p); layout(p); draw(p); return; }
+    if (k === "l" || k === "L") { done(); if (s.lock) unlock(p); else { const q = point(p) || { rt: (a.x0 + a.x1) / 2, mz: (a.y0 + a.y1) / 2 }; s.lock = { ...q }; overlay(p); margins(p); } return; }
+    if (k === "Escape" && s.lock) { done(); unlock(p); return; }
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(k)) return;
+    done();
+    const cur = point(p) || { rt: (a.x0 + a.x1) / 2, mz: (a.y0 + a.y1) / 2 }, nx = { ...cur }, dir = k === "ArrowRight" || k === "ArrowUp" ? 1 : -1;
+    const set = q => { if (s.lock) s.lock = q; else s.kp = q; follow(p, q); overlay(p); margins(p); };
+    if (k === "ArrowUp" || k === "ArrowDown") {
+      if (e.shiftKey) { fetchSpec(p, cur.rt).then(sp => { const m = peakStep(sp, cur.mz, dir); if (m != null) set({ ...cur, mz: m }); }); return; }   // next local maximum of the spectrum above 3 x noise
+      nx.mz = Math.max(a.fullY[0], Math.min(a.fullY[1], cur.mz + dir * binDa(p))); set(nx); return;
+    }
+    fetchXic(p, cur.mz).then(xi => {
+      const t = xi && xi.tr && xi.tr[0]; if (!t || !t.rt.length) { nx.rt = Math.max(a.full[0], Math.min(a.full[1], cur.rt + dir * scanStep())); set(nx); return; }
+      const i0 = nearIdx(t.rt, cur.rt);
+      if (e.shiftKey) { const i = apexStep(t, i0, dir); if (i != null) set({ ...cur, rt: t.rt[i] }); return; }       // apex of the XIC in that direction
+      const i = Math.max(0, Math.min(t.rt.length - 1, (Math.abs(t.rt[i0] - cur.rt) < 1e-6 ? i0 : (dir > 0 ? (t.rt[i0] > cur.rt ? i0 - 1 : i0) : (t.rt[i0] < cur.rt ? i0 + 1 : i0))) + dir));   // next scan
+      set({ ...cur, rt: t.rt[i] });
+    });
+  }
+  // the view follows the point when it leaves it
+  function follow(p, q) {
+    const a = p._a; let ch = false;
+    if (p.zoom && (q.rt < a.x0 || q.rt > a.x1)) { const w = a.x1 - a.x0; p.zoom = clampView(q.rt - w / 2, q.rt + w / 2, a.full[0], a.full[1]); ch = true; }
+    if (p.zoomY && (q.mz < a.y0 || q.mz > a.y1)) { const h = a.y1 - a.y0; p.zoomY = clampView(q.mz - h / 2, q.mz + h / 2, a.fullY[0], a.fullY[1]); ch = true; }
+    if (ch) draw(p);
+  }
+  const madNoise = y => { const v = Array.from(y).filter(x => x > 0).sort((m, n) => m - n); if (!v.length) return 0; const med = v[v.length >> 1], d = v.map(x => Math.abs(x - med)).sort((m, n) => m - n); return 1.4826 * d[d.length >> 1]; };
+  function peakStep(sp, mz, dir) {
+    if (!sp || !sp.mz || !sp.mz.length) return null;
+    const thr = 3 * madNoise(sp.y), n = sp.mz.length;
+    const isMax = i => sp.y[i] > thr && (i === 0 || sp.y[i] >= sp.y[i - 1]) && (i === n - 1 || sp.y[i] >= sp.y[i + 1]);
+    if (dir > 0) { for (let i = 0; i < n; i++) if (sp.mz[i] > mz + 1e-6 && isMax(i)) return sp.mz[i]; }
+    else { for (let i = n - 1; i >= 0; i--) if (sp.mz[i] < mz - 1e-6 && isMax(i)) return sp.mz[i]; }
+    return null;
+  }
+  function apexStep(t, i0, dir) {
+    const y = t.y, n = y.length, thr = 3 * madNoise(y);
+    for (let i = i0 + dir; i > 0 && i < n - 1; i += dir) if (y[i] > thr && y[i] >= y[i - 1] && y[i] >= y[i + 1] && y[i] > 0) return i;
+    return null;
+  }
+
+  // ---------------------------------------------------------------- buttons in the controls of the map: «⋯» menu, sight, whole view
+  function decorate(p, c) {
+    if (p.type !== "map") return;
+    const sp = document.createElement("span"); sp.className = "seg mzbt";
+    sp.innerHTML = `<button data-mz="mir" class="${mirOn(p) ? "on" : ""}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button><button data-mz="all" title="${T("mappa.btn.all.title")}">&#10530;</button><button data-mz="menu" title="${T("mappa.btn.menu.title")}" aria-label="${T("mappa.btn.menu.title")}">&#8943;</button>`;
+    c.appendChild(sp);
+    sp.querySelector('[data-mz="mir"]').onclick = ev => { const s = st(p); s.mir = !mirOn(p); ev.currentTarget.classList.toggle("on", s.mir); layout(p); draw(p); };
+    sp.querySelector('[data-mz="all"]').onclick = () => whole(p);
+    sp.querySelector('[data-mz="menu"]').onclick = ev => { ev.stopPropagation(); menuAt(p, ev.currentTarget); };     // the click must not reach the document (it closes #ctx)
+  }
+
+  return { init, zoomImg, after, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, peakStep, apexStep, madNoise };
+})();

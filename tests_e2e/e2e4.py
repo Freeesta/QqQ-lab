@@ -75,17 +75,18 @@ try:
             t = pg.inner_text(f".pnl.map .tip"); print("MAP TIP:", t.replace("\n", " | ")); import re; mzv = float(re.search(r"m/z ([0-9.]+)", t).group(1)); assert abs(mzv - 194.5) < 2.5, t   # +-2 m/z = about 1.5 px: the page layout may shift by a sub-pixel
         step("map hover", maphover)
         def mapxic():
-            i = mi(); c = pt(pg, i, 14.33, ymz=194.5); pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
-            pg.locator("#ctx div", has_text="Estrai l'XIC").first.click(); pg.wait_for_timeout(300); pg.click("#xic-go"); ready(pg)
+            i = mi(); c = pt(pg, i, 14.33, ymz=194.5); pg.keyboard.down("Shift"); pg.mouse.click(c["px"], c["py"], button="right"); pg.keyboard.up("Shift"); pg.wait_for_timeout(300)   # Maiusc + clic destro = XIC (mappa.js; il clic destro blocca il punto)
+            pg.click("#xic-go"); ready(pg)
             assert pg.evaluate("E.panels.some(p=>p.type==='xic'&&p.traces.length===1&&Math.abs(p.traces[0].mz-194.5)<2.5)")
-        step("map right-click -> XIC", mapxic)
+        step("map Shift + right click -> XIC", mapxic)
         def mapdrag():
             i = mi(); a = pt(pg, i, 14.1, ymz=300); b = pt(pg, i, 14.6, ymz=300)
-            pg.mouse.move(a["px"], a["py"]); pg.mouse.down(); pg.mouse.move(b["px"], b["py"], steps=6); pg.mouse.up(); pg.wait_for_timeout(300)
-            pg.locator("css=.pnl.map canvas").click(button="right", position={"x": 300, "y": 120}); pg.wait_for_timeout(300)
+            pg.mouse.move(a["px"], a["py"]); pg.keyboard.down("Alt"); pg.mouse.down(); pg.mouse.move(b["px"], b["py"], steps=6); pg.mouse.up(); pg.keyboard.up("Alt"); pg.wait_for_timeout(300)   # Alt + trascina = intervallo (trascinare da solo = zoom)
+            assert pg.evaluate(f"E.panels[{i}].sel"), "Alt + drag selects an interval"
+            pg.click(".pnl.map [data-mz=menu]"); pg.wait_for_timeout(300)                                  # the «⋯» menu has the old right-click entries
             pg.locator("#ctx div", has_text="Spettro medio").first.click(); pg.wait_for_timeout(2000)
             assert pg.evaluate("E.panels.filter(p=>p.type==='spec').length") >= 2
-        step("map drag -> averaged spectrum", mapdrag)
+        step("map Alt + drag, menu ⋯ -> averaged spectrum", mapdrag)
         def mapdiff():
             i = mi(); pg.evaluate(f"E.panels[{i}].ref = 0; E.panels[{i}].k = 2; ctl(E.panels[{i}]); draw(E.panels[{i}])"); pg.wait_for_timeout(2000)
             pg.screenshot(path=SH + "48_map_diff.png")
