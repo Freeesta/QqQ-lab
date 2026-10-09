@@ -25,7 +25,9 @@ Unico documento per gli agenti: descrive lo STATO ATTUALE (la storia è in git e
 - **Più chat in parallelo**: prima del merge `git fetch origin`, guarda cosa è entrato in `main` (`git log --stat HEAD..origin/main`), `git merge origin/main` e risolvi TU i conflitti tenendo il lavoro di entrambi (in `AGENTS.md` due sezioni con lo stesso numero = rinumerare la tua); poi verifica di nuovo e solo allora unisci. Non sovrascrivere il lavoro degli altri. Se scegliere fa perdere un comportamento, chiedi a Federico.
 - **Se qualcosa resta rosso** o serve una decisione di Federico: PR aperta con la spiegazione, niente merge. Un test rosso anche su `main` va segnalato nella PR (con il log).
 - **Commit**: titolo breve in italiano + 1-3 righe; in coda le righe di attribuzione richieste dall'ambiente. Mai nomi di modelli nei messaggi o nel codice.
-- **Risparmio di token**: raggruppa le modifiche, prova UNA volta alla fine con `--cambiati`, poi la verifica completa prima del merge; leggi solo i log dei FAIL.
+- **Risparmio di token**: raggruppa le modifiche, prova UNA volta alla fine con `--cambiati`, poi la verifica completa UNA volta prima del merge; leggi solo i log dei FAIL.
+- **Subagenti leggeri** (`.claude/agents/`, modello leggero): per eseguire la verifica e leggere i log usa il subagente `verificatore`; per lo stato di PR, CI e pages `controllo-github`; per spostamenti di file da un elenco `archivista`.
+- **Consumo**: una sessione per pacchetto di lavoro, poi se ne apre una nuova (mai «continua anche con…» in una chat lunga). `grep -n` e lettura a intervalli di righe; mai leggere per intero i file sopra le 500 righe (`explore.js` e simili). Niente screenshot letti nel contesto, salvo per un giudizio visivo; quelli per la PR si allegano senza leggerli. I file dell'elenco «Non leggere» sono bloccati anche da `.claude/settings.json` (grep resta permesso). Messaggio finale in al massimo 5 righe (PR, CI, pages, cosa resta).
 - **Niente `pkill -f` con parole presenti nel comando** (uccide la propria shell): ferma i server con il PID.
 - Un front end non provato nel browser è rotto: niente «funziona» senza e2e o screenshot.
 
