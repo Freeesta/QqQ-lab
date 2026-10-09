@@ -91,7 +91,7 @@
   const ATTRS = [["data-i18n-title", "title"], ["data-i18n-placeholder", "placeholder"], ["data-i18n-aria-label", "aria-label"]];
   function apply(rootEl) {
     const r = rootEl || (typeof document !== "undefined" ? document : null); if (!r) return;
-    const P = { app: (typeof window !== "undefined" && window.APP_NAME) || "mzLab" };      // {app} = the visible name of the program (appname.js)
+    const P = { app: (typeof window !== "undefined" && window.APP_NAME) || "" };      // {app} = the visible name of the program (appname.js)
     r.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n"), P); });
     r.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html"), P); });   // catalog text with b/i/u/code/sub/sup/a/br (trusted)
     ATTRS.forEach(([a, target]) => r.querySelectorAll("[" + a + "]").forEach(el => el.setAttribute(target, t(el.getAttribute(a), P))));
