@@ -23,7 +23,7 @@ function renderTabs() {
   el.innerHTML = TABS.map(([t, n]) => {
     const c = tabFiles(t).length;
     return `<span class="tw"><button data-t="${t}" data-tiph="${EH(modeSchema(t))}" class="${t === E.tab ? "on" : ""}${c ? "" : " off"}">${EH(n)}<i>${c}</i></button></span>`;
-  }).join("") + `<span class="sp"></span><button id="ovbtn" title="Quali file ci sono per ogni tempo e per ogni tipo di esperimento">Tempi ed esperimenti</button>`;
+  }).join("") + `<span class="sp"></span><button id="ovbtn" title="${I18N.t("tabs.overview.button.title")}">${I18N.t("tabs.overview.title")}</button>`;
   el.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { setTab(b.dataset.t); if (lrTog()) setTimeout(() => { const f = E.panels.filter(q => q.tab === b.dataset.t && q.el).sort((u, v) => u.y - v.y)[0]; if (f) f.el.scrollIntoView({ block: "start", behavior: "smooth" }); }, 500); });
   Q("#ovbtn").onclick = openOverview;
 }
@@ -35,7 +35,7 @@ function emptyTab() {
   if (tabFiles(t).length) { el.hidden = true; return; }
   const other = TABS.filter(([k]) => k !== t && tabFiles(k).length);
   el.hidden = false;
-  el.innerHTML = `<b>Qui non ci sono file ${EH(name)}.</b> ` + (other.length ? "I tuoi file sono nella scheda: " + other.map(([k, n]) => `<button class="go" data-go="${k}">${EH(n)} (${tabFiles(k).length})</button>`).join(" ") : "Non hai ancora caricato nulla.") + ` <button data-load="1" title="Apre la pagina di caricamento: i file già caricati restano nella sessione">+ Carica file ${EH(name)}</button>`;
+  el.innerHTML = I18N.t("tabs.empty.title", { name: EH(name) }) + " " + (other.length ? I18N.t("tabs.empty.yours") + " " + other.map(([k, n]) => `<button class="go" data-go="${k}">${EH(n)} (${tabFiles(k).length})</button>`).join(" ") : I18N.t("tabs.empty.nothing")) + ` <button data-load="1" title="${I18N.t("tabs.empty.load.title")}">${I18N.t("tabs.empty.load", { name: EH(name) })}</button>`;
   el.querySelectorAll("[data-load]").forEach(b => b.onclick = () => Q("#addf").click());
   el.querySelectorAll("[data-go]").forEach(b => b.onclick = () => setTab(b.dataset.go));
 }
@@ -156,7 +156,7 @@ function defaultLayoutTab(t) {
       mfs.forEach((f, i) => { f.vis = (i === 0); });
       if (typeof renderFileList === "function") renderFileList();
       const w2 = hostWidth(), keys = [CAL.quant, CAL.qual].filter(Boolean);
-      addPanel("mrm", { tab: "mrm", tr: keys.length ? keys : "", title: "Transizioni MRM", x: 0, y: 0, w: w2, h: 420, full: true, imode: "man", intf: "all" });
+      addPanel("mrm", { tab: "mrm", tr: keys.length ? keys : "", title: PT.mrm, x: 0, y: 0, w: w2, h: 420, full: true, imode: "man", intf: "all" });
       relayout(); fitHost(); uiSave();
     });
   }
@@ -179,9 +179,9 @@ function mrmFocus(ps) {
 
 // one MS2 experiment = precursor chromatogram (above) + product-ion spectrum (below, linked)
 function addMs2Pair(e, y) {
-  const w = hostWidth(), f0 = tabFiles("ms2")[0], k = e.k ?? f0.k, label = e.prec != null ? `MS2 · precursore ${e.prec}` : "MS2";
+  const w = hostWidth(), f0 = tabFiles("ms2")[0], k = e.k ?? f0.k, label = ptMs2(e.prec);
   const c = addPanel("chrom", { tab: "ms2", prec: e.prec, title: label, x: 0, y, w, h: 250, full: true });
-  const sp = addPanel("spec", { tab: "ms2", link: c.id, k, level: 2, prec: e.prec, title: `Spettro degli ioni prodotto${e.prec != null ? " · " + e.prec : ""}`, x: 0, y: y + 260, w, h: 280, full: true });
+  const sp = addPanel("spec", { tab: "ms2", link: c.id, k, level: 2, prec: e.prec, title: ptProduct(e.prec), x: 0, y: y + 260, w, h: 280, full: true });
   apexSpectrum(c, sp); return c;
 }
 const ms2PairOf = prec => E.panels.find(p => p.tab === "ms2" && p.type === "chrom" && String(p.prec) === String(prec));
@@ -200,9 +200,9 @@ function ms2Goto(prec) {
 function ms2Switch(prec) {
   const c = tabPanels("ms2").filter(q => q.type === "chrom").sort((a, b) => a.y - b.y)[0];
   if (!c) return ms2Toggle(prec, true);
-  c.prec = prec; c.title = prec != null ? `MS2 · precursore ${prec}` : "MS2"; c.sel = null;
+  c.prec = prec; c.title = ptMs2(prec); c.sel = null;
   const live = E.panels.filter(q => q.type === "spec" && q.link === c.id);
-  live.forEach(sp => { sp.prec = prec; sp.zoom = null; sp.zoomY = null; sp.lock = null; sp.title = `Spettro degli ioni prodotto${prec != null ? " · " + prec : ""}`; });
+  live.forEach(sp => { sp.prec = prec; sp.zoom = null; sp.zoomY = null; sp.lock = null; sp.title = ptProduct(prec); });
   ctl(c); live.forEach(ctl);
   renderFileList(); uiSave();
   return Promise.resolve(draw(c)).then(() => live[0] ? apexSpectrum(c, live[0]) : null);       // the spectrum of the highest scan of the new precursor
@@ -212,11 +212,11 @@ function ms2Switch(prec) {
 function openOverview() {
   const kinds = TABS.filter(([t]) => tabFiles(t).length);
   const key = f => f.type === "sample" ? `0|${(f.time ?? 1e9).toString().padStart(9, "0")}` : f.type === "standard" ? `1|${(f.conc ?? 1e9).toString().padStart(9, "0")}` : "2|";
-  const lab = f => f.type === "sample" ? (f.time != null ? `t = ${f.time} min` : "campione") : f.type === "standard" ? `standard${f.conc != null ? " " + f.conc + " " + (f.cunit || "") : ""}` : "bianco";
+  const lab = f => f.type === "sample" ? (f.time != null ? `t = ${f.time} min` : I18N.t("load.type.sample")) : f.type === "standard" ? `standard${f.conc != null ? " " + f.conc + " " + (f.cunit || "") : ""}` : I18N.t("load.type.blank");
   const rows = new Map();
   E.files.forEach(f => { const k = key(f) + "|" + lab(f); if (!rows.has(k)) rows.set(k, { lab: lab(f), by: {} }); (rows.get(k).by[f.kind] = rows.get(k).by[f.kind] || []).push(f); });
-  const body = [...rows.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([, r]) => `<tr><td><b>${EH(r.lab)}</b></td>` + kinds.map(([t]) => `<td>${(r.by[t] || []).map(f => `<button class="fc" data-k="${f.k}" title="Apri nella scheda ${EH(TABS.find(x => x[0] === t)[1])}">${EH(f.label)}</button>`).join("") || '<span class="muted">-</span>'}</td>`).join("") + "</tr>").join("");
-  big("Tempi ed esperimenti", `<div class="muted sm" style="margin-bottom:6px">Una riga per tempo (o standard, o bianco), una colonna per tipo di esperimento. Clic su un file: si apre nella sua scheda.</div><table id="ovw"><tr><th></th>${kinds.map(([, n]) => `<th>${EH(n)}</th>`).join("")}</tr>${body}</table>`, () => {
+  const body = [...rows.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1).map(([, r]) => `<tr><td><b>${EH(r.lab)}</b></td>` + kinds.map(([t]) => `<td>${(r.by[t] || []).map(f => `<button class="fc" data-k="${f.k}" title="${I18N.t("tabs.overview.open", { tab: EH(TABS.find(x => x[0] === t)[1]) })}">${EH(f.label)}</button>`).join("") || '<span class="muted">-</span>'}</td>`).join("") + "</tr>").join("");
+  big(I18N.t("tabs.overview.title"), `<div class="muted sm" style="margin-bottom:6px">${I18N.t("tabs.overview.intro")}</div><table id="ovw"><tr><th></th>${kinds.map(([, n]) => `<th>${EH(n)}</th>`).join("")}</tr>${body}</table>`, () => {
     Q("#bigbody").querySelectorAll("button.fc").forEach(b => b.onclick = () => {
       const f = E.files[+b.dataset.k]; Q("#bigdlg").close();
       setTab(f.kind, true); E.cur = f.k; E.browse = true; renderFileList(); renderNav(); redrawAll(); uiSave();

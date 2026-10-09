@@ -163,11 +163,11 @@ const TOUCH = (() => {
     bar = document.createElement("div"); bar.id = "tbar"; bar.hidden = true;
     const B = (id, label, title, svg) => `<button type="button" data-k="${id}" title="${title}" aria-label="${title}">${svg}<span>${label}</span></button>`;
     const ic = d => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
-    bar.innerHTML = B("prev", "Indietro", "Scansione precedente (tienila premuta per scorrere)", ic('<path d="M15 5l-7 7 7 7"/>')) +
-      B("play", "Avvia", "Avvia o ferma lo scorrimento automatico (Spazio)", ic('<path d="M8 5l11 7-11 7z"/>')) +
-      B("next", "Avanti", "Scansione successiva (tienila premuta per scorrere)", ic('<path d="M9 5l7 7-7 7"/>')) +
-      B("fit", "Vista intera", "Torna a vedere tutto il grafico (Backspace)", ic('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>')) +
-      B("undo", "Annulla", "Annulla l'ultima azione (Ctrl/Cmd+Z)", ic('<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/>'));
+    bar.innerHTML = B("prev", I18N.t("touch.prev"), I18N.t("touch.prev.title"), ic('<path d="M15 5l-7 7 7 7"/>')) +
+      B("play", I18N.t("touch.play"), I18N.t("touch.play.title"), ic('<path d="M8 5l11 7-11 7z"/>')) +
+      B("next", I18N.t("touch.next"), I18N.t("touch.next.title"), ic('<path d="M9 5l7 7-7 7"/>')) +
+      B("fit", I18N.t("touch.fit"), I18N.t("touch.fit.title"), ic('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>')) +
+      B("undo", I18N.t("touch.undo"), I18N.t("touch.undo.title"), ic('<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/>'));
     document.body.appendChild(bar);
     const send = (k, o) => { key("keydown", k, o); return () => key("keyup", k, o); };
     bar.querySelectorAll("button").forEach(b => {
@@ -186,7 +186,7 @@ const TOUCH = (() => {
   // ============================================================ a grip to change the height of a panel (the CSS handle does not work with a finger)
   function grip(p) {
     if (p.el.querySelector(".rzg")) return;
-    const g = document.createElement("div"); g.className = "rzg"; g.title = "Trascina per cambiare l'altezza del grafico"; g.innerHTML = "<i></i>"; p.el.appendChild(g);
+    const g = document.createElement("div"); g.className = "rzg"; g.title = I18N.t("touch.grip.title"); g.innerHTML = "<i></i>"; p.el.appendChild(g);
     let st = null;
     g.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); g.setPointerCapture(e.pointerId); st = { y: e.clientY, h: p.h }; touchMode(); });
     g.addEventListener("pointermove", e => { if (!st) return; p.h = Math.max(190, Math.round(st.h + e.clientY - st.y)); apply(p); relayout(); fitHost(); });
