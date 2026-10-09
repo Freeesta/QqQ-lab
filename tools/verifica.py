@@ -41,7 +41,10 @@ NEEDS: dict[str, set[str]] = {
     "e2e_tpmine_mem": {"sito", "crypto", "veri"},          # 13 real HR files (1 GB) in the real worker: minutes
 }
 NOT_TESTS = {"lib", "synth", "lat_arrows", "make_examples"}          # helpers and measurements, not tests
-SMOKE = ["e2e3"]
+# e2e3 plus the e2e that were red on main without anybody seeing it (the CI used to run only e2e3): download menu, buttons, settings, axes, spectra, integration.
+# About 3 minutes together on a laptop; the whole set (python3 tools/verifica.py) stays the rule before every merge.
+SMOKE = ["e2e3", "e2e8", "e2e18", "e2e19", "e2e20", "e2e_spettro", "e2e_cromato", "e2e_hr_nearest", "e2e_hr_composizione", "e2e_pannelli2", "e2e_teoria_scura",
+         "e2e_hr_isotopi", "e2e_picchi"]
 # Console messages that are known and harmless (not counted as browser errors).
 BENIGN = [r"allow-scripts and allow-same-origin", r"/api/(ping|bye|live)", r"ERR_ABORTED", r"api/formula\?f=C2H6Qq", r"status of 400",
           r"Layout was forced before the page was fully loaded"]   # Firefox: a notice about styles, not an error   # aborted requests = page reloaded or closed by the test

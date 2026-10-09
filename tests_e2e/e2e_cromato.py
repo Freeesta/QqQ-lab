@@ -12,9 +12,10 @@ r = Run(port=8881, wd="/tmp/wd81")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60"), mz("B_FullMass-t10")]); pg.wait_for_timeout(1000)
+        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60"), mz("B_FullMass-t10")])
+        pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length>=4", timeout=60000)      # all 4 uploaded: with a fixed pause, on a loaded machine «Carica dati» loaded only the files staged so far
         pg.click("text=Carica dati"); ready(pg)
-        pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_timeout(2500)
+        pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})"); pg.wait_for_function(f"(()=>{{const p={XP};return !!(p && p._a && p._a.sr && p._a.sr.length)}})()", timeout=60000)
         pg.evaluate(f"(()=>{{const p={XP};p.sr=p._a.sr;addInt(p,p._a.sr[0],13.9,14.9)}})()"); pg.wait_for_timeout(800)
         def default_off():
             pg.evaluate("showInts()"); pg.wait_for_timeout(400)
@@ -46,7 +47,7 @@ try:
             pg.evaluate("E.panels.filter(p=>p.type==='xic').forEach(p=>p.el.querySelector('.x').click())"); pg.wait_for_timeout(300)
             ch = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom'&&p.tab==='full')")
             assert "a cascata" in pg.evaluate(f"E.panels[{ch}].el.querySelector('[data-o=mode]').innerText")
-            pg.select_option(f".pnl.chrom [data-o=mode]", "cas"); pg.wait_for_timeout(1500)
+            pg.select_option(f".pnl.chrom [data-o=mode]", "cas"); pg.wait_for_function(f"(()=>{{const a=E.panels[{ch}]._a;return !!(a && a.cas && a.sr && a.sr.length===4)}})()", timeout=60000)
             a = pg.evaluate(f"(()=>{{const a=E.panels[{ch}]._a;return {{cas:a.cas,n:a.sr.length}}}})()"); assert a["cas"] and a["n"] == 4, a
             pg.evaluate(f"E.panels[{ch}].el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
             box = pg.locator(".pnl.chrom canvas").first.bounding_box(); pg.mouse.move(box["x"] + 300, box["y"] + 150); pg.wait_for_timeout(2000)
