@@ -17,7 +17,7 @@ try:
         pg = r.page(p)
         try: pg.context.grant_permissions(["clipboard-read", "clipboard-write"])
         except Exception: pass
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_MS2-t15")]); pg.wait_for_timeout(1000)
+        stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_MS2-t15")])
         pg.click("text=Carica dati"); ready(pg)
         pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(500)
         def px(expr_m, frac_y=0.0):   # pixel of a peak of the spectrum (m/z -> screen)

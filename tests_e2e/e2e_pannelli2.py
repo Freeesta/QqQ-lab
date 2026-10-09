@@ -13,7 +13,7 @@ r = Run(port=8957, wd="/tmp/wd_pan2")
 try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1280, "height": 1000})
-        pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")]); pg.wait_for_timeout(1000)
+        stage(pg, [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60")])
         pg.click("text=Carica dati"); ready(pg)
         def corr_out():
             assert pg.is_visible(".pnl.chrom .corrb"), "Correzione is in the header, not hidden in the popover"
