@@ -78,6 +78,16 @@ const PALS = {
     catDark: ["#f87171", "#60a5fa", "#4ade80", "#c084fc", "#fb923c", "#38bdf8", "#f472b6", "#facc15", "#2dd4bf", "#a3e635", "#fbbf24", "#818cf8"],
     blank: "#8a8a8a", blankDark: "#9ca3af", std: "#4d4d4d", stdDark: "#cbd5e1"
   },
+  // Monochrome black & white with dashes for distinct traces
+  bw: {
+    name: "Bianco e nero",
+    seq: ["#000000", "#333333", "#666666", "#999999"],
+    seqDark: ["#ffffff", "#cccccc", "#999999", "#666666"],
+    a: 0, b: 1.0, aDark: 0, bDark: 1.0,
+    cat: ["#000000", "#222222", "#444444", "#666666", "#111111", "#333333", "#555555", "#777777"],
+    catDark: ["#ffffff", "#e0e0e0", "#b8b8b8", "#909090", "#f0f0f0", "#d0d0d0", "#a8a8a8", "#808080"],
+    dash: true, blank: "#777777", blankDark: "#aaaaaa", std: "#333333", stdDark: "#dddddd"
+  },
 };
 const PAL = [];
 function setPal(mode) {
@@ -129,6 +139,8 @@ const TOL0 = 1.0;                                   // strumento datato: finestr
 const IC_DL = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px"><path d="M6 1v7M3 5.5 6 8.5 9 5.5M1.5 11h9"/></svg>';
 const IC_AUTO = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M1 14h14"/><path d="M3 14C5 14 6 4.5 8 4.5S11 14 13 14z" fill="currentColor" fill-opacity=".3"/><path d="M13 1.2l.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7z" fill="currentColor" stroke="none"/></svg>';   // peak with its area + sparkle = automatic
 const IC_MAN = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M1 14h14"/><path d="M4.5 14C6 14 6.5 5 8 5s2 9 3.5 9" /><path d="M4 2.5v11.5M12 2.5v11.5" stroke-dasharray="2 1.6"/></svg>';   // peak between two edge bars = manual
+const IC_DEL_INT = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 14h14"/><path d="M3 14c1.5 0 2.5-9 5-9s3.5 9 5 9"/><path d="M10.5 2.5l4 4M14.5 2.5l-4 4"/></svg>';   // peak with an X = delete integration
+const IC_D2 = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 13.5h13"/><path d="M2.5 13.5c2 0 3-9 5.5-9s3.5 9 5.5 9"/><path d="M7 2.5l1.2 2.2M9.2 2.5l1.2 2.2"/></svg>';   // inverted second derivative
 const IC_ZOOM = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="4.6"/><path d="M10 10l4.6 4.6M4.4 6.5h4.2M6.5 4.4v4.2"/></svg>';   // magnifier = zoom tool
 const IC_TAB = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="2" width="11" height="10" rx="1.2"/><path d="M1.5 5.5h11M1.5 8.7h11M6 5.5V12"/></svg>';
 const IC_FS = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M8.5 1.5h4v4M12.5 1.5 8 6M5.5 12.5h-4v-4M1.5 12.5 6 8"/></svg>';   // full screen: arrows pointing out
@@ -361,26 +373,52 @@ function renderFileList() {
   side.forEach(f => { const g = grpOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
   if (E.tab === "mrm" || lrTog()) groups.sort((a, b) => ["Standard", "Campioni", "Bianchi"].indexOf(a.g) - ["Standard", "Campioni", "Bianchi"].indexOf(b.g));
   const sub = f => f.type === "sample" ? (f.time != null ? f.time + " min" : "") : (f.type === "blank" ? "bianco" : "standard" + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
-  const row = f => `<div class="fl ${f.k === E.cur ? "cur" : ""}" data-tip="${EH(f.label)}"><input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="Mostra o nascondi">
-    <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b>${polSign(f)}${window.HR ? HR.badge(f) : ""}
-    <small>${sub(f)}</small>
-    ${E.tab === "ms2" && f.precursors && f.precursors.length ? 
-        '<div class="pr-list" style="margin-top:4px">' + [...new Set(f.precursors)].sort((a,b)=>a-b).map(pr => `<div class="fl pr" style="padding-left:0; min-height:0; margin-bottom:2px"><input type="checkbox" data-pr="${pr}" ${ms2PairOf(pr) ? "checked" : ""} title="Aggiunge (o chiude) una seconda coppia di grafici per confrontare questo precursore con quello mostrato"><div class="fi"><b class="pn" data-pg="${pr}" title="Clic: i grafici passano a questo precursore."><span style="font-style:italic">m/z</span> ${EH(pr)}</b></div></div>`).join("") + '</div>'
-    : ""}
-</div></div>`;
+  const row = f => {
+    const hasPr = E.tab === "ms2" && f.precursors && f.precursors.length;
+    const prOpen = f._prOpen !== false;
+    const prList = hasPr ? [...new Set(f.precursors)].sort((a, b) => a - b) : [];
+    return `<div class="fl ${f.k === E.cur ? "cur" : ""}" data-tip="${EH(f.label)}" style="flex-wrap:wrap">
+      <input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="Mostra o nascondi">
+      <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b><span style="display:inline-flex;align-items:center;gap:4px">${polSign(f)}${window.HR ? HR.badge(f) : ""}<small>${sub(f)}</small>${hasPr ? `<span class="pr-tog" data-prk="${f.k}" title="Mostra o nascondi precursori" style="cursor:pointer;padding:0 2px;user-select:none;font-size:10px;color:var(--muted)">${prOpen ? "▾" : "▸"}</span>` : ""}</span></div>
+      ${hasPr ? `<div class="pr-container" style="padding-left:22px;width:100%;box-sizing:border-box;margin-top:2px;${prOpen ? "" : "display:none;"}">` +
+        prList.map(pr => `<div class="fl pr" style="padding-left:0;min-height:0;margin-bottom:2px;border-bottom:none"><input type="checkbox" data-pr="${pr}" ${ms2PairOf(pr) ? "checked" : ""} title="Aggiunge (o chiude) una seconda coppia di grafici per confrontare questo precursore con quello mostrato"><div class="fi"><b class="pn" data-pg="${pr}" title="Clic: i grafici passano a questo precursore."><span style="font-style:italic">m/z</span> ${EH(pr)}</b></div></div>`).join("") +
+        '</div>' : ""}
+    </div>`;
+  };
   const ghost = f => `<div class="fl ghost" data-go="${f.k}" data-tip="${EH(f.label)} (${EH(kindOf(f))})"><input type="checkbox" disabled><i style="background:${f.color}"></i><div class="fi"><b class="nm">${EH(f.label)}</b><small>${sub(f)}</small></div></div>`;
   const pre = window.DDA && DDA.listMode() ? DDA.listBlock() : "";
-  const others = (allTabs() ? [] : TABS).filter(([t]) => t !== E.tab && tabFiles(t).length).map(([t, n]) => `<div class="fgh sep">${modeIcon(t, 18)}<span>${EH(n)}</span><em>${tabFiles(t).length}</em></div>` + tabFiles(t).map(ghost).join("")).join("");
-  const gh = (G, label, cls = "") => `<div class="fgh ${cls}"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="Mostra o nascondi tutto il gruppo">${cls ? "" : modeIcon(E.tab, 18)}<span>${EH(label)}${cls ? "" : polHead(G.fs)}</span><em>${G.fs.length}</em></div>`;
+  E._grpOpen = E._grpOpen || {};
+  const isExpOpen = t => E._grpOpen[t] !== undefined ? E._grpOpen[t] : (t === E.tab || lrTog());
+  const others = (allTabs() ? [] : TABS).filter(([t]) => t !== E.tab && tabFiles(t).length).map(([t, n]) => {
+    const open = isExpOpen(t);
+    return `<div class="fgh sep" data-gt="${t}" style="cursor:pointer"><span class="chv" style="user-select:none;font-size:10px;margin-right:2px">${open ? "▾" : "▸"}</span>${modeIcon(t, 18)}<span>${EH(n)}</span><em>${tabFiles(t).length}</em></div><div class="grp-files" style="${open ? "" : "display:none"}">${tabFiles(t).map(ghost).join("")}</div>`;
+  }).join("");
+  const isMainOpen = isExpOpen(E.tab);
+  const gh = (G, label, cls = "") => {
+    const isSub = !!cls;
+    const open = isSub ? true : isMainOpen;
+    return `<div class="fgh ${cls}" ${isSub ? "" : `data-gt="${E.tab}" style="cursor:pointer"`}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="Mostra o nascondi tutto il gruppo">${isSub ? "" : `<span class="chv" style="user-select:none;font-size:10px;margin-right:2px">${open ? "▾" : "▸"}</span>`}${cls ? "" : modeIcon(E.tab, 18)}<span>${EH(label)}${cls ? "" : polHead(G.fs)}</span><em>${G.fs.length}</em></div>`;
+  };
   // MRM tab: like the other tabs the header is the type of experiment («MRM»); standard / campioni / bianchi are smaller sub-groups, written only when there is more than one
   const body = E.tab === "mrm" && !lrTog() && groups.length
-    ? gh({ g: "__all", fs: tabFiles() }, "MRM") + groups.map(G => (groups.length > 1 ? gh(G, G.g.toLowerCase(), "sub") : "") + G.fs.map(row).join("")).join("")
-    : groups.map(G => gh(G, G.g) + G.fs.map(row).join("")).join("");
+    ? gh({ g: "__all", fs: tabFiles() }, "MRM") + `<div class="grp-files" style="${isMainOpen ? "" : "display:none"}">${groups.map(G => (groups.length > 1 ? gh(G, G.g.toLowerCase(), "sub") : "") + G.fs.map(row).join("")).join("")}</div>`
+    : groups.map(G => gh(G, G.g) + `<div class="grp-files" style="${isMainOpen ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
   Q("#flst").innerHTML = pre + body + others;
   Q("#flst").querySelectorAll("input[data-pr]").forEach(x => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));
   { const dl = Q("#ddalist"); if (dl) dl.onclick = () => DDA.openList(); }
   Q("#flst").querySelectorAll("[data-pg]").forEach(x => x.onclick = () => ms2Goto(x.dataset.pg));
   Q("#flst").querySelectorAll("[data-go]").forEach(x => x.onclick = () => goToFileTab(E.files[+x.dataset.go]));
+  Q("#flst").querySelectorAll(".fgh[data-gt]").forEach(el => el.onclick = e => {
+    if (e.target.closest("input")) return;
+    const t = el.dataset.gt;
+    E._grpOpen[t] = !isExpOpen(t);
+    renderFileList();
+  });
+  Q("#flst").querySelectorAll(".pr-tog").forEach(tog => tog.onclick = e => {
+    e.stopPropagation();
+    const f = E.files[+tog.dataset.prk];
+    if (f) { f._prOpen = f._prOpen === false; renderFileList(); }
+  });
   Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => { side.filter(f => x.dataset.g === "__all" || grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked); renderFileList(); redrawAll(); uiSave(); });
   Q("#flst").querySelectorAll("input[data-k]").forEach(x => x.onchange = () => { E.files[+x.dataset.k].vis = x.checked; redrawAll(); uiSave(); });
   Q("#flst").querySelectorAll(".fl:not(.ghost)").forEach(el => { const nm = el.querySelector(".nm"); if (nm) el.oncontextmenu = e => fileCtx(e, E.files[+nm.dataset.k]); });
@@ -388,7 +426,7 @@ function renderFileList() {
   Q("#flst").querySelectorAll(".fl:not(.ghost):not(.pr)").forEach(row => {
     const nm = row.querySelector(".nm"); if (!nm) return;
     row.onclick = e => {
-      if (e.target.closest("input")) return;
+      if (e.target.closest("input") || e.target.closest(".pr-tog")) return;
       E.cur = +nm.dataset.k; Q("#flst").querySelectorAll(".fl").forEach(r => r.classList.toggle("cur", r === row)); renderNav(); if (E.browse) redrawAll();
     };
     nm.ondblclick = () => renameFile(E.files[+nm.dataset.k]);
@@ -487,9 +525,9 @@ function ask(title, def = "") {
     i.hidden = false; Q("#askno").hidden = false;
     Q("#asktxt").innerHTML = title; i.value = def;
     const done = v => { d.close(); Q("#askok").onclick = Q("#askno").onclick = i.onkeydown = null; res(v); };
-    Q("#askok").onclick = () => done(i.value.trim() || null);
+    Q("#askok").onclick = () => done(i.value.trim());
     Q("#askno").onclick = () => done(null);
-    i.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); done(i.value.trim() || null); } };
+    i.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); done(i.value.trim()); } };
     d.oncancel = () => done(null);
     d.showModal(); i.focus(); i.select();
   });
@@ -518,7 +556,19 @@ function menu(ev, items) {
   items.forEach(it => {
     if (it === "-") { m.appendChild(document.createElement("hr")); return; }
     const d = document.createElement("div");
-    d.textContent = it.label; if (it.tip) d.title = it.tip;
+    if (it.icon) {
+      const ic = document.createElement("span");
+      ic.innerHTML = it.icon;
+      ic.style.display = "inline-flex";
+      ic.style.alignItems = "center";
+      ic.style.marginRight = "6px";
+      ic.style.verticalAlign = "middle";
+      d.appendChild(ic);
+      d.appendChild(document.createTextNode(it.label));
+    } else {
+      d.textContent = it.label;
+    }
+    if (it.tip) d.title = it.tip;
     if (it.dim) d.className = "dim"; else d.onclick = () => { m.hidden = true; it.fn(); };
     m.appendChild(d);
   });
@@ -549,6 +599,19 @@ function plotSheets(p) {
   const n = Math.max(...cols.map(c => c[1].length)), rows = [];
   for (let i = 0; i < n; i++) rows.push(cols.map(c => (i < c[1].length ? c[1][i] : null)));
   const out = [{ name: p.title || "Dati", head: cols.map(c => c[0]), rows, widths: cols.map(c => Math.min(44, Math.max(14, c[0].length + 2))) }];
+  const metaRows = [
+    [{ v: "Proprietà", b: true }, { v: "Valore", b: true }],
+    [{ v: "Titolo", b: true }, p.title || "Grafico"],
+    [{ v: "Tipo", b: true }, { chrom: "Cromatogramma " + (p.kind || "").toUpperCase(), xic: "XIC (ione estratto)", mrm: "Transizioni MRM", spec: "Spettro di massa " + (p.level === 2 ? "MS²" : "MS¹"), map: "Mappa RT-m/z" }[p.type] || p.type],
+    [{ v: "Campioni", b: true }, plotFiles(p).map(f => f.label).join(", ")],
+    [{ v: "Didascalia", b: true }, plotCaption(p)],
+    [{ v: "Data esportazione", b: true }, new Date().toLocaleString("it-IT")],
+    [{ v: "Software", b: true }, APP_NAME]
+  ];
+  if (p.r0 != null && p.r1 != null) metaRows.push([{ v: "Intervallo RT (min)", b: true }, `${p.r0.toFixed(2)} - ${p.r1.toFixed(2)}`]);
+  if (a.x0 != null && a.x1 != null) metaRows.push([{ v: "Asse orizzontale visibile", b: true }, `${a.x0.toFixed(2)} - ${a.x1.toFixed(2)}`]);
+  if (p.ibk) metaRows.push([{ v: "Bianco interno", b: true }, ibkText(p.ibk)]);
+  out.push({ name: "Metadati", rows: metaRows, widths: [24, 60] });
   if (p.ibk) out.push({ name: "Note", rows: [[{ v: "Bianco interno applicato", b: true }, ibkText(p.ibk)], ["Le intensità di questo foglio sono già sottratte del livello di fondo (un numero o una retta preso da un tratto del cromatogramma); non è la sottrazione di un file bianco."]], widths: [28, 60] });
   return out;
 }
@@ -574,7 +637,8 @@ function restack(drag, final, grp = []) {
   grp = grp.filter(q => !dockedP(q));
   const st = tabPanels().filter(q => q.full && q.el && !dockedP(q));
   const others = st.filter(q => q !== drag && !grp.includes(q)).sort((a, b) => a.y - b.y), c = drag.y + drag.h / 2;
-  const idx = others.filter(q => q.y + q.h / 2 < c).length;
+  let idx = others.filter(q => q.y + q.h / 2 < c).length;
+  if (others.length && drag.y < others[0].y + others[0].h * 0.5) idx = 0;
   const order = others.slice(); order.splice(idx, 0, drag, ...grp);      // the group stays together, in its own order
   let y = 0;
   order.forEach((q, i) => {
@@ -679,11 +743,12 @@ function addPanel(type, o, after) {
     const gv = `<span class="tbg">${lens ? `<button class="bt" data-a="izoom" title="Zoom: attivalo e trascina sul grafico l'intervallo di tempo da ingrandire; il pulsante accanto torna alla vista intera. Ctrl o Cmd + rotella ingrandisce anche senza attivarlo">${IC_ZOOM}</button>` : ""}${fit}</span>`;
     const gs = type === "spec" ? `<span class="tbg"><button class="bt" data-a="rul" title="Righello: clic su un picco (riferimento) e poi su un altro: mostra la differenza di m/z. Si può anche usare il clic destro su un picco, «Misura da questo picco». Esc toglie le misure">${IC_RULER}</button><button class="bt" data-a="par" title="Parametri dello spettro: asse in % o in cps, quante etichette m/z, decimali" aria-label="Altre impostazioni">&#9662;</button><button class="bt${p.rel ? " on" : ""}" data-a="rel" title="Asse dell'intensità: in cps (acceso = in % del picco più alto)">%</button></span>` : "";
     const gl = lens ? `<span class="tbg"><button class="bt${o.tl ? " on" : ""}" data-a="tlink" title="Collega l'asse del tempo: ingrandendo un grafico collegato, gli altri collegati mostrano lo stesso intervallo di tempo">${IC_LINK}</button></span>` : "";
-    const gi = lens ? `<span class="tbg"><button class="bt" data-a="iauto" title="Integrazione automatica: clicca su un picco e il programma trova i bordi e ne mostra l'area (poi puoi trascinare le barre)">${IC_AUTO}</button><button class="bt" data-a="iman" title="Integrazione manuale: trascina sul grafico l'intervallo da integrare">${IC_MAN}</button><select class="bt" data-a="intf" hidden title="Quale traccia integrare: quella su cui clicchi, tutte le visibili oppure un file preciso"></select><button class="bt" data-a="iclr" hidden title="Cancella tutte le integrazioni di questo grafico">Pulisci integrazioni</button><button class="bt" data-a="itab" hidden title="Tabella delle aree integrate e cinetica">${IC_TAB}</button></span>` : "";
+    const gi = lens ? `<span class="tbg"><button class="bt" data-a="iauto" title="Integrazione automatica: clicca su un picco e il programma trova i bordi e ne mostra l'area (poi puoi trascinare le barre)">${IC_AUTO}</button><button class="bt" data-a="iman" title="Integrazione manuale: trascina sul grafico l'intervallo da integrare">${IC_MAN}</button><button class="bt" data-a="idel" title="Cancella integrazione: clicca su un picco integrato per eliminarne l'integrazione">${IC_DEL_INT}</button><select class="bt" data-a="intf" hidden title="Quale traccia integrare: quella su cui clicchi, tutte le visibili oppure un file preciso"></select><button class="bt" data-a="iclr" hidden title="Cancella tutte le integrazioni di questo grafico">Pulisci integrazioni</button><button class="bt" data-a="itab" hidden title="Tabella delle aree integrate e cinetica">${IC_TAB}</button></span>` : "";
     const gx = type === "chrom" ? `<span class="tbg"><button class="bt" data-a="xic" ${p.tab === "ms2" ? "disabled " : ""}title="${p.tab === "ms2" ? "Non disponibile per MS2" : "Estrai uno ione (XIC): scegli la finestra di m/z. Si integra solo dagli XIC"}">XIC</button></span>` : "";
+    const gd2 = (type === "chrom" || type === "xic") ? `<span class="tbg"><button class="bt${p.d2 ? " on" : ""}" data-a="d2" title="Derivata seconda invertita (-d²y/dt²): mette in evidenza i picchi nascosti e le spalle orientandoli verso l'alto">${IC_D2}</button></span>` : "";
     const gm = '<span class="tbg mv"><button class="bt" data-a="up" title="Sposta questo grafico in su">&#9650;</button><button class="bt" data-a="down" title="Sposta questo grafico in giù">&#9660;</button></span>';
-    const go = `<span class="tbg"><button class="bt" data-a="dl" title="Scarica l'immagine o i dati del grafico">${IC_DL}Scarica &#9662;</button></span>`;
-    return `<span class="tbs">${gv + gl + gs + gi + gx + gm + go}<button class="bt fsb" data-a="max" title="Schermo intero: ingrandisce questo pannello (Esc per uscire)">${IC_FS}</button><button class="x" title="Chiudi il pannello">&times;</button></span>`;
+    const go = `<span class="tbg"><button class="bt" data-a="dl" title="Scarica l'immagine o i dati del grafico">${IC_DL}Scarica</button></span>`;
+    return `<span class="tbs">${gv + gl + gs + gi + gx + gd2 + gm + go}<button class="bt fsb" data-a="max" title="Schermo intero: ingrandisce questo pannello (Esc per uscire)">${IC_FS}</button><button class="x" title="Chiudi il pannello">&times;</button></span>`;
   })()}</div><canvas></canvas>${type === "spec" ? `<button class="bt lkb" data-a="lock">${IC_UNLOCK}</button>` : ""}<div class="vl" hidden></div><div class="cl" hidden></div><div class="tip" hidden></div><div class="leg"></div>${type === "spec" ? '<div class="leg2"></div>' : ""}`;
   p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2");
   Q("#dpanels").appendChild(el);
@@ -734,7 +799,7 @@ function addPanel(type, o, after) {
     menu(e, [
       { label: "Immagine (PNG)", icon: IC_DL, fn: async () => {
         let cvs; p._exp = true; EXPORTING = true;
-        try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; draw(p); }
+        try { await draw(p); cvs = whiteCanvas(p.cv, plotCaption(p)); } finally { p._exp = false; EXPORTING = false; draw(p); }
         cvs.toBlob(async b => {
           let out = b; try { out = await pngWithMeta(b, plotMeta(p)); } catch (e) { }
           const a = document.createElement("a"); a.href = URL.createObjectURL(out); a.download = plotName(p) + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
@@ -745,16 +810,17 @@ function addPanel(type, o, after) {
       }}])
     ]);
   };
-  const bZ = el.querySelector('[data-a="izoom"]'), bA = el.querySelector('[data-a="iauto"]'), bM = el.querySelector('[data-a="iman"]'), bT = el.querySelector('[data-a="itab"]'), bX = el.querySelector('[data-a="xic"]');
-  if (bA) {                                             // tools (one at a time): zoom (drag an interval), automatic integration (click a peak), manual integration (drag an interval)
-    const btns = { zoom: bZ, auto: bA, man: bM };
-    const setMode = m => { p.imode = p.imode === m ? null : m; Object.entries(btns).forEach(([k, b]) => b.classList.toggle("on", p.imode === k)); p.cv.style.cursor = p.imode === "zoom" ? "zoom-in" : p.imode ? "cell" : "crosshair"; refreshIntf(p); };
-    if (p.imode && btns[p.imode]) { btns[p.imode].classList.add("on"); p.cv.style.cursor = "cell"; }      // MRM panels open with the manual integration tool ready
-    bZ.onclick = () => setMode("zoom"); bA.onclick = () => setMode("auto"); bM.onclick = () => setMode("man"); bT.onclick = showInts;
+  const bZ = el.querySelector('[data-a="izoom"]'), bA = el.querySelector('[data-a="iauto"]'), bM = el.querySelector('[data-a="iman"]'), bD = el.querySelector('[data-a="idel"]'), bT = el.querySelector('[data-a="itab"]'), bX = el.querySelector('[data-a="xic"]'), bD2 = el.querySelector('[data-a="d2"]');
+  if (bA) {                                             // tools (one at a time): zoom (drag an interval), automatic integration (click a peak), manual integration (drag an interval), delete integration (click a peak)
+    const btns = { zoom: bZ, auto: bA, man: bM, idel: bD };
+    const setMode = m => { p.imode = p.imode === m ? null : m; Object.entries(btns).forEach(([k, b]) => { if (b) b.classList.toggle("on", p.imode === k); }); p.cv.style.cursor = p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair"; refreshIntf(p); };
+    if (p.imode && btns[p.imode]) { btns[p.imode].classList.add("on"); p.cv.style.cursor = p.imode === "idel" ? "pointer" : "cell"; }      // MRM panels open with the manual integration tool ready
+    bZ.onclick = () => setMode("zoom"); bA.onclick = () => setMode("auto"); bM.onclick = () => setMode("man"); if (bD) bD.onclick = () => setMode("idel"); bT.onclick = showInts;
     el.querySelector('[data-a="iclr"]').onclick = () => { if (p.ints.length) delInts(p, [...p.ints]); };
     el.querySelector('[data-a="intf"]').onchange = e => { p.intf = e.target.value; };
   }
   if (bX) bX.onclick = () => openXic(null, { after: p });      // the new XIC sits right under this chromatogram
+  if (bD2) bD2.onclick = () => { p.d2 = !p.d2; bD2.classList.toggle("on", p.d2); draw(p); };
   el.querySelector(".x").onclick = () => { if (window.DDA) DDA.onClose(p); fsInert(null, p); p._ro.disconnect(); if (p._up) removeEventListener("mouseup", p._up); el.remove(); E.panels = E.panels.filter(x => x !== p); relayout(); fitHost(); uiSave(); if (E.tab === "ms2") renderFileList(); };
   el.querySelector(".ttl").ondblclick = async () => { const v = await ask("Nome del pannello", p.title); if (v) { p.title = v; ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
@@ -776,7 +842,7 @@ function fsInert(on, closing) {
 }
 // copy of a plot on a white background (for PNG files and the report: a transparent PNG looks black in some viewers)
 function whiteCanvas(cv, caption = "") {
-  const sc = cv.width / Math.max(cv.clientWidth, 1), top = caption ? Math.round(24 * sc) : 0;
+  const sc = cv.width / Math.max(cv.clientWidth, 1), top = caption ? Math.round(30 * sc) : 0;
   const c = document.createElement("canvas"); c.width = cv.width; c.height = cv.height + top;
   const g = c.getContext("2d"); g.fillStyle = "#ffffff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(cv, 0, top);
   if (caption) { g.fillStyle = "#222"; g.font = `${Math.round(12 * sc)}px system-ui`; g.textBaseline = "middle"; g.fillText(caption, Math.round(14 * sc), top / 2); }
@@ -784,8 +850,34 @@ function whiteCanvas(cv, caption = "") {
 }
 // line written on the saved image of a mass spectrum: file, MS level, retention time and number of scans
 function specCaption(p) {
-  const parts = [...p.leg.children, ...(p.leg2 ? p.leg2.children : [])].map(x => x.textContent.trim()).filter(Boolean), f = E.files[p.k];
-  return (p.all || !f ? "" : f.label + " · ") + parts.slice(0, 1).join("") + (parts.length > 1 ? " · " + parts.slice(1).join(", ") : "");
+  const parts = [...p.leg.children, ...(p.leg2 ? p.leg2.children : [])].map(x => x.textContent.trim()).filter(Boolean);
+  const fn = p._a && p._a.data ? [...new Set(p._a.data.map(x => x.f.label))].join(", ") : (E.files[p.k]?.label || "");
+  return (p.all || !fn ? "" : fn + " · ") + parts.slice(0, 1).join("") + (parts.length > 1 ? " · " + parts.slice(1).join(", ") : "");
+}
+function plotCaption(p) {
+  if (p.type === "spec") return specCaption(p);
+  const a = p._a || {};
+  const fs = plotFiles(p);
+  const fn = fs.map(f => f.label).join(", ");
+  const pol = [...new Set(fs.map(f => polLabel(f)).filter(x => x && x !== "ESI?"))].join(" ");
+  const parts = [];
+  if (fn) parts.push(fn + (pol ? ` (${pol})` : ""));
+  if (p.type === "chrom") {
+    parts.push((p.kind || "TIC").toUpperCase());
+  } else if (p.type === "xic") {
+    const trLab = (p.traces || []).map(t => t.label || ("m/z " + t.mz.toFixed(mzd(p)))).join(", ");
+    parts.push("XIC" + (trLab ? ` · ${trLab}` : ""));
+  } else if (p.type === "mrm") {
+    const trs = (p.traces && p.traces.length) ? p.traces.map(t => t.label || t.tr).join(", ") : (Array.isArray(p.tr) ? p.tr.join(", ") : (p.tr || ""));
+    parts.push("MRM" + (trs ? ` · ${trs}` : ""));
+  } else if (p.type === "map") {
+    parts.push("Mappa RT-m/z");
+    if (a.y0 != null && a.y1 != null) parts.push(`m/z ${a.y0.toFixed(0)}–${a.y1.toFixed(0)}`);
+  }
+  if (a.x0 != null && a.x1 != null) {
+    parts.push(`RT ${a.x0.toFixed(2)}–${a.x1.toFixed(2)} min`);
+  }
+  return parts.filter(Boolean).join(" · ");
 }
 
 // bring a panel to the front (z-index is renumbered before it can reach the menus, which sit above 10000)
@@ -987,7 +1079,11 @@ function ctl(p) {
     const xr = xt ? `${xsel}<label class="muted" title="Intervallo di m/z estratto (XIC). Scrivi i due estremi e premi Invio"><i>m/z</i> da <input data-o="xlo" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[0] : fmz(xt.mz - xw1)}"> a <input data-o="xhi" class="mzf" inputmode="decimal" autocomplete="off" value="${xed ? xed[1] : fmz(xt.mz + xw1)}"></label>` : "";
     c.innerHTML = `${xr}${fsel}${chk("smooth", "smoothing")}${view}${corr}${parBox(logChk + rtbar)}${p.traces.length > 1 ? '<button data-o="split" title="Un pannello per ogni ione">Separa</button>' : ""}`;
   }
-  if (p.type === "mrm") c.innerHTML = `<select data-o="tr" title="Transizione"><option value="">tutte le transizioni</option>${p._trs.map(t => `<option value="${EH(t.key)}" ${p.tr === t.key ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${fsel}${chk("smooth", "smoothing", false, "", "Spento: le aree si calcolano sul segnale grezzo. Lo smoothing cambia solo il disegno, mai le aree integrate (nell'MRM si integra, per questo parte spento)")}${view}${corr}${parBox(logChk + rtbar)}`;
+  if (p.type === "mrm") {
+    const isMulti = Array.isArray(p.tr) && p.tr.length > 1;
+    const qqOpt = isMulti ? `<option value="__quant_qual" selected>quantificatore + qualificatore</option>` : "";
+    c.innerHTML = `<select data-o="tr" title="Transizione"><option value="" ${(!p.tr && !isMulti) ? "selected" : ""}>tutte le transizioni</option>${qqOpt}${p._trs.map(t => `<option value="${EH(t.key)}" ${(!isMulti && p.tr === t.key) ? "selected" : ""}>${EH(t.key)} ${EH(t.name)}</option>`).join("")}</select>${fsel}${chk("smooth", "smoothing", false, "", "Spento: le aree si calcolano sul segnale grezzo. Lo smoothing cambia solo il disegno, mai le aree integrate (nell'MRM si integra, per questo parte spento)")}${view}${corr}${parBox(logChk + rtbar)}`;
+  }
   if (p.type === "map") {
     const rf0 = p.ref !== "" && p.ref != null, sf = TF, opt = (v, cur, lab) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${EH(lab)}</option>`;
     c.innerHTML = `<span class="seg" role="group" title="Vista della mappa: 2D o 3D (superficie)"><button data-o="view" data-v="2d" class="${p.view !== "3d" ? "on" : ""}">2D</button><button data-o="view" data-v="3d" class="${p.view === "3d" ? "on" : ""}">3D</button></span>` +
@@ -1038,7 +1134,11 @@ function ctl(p) {
       m.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { m.hidden = true; setCorr(p, b.dataset.c); });
     }
         else x.onchange = () => {
-      p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
+      if (k === "tr" && x.value === "__quant_qual") {
+        p.tr = [window.CAL?.quant, window.CAL?.qual].filter(Boolean);
+      } else {
+        p[k] = (k === "mz0" || k === "mz1") ? numMz(x.value) : x.type === "checkbox" ? x.checked : x.type === "number" ? +x.value : (k === "k" || k === "level") ? +x.value : x.value === "" ? (k === "fk" || k === "tr" ? "" : null) : x.value;
+      }
       if (k === "bk" || k === "bg") p[k] = x.value === "" ? "" : x.value === "w" ? "w" : +x.value;
       if (p.type === "spec" && ["k", "level", "prec", "all"].includes(k)) p.meas = null;      // the measures belong to the spectrum they were made on
       if (["level", "all", "snip", "bg", "kind", "mz0", "mz1"].includes(k)) ctl(p);
@@ -1263,10 +1363,13 @@ async function rawSeries(p) {
   const list = [...seen.values()];
   if (JSON.stringify(list) !== JSON.stringify(p._trs)) { p._trs = list; ctl(p); }
   data.forEach(({ f, tr }, fi) => tr.forEach(t => {
-    const key = `${t.q1}>${t.q3}`; if (p.tr && p.tr !== key) return;
-    const ti = list.findIndex(l => l.key === key), single = !!p.tr;
-    out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, time: f.time, color: single && mf.length > 1 ? f.color : PAL[ti % PAL.length],
-      dash: f.type === "blank" ? [4, 3] : !single && fi > 0 ? DASHES[fi % 4] : single && mf.length > 1 ? fdash(f) : [], name: mf.length > 1 ? `${key} · ${f.label}` : `${key} ${t.name || ""}`.trim(), tid_label: `${key} ${t.name || ""}`.trim() });
+    const key = `${t.q1}>${t.q3}`;
+    const matchTr = !p.tr || (Array.isArray(p.tr) ? p.tr.includes(key) : p.tr === key);
+    if (!matchTr) return;
+    const ti = list.findIndex(l => l.key === key), single = !!p.tr && !Array.isArray(p.tr);
+    const multiTr = Array.isArray(p.tr) && p.tr.length > 1;
+    out.push({ x: t.rt, y: t.y, k: f.k, key: `m|${f.k}|${t.id}`, ion: key, time: f.time, color: (single && mf.length > 1) ? f.color : PAL[ti % PAL.length],
+      dash: f.type === "blank" ? [4, 3] : (!single && !multiTr && fi > 0) ? DASHES[fi % 4] : (multiTr && fi > 0) ? DASHES[fi % 4] : (single && mf.length > 1) ? fdash(f) : [], name: mf.length > 1 ? `${key} · ${f.label}` : `${key} ${t.name || ""}`.trim(), tid_label: `${key} ${t.name || ""}`.trim() });
   }));
   return out;
 }
@@ -1400,7 +1503,11 @@ async function drawLines(p) {
   let lo = Infinity, hi = -Infinity;
   for (const s of sr) { lo = Math.min(lo, s.x[0]); hi = Math.max(hi, s.x[s.x.length - 1]); }
   const x0 = p.zoom ? p.zoom[0] : lo, x1 = p.zoom ? p.zoom[1] : hi;
-  sr.forEach(s => { s.ys = smooth(s.y, p.smooth ? 3 : 0); let m = 1e-9; for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.ys[i] > m) m = s.ys[i]; s.mx = m; });
+  sr.forEach(s => {
+    s.ys = smooth(s.y, p.smooth ? 3 : 0);
+    if (p.d2) s.ys = sgDeriv2Inv(s.ys);
+    let m = 1e-9; for (let i = 0; i < s.x.length; i++) if (s.x[i] >= x0 && s.x[i] <= x1 && s.ys[i] > m) m = s.ys[i]; s.mx = m;
+  });
   const stk = p.mode === "stk" || (!!p.ranges && p.ranges.length > 1), cas = p.mode === "cas" && sr.length > 1 && !p.log, logy = !!p.log && !stk && !cas && p.kind !== "pda", G = Math.max(...sr.map(s => s.mx));
   // rows of the stacked view: one per trace, or (stacked graphs of the bench) one per graph with the files overlaid in it
   const rowIx = new Map(); sr.forEach((s, i) => { const g = s.grp != null ? s.grp : "i" + i; if (!rowIx.has(g)) rowIx.set(g, rowIx.size); s.row = rowIx.get(g); });
@@ -1418,7 +1525,7 @@ async function drawLines(p) {
   const yfull = [ymin, ymaxAuto];
   if (yzf) { ymin = p.zoomY[0]; ymax = p.zoomY[1]; }
   const lo10 = Math.pow(10, Math.max(0, Math.floor(Math.log10(ymax)) - 4));
-  const yt = nrm ? "Intensità relativa (0-100)" : stk ? (p.norm100 ? "Intensità relativa (righe separate, 0-100)" : "Intensità (righe separate)") : logy ? YT_I + ", scala log" : p.kind === "pda" && p.type === "chrom" ? "Segnale PDA (unità del file)" : YT_I;
+  const yt = p.d2 ? "-d²y/dt² (derivata seconda)" : nrm ? "Intensità relativa (0-100)" : stk ? (p.norm100 ? "Intensità relativa (righe separate, 0-100)" : "Intensità (righe separate)") : logy ? YT_I + ", scala log" : p.kind === "pda" && p.type === "chrom" ? "Segnale PDA (unità del file)" : YT_I;
   // waterfall: the traces are ordered by time (the first one in front), each moved up and a little to the right; the room is taken from the axes
   const pw0 = W - M.l - M.r, ph0 = H - M.t - M.b;
   const cs = cas ? sr.slice().sort((a, b) => ((E.files[a.k] || {}).time ?? 1e9) - ((E.files[b.k] || {}).time ?? 1e9) || a.k - b.k) : null;
@@ -1728,6 +1835,23 @@ function sgFilter(y, m, deriv) {                         // half window m (windo
   for (let i = 0; i < n; i++) { let v = 0; for (let j = -m; j <= m; j++) v += w[j + m] * y[Math.min(n - 1, Math.max(0, i + j))]; out[i] = v; }
   return out;
 }
+function sgDeriv2Inv(y, m = 3) {
+  const n = y.length;
+  if (n < 2 * m + 1) return y.slice();
+  const S0 = 2 * m + 1;
+  const S2 = m * (m + 1) * (2 * m + 1) / 3;
+  const S4 = m * (m + 1) * (2 * m + 1) * (3 * m * m + 3 * m - 1) / 15;
+  const det = S0 * S4 - S2 * S2;
+  const w = [];
+  for (let j = -m; j <= m; j++) w.push(-2 * (S0 * j * j - S2) / det);
+  const out = new Array(n);
+  for (let i = 0; i < n; i++) {
+    let v = 0;
+    for (let j = -m; j <= m; j++) v += w[j + m] * y[Math.min(n - 1, Math.max(0, i + j))];
+    out[i] = v;
+  }
+  return out;
+}
 // Parameters of the automatic integration (dialog «Rilevamento dei picchi»; the defaults are the behaviour that always was). Saved in this browser.
 const PK_DEF = { win: 1.2, areaNoise: 3, edgeFrac: 3, snMin: 0, noise: "mad", minHalf: 2, multi: 50, tail: 1.5, constrain: 0, nr0: 0, nr1: 0 };
 const PK = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem("qqq.picchi") || "{}"); } catch (e) { /* no storage */ } return { ...PK_DEF, ...o }; })();
@@ -1750,7 +1874,10 @@ function autoEdges(s, x, ref) {
   const nman = PK.noise === "manual" && PK.nr1 > PK.nr0 ? noiseSD(xs, s.y, PK.nr0, PK.nr1) : null;                    // noise from the region the student chose (no peaks there)
   const noise = nman != null && nman > 0 ? nman : Math.max(PK.noise === "rms" ? Math.sqrt(res.reduce((a, v) => a + v * v, 0) / (res.length || 1)) : 1.4826 * res[res.length >> 1], 1e-12);      // MAD of the residual = noise sigma (or its RMS)
   const low = []; for (let j = w0; j <= w1; j++) low.push(sm[j]); low.sort((p, q) => p - q);
-  const base = low[Math.floor(low.length * 0.1)], H = Math.max(sm[k] - base, 0), lim = base + Math.max(PK.edgeFrac / 100 * H, PK.areaNoise * noise);
+  const base = low[Math.floor(low.length * 0.1)], H = Math.max(sm[k] - base, 0);
+  const isMrm = (s.key && s.key.startsWith("m|")) || s.tr != null;
+  const frac = (isMrm || (noise > 0 && H / noise > 800)) ? Math.min(PK.edgeFrac / 100, Math.max(0.005, 5 * noise / Math.max(H, 1))) : PK.edgeFrac / 100;
+  const lim = base + Math.max(frac * H, PK.areaNoise * noise);
   if (PK.snMin > 0 && H < PK.snMin * noise) return null;                                  // signal/noise below the threshold: not a peak
   const need = Math.max(2, Math.round(m * PK.multi / 100)), dth = noise / Math.max(m, 1) * 0.3, maxw = Math.round(PK.tail / dt);
   const walk = dir => {
@@ -1880,13 +2007,12 @@ function peakParams() {
 function intMenuItems(p, x, near, py) {
   const items = [], a = p._a;
   const nearInt = p.ints.find(it => x >= iLo(it) && x <= iHi(it));
-  if (nearInt) items.push({ label: "Elimina questa integrazione", fn: () => delInts(p, [nearInt]) });
-  if (p.ints.length) items.push({ label: "Elimina tutte le integrazioni di questo pannello", fn: async () => { if (await yesno(`Eliminare le ${p.ints.length} integrazioni di questo pannello?`)) delInts(p, [...p.ints]); } });
+  if (nearInt) items.push({ label: "Elimina questa integrazione", icon: IC_DEL_INT, fn: () => delInts(p, [nearInt]) });
+  if (p.ints.length) items.push({ label: "Elimina tutte le integrazioni di questo pannello", icon: IC_DEL_INT, fn: () => delInts(p, [...p.ints]) });
   if (nearInt || p.ints.length) items.push("-");
   items.push({ label: "Parametri di rilevamento dei picchi…", fn: peakParams });
-  items.push({ label: "Integra il picco qui", fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach(s => autoInt(p, s, x)); } });
-  if (p.sel) items.push({ label: "Integra l'intervallo selezionato", fn: () => { if (guardInt(p)) a.sr.forEach(s => addInt(p, s, p.sel[0], p.sel[1])); } });
-  if (p.sel && p.sel[1] > p.sel[0]) items.push({ label: "Ingrandisci l'intervallo selezionato", fn: () => { const [s0, s1] = p.sel; const w = (s1 - s0) * 0.1; zoomTo(p, s0 - w, s1 + w); } });
+  items.push({ label: "Integra il picco", icon: IC_AUTO, fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach(s => autoInt(p, s, x)); } });
+  if (p.sel && p.sel[1] > p.sel[0]) items.push({ label: "Ingrandisci l'intervallo selezionato", icon: IC_ZOOM, fn: () => { const [s0, s1] = p.sel; const w = (s1 - s0) * 0.1; zoomTo(p, s0 - w, s1 + w); } });
   return items;
 }
 function allInts() {
@@ -1933,7 +2059,8 @@ async function drawSpec(p) {
   const tok = p._tok = (p._tok || 0) + 1;                // "last one wins": a slower, older request never paints over a newer one
   const say = t => { const { g, W, H: HF } = setup(p.cv); g.clearRect(0, 0, W, HF); g.fillStyle = css("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; };
   const isDda = p.dda != null && !!window.DDA;                // MS2 panel of a DDA trio: shows one MS2 scan of the file (dda.js), whatever file is selected in the toolbar
-  const base = isDda ? [E.files[p.k]] : p.all ? shownFor(p) : [E.files[E.browse && (!p.tab || p.tab === E.tab) ? E.cur : p.k]];
+  const targetK = p.link ? p.k : (E.browse && (!p.tab || p.tab === E.tab) ? E.cur : p.k);
+  const base = isDda ? [E.files[p.k]] : p.all ? shownFor(p) : [E.files[targetK]];
   const files = scanFiles(base.filter(Boolean));
   if (!files.length) return say("Questo file è MRM: contiene solo cromatogrammi di transizioni, non spettri.");
   if (isDda) { const m = DDA.waiting(p); if (m) return say(m); }
@@ -2134,7 +2261,7 @@ function attach(p) {
       if (Math.abs(px - drag.x0) > 4) { zr.hidden = false; const yy = canYZ(a) ? [Math.min(py, drag.y0), Math.abs(py - drag.y0)] : [M.t, a.H - M.t - M.b]; zr.style.left = cv.offsetLeft + Math.min(px, drag.x0) + "px"; zr.style.width = Math.abs(px - drag.x0) + "px"; zr.style.top = cv.offsetTop + yy[0] + "px"; zr.style.height = yy[1] + "px"; }
     } else { p.sel = [Math.min(xd(drag.x0), x), Math.max(xd(drag.x0), x)]; draw(p); } }
     else axisHint(yAxisZone(px, py) ? "v" : xAxisZone(px, py) ? "h" : null, e);
-    if (!drag) cv.style.cursor = e.shiftKey ? "grab" : yAxisZone(px, py) ? "ns-resize" : xAxisZone(px, py) ? "ew-resize" : edgeAt(px) ? "col-resize" : onCur(px) ? "ew-resize" : p.imode === "zoom" ? "zoom-in" : p.imode ? "cell" : "crosshair";
+    if (!drag) cv.style.cursor = e.shiftKey ? "grab" : yAxisZone(px, py) ? "ns-resize" : xAxisZone(px, py) ? "ew-resize" : edgeAt(px) ? "col-resize" : onCur(px) ? "ew-resize" : p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair";
     const lh = !drag && (a.lbls || []).find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
     if (lh) { cv.style.cursor = "pointer"; lb.hidden = false; lb.style.left = cv.offsetLeft + lh.x + "px"; lb.style.top = cv.offsetTop + lh.y + "px"; lb.style.width = lh.w + "px"; lb.style.height = lh.h + "px"; } else lb.hidden = true;
     p.rd.textContent = p.type === "spec" ? "m/z " + x.toFixed(a.hrp ? a.dec : 1) : "RT " + x.toFixed(2) + " min" + (a.map && !a.is3d ? " · m/z " + a.mzAt(py).toFixed(mzd(a, a.level)) : "");   // pass-over text: it goes away when the mouse leaves (see onmouseleave)
@@ -2184,6 +2311,11 @@ function attach(p) {
       p._pickIbk = false; p.sel = null; p.bk = ""; p.snip = false; ibkSet(p, "mean", [Math.min(x0, x1), Math.max(x0, x1)]); ctl(p); return;
     }
     if (p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) <= 4 && p.imode !== "auto") {      // a click on a filled peak selects it; elsewhere it deselects
+      if (p.imode === "idel") {
+        const hit = intAt(p, d.x0, d.y0) || p.ints.find(it => x0 >= iLo(it) && x0 <= iHi(it));
+        if (hit) delInts(p, [hit]);
+        return;
+      }
       const hit = intAt(p, d.x0, d.y0);
       if (hit) { p.isel = hit.id; draw(p); return; }
       if (p.isel != null) { p.isel = null; draw(p); }
@@ -2221,7 +2353,27 @@ function attach(p) {
   }, { passive: false });
   cv.ondblclick = async e => {
     const hit = (p._a?.lbls || []).find(b => b.ann && rect(e) >= b.x && rect(e) <= b.x + b.w && recty(e) >= b.y && recty(e) <= b.y + b.h);
-    if (hit) { const v = await ask("Annotazione", hit.ann.text); if (v) { hit.ann.text = v; draw(p); } return; }      // double click on a label: edit it
+    if (hit) {
+      const v = await ask("Annotazione", hit.ann.text);
+      if (v != null) {
+        if (v === "") p.anns = p.anns.filter(a => a !== hit.ann);
+        else hit.ann.text = v;
+        draw(p);
+      }
+      return;
+    }
+    if (p.type === "map" && !p._a?.is3d) {
+      if (p.el.classList.contains("max")) { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); return; }
+      const x = xd(rect(e)), k = p.k != null ? p.k : (p._a?.f?.k ?? 0), f = E.files[k];
+      if (!p._a || !f || f.kind === "mrm") return;
+      let dt = scanStep(), r0 = x - dt / 2, r1 = x + dt / 2;
+      let at = x;
+      const n = await nearScan(k, x);
+      if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; at = n.rt; }
+      p.sel = null; p.cur = at;
+      newSpec(p, r0, r1, p.k != null ? p.k : k);
+      draw(p); return;
+    }
     if (p.type === "chrom" || p.type === "xic" || p.type === "mrm") {      // double click = mass spectrum at that retention time (also on the PDA trace)
       if (p.el.classList.contains("max")) { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); return; }      // full screen: double click = whole view (a new spectrum would appear in a panel nobody sees)
       const x = xd(rect(e)), k = nearestFile(p, x), f = E.files[k];
@@ -2365,7 +2517,8 @@ function ctxFor(p, e, x, px, py) {
       draw(p);
     } });
     if (p.iso) items.push({ label: "Togli il profilo isotopico", fn: () => { p.iso = null; draw(p); } });
-    if (window.LIB && p.level === 2) items.push("-", { label: "Cerca nelle librerie…", fn: () => LIB.searchFrom(p) });
+    const isHr = p.k != null && E.files[p.k] && window.HR && HR.isHr(E.files[p.k]);
+    if (window.LIB && p.level === 2 && isHr) items.push("-", { label: "Cerca nelle librerie…", fn: () => LIB.searchFrom(p) });
     const srcP = p.src && E.panels.find(q => q.id === p.src && q.el);
     if (window.DDA) { const q = DDA.menuShow(p); if (q) items.push("-", q); }
     if (p.link) items.push("-", { label: "Congela lo spettro", fn: () => { freezeSpec(p); uiSave(); } });
@@ -2389,7 +2542,7 @@ function ctxFor(p, e, x, px, py) {
     { const ib = ibkMenuItems(p); if (ib.length) items.push("-", ...ib); }
     items.push("-", { label: "Annota questo punto…", fn: async () => { const v = await ask("Annotazione a RT " + x.toFixed(2), ""); if (v) { p.anns.push({ x, text: v }); draw(p); } } });
   }
-  if (near) items.push("-", { label: `Modifica «${near.text}»`, fn: async () => { const v = await ask("Annotazione", near.text); if (v) { near.text = v; draw(p); } } },
+  if (near) items.push("-", { label: `Modifica «${near.text}»`, fn: async () => { const v = await ask("Annotazione", near.text); if (v != null) { if (v === "") p.anns = p.anns.filter(a => a !== near); else near.text = v; draw(p); } } },
     { label: `Elimina «${near.text}»`, fn: () => { p.anns = p.anns.filter(a => a !== near); draw(p); } });
   if (!(p.type === "map" && p._a.is3d) && (p.zoom || p.zoomY)) items.unshift({ label: "Ripristina zoom", fn: () => { p.zoom = null; p.zoomY = null; draw(p); } }, "-");     // with a zoom active it is always the first entry
   menu(e, items);

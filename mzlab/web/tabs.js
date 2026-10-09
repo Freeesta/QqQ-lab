@@ -152,14 +152,12 @@ function defaultLayoutTab(t) {
     if (E._mrmLoading) return; E._mrmLoading = true;
     calLoad().catch(() => {}).then(() => {
       E._mrmLoading = false; if (tabPanels("mrm").length) return;
-      const w2 = hostWidth(), keys = [CAL.quant, CAL.qual, ...CAL.trs.map(x => x.key)].filter((k, i, a) => k && a.indexOf(k) === i).slice(0, 3); let y = 0;
-      (keys.length ? keys : [""]).forEach(key => {
-        const tr = CAL.trs.find(x => x.key === key), role = key === CAL.quant ? "Quantificatore" : key === CAL.qual ? "Qualificatore" : "Transizione";
-        addPanel("mrm", { tab: "mrm", tr: key, title: key ? `${role} · ${key}${tr && tr.name ? " (" + tr.name + ")" : ""}` : "Transizioni MRM", x: 0, y, w: w2, h: keys.length > 1 ? 300 : 420, full: true, imode: "man", intf: "all" });
-        y += 310;
-      });
+      const mfs = tabFiles("mrm");
+      mfs.forEach((f, i) => { f.vis = (i === 0); });
+      if (typeof renderFileList === "function") renderFileList();
+      const w2 = hostWidth(), keys = [CAL.quant, CAL.qual].filter(Boolean);
+      addPanel("mrm", { tab: "mrm", tr: keys.length ? keys : "", title: "Transizioni MRM", x: 0, y: 0, w: w2, h: 420, full: true, imode: "man", intf: "all" });
       relayout(); fitHost(); uiSave();
-      const made = tabPanels("mrm"); Promise.all(made.map(q => q.ready).filter(Boolean)).catch(() => {}).then(() => mrmFocus(made));
     });
   }
 }

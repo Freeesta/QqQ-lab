@@ -84,7 +84,7 @@ function lockButton(p) {
   const b = p.el && p.el.querySelector('[data-a="lock"]'); if (!b) return;
   const on = !!p.lock;
   b.innerHTML = on ? IC_LOCK : IC_UNLOCK; b.classList.toggle("on", on);
-  b.style.left = p.cv.offsetLeft + M.l + 4 + "px"; b.style.top = p.cv.offsetTop + 0 + "px"; b.hidden = !!p._exp;       // small, in the top margin just above the plot, so it never covers the numbers of the intensity axis
+  b.style.left = p.cv.offsetLeft + 8 + "px"; b.style.top = p.cv.offsetTop + 0 + "px"; b.hidden = !!p._exp;       // in the top-left margin above the y-axis label ("Intensità (cps)")
   b.title = on ? "Asse delle intensità bloccato: clic per sbloccare" : "Blocca l'asse delle intensità: così vedi crescere e calare i picchi fra una scansione e l'altra";
 }
 function toggleLock(p) {
