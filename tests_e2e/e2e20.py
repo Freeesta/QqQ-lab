@@ -11,7 +11,7 @@ r = Run(port=8820, wd="/tmp/wd20")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t15", "B_MS2-t15", "B_MS2-t45"]]); pg.wait_for_timeout(1000)
+        stage(pg, [mz(f) for f in ["B_FullMass-t0", "B_FullMass-t15", "B_MS2-t15", "B_MS2-t45"]])
         pg.click("text=Carica dati"); ready(pg)
         def cx(x):   # screen point of RT x on the first chromatogram of the current tab
             return pg.evaluate("""x=>{const p=E.panels.find(q=>q.tab===E.tab&&q.type==='chrom');p.el.scrollIntoView({block:'start'});const r=p.cv.getBoundingClientRect();return {px:r.left+p._a.X(x),py:r.top+r.height*0.4}}""", x)
