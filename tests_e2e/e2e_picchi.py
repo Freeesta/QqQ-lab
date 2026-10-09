@@ -25,6 +25,15 @@ try:
                 v = pg.evaluate(EDGES(extra)); assert v != BASE, extra
             assert pg.evaluate(EDGES("PK.snMin=1e9")) == [None] * 4
         step("every parameter changes the result; the S/N threshold refuses the peak", each)
+        def constr():
+            v = pg.evaluate("(()=>{"+SER+" Object.assign(PK,PK_DEF); PK.constrain=20; const e=autoEdges(S[2],2.25,0.2); return e[1]-e[0]})()"); assert 0.159 < v < 0.241, v
+            assert pg.evaluate("(()=>{"+SER+" Object.assign(PK,PK_DEF); PK.constrain=20; const e=autoEdges(S[2],2.25,0); return +(e[1]-e[0]).toFixed(5)})()") == 0.73       # no reference peak: free
+        step("«Vincola la larghezza»: the base stays within ±20% of the reference peak", constr)
+        def man():
+            b = pg.evaluate(EDGES("PK.noise='manual'; PK.nr0=0; PK.nr1=0"))
+            assert b == BASE, b                                       # manual without a region: the automatic noise
+            v = pg.evaluate(EDGES("PK.noise='manual'; PK.nr0=1.9; PK.nr1=2.6")); assert v != BASE, v
+        step("manual noise region", man)
         def dlg():
             pg.evaluate("Object.assign(PK, PK_DEF); peakParams()"); pg.wait_for_selector("#pk-ok", timeout=5000)
             pg.fill("[data-pk=areaNoise]", "7"); pg.select_option("[data-pk=noise]", "rms"); pg.click("#pk-ok"); pg.wait_for_timeout(300)

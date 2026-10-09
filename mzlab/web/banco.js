@@ -342,9 +342,16 @@ const BANCO = (() => {
     b.querySelector("#hri-off").onclick = () => { if (sp) { sp.iso = null; draw(sp); } };
   }
   function tPks(b, p) {
-    b.innerHTML = `<div class="muted">Integrazione automatica dei cromatogrammi della cella attiva.</div><div class="row"><button type="button" id="hri-on">${p.imode === "auto" ? "Spegni" : "Accendi"} il rilevamento nella cella</button><button type="button" id="hri-par">Parametri…</button></div><div class="muted sm">Acceso: un clic su un picco lo integra; i bordi si trascinano. I parametri (finestra della linea di base, rumore, bordi, S/N minimo) valgono per tutte le celle.</div>`;
+    b.innerHTML = `<div class="muted">Integrazione automatica dei cromatogrammi della cella attiva.</div><div class="row"><button type="button" id="hri-on">${p.imode === "auto" ? "Spegni" : "Accendi"} il rilevamento nella cella</button><button type="button" id="hri-par">Parametri…</button></div><div class="row"><button type="button" id="hri-all" title="Integra, nello stesso tempo del picco della cella attiva, tutti i cromatogrammi delle altre celle">Integra in tutte le celle</button><button type="button" id="hri-tab">Tabella delle aree</button></div><div class="muted sm">Acceso: un clic su un picco lo integra; i bordi si trascinano. I parametri (finestra della linea di base, rumore, bordi, S/N minimo) valgono per tutte le celle.</div>`;
     b.querySelector("#hri-on").onclick = () => { const x = p.el.querySelector('[data-a="iauto"]'); if (x) x.click(); else nearMsg("Serve una cella cromatogramma."); renderInfo(); };
     b.querySelector("#hri-par").onclick = () => peakParams();
+    b.querySelector("#hri-all").onclick = () => {
+      const last = p.ints && p.ints[p.ints.length - 1], x = last ? (iLo(last) + iHi(last)) / 2 : p.sel ? (p.sel[0] + p.sel[1]) / 2 : null;
+      if (x == null) return nearMsg("Integra prima un picco nella cella attiva (o scegli un intervallo): lo stesso tempo vale per le altre celle.");
+      let n = 0; E.panels.filter(q => q.type === "chrom" && q._a && q._a.sr && !q.ints.some(i => iLo(i) < x && x < iHi(i))).forEach(q => { if (!guardInt(q)) return; intTargets(q, x, null).forEach(s => { autoInt(q, s, x); n++; }); });
+      nearMsg(n ? `Integrato il picco a ${num(x, 2)} min in ${n} tracce.` : "Nessuna cella da integrare.");
+    };
+    b.querySelector("#hri-tab").onclick = () => showInts();
   }
   function tCom(b, p) {
     const c = p.type === "spec" ? E.panels.find(q => q.id === p.link) || p : p, sel = c.sel || (c.zoom ? c.zoom : null);

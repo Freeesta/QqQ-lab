@@ -55,10 +55,13 @@ const COMP = (() => {
           const j = await J("api/composition?" + Object.entries(q).filter(([, v]) => v != null && v !== "").map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&"));
           if (!j.results.length) { $("#cmp-out").innerHTML = `<div class="muted">Nessuna formula entro la tolleranza con questi elementi e limiti.</div>`; return; }
           const hasIso = j.results.some(r => r.iso && r.iso.ok != null);
-          $("#cmp-out").innerHTML = `<div class="muted sm">${j.n_candidates} candidat${j.n_candidates === 1 ? "o" : "i"}${j.n_candidates > j.results.length ? ` (primi ${j.results.length})` : ""}. Livello di confidenza: formula compatibile con la massa, non identificata.</div>
+          $("#cmp-out").innerHTML = `<div class="bar"><button id="cmp-xlsx" type="button">${typeof IC_DL !== "undefined" ? IC_DL : ""}Excel</button></div><div class="muted sm">${j.n_candidates} candidat${j.n_candidates === 1 ? "o" : "i"}${j.n_candidates > j.results.length ? ` (primi ${j.results.length})` : ""}. Livello di confidenza: formula compatibile con la massa, non identificata.</div>
             <table class="lct"><tr><th>#</th><th>Formula dello ione</th><th>Neutro</th><th class="num">RDB</th><th class="num">Δ mDa</th><th class="num">Δ ppm</th><th>Isotopi M+1 / M+2</th>${hasIso ? "<th>Isotopi</th>" : ""}<th>Regole</th></tr>
             ${j.results.map((r, i) => `<tr><td>${i + 1}</td><td><b>${fmtFormula(r.formula)}</b></td><td>${r.neutral ? fmtFormula(r.neutral) : ""}</td><td class="num">${r.rdb}</td><td class="num">${r.delta_mda}</td><td class="num">${r.delta_ppm}</td>
               <td class="num">${(r.iso.m1 * 100).toFixed(1)}% / ${(r.iso.m2 * 100).toFixed(1)}%</td>${hasIso ? `<td>${r.iso.ok == null ? "" : r.iso.ok ? "compatibili" : "non compatibili"}</td>` : ""}<td>${r.rules_failed.length ? "non passa: " + r.rules_failed.join(", ") : "tutte"}</td></tr>`).join("")}</table>`;
+          $("#cmp-xlsx").onclick = () => dlx(`formule_${(+q.mz).toFixed(4)}.xlsx`, [{ name: "Formule", head: ["#", "Formula dello ione", "Neutro", "RDB", "Δ mDa", "Δ ppm", "M+1/M (%)", "M+2/M (%)", "Isotopi", "Regole non superate"],
+            rows: j.results.map((r, i) => [i + 1, r.formula, r.neutral || "", r.rdb, r.delta_mda, r.delta_ppm, +(r.iso.m1 * 100).toFixed(2), +(r.iso.m2 * 100).toFixed(2), r.iso.ok == null ? "" : r.iso.ok ? "compatibili" : "non compatibili", r.rules_failed.join(", ")]), widths: [5, 24, 22, 8, 10, 10, 12, 12, 16, 30] },
+            { name: "Parametri", head: ["Parametro", "Valore"], rows: [["m/z", q.mz], ["Ione", q.ion], ["Tolleranza", `${q.tol} ${q.unit}`], ["Elementi", q.elements], ["RDB", q.rdb], ["Regola dell'azoto", q.n], ["Filtri", q.rules || ""], ["Sottoformula del precursore", q.parent || ""], ["Livello", "formule compatibili con la massa: candidati, non identificazioni"]], widths: [28, 60] }]);
         } catch (e) { $("#cmp-out").innerHTML = `<span class="fail">${EH(e.message)}</span>`; }
       };
       $("#cmp-go").onclick = go;
@@ -78,11 +81,14 @@ const COMP = (() => {
         try {
           const j = await J(`api/msntree?k=${k}${fm ? "&formula=" + encodeURIComponent(fm) : ""}`);
           const nd = j.nodes, depth = n => (n.parent == null ? 0 : 1 + depth(nd[n.parent]));
-          Q("#mt-out").innerHTML = `${j.formula_given ? "" : `<div class="muted sm">Senza la formula il primo stadio è solo un candidato${j.root_candidates.length ? `: ${j.root_candidates.slice(0, 6).map(x => `<a href="#" data-rf="${EH(x)}">${fmtFormula(x)}</a>`).join(", ")}` : ""} (clic per fissarla).</div>`}
+          Q("#mt-out").innerHTML = `<div class="bar"><button id="mt-xlsx" type="button">${typeof IC_DL !== "undefined" ? IC_DL : ""}Excel</button></div>${j.formula_given ? "" : `<div class="muted sm">Senza la formula il primo stadio è solo un candidato${j.root_candidates.length ? `: ${j.root_candidates.slice(0, 6).map(x => `<a href="#" data-rf="${EH(x)}">${fmtFormula(x)}</a>`).join(", ")}` : ""} (clic per fissarla).</div>`}
             <div style="display:flex;gap:10px;flex-wrap:wrap"><div style="flex:1 1 380px;max-height:360px;overflow:auto"><table class="lct" id="mt-tbl"><tr><th>Percorso</th><th>MS</th><th class="num">Scansioni</th><th class="num">Precursore</th><th>Formula</th><th class="num">ppm</th><th></th></tr>
             ${nd.map(n => `<tr data-n="${n.id}" style="cursor:pointer"><td style="padding-left:${6 + 14 * depth(n)}px">${EH(n.path[n.path.length - 1].join("@").replace(/@([A-Za-z]+)@/, "@$1"))}</td><td>${n.level}</td><td class="num">${n.scans}</td>
               <td class="num">${n.prec == null ? "" : n.prec.toFixed(4)}</td><td>${n.formula ? fmtFormula(n.formula) : "–"}</td><td class="num">${n.ppm == null ? "" : n.ppm.toFixed(1)}</td><td class="muted sm">${n.empty ? "quasi vuoto" : ""}</td></tr>`).join("")}</table></div>
             <div id="mt-pk" style="flex:1 1 300px;max-height:360px;overflow:auto"><span class="muted sm">Clic su un nodo: i suoi picchi.</span></div></div>`;
+          Q("#mt-xlsx").onclick = () => dlx(`albero_MSn_${f ? String(f.label || "file").replace(/[^\w.-]+/g, "_") : "file"}.xlsx`, [
+            { name: "Percorsi", head: ["Percorso", "MS", "Scansioni", "Picchi", "Precursore", "Formula", "Δ ppm", "Nota"], rows: nd.map(n => [n.label, n.level, n.scans, n.n_peaks, n.prec == null ? "" : +n.prec.toFixed(5), n.formula || "", n.ppm == null ? "" : +n.ppm.toFixed(2), n.empty ? "quasi vuoto" : ""]), widths: [40, 6, 10, 8, 14, 20, 8, 14] },
+            { name: "Picchi", head: ["Percorso", "m/z", "% del più intenso", "Formula", "Δ ppm", "Nota"], rows: nd.flatMap(n => n.peaks.slice().sort((a, b) => b.rel - a.rel).map(p => [n.label, +p.mz.toFixed(5), p.rel, p.formula || "", p.ppm == null ? "" : +p.ppm.toFixed(2), p.contam ? "contaminazione?" : ""])), widths: [40, 12, 12, 20, 8, 16] }]);
           Q("#mt-out").querySelectorAll("[data-rf]").forEach(a => { a.onclick = ev => { ev.preventDefault(); Q("#mt-f").value = a.dataset.rf; go(); }; });
           Q("#mt-tbl").querySelectorAll("tr[data-n]").forEach(tr => {
             tr.onclick = () => {

@@ -32,6 +32,10 @@ try:
             for f in ("C9H17N4O3S", "C9H14N3O3S", "C5H9N2OS"): assert f in t.replace(" ", ""), f
             assert "quasi vuoto" in t
         step("with the formula the nodes are sub-formulas (261, 244, 145)", fixed)
+        def xl():
+            with pg.expect_download() as d: pg.click("#mt-xlsx")
+            assert d.value.suggested_filename.startswith("albero_MSn") and os.path.getsize(d.value.path()) > 1500
+        step("Excel of the MSn tree (paths and peaks)", xl)
         def node():
             pg.click("#mt-tbl tr[data-n='1']"); pg.wait_for_selector("#mt-pk tr[data-mz]", timeout=10000)
             t = pg.inner_text("#mt-pk"); assert "244.07" in t and "C9H14N3O3S" in t.replace(" ", ""), t[:300]

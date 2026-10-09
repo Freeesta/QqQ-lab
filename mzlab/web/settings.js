@@ -6,11 +6,12 @@ const UIP_KEY = "qqq.prefs"; // kept from the old name: renaming it would lose t
 const uipRead = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const uipWrite = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage not available: the setting lasts until the page is closed */ } };
 function uipLoad() {
-  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.pal; if (o.merge === false) UIP.merge = false;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
+  try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.pal; if (o.merge === false) UIP.merge = false; if (o.tog === true) UIP.tog = true;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
   setPal(UIP.pal);
 }
 function uipSave() {
   const o = { theme: UIP.theme, pal: UIP.pal, merge: UIP.merge };
+  if (UIP.tog) o.tog = true;
   if (UIP.hrPpm !== 5) o.hrPpm = UIP.hrPpm; if (UIP.hrDec !== 4) o.hrDec = UIP.hrDec;         // high resolution: only what differs from the defaults
   uipWrite(UIP_KEY, JSON.stringify(o));
 }
@@ -40,6 +41,7 @@ function uipOpen(btn) {
     <div class="row">Tema <select id="uip-th"><option value="auto">Come il sistema</option><option value="light">Chiaro</option><option value="dark">Scuro</option></select></div>
     <div class="row">Colori dei grafici <select id="uip-pal" title="Per tempo: i file Full Scan con un tempo vanno dal viola scuro al verde in ordine di tempo. Accessibili: colori distinguibili anche con le forme comuni di daltonismo, più linee tratteggiate. Alto contrasto aggiunge anche lo stile della linea. Arcobaleno: tinte ben separate.">${Object.entries(PALS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join("")}</select></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>Unisci i centroidi della stessa massa nominale</span></label>
+    ${typeof E !== "undefined" && E.files && E.files.length && !(window.BANCO && BANCO.on()) ? `<label class="row" style="align-items:flex-start;gap:6px" title="Full Scan, MS2 e MRM nella stessa pagina, un blocco per tipo di esperimento. Un grafico mostra sempre un solo tipo."><input type="checkbox" id="uip-tog" ${UIP.tog ? "checked" : ""}> <span>Mostra tutti gli esperimenti insieme</span></label>` : ""}
     ${(typeof E !== "undefined" && E.files && E.files.some(f => (window.HR && HR.isHr(f)) || f.kind === "ms2" || f.ms2)) ? `
     <div class="row">Librerie di spettri <button id="uip-lib" title="Carica le librerie (MSP, MGF) con cui confrontare le MS2: clic destro su uno spettro MS2, «Cerca nelle librerie»">Librerie…</button></div>` : ""}
     ${(typeof E !== "undefined" && E.files && E.files.some(f => window.HR && HR.isHr(f))) ? `
@@ -54,6 +56,7 @@ function uipOpen(btn) {
     UIP.merge = e.target.checked; uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof redrawAll === "function") redrawAll();
   };
+  const uipTog = d.querySelector("#uip-tog"); if (uipTog) uipTog.onchange = e => { if (typeof setTogether === "function") setTogether(e.target.checked); };
   const uipLib = d.querySelector("#uip-lib"); if (uipLib) uipLib.onclick = () => { d.remove(); if (window.LIB) LIB.open(); };
   const hrChanged = () => {
     uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();

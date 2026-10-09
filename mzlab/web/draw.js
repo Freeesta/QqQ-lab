@@ -153,6 +153,12 @@ function hideMacro(fr) {
         m.hidden = true;
       };
       m.appendChild(ctrItem);
+      if ((sel.bonds || []).length) {                                   // «Spezza il legame»: the selected bond(s) are deleted (the atoms stay), the two pieces and their formulas are worked out again
+        const brk = document.createElement("div"), nb = sel.bonds.length;
+        brk.textContent = nb > 1 ? `Spezza i ${nb} legami selezionati` : "Spezza il legame"; brk.title = "Cancella il legame (non gli atomi): i due frammenti hanno ciascuno la propria formula";
+        const bids = [...sel.bonds]; brk.onclick = () => { m.hidden = true; setTimeout(() => breakBonds(bids), 60); };
+        m.appendChild(brk);
+      }
       m.hidden = false;
       m.style.left = Math.min(mx, innerWidth - 240) + "px";
       m.style.top = Math.max(4, Math.min(my, innerHeight - m.offsetHeight - 8)) + "px";
@@ -294,6 +300,22 @@ function neutralPlan(ids, q) {
   const ok = ids.filter(i => { const a = st.atoms.get(i); return a.charge && Math.sign(a.charge) === Math.sign(q) && Math.abs(a.charge) === 1 && VMAX[a.label] && bs.get(i) <= VMAX[a.label] + 0.01; });
   return ok.length >= Math.abs(q) ? new Set(ok.slice(0, Math.abs(q))) : null;
 }
+// «Spezza il legame»: the Delete key of Ketcher on a selection made only of bonds removes the bonds and keeps the atoms (the same as the eraser on a bond)
+function breakBonds(ids) {
+  try {
+    const d = Q("#kframe").contentDocument, bonds = ids || (K.editor.selection() || {}).bonds || []; if (!bonds.length) return false;
+    K.editor.selection({ bonds: [...bonds] });                       // only the bonds: Delete would also remove the selected atoms
+    try { d.defaultView.focus(); } catch (_) { /* focus is only a help */ }
+    const ta = d.querySelector("textarea");                              // Ketcher listens on its hidden text area when it has the focus, otherwise on the document
+    [...new Set([ta, d.activeElement, d.body].filter(Boolean))].forEach(tg => {
+      if (K.editor.selection() == null) return;                           // already done by the first one: Delete would find nothing
+      ["keydown", "keyup"].forEach(t => tg.dispatchEvent(new d.defaultView.KeyboardEvent(t, { key: "Delete", code: "Delete", keyCode: 46, which: 46, bubbles: true })));
+    });
+    setTimeout(() => { try { drawLabels(); showInfo(); } catch (_) { /* labels are redrawn at the next change */ } }, 300);
+    return true;
+  } catch (_) { return false; }
+}
+window.breakBonds = breakBonds;
 // cut bonds of a piece selection: bonds between a selected and an unselected atom
 function cutBonds(set) { let n = 0; K.editor.struct().bonds.forEach(b => { if (set.has(b.begin) !== set.has(b.end)) n++; }); return n; }
 const copyBtn = (text, label) => `<button class="sm" data-cp="${EH(text)}" title="Copia negli appunti">${label || "Copia"}</button>`;
