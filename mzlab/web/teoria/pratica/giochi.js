@@ -213,7 +213,7 @@ const GIOCHI = (() => {
         <p style="font-size:19px"><b>m/z ${fx(mz, 4)}</b> &nbsp; con M+1 = <b>${fx(obs[1], 1)}%</b> e M+2 = <b>${fx(obs[2], 1)}%</b> di M</p>
         <p>Il software propone queste formule dello ione. Quale è quella giusta?</p>
         <table><tr><th></th><th>Formula dello ione</th><th>m/z teorica</th>${lv === 1 ? "<th>errore (ppm)</th>" : ""}</tr>
-        ${cand.map((x, i) => `<tr><td><input type="radio" name="fc" value="${i}"></td><td>${PAL.fhtml(x.f)}<sup>+</sup></td><td class="n">${fx(x.mz, 4)}</td>${lv === 1 ? `<td class="n">${fx(x.ppm, 1)}</td>` : ""}</tr>`).join("")}</table>
+        ${cand.map((x, i) => `<tr><td><input type="radio" name="fc" value="${i}" aria-label="Candidato ${i + 1}: ${PAL.fstr(x.f)}, m/z ${fx(x.mz, 4)}"></td><td>${PAL.fhtml(x.f)}<sup>+</sup></td><td class="n">${fx(x.mz, 4)}</td>${lv === 1 ? `<td class="n">${fx(x.ppm, 1)}</td>` : ""}</tr>`).join("")}</table>
         <div class="row"><button class="pri ck">Controlla</button></div><div class="fb"></div>
         <details class="q"><summary>Come si sceglie</summary><ol><li>Errore: (misurata − teorica)/teorica × 10<sup>6</sup>: entro l'accuratezza dello strumento.</li><li>Uno ione [M+H]<sup>+</sup> è a elettroni pari: RDB semintero (…,5). Un RDB intero indica un radicale catione: in ESI quasi mai.</li><li>Isotopi: M+1 ≈ 1,1% per C (+0,37% per N, +0,8% per S); M+2 ≈ 32% per Cl, 4,4% per S, ≈ (1,1 n<sub>C</sub>)<sup>2</sup>/200 + 0,2% per O.</li><li>Rimasti più candidati? Regola dell'azoto sulla molecola neutra, rapporto H/C sensato, MS2.</li></ol></details>`;
       fr.wk.querySelector(".ck").onclick = () => {
@@ -270,10 +270,10 @@ const GIOCHI = (() => {
       const it = PAL.pick("strumento", CASES.map(c => ({ id: c.id, d0: 0, skills: ["strumento"], c })));
       const c = it.c, ch = {};
       fr.wk.innerHTML = `<h3>Il problema</h3><p style="font-size:17px">${c.t}</p>` +
-        Object.entries(SLOTS).map(([k, [name, o]]) => `<div class="st"><h4>${name}</h4><div class="cards2" data-k="${k}">${Object.entries(o).map(([v, l]) => `<button data-v="${v}">${l}</button>`).join("")}</div></div>`).join("") +
+        Object.entries(SLOTS).map(([k, [name, o]]) => `<div class="st"><h4>${name}</h4><div class="cards2" role="group" aria-label="${name}" data-k="${k}">${Object.entries(o).map(([v, l]) => `<button data-v="${v}">${l}</button>`).join("")}</div></div>`).join("") +
         `<div class="row"><button class="pri ck">Controlla</button></div><div class="fb"></div>`;
       fr.wk.querySelectorAll(".cards2").forEach(g => g.querySelectorAll("button").forEach(b => b.onclick = () => {
-        g.querySelectorAll("button").forEach(y => y.classList.toggle("on", y === b)); ch[g.dataset.k] = b.dataset.v;
+        g.querySelectorAll("button").forEach(y => { y.classList.toggle("on", y === b); y.setAttribute("aria-pressed", String(y === b)); }); ch[g.dataset.k] = b.dataset.v;
       }));
       fr.wk.querySelector(".ck").onclick = () => {
         if (Object.keys(SLOTS).some(k => !ch[k])) { const fb = fr.wk.querySelector(".fb"); fb.className = "fb hi"; fb.textContent = "Scegliete una carta per ogni riga."; return; }

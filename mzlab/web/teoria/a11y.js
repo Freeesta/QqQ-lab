@@ -69,8 +69,9 @@
     else if (t.name === "a11y-motion") S.motion = t.value;
     else if (t.name === "a11y-rate") S.rate = t.value;
     save(); sync();
+    if (t.name === "a11y-bg") dispatchEvent(new Event("resize"));   // the figures draw again with the new colours
   });
-  $("#a11y-reset", panel).onclick = () => { S = {}; stop(); save(); sync(); };
+  $("#a11y-reset", panel).onclick = () => { S = {}; stop(); save(); sync(); dispatchEvent(new Event("resize")); };
   function sync() {   // panel controls follow S (after Reset or the F key)
     panel.querySelectorAll("input[type=checkbox]").forEach(c => { c.checked = !!S[c.dataset.k]; });
     [["font", S.font || ""], ["bg", S.bg || ""], ["motion", S.motion || "auto"], ["rate", S.rate || "1"]].forEach(([n, v]) => panel.querySelectorAll(`input[name=a11y-${n}]`).forEach(r => { r.checked = r.value === v; }));
