@@ -310,6 +310,8 @@ const TP = (() => {
     addEventListener("scroll", hide, { passive: true });
   }
 
-  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); });
-  return { $, controls, buttons, canvas, axes, line, sticks, label, legend, nice, fmt, sci, sup };
+  // «Lettura facilitata»: tema.js has already put the choices on <html>; the panel and the reading tools come from a11y.js
+  function loadA11y() { const s = document.createElement("script"); s.src = "a11y.js"; document.head.appendChild(s); }
+  document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); loadA11y(); });
+  return { reduced: () => document.documentElement.hasAttribute("data-a11y-reduce"), $, controls, buttons, canvas, axes, line, sticks, label, legend, nice, fmt, sci, sup };
 })();

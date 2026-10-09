@@ -1,4 +1,4 @@
-# mzLab (già QqQ lab)
+# mzLab
 
 Programma didattico per esplorare dati LC-MS e cercare i **prodotti di trasformazione (TP)** di un inquinante degradato nel tempo (esperienza al triplo quadrupolo del laboratorio di analisi degli inquinanti, UniTO). Lo studente sceglie cosa estrarre, integra, annota e disegna: il programma mostra i dati, **non dà le risposte**. Comprende la Teoria (spettrometria di massa a bassa e alta risoluzione, GC, LC) e la Pratica per preparare l'orale.
 
@@ -37,7 +37,6 @@ Il codice è sotto licenza **MIT** (`LICENSE`, Federico Cristaudo). Materiale di
 - **NumPy** (incluso in Pyodide), BSD-3-Clause: https://numpy.org
 - **Spettri EI** della Teoria e della Pratica: MassBank Europe, CC BY-NC-SA (fonte sotto ogni spettro).
 - **Masse e abbondanze degli elementi** (`elements.js`): masse da OpenChemLib, pesi atomici da Ketcher, abbondanze IUPAC.
-- **Logo**: deriva da *QuadrupoleContour.svg* di **Geek3** (Wikimedia Commons), **CC BY-SA 4.0**; logo e icone derivate si distribuiscono con la stessa licenza.
 
 ## Limiti noti
 

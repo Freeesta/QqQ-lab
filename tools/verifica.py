@@ -97,6 +97,15 @@ def browser_ok() -> bool:
     return subprocess.run([sys.executable, "-c", code], capture_output=True, timeout=120).returncode == 0
 
 
+def i18n(results) -> None:
+    """Both interface languages: catalogs, keys, static HTML, glossary, no Italian outside the catalogs (tools/controlla_i18n.py)."""
+    t0 = time.time()
+    p = subprocess.run([sys.executable, str(ROOT / "tools" / "controlla_i18n.py")], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    out = (p.stdout or "") + (p.stderr or "")
+    (LOG / "i18n.log").write_text(out, encoding="utf-8")
+    results.append(("lingue (i18n)", "FAIL" if p.returncode else "OK", time.time() - t0, out.strip().splitlines()[:6] if p.returncode else []))
+
+
 def js_syntax(results) -> None:
     web = ROOT / "mzlab" / "web"
     tmp = OUT / "js"; tmp.mkdir(parents=True, exist_ok=True)
@@ -214,8 +223,8 @@ def judge(out: str, rc: int) -> list[str]:
 # --cambiati: which e2e cover which files. A changed file that matches no rule (the core: explore.js, index.html, app.py, api.py,
 # explore.py, tabs.js, ...) means "all of them". Documents only: no e2e. Keep it short and update it with a new e2e of a new area.
 AREE = [
-    ("mzlab/web/teoria/", {"e2e7", "e2e_pratica", "e2e_telefono", "e2e_header", "e2e_nome", "e2e_teoria_scura"}),
-    ("mzlab/web/draw.js", {"e2e24", "e2e6", "e2e_decimali", "e2e_ketcher_grandi", "e2e_strumenti_ketcher", "e2e_tocco"}),
+    ("mzlab/web/teoria/", {"e2e7", "e2e_pratica", "e2e_telefono", "e2e_header", "e2e_nome", "e2e_teoria_scura", "e2e_accessibilita"}),
+    ("mzlab/web/draw.js", {"e2e24", "e2e6", "e2e_decimali", "e2e_ketcher_grandi", "e2e_strumenti_ketcher", "e2e_tocco", "e2e_lingua_disegno"}),
     ("mzlab/web/telefono.js", {"e2e_telefono"}),
     ("mzlab/web/tables.js", {"e2e28", "e2e_perdite", "e2e6"}), ("mzlab/web/elements.js", {"e2e28", "e2e6"}),
     ("mzlab/web/perdite.js", {"e2e_perdite"}), ("mzlab/web/calcola.js", {"e2e_calc"}), ("mzlab/web/cromato.js", {"e2e_cromato"}),
@@ -223,7 +232,8 @@ AREE = [
     ("mzlab/reader/profile.py", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_dda", "e2e_hr_ui"}),
     ("mzlab/web/libreria", {"e2e_libreria"}), ("mzlab/web/touch.js", {"e2e_tocco"}), ("mzlab/web/perf.js", {"e2e_perf"}),
     ("mzlab/web/origine.js", {"e2e_origine"}), ("mzlab/ionfamily.py", {"e2e_origine"}),
-    ("mzlab/web/settings.js", {"e2e22", "e2e25"}), ("mzlab/web/spettro.js", {"e2e_spettro", "e2e_assi"}),
+    ("mzlab/web/settings.js", {"e2e22", "e2e25", "e2e_lingua"}), ("mzlab/web/lang/", {"e2e_lingua"}), ("mzlab/web/i18n.js", {"e2e_lingua"}),
+    ("tools/controlla_i18n.py", set()), ("mzlab/web/spettro.js", {"e2e_spettro", "e2e_assi"}),
     ("mzlab/web/scroll.js", {"e2e_scroll", "e2e8"}), ("mzlab/web/xlsx.js", {"e2e6", "e2e8", "e2e15", "e2e18"}),
     ("mzlab/web/tpmine-loader.js", {"e2e_tpmine1", "e2e_tpmine2"}), ("TP_Mine/", {"e2e_tpmine1", "e2e_tpmine2", "e2e_tpmine_mem"}),
     ("mzlab/web/browser", {"e2e13"}), ("mzlab/web/sw.js", {"e2e13"}), ("mzlab/browser.py", {"e2e13"}), ("tools/build_site.py", {"e2e13"}),
@@ -328,6 +338,7 @@ def main() -> None:
     t0 = time.time()
     if not a.fumo:
         js_syntax(results)
+        i18n(results)
         pytest(results, 1200)
         if not a.rapida:
             prova_hr(results)

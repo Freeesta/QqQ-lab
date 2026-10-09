@@ -24,7 +24,10 @@ document.addEventListener("DOMContentLoaded", () => {
       mrm: { t: "MRM: 250→208 e 266→224", q1: "fisso 250 / 266", q2: "CID", q3: "fisso 208 / 224", x: "tempo di ritenzione (min)", info: "Q1 e Q3 fissi, alternati tra le transizioni: nessuno spettro, ma un cromatogramma per transizione, con il rumore più basso possibile. Serve a quantificare." },
     };
     let mode = "full", t0 = performance.now(), raf = null, dots = [];
-    TP.buttons(sm, Object.entries(MODES).map(([k, m]) => [k, m.t.split(" (")[0].split(":")[0]]), "full", k => { mode = k; t0 = performance.now(); dots = []; });
+    let paused = TP.reduced(), tFrozen = 0;   // reduced motion: starts paused, ▶ starts it
+    const bt0 = TP.buttons(sm, Object.entries(MODES).map(([k, m]) => [k, m.t.split(" (")[0].split(":")[0]]), "full", k => { mode = k; t0 = performance.now(); dots = []; tFrozen = 0; if (paused && !raf) loop(); });
+    const pb = document.createElement("button"); pb.type = "button"; pb.textContent = paused ? "▶ Avvia" : "⏸ Pausa"; bt0.appendChild(pb);
+    pb.onclick = () => { paused = !paused; pb.textContent = paused ? "▶ Avvia" : "⏸ Pausa"; if (paused) tFrozen = (performance.now() - t0) / 1000; else { t0 = performance.now() - tFrozen * 1000; if (!raf) loop(); } };
     const c = TP.canvas(sm, 200), c2 = TP.canvas(sm, 220);
     const out = document.createElement("div"); out.className = "readout"; sm.appendChild(out);
     const SWEEP = 4.5; // s per sweep
@@ -108,10 +111,11 @@ document.addEventListener("DOMContentLoaded", () => {
       ax.ctx.strokeStyle = "#c2410c"; ax.ctx.setLineDash([3, 3]); ax.ctx.beginPath(); ax.ctx.moveTo(ax.X(st.rec), ax.m.t); ax.ctx.lineTo(ax.X(st.rec), ax.H - ax.m.b); ax.ctx.stroke(); ax.ctx.setLineDash([]);
     }
     function loop() {
-      const t = (performance.now() - t0) / 1000, st = setting(t);
+      raf = null;
+      const t = paused ? tFrozen : (performance.now() - t0) / 1000, st = setting(t);
       drawInstr(st, t); drawOut(st);
       out.innerHTML = `<b>${MODES[mode].t}</b>. ${MODES[mode].info} <br><span style="color:var(--muted)">Miscela fittizia: ${MIX.map(x => `<span style="color:${x.c}">●</span> ${x.n} (m/z ${x.mz})`).join(", ")}.</span>`;
-      raf = requestAnimationFrame(loop);
+      if (!paused) raf = requestAnimationFrame(loop);
     }
     if ("IntersectionObserver" in window) new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && !raf) loop(); if (!e.isIntersecting && raf) { cancelAnimationFrame(raf); raf = null; } })).observe(sm);
     else loop();
