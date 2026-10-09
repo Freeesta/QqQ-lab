@@ -25,7 +25,7 @@ window.toast = function(msg) {
 const E = { files: [], panels: [], seq: 1, key: "", cur: 0, browse: false, z: 10, fold: false, tab: "full" };
 const NB = { ui: null, session: null };   // taccuino: stato dell'interfaccia (+ disegno, vedi draw.js)
 // user preferences (settings gear): text size, theme, chart colours, high resolution (hr: automatic | off, tolerance in ppm, decimals; see hr.js). Filled from localStorage by uipLoad() (settings.js).
-const UIP = { theme: "auto", pal: "time", merge: true, hrPpm: 5, hrDec: 4 };      // merge = join the centroids of the same nominal mass (centroid files only)
+const UIP = { theme: "auto", pal: "time", merge: true, hrPpm: 5, hrDec: 4, tog: false };      // merge = join the centroids of the same nominal mass (centroid files only)
 // areas: at least 3 decimals in the label (2.243e+6), whole number with thousands separated by a thin space in the tooltip
 const fmtA = v => !Number.isFinite(v) || v === 0 ? "0" : Math.abs(v) >= 1e4 || Math.abs(v) < 0.01 ? v.toExponential(3) : (+v.toPrecision(4)).toString();
 const fmtFull = v => Number.isFinite(v) ? Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "\u2009") : "";
@@ -117,8 +117,11 @@ const kindOf = f => KIND[f.kind] || f.kind;
 const TABS = [["full", "Full Scan"], ["ms2", "MS2 (Product Ion)"], ["mrm", "MRM"]];
 const tabFiles = (t = E.tab) => E.files.filter(f => f.kind === t && !f.gone);   // f.gone = removed from the session (the file on disk is untouched)
 // the panels of a tab; in the high-resolution bench (banco.js) the cells of every experiment are on the page together, so "the panels of the tab" is all of them
-const tabPanels = t => (t === undefined && window.BANCO && BANCO.on() ? E.panels : E.panels.filter(p => p.tab === (t ?? E.tab)));
-const grpOf = f => E.tab === "mrm" ? ({ standard: "Standard", sample: "Campioni", blank: "Bianchi" }[f.type] || "Campioni") : kindOf(f);
+// «Mostra tutti gli esperimenti insieme» (gear, off by default; low-resolution world): one block per experiment type on the same page. A panel still holds ONE experiment type.
+const lrTog = () => !!UIP.tog && !(window.BANCO && BANCO.on());
+const allTabs = () => !!(window.BANCO && BANCO.on()) || !!UIP.tog;
+const tabPanels = t => (t === undefined && allTabs() ? E.panels : E.panels.filter(p => p.tab === (t ?? E.tab)));
+const grpOf = f => f.kind === "mrm" ? ({ standard: "Standard", sample: "Campioni", blank: "Bianchi" }[f.type] || "Campioni") : kindOf(f);
 const TOL0 = 1.0;                                   // strumento datato: finestra XIC di +-1 Da
 
 // ------------------------------------------------------------------ schermata di caricamento
@@ -354,9 +357,9 @@ function renderFileList() {
   // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file. ALL the files are listed:
   // those of the other tabs are greyed and a click takes you to their tab
   const groups = [];
-  const side = window.BANCO && BANCO.on() ? E.files.filter(f => !f.gone && f.kind !== "mrm") : tabFiles();       // the bench lists the files of every experiment, all of them live
+  const side = window.BANCO && BANCO.on() ? E.files.filter(f => !f.gone && f.kind !== "mrm") : lrTog() ? E.files.filter(f => !f.gone) : tabFiles();       // the bench lists the files of every experiment, all of them live
   side.forEach(f => { const g = grpOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
-  if (E.tab === "mrm") groups.sort((a, b) => ["Standard", "Campioni", "Bianchi"].indexOf(a.g) - ["Standard", "Campioni", "Bianchi"].indexOf(b.g));
+  if (E.tab === "mrm" || lrTog()) groups.sort((a, b) => ["Standard", "Campioni", "Bianchi"].indexOf(a.g) - ["Standard", "Campioni", "Bianchi"].indexOf(b.g));
   const sub = f => f.type === "sample" ? (f.time != null ? f.time + " min" : "") : (f.type === "blank" ? "bianco" : "standard" + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
   const row = f => `<div class="fl ${f.k === E.cur ? "cur" : ""}" data-tip="${EH(f.label)}"><input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="Mostra o nascondi">
     <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b>${polSign(f)}${window.HR ? HR.badge(f) : ""}
@@ -367,10 +370,10 @@ function renderFileList() {
 </div></div>`;
   const ghost = f => `<div class="fl ghost" data-go="${f.k}" data-tip="${EH(f.label)} (${EH(kindOf(f))})"><input type="checkbox" disabled><i style="background:${f.color}"></i><div class="fi"><b class="nm">${EH(f.label)}</b><small>${sub(f)}</small></div></div>`;
   const pre = window.DDA && DDA.listMode() ? DDA.listBlock() : "";
-  const others = (window.BANCO && BANCO.on() ? [] : TABS).filter(([t]) => t !== E.tab && tabFiles(t).length).map(([t, n]) => `<div class="fgh sep">${modeIcon(t, 18)}<span>${EH(n)}</span><em>${tabFiles(t).length}</em></div>` + tabFiles(t).map(ghost).join("")).join("");
+  const others = (allTabs() ? [] : TABS).filter(([t]) => t !== E.tab && tabFiles(t).length).map(([t, n]) => `<div class="fgh sep">${modeIcon(t, 18)}<span>${EH(n)}</span><em>${tabFiles(t).length}</em></div>` + tabFiles(t).map(ghost).join("")).join("");
   const gh = (G, label, cls = "") => `<div class="fgh ${cls}"><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="Mostra o nascondi tutto il gruppo">${cls ? "" : modeIcon(E.tab, 18)}<span>${EH(label)}${cls ? "" : polHead(G.fs)}</span><em>${G.fs.length}</em></div>`;
   // MRM tab: like the other tabs the header is the type of experiment («MRM»); standard / campioni / bianchi are smaller sub-groups, written only when there is more than one
-  const body = E.tab === "mrm" && groups.length
+  const body = E.tab === "mrm" && !lrTog() && groups.length
     ? gh({ g: "__all", fs: tabFiles() }, "MRM") + groups.map(G => (groups.length > 1 ? gh(G, G.g.toLowerCase(), "sub") : "") + G.fs.map(row).join("")).join("")
     : groups.map(G => gh(G, G.g) + G.fs.map(row).join("")).join("");
   Q("#flst").innerHTML = pre + body + others;
@@ -684,7 +687,7 @@ function addPanel(type, o, after) {
   })()}</div><canvas></canvas>${type === "spec" ? `<button class="bt lkb" data-a="lock">${IC_UNLOCK}</button>` : ""}<div class="vl" hidden></div><div class="cl" hidden></div><div class="tip" hidden></div><div class="leg"></div>${type === "spec" ? '<div class="leg2"></div>' : ""}`;
   p.el = el; p.vl = el.querySelector(".vl"); p.cl = el.querySelector(".cl"); p.tip = el.querySelector(".tip"); p.cv = el.querySelector("canvas"); p.rd = el.querySelector(".rd"); p.leg = el.querySelector(".leg"); p.leg2 = el.querySelector(".leg2");
   Q("#dpanels").appendChild(el);
-  E.panels.push(p); apply(p); if (p.tab !== E.tab && !(window.BANCO && BANCO.on())) el.style.display = "none"; fitHost();
+  E.panels.push(p); apply(p); if (p.tab !== E.tab && !allTabs()) el.style.display = "none"; fitHost();
   // sposta (trascina l'intestazione), porta davanti, ridimensiona (maniglia in basso a destra), ingrandisci
   el.addEventListener("mousedown", () => { front(el); setActive(p); });
   el.querySelector(".hd").addEventListener("mousedown", e => {
@@ -1726,10 +1729,10 @@ function sgFilter(y, m, deriv) {                         // half window m (windo
   return out;
 }
 // Parameters of the automatic integration (dialog «Rilevamento dei picchi»; the defaults are the behaviour that always was). Saved in this browser.
-const PK_DEF = { win: 1.2, areaNoise: 3, edgeFrac: 3, snMin: 0, noise: "mad", minHalf: 2, multi: 50, tail: 1.5 };
+const PK_DEF = { win: 1.2, areaNoise: 3, edgeFrac: 3, snMin: 0, noise: "mad", minHalf: 2, multi: 50, tail: 1.5, constrain: 0, nr0: 0, nr1: 0 };
 const PK = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem("qqq.picchi") || "{}"); } catch (e) { /* no storage */ } return { ...PK_DEF, ...o }; })();
 function pkSave() { try { localStorage.setItem("qqq.picchi", JSON.stringify(PK)); } catch (e) { /* no storage */ } }
-function autoEdges(s, x) {
+function autoEdges(s, x, ref) {
   const xs = s.x, n = xs.length, ic = nearIdx(xs, x);
   if (n < 9) return [xs[ic], xs[ic]];
   const dt = (xs[Math.min(n - 1, ic + 50)] - xs[Math.max(0, ic - 50)]) / (Math.min(n - 1, ic + 50) - Math.max(0, ic - 50) || 1) || 0.01;
@@ -1744,7 +1747,8 @@ function autoEdges(s, x) {
   let k = Math.max(0, m0 - m); const k1 = Math.min(N - 1, m0 + m); for (let j = k; j <= k1; j++) if (sm[j] > sm[k]) k = j;   // apex of the smoothed trace
   const w0 = Math.max(0, k - Math.round(PK.win / dt)), w1 = Math.min(N - 1, k + Math.round(PK.win / dt));          // baseline window (min)
   const res = []; for (let j = w0; j <= w1; j++) res.push(Math.abs(y[j] - sm[j])); res.sort((p, q) => p - q);
-  const noise = Math.max(PK.noise === "rms" ? Math.sqrt(res.reduce((a, v) => a + v * v, 0) / (res.length || 1)) : 1.4826 * res[res.length >> 1], 1e-12);      // MAD of the residual = noise sigma (or its RMS)
+  const nman = PK.noise === "manual" && PK.nr1 > PK.nr0 ? noiseSD(xs, s.y, PK.nr0, PK.nr1) : null;                    // noise from the region the student chose (no peaks there)
+  const noise = nman != null && nman > 0 ? nman : Math.max(PK.noise === "rms" ? Math.sqrt(res.reduce((a, v) => a + v * v, 0) / (res.length || 1)) : 1.4826 * res[res.length >> 1], 1e-12);      // MAD of the residual = noise sigma (or its RMS)
   const low = []; for (let j = w0; j <= w1; j++) low.push(sm[j]); low.sort((p, q) => p - q);
   const base = low[Math.floor(low.length * 0.1)], H = Math.max(sm[k] - base, 0), lim = base + Math.max(PK.edgeFrac / 100 * H, PK.areaNoise * noise);
   if (PK.snMin > 0 && H < PK.snMin * noise) return null;                                  // signal/noise below the threshold: not a peak
@@ -1759,7 +1763,12 @@ function autoEdges(s, x) {
     }
     return j;
   };
-  return [xs[a0 + Math.min(walk(-1), k)], xs[a0 + Math.max(walk(1), k)]];
+  let e0 = xs[a0 + Math.min(walk(-1), k)], e1 = xs[a0 + Math.max(walk(1), k)];
+  if (PK.constrain > 0 && ref > 0) {                                                       // «Vincola la larghezza»: the base width stays within +-constrain % of the reference peak
+    const tp = xs[a0 + k], w = e1 - e0, lo = ref * (1 - PK.constrain / 100), hi = ref * (1 + PK.constrain / 100), w2 = Math.min(hi, Math.max(lo, w));
+    if (w > 0 && w2 !== w) { const q = (tp - e0) / w; e0 = tp - q * w2; e1 = e0 + w2; }
+  }
+  return [e0, e1];
 }
 // trace to integrate at time x: the clicked row when stacked, otherwise the most intense one
 function intSeries(p, x, py) {
@@ -1823,7 +1832,8 @@ function addInt(p, s, a, b, mirror = true) {
 }
 // automatic integration at time x: refused on an integrated peak; next to one it stops at its border (the two peaks touch)
 function autoInt(p, s, x) {
-  const ed = autoEdges(s, x); if (!ed) { nearMsg("Sotto la soglia segnale/rumore dei parametri di rilevamento: nessun picco"); return; }
+  const same = p.ints.filter(i => i.key === s.key).map(i => iHi(i) - iLo(i)).sort((u, v) => u - v);
+  const ed = autoEdges(s, x, same.length ? same[same.length >> 1] : 0); if (!ed) { nearMsg("Sotto la soglia segnale/rumore dei parametri di rilevamento: nessun picco"); return; }
   let [l, r] = ed;
   if (p.type !== "mrm") {
     const c = p.ints.filter(i => i.key === s.key);
@@ -1851,7 +1861,10 @@ function peakParams() {
     ${f("areaNoise", "Fattore di rumore per l'area", "il bordo non scende sotto fondo + questo × rumore")}
     ${f("edgeFrac", "Bordo al … % dell'altezza", "fondo + questa quota dell'altezza")}
     ${f("snMin", "Segnale/rumore minimo del picco", "0 = nessuna soglia")}
-    <label style="display:block;margin:3px 0">Metodo del rumore <select data-pk="noise"><option value="mad"${PK.noise === "mad" ? " selected" : ""}>automatico (MAD dei residui)</option><option value="rms"${PK.noise === "rms" ? " selected" : ""}>RMS dei residui</option></select></label>
+    <label style="display:block;margin:3px 0">Metodo del rumore <select data-pk="noise"><option value="mad"${PK.noise === "mad" ? " selected" : ""}>automatico (MAD dei residui)</option><option value="rms"${PK.noise === "rms" ? " selected" : ""}>RMS dei residui</option><option value="manual"${PK.noise === "manual" ? " selected" : ""}>zona scelta da me (da … a … min)</option></select></label>
+    ${f("nr0", "Zona di rumore: da (min)", "solo con «zona scelta da me»; nessun picco nella zona")}
+    ${f("nr1", "Zona di rumore: a (min)", "")}
+    ${f("constrain", "Vincola la larghezza dei picchi (± %)", "0 = libera; altrimenti la base resta entro ± questa quota della larghezza mediana dei picchi già integrati nella traccia")}
     ${f("minHalf", "Larghezza minima del picco (semifinestra, punti)", "più grande = più liscio")}
     ${f("multi", "Risoluzione dei multipletti (% )", "quanto deve risalire il segnale prima di separare due picchi")}
     ${f("tail", "Estensione massima della coda (min)", "")}
@@ -1946,6 +1959,7 @@ async function drawSpec(p) {
   });
   const data = await Promise.all(reqs.map(q => (isDda ? DDA.scanData(p) : one ? scData(p, q.f.k) : getSpec(q.f.k, p.r0, p.r1, p.level, prk(q.prec, p.filt), bgOf(q.f))).then(d => ({ f: q.f, prec: q.prec, multi: q.multi, idx: q.idx, d: rel ? relScale(d) : d }))));
   if (tok !== p._tok) return false;                      // a newer request is on its way: this one is dropped
+  if (p.iso && p.iso.only && hrp && window.QQQRef) data.forEach(x => { try { x.d = HR.isoAsSpectrum(p, x.f, x.d); } catch (e) { /* the observed spectrum stays */ } });      // «Sostituisci»: the simulation takes the place of the spectrum
   const mzs = data.flatMap(x => x.d.mz);
   if (!mzs.length) return say("Nessuno scan in questo intervallo (per MS2: scegli il precursore e il livello giusto).");
   // everything is known: only now the canvas is cleared and drawn again, in one go (until then the previous spectrum stays on the screen)
@@ -2024,7 +2038,7 @@ async function drawSpec(p) {
   if (window.DDA) DDA.decorate(p, g, X, Y, W, { x0, x1, ymax, d0, data, files });       // DDA: flags of the precursors, isolation band, line of the precursor
   // theoretical isotope pattern of a formula chosen by the student (red circles), aligned on the nearest observed peak
   let isoNote = "";
-  if (p.iso && window.QQQRef) {
+  if (p.iso && !p.iso.only && window.QQQRef) {
     try {
       if (hrp) isoNote = HR.drawIso(p, g, X, Y, d0, ymax, W, files[0]);          // high resolution: fine structure, error in ppm (hr.js)
       else {

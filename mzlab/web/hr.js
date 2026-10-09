@@ -94,35 +94,64 @@ const HR = (() => {
   // Peaks closer than their width are not resolved: at resolving power R the fine structure of the pattern fuses into one peak. R200 = resolving power at
   // m/z 200 as Thermo writes it (Orbitrap: R falls with 1/sqrt(m/z)); two neighbours merge when their distance is below the FWHM = m/R(m).
   const resAt = (R200, mz) => R200 * Math.sqrt(200 / mz);
-  function mergeRes(pat, R200) {
-    if (!(R200 > 0)) return pat;
+  // generic: two neighbours merge when their distance is below the width fw(m) at the peak
+  function mergeBy(pat, fw) {
+    if (!fw) return pat;
     const out = []; let cur = null;
     for (const r of pat) {
-      if (cur && r.mz - cur.last <= r.mz / resAt(R200, r.mz)) { cur.s += r.mz * r.rel; cur.rel += r.rel; cur.last = r.mz; } else { cur = { s: r.mz * r.rel, rel: r.rel, last: r.mz }; out.push(cur); }
+      if (cur && r.mz - cur.last <= fw(r.mz)) { cur.s += r.mz * r.rel; cur.rel += r.rel; cur.last = r.mz; } else { cur = { s: r.mz * r.rel, rel: r.rel, last: r.mz }; out.push(cur); }
     }
     const top = Math.max(...out.map(c => c.rel));
     return out.map(c => ({ mz: c.s / c.rel, rel: 100 * c.rel / top }));
   }
+  const mergeRes = (pat, R200) => (R200 > 0 ? mergeBy(pat, m => m / resAt(R200, m)) : pat);
+  // the width of a peak of the simulation: from the resolving power (at m/z 200, scaling with 1/sqrt(m/z)), or fixed in Da, or in ppm; given as FWHM or as the width at 10% / 5% of the height
+  const WDEF = { fwhm: 1, "10": 1.8227, "5": 2.3223 };            // width at that fraction of a Gaussian / FWHM
+  function fwhmFn(iso, f, level) {
+    const k = WDEF[iso.def || "fwhm"] || 1;
+    if (iso.fw && iso.fw.v > 0) return iso.fw.mode === "ppm" ? (m => m * iso.fw.v * 1e-6 / k) : (() => iso.fw.v / k);
+    const R = iso.R === 0 ? 0 : (iso.R || (f && (level === 2 ? f.res2 : f.res1)) || 0);
+    return R > 0 ? (m => m / resAt(R, m)) : null;
+  }
+  // the Gaussian profile of the merged peaks (points = points per FWHM): {x, y}, highest point = 100
+  function isoCurve(pat, fw, pts = 10) {
+    const sg = m => fw(m) / 2.3548, a = pat[0].mz - 5 * sg(pat[0].mz), b = pat[pat.length - 1].mz + 5 * sg(pat[pat.length - 1].mz);
+    const step = Math.min(...pat.map(r => fw(r.mz))) / Math.max(3, pts), n = Math.min(6000, Math.max(20, Math.ceil((b - a) / step))), x = [], y = [];
+    for (let i = 0; i <= n; i++) { const m = a + (b - a) * i / n; let v = 0; for (const r of pat) { const d = (m - r.mz) / sg(r.mz); if (Math.abs(d) < 6) v += r.rel * Math.exp(-0.5 * d * d); } x.push(m); y.push(v); }
+    const mx = Math.max(...y) || 1; return { x, y: y.map(v => 100 * v / mx) };
+  }
+  // the simulation in place of the spectrum («Sostituisci»): centroids (and the Gaussian line when the style is «profilo»), height of the observed top
+  function isoAsSpectrum(p, f, dObs) {
+    const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), fw = fwhmFn(p.iso, f, p.level), pat = fw ? mergeBy(isoFine(ion.n, ion.z), fw) : isoFine(ion.n, ion.z);
+    const top = Math.max(0, ...(dObs && dObs.y ? dObs.y : [0])) || 1e6, o = { mz: pat.map(r => r.mz), y: pat.map(r => top * r.rel / 100), mode: "centroid" };
+    if (p.iso.style === "profilo" && fw) { const c = isoCurve(pat, fw, p.iso.pts || 10); o.pmz = c.x; o.py = c.y.map(v => top * v / 100); o.mode = "profile"; }
+    return o;
+  }
   // the theoretical pattern on a spectrum (red circles): each circle sits on the observed centroid within the tolerance of the profile (and says the
   // error in ppm), otherwise on the calculated m/z with "non trovato". Returns the note for the legend.
   function drawIso(p, g, X, Y, d0, ymax, W, f) {
-    const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), tol = prof(f, p.level).tol;
-    const R = p.iso.R === 0 ? 0 : (p.iso.R || (p.level === 2 ? f.res2 : f.res1) || 0), pat = mergeRes(isoFine(ion.n, ion.z), R);          // R = 0: whole fine structure
+    const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), tol = prof(f, p.level).tol, st = p.iso.style || "centroidi";
+    const fw = fwhmFn(p.iso, f, p.level), R = p.iso.R === 0 ? 0 : (p.iso.R || (p.level === 2 ? f.res2 : f.res1) || 0), pat = fw ? mergeBy(isoFine(ion.n, ion.z), fw) : isoFine(ion.n, ion.z);          // no width: whole fine structure
     const top = pat.reduce((a, b) => (b.rel > a.rel ? b : a));
     const find = mz => { let best = null; d0.mz.forEach((m, j) => { if (d0.y[j] <= 0) return; const e = ppm(m, mz); if (Math.abs(e) <= tol && (!best || d0.y[j] > best.y)) best = { m, y: d0.y[j], e }; }); return best; };
     const obsTop = find(top.mz), h = obsTop ? obsTop.y : ymax / 1.12 * 0.9, m0 = pat[0].mz;
     g.save(); g.strokeStyle = g.fillStyle = "#d62728"; g.lineWidth = 1.5;
+    if (st === "profilo" && fw) {                                      // Gaussian profile at the resolution of the scan
+      const c = isoCurve(pat, fw, p.iso.pts || 10); g.beginPath(); let on = false;
+      c.x.forEach((m, i) => { const px = X(m), py = Y(h * c.y[i] / 100); if (px < M.l - 2 || px > W - M.r + 2) { on = false; return; } if (on) g.lineTo(px, py); else { g.moveTo(px, py); on = true; } }); g.stroke();
+    }
     for (const r of pat) {
       const ob = find(r.mz), px = X(ob ? ob.m : r.mz), py = Y(h * r.rel / 100); if (px < M.l || px > W - M.r) continue;
-      g.setLineDash([3, 2]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, py); g.stroke(); g.setLineDash([]);
-      g.beginPath(); g.arc(px, py, 3.5, 0, 7); g.stroke();
+      if (st === "barre") { g.lineWidth = 3; g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, py); g.stroke(); g.lineWidth = 1.5; }
+      else if (st === "centroidi") { g.setLineDash([3, 2]); g.beginPath(); g.moveTo(px, Y(0)); g.lineTo(px, py); g.stroke(); g.setLineDash([]); g.beginPath(); g.arc(px, py, 3.5, 0, 7); g.stroke(); }
       if (r.rel >= 1) {
         const off = Math.round(r.mz - m0), t = (off ? "M+" + off : "M") + " " + (r.rel < 10 ? r.rel.toFixed(1) : Math.round(r.rel)) + "%" + (ob ? ` · ${ob.e >= 0 ? "+" : "−"}${Math.abs(ob.e).toFixed(1)} ppm` : " · non trovato");
         g.font = fpx(10); g.textAlign = "left"; g.fillText(t, px + 5, py - 4);
       }
     }
     g.restore(); g.font = fpx(11);
-    return `<span><i style="background:#d62728"></i>profilo teorico ${fmtFormula(p.iso.formula)} ${fmtAdduct(p.iso.ad)}${R ? ` (R ${Math.round(R)} a m/z 200)` : ""}${obsTop ? ` (M: ${obsTop.e >= 0 ? "+" : "−"}${Math.abs(obsTop.e).toFixed(1)} ppm)` : ` (nessun picco osservato entro ${+tol.toFixed(1)} ppm da m/z ${top.mz.toFixed(HR.prof(f, p.level).dec)})`}</span>`;
+    const wtxt = p.iso.fw && p.iso.fw.v > 0 ? ` (larghezza ${p.iso.fw.v} ${p.iso.fw.mode === "ppm" ? "ppm" : "Da"}${p.iso.def && p.iso.def !== "fwhm" ? ` al ${p.iso.def}%` : ""})` : R ? ` (R ${Math.round(R)} a m/z 200)` : "";
+    return `<span><i style="background:#d62728"></i>profilo teorico ${fmtFormula(p.iso.formula)} ${fmtAdduct(p.iso.ad)}${wtxt}${obsTop ? ` (M: ${obsTop.e >= 0 ? "+" : "−"}${Math.abs(obsTop.e).toFixed(1)} ppm)` : ` (nessun picco osservato entro ${+tol.toFixed(1)} ppm da m/z ${top.mz.toFixed(HR.prof(f, p.level).dec)})`}</span>`;
   }
   // ---------------------------------------------------------------- XIC of an ion
   // A trace {mz, ion: true} is an ion: its exact m/z. Each file reads it with ITS tolerance: ppm of the profile for a high-resolution file,
@@ -149,6 +178,6 @@ const HR = (() => {
     if (!t.ion || !q) return null;
     const d = q.dec, w = t.mz * q.tol * 1e-6; return [+(t.mz - w).toFixed(d + 1), +(t.mz + w).toFixed(d + 1)];
   }
-  return { mergeRes, resAt, LOW, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, badge, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
+  return { mergeRes, mergeBy, resAt, fwhmFn, isoCurve, isoAsSpectrum, WDEF, LOW, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, badge, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
 })();
 window.HR = HR;

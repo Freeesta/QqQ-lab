@@ -314,22 +314,44 @@ const BANCO = (() => {
     b.querySelector("#hri-go").onclick = () => { const v = parseFloat(b.querySelector("#hri-mz").value.replace(",", ".")); if (!(v > 0)) return nearMsg("Scrivi un m/z."); COMP.open({ mz: v, spec: sp && sp._a && sp._a.data[0] && sp._a.data[0].d, polarity: (cFile(p) || {}).polarity }); };
   }
   function tIso(b, p) {
-    const sp = specOf(p);
-    b.innerHTML = `<div class="muted">Profilo isotopico teorico sullo spettro della cella, alla risoluzione della scansione.</div><div class="row"><label>Formula neutra <input id="hri-f" placeholder="C13H24N4O3S" value="${sp && sp.iso ? esc(sp.iso.formula) : ""}" style="width:130px"></label><label>Addotto <select id="hri-ad"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M+K]+</option><option>[M]+</option><option>[M-H]-</option><option>[M]-</option></select></label></div>
-      <div class="row"><label>Potere risolutivo a m/z 200 <input id="hri-r" placeholder="auto" value="${sp && sp.iso && sp.iso.R != null ? sp.iso.R : ""}" style="width:80px"></label><button type="button" id="hri-go" class="go">Sovrapponi</button><button type="button" id="hri-off">Togli</button></div><div class="muted sm">Vuoto = quello della scansione; 0 = tutta la struttura fine.</div>`;
-    if (sp && sp.iso) b.querySelector("#hri-ad").value = sp.iso.ad;
-    b.querySelector("#hri-go").onclick = async () => {
-      if (!sp) return nearMsg("Serve una cella con uno spettro."); const f = b.querySelector("#hri-f").value.trim(); if (!f) return nearMsg("Scrivi la formula.");
-      try { const r = await getFormula(f, ""); sp.iso = { formula: r.formula, ad: b.querySelector("#hri-ad").value }; const rv = b.querySelector("#hri-r").value.trim().replace(",", "."); if (rv !== "") { const x = parseFloat(rv); if (x >= 0) sp.iso.R = x; }
-        const ion = QQQRef.ionCounts(sp.iso.formula, sp.iso.ad), pat = QQQRef.isoPattern(ion.n, ion.z); sp.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; sp._isoKey = JSON.stringify(sp.zoom); draw(sp); }
-      catch (e) { nearMsg("Non riesco a calcolare il profilo: " + e.message); }
+    const sp = specOf(p), iso = (sp && sp.iso) || {}, fw = iso.fw || {};
+    const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${v}"${String(cur) === String(v) ? " selected" : ""}>${l}</option>`).join("")}</select>`;
+    b.innerHTML = `<div class="muted">Profilo isotopico teorico sullo spettro della cella, alla risoluzione della scansione.</div>
+      <div class="row"><label>Formula neutra <input id="hri-f" placeholder="C13H24N4O3S" value="${iso.formula ? esc(iso.formula) : ""}" style="width:120px"></label><label>Addotto ${sel("hri-ad", ["[M+H]+", "[M+Na]+", "[M+NH4]+", "[M+K]+", "[M]+", "[M-H]-", "[M]-"].map(x => [x, x]), iso.ad || "[M+H]+")}</label></div>
+      <div class="row"><label>Uscita ${sel("hri-st", [["centroidi", "Centroidi"], ["barre", "Barre"], ["profilo", "Profilo (gaussiano)"]], iso.style || "centroidi")}</label><label title="Punti per ogni larghezza a metà altezza">punti/picco <input id="hri-pts" value="${iso.pts || 10}" style="width:36px"></label></div>
+      <div class="row"><label>Risoluzione ${sel("hri-rm", [["R", "potere risolutivo a m/z 200"], ["da", "larghezza in Da"], ["ppm", "larghezza in ppm"]], fw.mode || "R")} <input id="hri-r" placeholder="auto" value="${fw.v != null ? fw.v : iso.R != null ? iso.R : ""}" style="width:72px"></label>
+        <label title="Come è definita la larghezza scritta">definita come ${sel("hri-df", [["fwhm", "metà altezza (FWHM)"], ["10", "valle al 10%"], ["5", "valle al 5%"]], iso.def || "fwhm")}</label></div>
+      <div class="row"><button type="button" id="hri-go" class="go" title="Disegna il profilo sopra lo spettro della cella">Sovrapponi</button><button type="button" id="hri-new" title="Il profilo in una cella nuova, sotto questa">Nuova cella</button><button type="button" id="hri-rep" title="Al posto dello spettro osservato resta solo la simulazione">Sostituisci</button><button type="button" id="hri-off">Togli</button></div>
+      <div class="muted sm">Risoluzione vuota = quella della scansione; 0 = tutta la struttura fine. Potere risolutivo: come lo scrive Thermo, scende con la radice di m/z.</div>`;
+    const read = async () => {
+      const f = b.querySelector("#hri-f").value.trim(); if (!f) { nearMsg("Scrivi la formula."); return null; }
+      let r; try { r = await getFormula(f, ""); } catch (e) { nearMsg("Non riesco a calcolare il profilo: " + e.message); return null; }
+      const o = { formula: r.formula, ad: b.querySelector("#hri-ad").value, style: b.querySelector("#hri-st").value, def: b.querySelector("#hri-df").value, pts: Math.max(3, parseInt(b.querySelector("#hri-pts").value) || 10) };
+      const mode = b.querySelector("#hri-rm").value, rv = b.querySelector("#hri-r").value.trim().replace(",", "."), x = parseFloat(rv);
+      if (rv !== "" && x >= 0) { if (mode === "R") o.R = x; else if (x > 0) o.fw = { mode, v: x }; }
+      return o;
+    };
+    const apply = (s2, o, only) => { s2.iso = { ...o, only: !!only }; const ion = QQQRef.ionCounts(o.formula, o.ad), pat = QQQRef.isoPattern(ion.n, ion.z); s2.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; s2._isoKey = JSON.stringify(s2.zoom); draw(s2); };
+    b.querySelector("#hri-go").onclick = async () => { if (!sp) return nearMsg("Serve una cella con uno spettro."); const o = await read(); if (o) apply(sp, o, false); };
+    b.querySelector("#hri-rep").onclick = async () => { if (!sp) return nearMsg("Serve una cella con uno spettro."); const o = await read(); if (o) apply(sp, o, true); };
+    b.querySelector("#hri-new").onclick = async () => {
+      if (!sp) return nearMsg("Serve una cella con uno spettro."); const o = await read(); if (!o) return;
+      const n = addPanel("spec", { tab: sp.tab, k: sp.k, level: sp.level, r0: sp.r0, r1: sp.r1, filt: sp.filt || null, title: "Simulazione isotopica", link: null, x: 0, y: E.panels.reduce((m, q) => Math.max(m, q.y + q.h + 10), 0), w: hostWidth(), h: 300, full: true });
+      relayout(); fitHost(); apply(n, o, false); setActive(n); n.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
     };
     b.querySelector("#hri-off").onclick = () => { if (sp) { sp.iso = null; draw(sp); } };
   }
   function tPks(b, p) {
-    b.innerHTML = `<div class="muted">Integrazione automatica dei cromatogrammi della cella attiva.</div><div class="row"><button type="button" id="hri-on">${p.imode === "auto" ? "Spegni" : "Accendi"} il rilevamento nella cella</button><button type="button" id="hri-par">Parametri…</button></div><div class="muted sm">Acceso: un clic su un picco lo integra; i bordi si trascinano. I parametri (finestra della linea di base, rumore, bordi, S/N minimo) valgono per tutte le celle.</div>`;
+    b.innerHTML = `<div class="muted">Integrazione automatica dei cromatogrammi della cella attiva.</div><div class="row"><button type="button" id="hri-on">${p.imode === "auto" ? "Spegni" : "Accendi"} il rilevamento nella cella</button><button type="button" id="hri-par">Parametri…</button></div><div class="row"><button type="button" id="hri-all" title="Integra, nello stesso tempo del picco della cella attiva, tutti i cromatogrammi delle altre celle">Integra in tutte le celle</button><button type="button" id="hri-tab">Tabella delle aree</button></div><div class="muted sm">Acceso: un clic su un picco lo integra; i bordi si trascinano. I parametri (finestra della linea di base, rumore, bordi, S/N minimo) valgono per tutte le celle.</div>`;
     b.querySelector("#hri-on").onclick = () => { const x = p.el.querySelector('[data-a="iauto"]'); if (x) x.click(); else nearMsg("Serve una cella cromatogramma."); renderInfo(); };
     b.querySelector("#hri-par").onclick = () => peakParams();
+    b.querySelector("#hri-all").onclick = () => {
+      const last = p.ints && p.ints[p.ints.length - 1], x = last ? (iLo(last) + iHi(last)) / 2 : p.sel ? (p.sel[0] + p.sel[1]) / 2 : null;
+      if (x == null) return nearMsg("Integra prima un picco nella cella attiva (o scegli un intervallo): lo stesso tempo vale per le altre celle.");
+      let n = 0; E.panels.filter(q => q.type === "chrom" && q._a && q._a.sr && !q.ints.some(i => iLo(i) < x && x < iHi(i))).forEach(q => { if (!guardInt(q)) return; intTargets(q, x, null).forEach(s => { autoInt(q, s, x); n++; }); });
+      nearMsg(n ? `Integrato il picco a ${num(x, 2)} min in ${n} tracce.` : "Nessuna cella da integrare.");
+    };
+    b.querySelector("#hri-tab").onclick = () => showInts();
   }
   function tCom(b, p) {
     const c = p.type === "spec" ? E.panels.find(q => q.id === p.link) || p : p, sel = c.sel || (c.zoom ? c.zoom : null);

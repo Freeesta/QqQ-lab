@@ -24,7 +24,7 @@ function renderTabs() {
     const c = tabFiles(t).length;
     return `<span class="tw"><button data-t="${t}" data-tiph="${EH(modeSchema(t))}" class="${t === E.tab ? "on" : ""}${c ? "" : " off"}">${EH(n)}<i>${c}</i></button></span>`;
   }).join("") + `<span class="sp"></span><button id="ovbtn" title="Quali file ci sono per ogni tempo e per ogni tipo di esperimento">Tempi ed esperimenti</button>`;
-  el.querySelectorAll("[data-t]").forEach(b => b.onclick = () => setTab(b.dataset.t));
+  el.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { setTab(b.dataset.t); if (lrTog()) setTimeout(() => { const f = E.panels.filter(q => q.tab === b.dataset.t && q.el).sort((u, v) => u.y - v.y)[0]; if (f) f.el.scrollIntoView({ block: "start", behavior: "smooth" }); }, 500); });
   Q("#ovbtn").onclick = openOverview;
 }
 
@@ -46,7 +46,7 @@ function setTab(t, quiet) {
   E.curBy[E.tab] = E.cur;
   E.activeBy = E.activeBy || {};      // coming back to a tab: same active graph as when the student left it (no automatic scroll)
   E.activeBy[E.tab] = E.active; E.tab = t;
-  E.panels.forEach(p => { if (p.el) p.el.style.display = p.tab === t || (window.BANCO && BANCO.on()) ? "" : "none"; });
+  E.panels.forEach(p => { if (p.el) p.el.style.display = p.tab === t || allTabs() ? "" : "none"; });
   const back = E.curBy[t]; E.cur = E.files[back]?.kind === t ? back : (tabFiles()[0] || { k: E.cur }).k;
   setActive(E.activeBy[t] && E.panels.includes(E.activeBy[t]) ? E.activeBy[t] : null); playStop();
   E.panels.forEach(q => { if (q.type === "spec") q.lock = null; });      // changing tab: the axes of the spectra are free again
@@ -61,9 +61,32 @@ function setTab(t, quiet) {
 
 // first time a tab is shown (or after all its panels were closed and the page reloaded): its starting layout
 function ensureLayout() {
-  if (!tabFiles().length || E.panels.some(p => p.tab === E.tab)) return;
-  defaultLayoutTab(E.tab);
+  if (tabFiles().length && !E.panels.some(p => p.tab === E.tab)) defaultLayoutTab(E.tab);
+  if (lrTog()) ensureBlocks();
 }
+// «tutti gli esperimenti insieme»: every experiment type that has files gets its block (its starting layout) under the ones already on the page
+function ensureBlocks() {
+  TABS.forEach(([t]) => {
+    if (!tabFiles(t).length || E.panels.some(p => p.tab === t)) return;
+    const before = new Set(E.panels), save = E.tab;
+    E.tab = t; try { defaultLayoutTab(t); } finally { E.tab = save; }
+    const shift = () => {
+      const nw = E.panels.filter(q => !before.has(q) && q.tab === t && !q._sh); if (!nw.length) return false;
+      const top = Math.min(...nw.map(q => q.y)), off = E.panels.filter(q => q.tab !== t).reduce((m, q) => Math.max(m, q.y + q.h + 24), 0) - top;
+      nw.forEach(q => { q._sh = 1; q.y += off; apply(q); });
+      relayout(); fitHost(); renderFileList(); return true;
+    };
+    if (!shift() && t === "mrm") { let i = 0; const iv = setInterval(() => { if (shift() || ++i > 80) clearInterval(iv); }, 150); }
+  });
+}
+// the gear checkbox: all the blocks on the page, or only the ones of the current tab again
+function setTogether(on) {
+  UIP.tog = !!on; if (typeof uipSave === "function") uipSave();
+  if (lrTog()) ensureBlocks(); else E.panels.forEach(p => { if (p.el) p.el.style.display = p.tab === E.tab ? "" : "none"; });
+  E.panels.forEach(p => { if (p.el && allTabs()) p.el.style.display = ""; });
+  renderTabs(); relayout(); fitHost(); renderFileList(); renderNav(); redrawAll(); uiSave();
+}
+window.setTogether = setTogether;
 
 // transitions of the MRM files and which one is the quantifier / qualifier (by the name in the method: Quant, Qual; otherwise the first and the second).
 // The calibration line itself is NOT made by the program: the students do it in Excel from the integration table.

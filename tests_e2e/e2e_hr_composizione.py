@@ -22,6 +22,10 @@ try:
             row = pg.inner_text("#cmp-out tr:nth-child(2)").replace("\t", " "); assert "C13H25N4O3S" in row.replace(" ", ""), row
             assert "non identificazioni" in pg.inner_text("#bigbody")
         step("317.1639 gives C13H25N4O3S with the elements of the infusion file", dialog)
+        def xl():
+            with pg.expect_download() as d: pg.click("#cmp-xlsx")
+            assert d.value.suggested_filename.endswith(".xlsx") and os.path.getsize(d.value.path()) > 1500
+        step("Excel of the candidate formulas", xl)
         def narrow():
             pg.fill("#cmp-els", "C:0-5,H:0-10"); pg.click("#cmp-go"); pg.wait_for_timeout(1500)
             assert "Nessuna formula" in pg.inner_text("#cmp-out"), pg.inner_text("#cmp-out")
