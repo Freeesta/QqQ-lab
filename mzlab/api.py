@@ -124,6 +124,11 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                                      iso_tol=float(q.get("isotol", 0.2))))
             except (ValueError, KeyError, IndexError) as e:
                 return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante o non valido: {e}"}, 400)
+        if path == "/api/msntree":      # tree of the fragmentation paths of an MSn file (consensus spectra and formulas): candidates, not identifications
+            try:
+                return _json(app.msn_tree(int(q["k"]), q.get("formula") or None, float(q.get("ppm", 5))))
+            except (ValueError, KeyError) as e:
+                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
         if path == "/api/map":
             return _json(app.ionmap(int(q["k"]), int(q.get("level", 1))))
         return _json({"error": "unknown endpoint"}, 404)
