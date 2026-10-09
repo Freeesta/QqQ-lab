@@ -222,5 +222,19 @@
   "lib.noPrec": "Messaggio quando nessuna voce ha un precursore entro la tolleranza; {tol} = tolleranza con unità (es. «10 ppm»).",
   "lib.plot.shared": "Etichetta in alto a destra nel grafico a specchio; {n} = numero di picchi in comune.",
   "lib.results": "Messaggio dopo la ricerca; {n} = risultati, {ms} = millisecondi.",
-  "lib.space": "Riga in fondo alla finestra delle librerie; {mb} = megabyte usati dal sito."
+  "lib.space": "Riga in fondo alla finestra delle librerie; {mb} = megabyte usati dal sito.",
+  "dda.mixed": "Seguito di dda.none; {n} = numero di MS2 che isolano anche questo ione.",
+  "dda.near.line": "Riga nel riquadro del triangolino; {min} = finestra in minuti, {prec} = m/z del precursore.",
+  "dda.kid.title": "Titolo del riquadro su un triangolino; {i} = numero d'ordine, {n} = totale.",
+  "dda.avg": "Voce del menu; {n} = quante MS2 vicine.",
+  "dda.list.zoom": "Riga sopra la tabella dei precursori.",
+  "dda.avg.tip": "Suggerimento sulla voce «Media delle MS2»; {min} = finestra in minuti, {max} = numero massimo di MS2 mediate.",
+  "dda.kid.prec": "Riga del riquadro su un triangolino; {prec} = m/z del precursore.",
+  "dda.list.all": "Riga sopra la tabella dei precursori quando non c'è zoom; {n} = numero di ioni.",
+  "dda.none": "Messaggio quando lo ione non ha MS2; {ion} = m/z.",
+  "comp.xlsx.prefix": "Inizio del nome del file scaricato; solo lettere minuscole senza accento.",
+  "tree.xlsx.prefix": "Inizio del nome del file scaricato; solo lettere, numeri e trattino basso.",
+  "tree.nodeInfo": "Riga sopra la tabella dei picchi di un nodo dell'albero MSn.",
+  "comp.count": "Conteggio dei candidati nella finestra «Formule compatibili»; {n} = numero.",
+  "comp.first": "Seguito di comp.count; {n} = quanti ne sono mostrati."
 }
