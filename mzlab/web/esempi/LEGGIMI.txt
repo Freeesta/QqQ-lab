@@ -24,5 +24,5 @@ MRM: quattro standard a concentrazione crescente (curva di taratura).
 
 Il numero dopo «t» nel nome è il tempo di trattamento in minuti, il numero prima di «ppm» la concentrazione: mzLab li legge da soli.
 Si aprono con il pulsante «Prova con i file di esempio» della pagina iniziale (si sceglie fra Full Scan, MS2 e MRM e si scarica solo il gruppo scelto), oppure scaricandoli e
-trascinandoli nella pagina (https://freeesta.github.io/QqQ-lab/). Sono dati reali del laboratorio, pubblicati
+trascinandoli nella pagina (https://freeesta.github.io/mzlab/). Sono dati reali del laboratorio, pubblicati
 come esempio didattico (formato mzML convertito con ProteoWizard MSConvert).
