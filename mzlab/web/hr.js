@@ -39,7 +39,16 @@ const HR = (() => {
   const badge = f => {
     if (!f) return "";
     const hr = !!((f.prof1 && f.prof1.hr) || (f.prof2 && f.prof2.hr)), t = EH(label(f) || f.instrument || "");
-    return (hr ? `<span class="hrb" title="${t}">HR</span>` : "") + (f.dda && f.kind !== "mrm" ? `<span class="hrb" title="${t || "Acquisizione dipendente dai dati: lo strumento sceglie da solo gli ioni da frammentare"}">DDA</span>` : "");
+    const pill = (txt, tip) => `<span class="hrb" title="${EH(tip || t || txt)}">${EH(txt)}</span>`;
+    const TIPS = { DDA: "Acquisizione dipendente dai dati: lo strumento sceglie da solo gli ioni da frammentare", DIA: "Acquisizione indipendente dai dati: finestre larghe che si ripetono", AIF: "Frammentazione di tutti gli ioni, senza isolamento",
+      PRM: "Parallel reaction monitoring: sempre gli stessi precursori", SIM: "Selected ion monitoring", MSn: "Più stadi di frammentazione (MS3 e oltre)" };
+    const acq = (f.acq && f.acq.length ? f.acq.filter(x => x !== "MS1" && x !== "MS2") : f.dda && f.kind !== "mrm" ? ["DDA"] : []);
+    const hrw = hr && f.kind !== "mrm";
+    const lvl = hrw && f.max_level >= 3 ? `MS${f.max_level}` : "";
+    const mode = hrw ? (f.kind === "ms2" ? f.mode2 : f.mode1) : null;
+    const pol = hrw && f.polarity && f.polarity !== "unknown" ? { positive: "+", negative: "\u2212", mixed: "\u00b1" }[f.polarity] : "";
+    return (hr ? pill("HR") : "") + acq.map(x => pill(x, TIPS[x])).join("") + (lvl && !acq.includes("MSn") ? pill(lvl, TIPS.MSn) : "")
+      + (mode ? pill(mode === "profile" ? "profilo" : "centroidi", mode === "profile" ? "Spettri in profilo" : "Spettri a centroidi") : "") + (pol ? pill(pol, "Polarità: " + f.polarity) : "");
   };
   // a file whose high-resolution reading failed on the server opens as low resolution: say it once
   const told = new Set();
