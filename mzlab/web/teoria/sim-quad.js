@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const L = document.createElement("div"), R = document.createElement("div"); wrap.append(L, R);
     const c1 = TP.canvas(L, 320), c2 = TP.canvas(R, 320);
     const out = document.createElement("div"); out.className = "readout"; fd.appendChild(out);
-    let st, run = true, raf = null;
+    let st, run = !TP.reduced(), raf = null;   // reduced motion: starts paused (▶ «Riprendi»)
     function reset() {
       const ang = Math.random() * 2 * Math.PI, rad = 0.12 + 0.1 * Math.random();
       st = { x: rad * Math.cos(ang), y: rad * Math.sin(ang), vx: 0.03 * (Math.random() - .5), vy: 0.03 * (Math.random() - .5), xi: 0, ph: Math.random() * Math.PI, trail: [], lost: false, hist: [] };
@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
       out.innerHTML = `(a, q) = (${TP.fmt(v.a, 3)}, ${TP.fmt(v.q, 2)}): direzione x <span class="${sx ? "ok" : "bad"}">${sx ? "stabile" : "instabile"}</span>, direzione y <span class="${sy ? "ok" : "bad"}">${sy ? "stabile" : "instabile"}</span>. ` +
         (sx && sy ? "Lo ione oscilla ma resta confinato: attraversa il quadrupolo." : "L'ampiezza cresce esponenzialmente: lo ione colpisce una barra e si scarica.") +
         (v.a === 0 && v.q < 0.4 ? ` Frequenza secolare ≈ β·Ω/2 con β ≈ q/√2 = ${TP.fmt(v.q / Math.SQRT2, 2)}.` : "");
-      if (!raf && run) loop();
+      if (!raf) loop();   // paused: loop() only draws one frame
     }
     function drawField() {
       const { ctx, W, H } = c1, S = Math.min(W, H), cx = W / 2, cy = H / 2, sc = S * 0.26; // r0 in pixels
@@ -142,6 +142,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // pause the animation when not visible (saves battery)
     if ("IntersectionObserver" in window) new IntersectionObserver(es => es.forEach(e => { const vis = e.isIntersecting; if (vis && run && !raf) loop(); if (!vis && raf) { cancelAnimationFrame(raf); raf = null; } })).observe(fd);
     c1.onresize = c2.onresize = () => { drawField(); drawHist(); };
+    if (!run) bt.querySelector("[data-k=play]").textContent = "Riprendi";
     reset();
   }
 

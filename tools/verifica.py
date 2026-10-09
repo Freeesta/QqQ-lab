@@ -214,7 +214,7 @@ def judge(out: str, rc: int) -> list[str]:
 # --cambiati: which e2e cover which files. A changed file that matches no rule (the core: explore.js, index.html, app.py, api.py,
 # explore.py, tabs.js, ...) means "all of them". Documents only: no e2e. Keep it short and update it with a new e2e of a new area.
 AREE = [
-    ("mzlab/web/teoria/", {"e2e7", "e2e_pratica", "e2e_telefono", "e2e_header", "e2e_nome", "e2e_teoria_scura"}),
+    ("mzlab/web/teoria/", {"e2e7", "e2e_pratica", "e2e_telefono", "e2e_header", "e2e_nome", "e2e_teoria_scura", "e2e_accessibilita"}),
     ("mzlab/web/draw.js", {"e2e24", "e2e6", "e2e_decimali", "e2e_ketcher_grandi", "e2e_strumenti_ketcher", "e2e_tocco"}),
     ("mzlab/web/telefono.js", {"e2e_telefono"}),
     ("mzlab/web/tables.js", {"e2e28", "e2e_perdite", "e2e6"}), ("mzlab/web/elements.js", {"e2e28", "e2e6"}),
