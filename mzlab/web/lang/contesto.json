@@ -163,5 +163,17 @@
   "iso.shift": "Parte di una frase sul profilo isotopico: spostamento in m/z del profilo; il segnaposto è il valore già formattato.",
   "spec.scanLine.avg": "Riga sopra lo spettro quando si mostra la media di più scansioni; {n} = numero di scansioni.",
   "spec.scanLine.prec": "Riga sopra lo spettro: precursore isolato; {prec} = m/z del precursore.",
-  "spec.scanLine.ce": "Riga sopra lo spettro: energia di collisione; {ce} = valore in eV."
+  "spec.scanLine.ce": "Riga sopra lo spettro: energia di collisione; {ce} = valore in eV.",
+  "el.H": "Nome di un elemento nella tavola periodica (el.<simbolo>).",
+  "tbl.pt.avgWeight": "Riga nella casella della tavola periodica; {w} = peso atomico (numero).",
+  "tbl.pt.mono": "{m} = massa, {a} = numero di massa dell'isotopo, {s} = simbolo dell'elemento.",
+  "tbl.pt.peak": "{s} = simbolo, {off} = scarto in unità di massa (es. +1), {pct} = percentuale.",
+  "tbl.add.divided": "Coda dell'espressione di un addotto con carica multipla (es. «M + 2.0146, diviso 2»); {z} = carica.",
+  "tbl.add.col.delta": "Intestazione di colonna; {ref} = addotto di riferimento (HTML).",
+  "tbl.loss.detail": "Dettaglio di una perdita neutra; {m} = massa esatta, {mech} = testo del meccanismo.",
+  "tbl.loss.sources": "{refs} = autori e anno.",
+  "tbl.loss.sourcesRad": "{refs} = autori e anno.",
+  "tbl.loss.none": "{tol} = tolleranza in Da.",
+  "tbl.iso.unavailable": "{s} = simbolo dell'elemento.",
+  "tbl.loss.sameNominal": "Titolo di un riquadro che raggruppa perdite neutre con la stessa massa nominale; {n} = massa nominale."
 }
