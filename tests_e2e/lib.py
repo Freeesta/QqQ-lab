@@ -24,8 +24,10 @@ _TRACK = ("(()=>{if(window.__qqF!==undefined)return;window.__qqF=0;window.__qqT=
 from playwright.sync_api import Browser as _Br, BrowserContext as _Ctx
 _np, _nc = _Br.new_page, _Br.new_context
 def _new_page(self, *a, **k):
+    k.setdefault("locale", "it-IT")        # Playwright starts in en-US, which would now give English to every test written in Italian (e2e_inglese uses en-US on purpose)
     pg = _np(self, *a, **k); pg.add_init_script(_TRACK); return pg
 def _new_context(self, *a, **k):
+    k.setdefault("locale", "it-IT")
     c = _nc(self, *a, **k); c.add_init_script(_TRACK); return c
 _Br.new_page, _Br.new_context = _new_page, _new_context
 def stage(pg, files, timeout=90000):
