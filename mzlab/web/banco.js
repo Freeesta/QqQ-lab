@@ -138,7 +138,7 @@ const BANCO = (() => {
         if (!sel.isConnected) return;
         const opt = g => `<option value="${EH(g.key)}"${p.filt === g.key ? " selected" : ""}>${EH(g.key)} \u00d7${nfmt(g.n)}</option>`;
         const lv = gs.filter(g => g.level === 1), l2 = gs.filter(g => g.level === 2), ln = gs.filter(g => g.level > 2);
-        sel.innerHTML = `<option value="">tutti i tipi di questo esperimento</option>` + [["Scansione completa (MS1)", lv], ["Ioni prodotto (MS2)", l2], ["Frammentazioni successive (MSn)", ln]].filter(([, l]) => l.length).map(([t, l]) => `<optgroup label="${t}">${l.map(opt).join("")}</optgroup>`).join("");
+        sel.innerHTML = `<option value="">tutti i tipi</option>` + [["Scansione completa (MS1)", lv], ["Ioni prodotto (MS2)", l2], ["Frammentazioni successive (MSn)", ln]].filter(([, l]) => l.length).map(([t, l]) => `<optgroup label="${t}">${l.map(opt).join("")}</optgroup>`).join("");
         sel.value = p.filt && gs.some(g => g.key === p.filt) ? p.filt : "";
         sel.onchange = () => setFilter(p, sel.value || null, gs);
       }).catch(() => { sel.disabled = true; });
@@ -147,6 +147,7 @@ const BANCO = (() => {
       const add = document.createElement("button"); add.type = "button"; add.dataset.bf = "range"; add.textContent = "+ Grafico"; add.title = "Aggiungi un grafico impilato sullo stesso asse del tempo (TIC, BPC o XIC di un tipo di scansione)";
       add.onclick = e => { e.stopPropagation(); addRange(p); }; wrap.appendChild(add);
       if (p.ranges && p.ranges.length) {
+        const ks = c.querySelector('[data-o="kind"]'); if (ks) { const t = document.createElement("b"); t.className = "ttl"; t.textContent = "Grafici impilati"; t.title = "Il tipo di cromatogramma è scelto per ogni grafico (pulsante «× …» per toglierlo)"; ks.replaceWith(t); }
         const n = document.createElement("label"); n.className = "muted"; n.title = "Porta ogni grafico impilato sulla scala 0-100 (l'intensità massima resta scritta come NL)";
         n.innerHTML = `<input type="checkbox" data-bf="norm"${p.norm100 ? " checked" : ""}> 0-100`; n.querySelector("input").onchange = e => { p.norm100 = e.target.checked; draw(p); uiSave(); }; wrap.appendChild(n);
         p.ranges.forEach(r => { const b = document.createElement("button"); b.type = "button"; b.className = "bt"; b.dataset.bf = "drop"; b.dataset.id = r.id; b.textContent = "\u00d7 " + (rangeLabel(r).length > 18 ? rangeLabel(r).slice(0, 17) + "…" : rangeLabel(r)); b.title = "Togli il grafico: " + rangeLabel(r); b.onclick = e => { e.stopPropagation(); dropRange(p, r.id); }; wrap.appendChild(b); });
