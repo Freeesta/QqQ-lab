@@ -279,6 +279,7 @@ const BARRA = (() => {
         document.body.appendChild(dlg);
       }
       dlg.classList.remove("sb-docked");
+      dlg.hidden = true;                      // outside the Dati view it is a window the student opens with its button
     }
   }
 
