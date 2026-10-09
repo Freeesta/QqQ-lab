@@ -39,12 +39,29 @@ def test_serie_peg_e_doppia_carica():
 
 
 def test_polarita_negativa_e_solo_mz():
-    it = [x for x in builtin()["items"] if x["id"] == "sds"][0]
-    assert it["pol"] == -1 and it["mz"] == pytest.approx(265.1479, abs=5e-4)
+    it = [x for x in builtin()["items"] if x["id"] == "phosphoric_acid"][0]
+    assert it["pol"] == -1 and it["mz"] == pytest.approx(96.9696, abs=5e-4)
     assert one("tfa", "[M-H]-") == pytest.approx(112.9856, abs=5e-4)
-    sm = [x for x in builtin()["items"] if x.get("mzonly")]
-    assert sm and all(x["formula"] is None for x in sm)
+    sm = expand({"id": "x", "name": "solo m/z", "formula": None, "mz": 123.4567, "polarity": "negative", "source": "prova"})
+    assert len(sm) == 1 and sm[0]["mzonly"] and sm[0]["pol"] == -1 and sm[0]["mz"] == 123.4567
     assert {x["pol"] for x in builtin()["items"]} == {1, -1}
+
+
+def test_voci_keller_si_espandono_e_combaciano():
+    """Every entry comes from Keller 2008 and expands; masses computed by us (not copied from the table) of some of the entries added after the comparison."""
+    d = json.loads((ROOT / "mzlab/chem/contaminants.json").read_text(encoding="utf-8"))
+    assert all(e["source"] == "Keller 2008" for e in d["entries"])
+    assert len({e["id"] for e in d["entries"]}) == len(d["entries"])
+    for e in d["entries"]:
+        its = expand(e)
+        assert its and all(x["mz"] > 0 for x in its), e["id"]
+    assert one("tween_c18h34o6", "[M+Na]+", 10) == pytest.approx(809.4869, abs=2e-3)
+    assert one("tween_c24h44o6", "[M+Na]+", 20) == pytest.approx(1331.8273, abs=2e-3)
+    assert one("trit_c15h24o", "[M+H]+", 5) == pytest.approx(441.3211, abs=2e-3)
+    assert one("siloxano_ciclico", "[M+H-CH4]+", 6) == pytest.approx(429.0887, abs=2e-3)
+    assert one("pep_slpr", "[M+H]+") == pytest.approx(472.2878, abs=2e-3)
+    assert one("diisoottilftalato_dimero", "[M+Na]+") == pytest.approx(803.5432, abs=2e-3)
+    assert one("dehp", "[M+CH3CN+Na]+") == pytest.approx(454.2928, abs=2e-3)
 
 
 def test_ogni_voce_ha_fonte_e_ioni():

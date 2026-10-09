@@ -1,8 +1,8 @@
 {
- "_nota": "Elenco dei contaminanti noti. Le m/z NON sono scritte qui: si calcolano dalle formule con mzlab/chem/elements.py (mzlab/chem/contaminants.py). Fonte principale: Keller B.O., Sui J., Young A.B., Whittal R.M., Anal. Chim. Acta 627 (2008) 71-81, doi:10.1016/j.aca.2008.04.043. Le sostanze e gli ioni sono quelli noti dalla chimica. Confronto voce per voce con la tabella supplementare di Keller 2008 fatto il 2026-10-09 (tolleranza 0,002 Da, stesso tipo di ione): su 82 voci 35 coerenti, 5 corrette (nomi), 42 non presenti nella tabella (fonte indicata nel campo source; le voci con fonte Guo 2006 non sono state verificate sull'articolo).",
+ "_nota": "Elenco dei contaminanti noti, solo da Keller et al., Anal. Chim. Acta 627 (2008) 71-81, doi:10.1016/j.aca.2008.04.043. Le m/z NON sono scritte qui: si calcolano dalle formule con mzlab/chem/elements.py (mzlab/chem/contaminants.py). Confronto voce per voce con la tabella supplementare di Keller fatto il 2026-10-09 (tolleranza 0,002 Da, stesso tipo di ione): delle 82 voci precedenti 36 coerenti, 5 corrette (nomi; 3 voci con la sola m/z sostituite da voci con formula), 41 non presenti in Keller e quindi tolte. Aggiunte le voci di Keller mancanti (ESI, positive e negative), con formula ricostruita e m/z calcolata entro 0,002 Da dalla tabella. Non incluse: ammassi di matrice MALDI, complessi con Fe e Cu, composti con deuterio, Cs, Sn, ione 37Cl, peptidi modificati o con ponti S-S, righe la cui m/z non coincide.",
  "id": "keller",
- "name": "Contaminanti noti e fondo LC-MS (Keller 2008, Guo 2006)",
- "source": "Keller et al., Anal. Chim. Acta 627 (2008) 71-81; Guo et al., Rapid Commun. Mass Spectrom. 20 (2006) 3145-3150",
+ "name": "Contaminanti noti e fondo LC-MS (Keller 2008)",
+ "source": "Keller et al., Anal. Chim. Acta 627 (2008) 71-81",
  "license": "dati chimici (formule): nessuna restrizione; elenco compilato per questo programma",
  "entries": [
   {
@@ -25,7 +25,7 @@
    "series": {
     "unit": "C2H4O",
     "n": [
-     3,
+     1,
      40
     ],
     "end": "H2O"
@@ -49,7 +49,7 @@
    "series": {
     "unit": "C3H6O",
     "n": [
-     3,
+     1,
      30
     ],
     "end": "H2O"
@@ -63,7 +63,8 @@
    "ions": [
     "[M+H]+",
     "[M+NH4]+",
-    "[M+Na]+"
+    "[M+Na]+",
+    "[M+H-CH4]+"
    ],
    "polarity": "positive",
    "source": "Keller 2008",
@@ -74,48 +75,6 @@
      14
     ],
     "end": ""
-   }
-  },
-  {
-   "id": "siloxano_lineare",
-   "name": "polisilossano lineare (terminali metilici)",
-   "class": "polisilossani",
-   "formula": "C2H6OSi",
-   "ions": [
-    "[M+H]+",
-    "[M+NH4]+",
-    "[M+Na]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)",
-   "series": {
-    "unit": "C2H6OSi",
-    "n": [
-     2,
-     14
-    ],
-    "end": "C6H18OSi2"
-   }
-  },
-  {
-   "id": "siloxano_oh",
-   "name": "polisilossano lineare (terminali OH)",
-   "class": "polisilossani",
-   "formula": "C2H6OSi",
-   "ions": [
-    "[M+H]+",
-    "[M+NH4]+",
-    "[M+Na]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)",
-   "series": {
-    "unit": "C2H6OSi",
-    "n": [
-     2,
-     14
-    ],
-    "end": "H2O"
    }
   },
   {
@@ -133,20 +92,6 @@
    "source": "Keller 2008"
   },
   {
-   "id": "dep",
-   "name": "dietilftalato (DEP)",
-   "class": "ftalati",
-   "formula": "C12H14O4",
-   "ions": [
-    "[M+H]+",
-    "[M+NH4]+",
-    "[M+Na]+",
-    "[M+K]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
    "id": "dbp",
    "name": "dibutilftalato (DBP)",
    "class": "ftalati",
@@ -161,20 +106,6 @@
    "source": "Keller 2008"
   },
   {
-   "id": "bbp",
-   "name": "benzilbutilftalato (BBP)",
-   "class": "ftalati",
-   "formula": "C19H20O4",
-   "ions": [
-    "[M+H]+",
-    "[M+NH4]+",
-    "[M+Na]+",
-    "[M+K]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
    "id": "dehp",
    "name": "DEHP / diisoottilftalato (isomeri)",
    "class": "ftalati",
@@ -183,38 +114,11 @@
     "[M+H]+",
     "[M+NH4]+",
     "[M+Na]+",
-    "[M+K]+"
+    "[M+K]+",
+    "[M+CH3CN+Na]+"
    ],
    "polarity": "positive",
    "source": "Keller 2008"
-  },
-  {
-   "id": "dinp",
-   "name": "diisononilftalato (DiNP)",
-   "class": "ftalati",
-   "formula": "C26H42O4",
-   "ions": [
-    "[M+H]+",
-    "[M+NH4]+",
-    "[M+Na]+",
-    "[M+K]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "didp",
-   "name": "diisodecilftalato (DiDP)",
-   "class": "ftalati",
-   "formula": "C28H46O4",
-   "ions": [
-    "[M+H]+",
-    "[M+NH4]+",
-    "[M+Na]+",
-    "[M+K]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "ftalato_149",
@@ -222,7 +126,8 @@
    "class": "ftalati",
    "formula": "C8H4O3",
    "ions": [
-    "[M+H]+"
+    "[M+H]+",
+    "[M+Na]+"
    ],
    "polarity": "positive",
    "source": "Keller 2008"
@@ -240,20 +145,6 @@
    ],
    "polarity": "positive",
    "source": "Keller 2008"
-  },
-  {
-   "id": "atbc",
-   "name": "acetil tributil citrato (ATBC)",
-   "class": "plastificanti",
-   "formula": "C20H34O8",
-   "ions": [
-    "[M+H]+",
-    "[M+NH4]+",
-    "[M+Na]+",
-    "[M+K]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "oleamide",
@@ -293,56 +184,6 @@
    ],
    "polarity": "positive",
    "source": "Keller 2008"
-  },
-  {
-   "id": "palmitamide",
-   "name": "palmitamide",
-   "class": "ammidi degli acidi grassi",
-   "formula": "C16H33NO",
-   "ions": [
-    "[M+H]+",
-    "[M+Na]+",
-    "[M+NH4]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "behenamide",
-   "name": "behenamide",
-   "class": "ammidi degli acidi grassi",
-   "formula": "C22H45NO",
-   "ions": [
-    "[M+H]+",
-    "[M+Na]+",
-    "[M+NH4]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "laurico",
-   "name": "acido laurico",
-   "class": "acidi grassi",
-   "formula": "C12H24O2",
-   "ions": [
-    "[M-H]-",
-    "[M+Na]+"
-   ],
-   "polarity": "both",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "miristico",
-   "name": "acido miristico",
-   "class": "acidi grassi",
-   "formula": "C14H28O2",
-   "ions": [
-    "[M-H]-",
-    "[M+Na]+"
-   ],
-   "polarity": "both",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "palmitico",
@@ -396,121 +237,11 @@
    "series": {
     "unit": "C2H4O",
     "n": [
-     3,
+     1,
      25
     ],
     "end": "C14H22O"
    }
-  },
-  {
-   "id": "sds",
-   "name": "dodecilsolfato (SDS)",
-   "class": "tensioattivi",
-   "formula": "C12H26O4S",
-   "ions": [
-    "[M-H]-"
-   ],
-   "polarity": "negative",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "sds_dimero",
-   "name": "dodecilsolfato, dimero (2M-H)",
-   "class": "tensioattivi",
-   "formula": "C24H52O8S2",
-   "ions": [
-    "[M-H]-"
-   ],
-   "polarity": "negative",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "las10",
-   "name": "alchilbenzensolfonato C10 (LAS)",
-   "class": "tensioattivi",
-   "formula": "C16H26O3S",
-   "ions": [
-    "[M-H]-"
-   ],
-   "polarity": "negative",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "las11",
-   "name": "alchilbenzensolfonato C11 (LAS)",
-   "class": "tensioattivi",
-   "formula": "C17H28O3S",
-   "ions": [
-    "[M-H]-"
-   ],
-   "polarity": "negative",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "las12",
-   "name": "alchilbenzensolfonato C12 (LAS)",
-   "class": "tensioattivi",
-   "formula": "C18H30O3S",
-   "ions": [
-    "[M-H]-"
-   ],
-   "polarity": "negative",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "las13",
-   "name": "alchilbenzensolfonato C13 (LAS)",
-   "class": "tensioattivi",
-   "formula": "C19H32O3S",
-   "ions": [
-    "[M-H]-"
-   ],
-   "polarity": "negative",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "bak12",
-   "name": "benzalconio C12",
-   "class": "ammoni quaternari",
-   "formula": "C21H38N",
-   "ions": [
-    "[M]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "bak14",
-   "name": "benzalconio C14",
-   "class": "ammoni quaternari",
-   "formula": "C23H42N",
-   "ions": [
-    "[M]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "cetrimide",
-   "name": "cetiltrimetilammonio",
-   "class": "ammoni quaternari",
-   "formula": "C19H42N",
-   "ions": [
-    "[M]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "ddac",
-   "name": "didecildimetilammonio",
-   "class": "ammoni quaternari",
-   "formula": "C22H48N",
-   "ions": [
-    "[M]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "tba",
@@ -538,78 +269,17 @@
    "source": "Keller 2008"
   },
   {
-   "id": "irganox1010",
-   "name": "Irganox 1010",
-   "class": "antiossidanti dei polimeri",
-   "formula": "C73H108O12",
-   "ions": [
-    "[M+NH4]+",
-    "[M+Na]+",
-    "[M+K]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "irganox1330",
-   "name": "Irganox 1330",
-   "class": "antiossidanti dei polimeri",
-   "formula": "C54H78O3",
-   "ions": [
-    "[M+H]+",
-    "[M+NH4]+",
-    "[M+Na]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "irgafos168",
-   "name": "Irgafos 168",
-   "class": "antiossidanti dei polimeri",
-   "formula": "C42H63O3P",
-   "ions": [
-    "[M+H]+",
-    "[M+Na]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "irgafos168_ox",
-   "name": "Irgafos 168 ossidato",
-   "class": "antiossidanti dei polimeri",
-   "formula": "C42H63O4P",
-   "ions": [
-    "[M+H]+",
-    "[M+Na]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
    "id": "bht",
    "name": "butilidrossitoluene (BHT)",
    "class": "antiossidanti dei polimeri",
    "formula": "C15H24O",
    "ions": [
     "[M-H]-",
-    "[M+H]+"
+    "[M+H]+",
+    "[M+Na]+"
    ],
    "polarity": "both",
    "source": "Keller 2008"
-  },
-  {
-   "id": "dtbp",
-   "name": "2,4-di-terz-butilfenolo",
-   "class": "antiossidanti dei polimeri",
-   "formula": "C14H22O",
-   "ions": [
-    "[M-H]-",
-    "[M+H]+"
-   ],
-   "polarity": "both",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "tea",
@@ -656,48 +326,17 @@
    "source": "Keller 2008"
   },
   {
-   "id": "tmea",
-   "name": "trimetilammina",
-   "class": "ammine degli eluenti",
-   "formula": "C3H9N",
-   "ions": [
-    "[M+H]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "dea",
-   "name": "dietanolammina",
-   "class": "ammine degli eluenti",
-   "formula": "C4H11NO2",
-   "ions": [
-    "[M+H]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "tea_ol",
-   "name": "trietanolammina",
-   "class": "ammine degli eluenti",
-   "formula": "C6H15NO3",
-   "ions": [
-    "[M+H]+"
-   ],
-   "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
    "id": "bbsa",
    "name": "N-butilbenzensolfonammide",
    "class": "plastificanti",
    "formula": "C10H15NO2S",
    "ions": [
     "[M+H]+",
-    "[M+Na]+"
+    "[M+Na]+",
+    "[M+NH4]+",
+    "[M-H]-"
    ],
-   "polarity": "positive",
+   "polarity": "both",
    "source": "Keller 2008"
   },
   {
@@ -737,25 +376,6 @@
    "source": "Keller 2008"
   },
   {
-   "id": "formiato_na",
-   "name": "formiato di sodio (cluster)",
-   "class": "cluster dei sali degli eluenti",
-   "formula": "CHNaO2",
-   "ions": [
-    "[M+Na]+"
-   ],
-   "polarity": "positive",
-   "source": "Guo 2006",
-   "series": {
-    "unit": "CHNaO2",
-    "n": [
-     1,
-     14
-    ],
-    "end": ""
-   }
-  },
-  {
    "id": "formiato_na_neg",
    "name": "formiato di sodio (cluster, negativo)",
    "class": "cluster dei sali degli eluenti",
@@ -764,90 +384,12 @@
     "[M+HCOO]-"
    ],
    "polarity": "negative",
-   "source": "Keller 2008, Guo 2006",
+   "source": "Keller 2008",
    "series": {
     "unit": "CHNaO2",
     "n": [
      1,
      14
-    ],
-    "end": ""
-   }
-  },
-  {
-   "id": "acetato_na",
-   "name": "acetato di sodio (cluster)",
-   "class": "cluster dei sali degli eluenti",
-   "formula": "C2H3NaO2",
-   "ions": [
-    "[M+Na]+"
-   ],
-   "polarity": "positive",
-   "source": "Keller 2008, Guo 2006",
-   "series": {
-    "unit": "C2H3NaO2",
-    "n": [
-     1,
-     14
-    ],
-    "end": ""
-   }
-  },
-  {
-   "id": "acetato_na_neg",
-   "name": "acetato di sodio (cluster, negativo)",
-   "class": "cluster dei sali degli eluenti",
-   "formula": "C2H3NaO2",
-   "ions": [
-    "[M+CH3COO]-"
-   ],
-   "polarity": "negative",
-   "source": "Guo 2006",
-   "series": {
-    "unit": "C2H3NaO2",
-    "n": [
-     1,
-     10
-    ],
-    "end": ""
-   }
-  },
-  {
-   "id": "formiato_nh4",
-   "name": "formiato di ammonio (cluster)",
-   "class": "cluster dei sali degli eluenti",
-   "formula": "CH5NO2",
-   "ions": [
-    "[M+H]+",
-    "[M+NH4]+"
-   ],
-   "polarity": "positive",
-   "source": "Guo 2006",
-   "series": {
-    "unit": "CH5NO2",
-    "n": [
-     1,
-     10
-    ],
-    "end": ""
-   }
-  },
-  {
-   "id": "acetato_nh4",
-   "name": "acetato di ammonio (cluster)",
-   "class": "cluster dei sali degli eluenti",
-   "formula": "C2H7NO2",
-   "ions": [
-    "[M+H]+",
-    "[M+NH4]+"
-   ],
-   "polarity": "positive",
-   "source": "Guo 2006",
-   "series": {
-    "unit": "C2H7NO2",
-    "n": [
-     1,
-     10
     ],
     "end": ""
    }
@@ -862,7 +404,7 @@
     "[M-H]-"
    ],
    "polarity": "both",
-   "source": "Keller 2008, Guo 2006",
+   "source": "Keller 2008",
    "series": {
     "unit": "CH2O2",
     "n": [
@@ -882,7 +424,7 @@
     "[M-H]-"
    ],
    "polarity": "both",
-   "source": "Keller 2008, Guo 2006",
+   "source": "Keller 2008",
    "series": {
     "unit": "C2H4O2",
     "n": [
@@ -899,53 +441,16 @@
    "formula": "C2H3N",
    "ions": [
     "[M+H]+",
-    "[M+Na]+"
+    "[M+Na]+",
+    "[M+NH4]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008, Guo 2006",
+   "source": "Keller 2008",
    "series": {
     "unit": "C2H3N",
     "n": [
      1,
      8
-    ],
-    "end": ""
-   }
-  },
-  {
-   "id": "acqua",
-   "name": "acqua (cluster)",
-   "class": "solventi",
-   "formula": "H2O",
-   "ions": [
-    "[M+H]+"
-   ],
-   "polarity": "positive",
-   "source": "Guo 2006",
-   "series": {
-    "unit": "H2O",
-    "n": [
-     2,
-     8
-    ],
-    "end": ""
-   }
-  },
-  {
-   "id": "acqua_na",
-   "name": "acqua (cluster con sodio)",
-   "class": "solventi",
-   "formula": "H2O",
-   "ions": [
-    "[M+Na]+"
-   ],
-   "polarity": "positive",
-   "source": "Guo 2006",
-   "series": {
-    "unit": "H2O",
-    "n": [
-     1,
-     6
     ],
     "end": ""
    }
@@ -960,7 +465,7 @@
     "[M+Na]+"
    ],
    "polarity": "positive",
-   "source": "Guo 2006",
+   "source": "Keller 2008",
    "series": {
     "unit": "CH4O",
     "n": [
@@ -971,33 +476,16 @@
    }
   },
   {
-   "id": "acetonitrile_acqua",
-   "name": "acetonitrile - acqua (cluster)",
-   "class": "solventi",
-   "formula": "C2H5NO",
-   "ions": [
-    "[M+H]+",
-    "[M+Na]+"
-   ],
-   "polarity": "positive",
-   "source": "Guo 2006",
-   "series": {
-    "unit": "C2H3N",
-    "n": [
-     1,
-     5
-    ],
-    "end": "H2O"
-   }
-  },
-  {
    "id": "dmso",
    "name": "dimetilsolfossido (DMSO)",
    "class": "solventi",
    "formula": "C2H6OS",
    "ions": [
     "[M+H]+",
-    "[M+Na]+"
+    "[M+Na]+",
+    "[M+CH3CN+H]+",
+    "[M+CH3CN+NH4]+",
+    "[M+CH3CN+Na]+"
    ],
    "polarity": "positive",
    "source": "Keller 2008",
@@ -1051,7 +539,7 @@
     "[M-H]-"
    ],
    "polarity": "negative",
-   "source": "Keller 2008, Guo 2006"
+   "source": "Keller 2008"
   },
   {
    "id": "tfa_cluster_neg",
@@ -1063,32 +551,12 @@
     "[M+Na-2H]-"
    ],
    "polarity": "negative",
-   "source": "Guo 2006",
+   "source": "Keller 2008",
    "series": {
     "unit": "C2HF3O2",
     "n": [
      2,
      4
-    ],
-    "end": ""
-   }
-  },
-  {
-   "id": "tfa_cluster_pos",
-   "name": "acido trifluoroacetico (cluster, positivo)",
-   "class": "modificatori degli eluenti",
-   "formula": "C2HF3O2",
-   "ions": [
-    "[M+H]+",
-    "[M+Na]+"
-   ],
-   "polarity": "positive",
-   "source": "Guo 2006",
-   "series": {
-    "unit": "C2HF3O2",
-    "n": [
-     1,
-     3
     ],
     "end": ""
    }
@@ -1102,82 +570,2822 @@
     "[M+H]+"
    ],
    "polarity": "positive",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
+   "source": "Keller 2008"
   },
   {
-   "id": "hepes",
-   "name": "HEPES",
-   "class": "tamponi",
-   "formula": "C8H18N2O4S",
+   "id": "acetato_na",
+   "name": "acetato di sodio (cluster)",
+   "class": "cluster dei sali degli eluenti",
+   "formula": "C2H3NaO2",
+   "ions": [
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H3NaO2",
+    "n": [
+     1,
+     14
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "cluster_acetonitrile_formic_acid_1_1",
+   "name": "acetonitrile/acido formico (cluster 1:1)",
+   "class": "solventi",
+   "formula": "C3H5NO2",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "cluster_methanol_water_2_2",
+   "name": "metanolo/acqua (cluster 2:2)",
+   "class": "solventi",
+   "formula": "C2H12O4",
    "ions": [
     "[M+H]+",
-    "[M-H]-"
+    "[M+Na]+"
    ],
-   "polarity": "both",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
+   "polarity": "positive",
+   "source": "Keller 2008"
   },
   {
-   "id": "mes",
-   "name": "MES",
-   "class": "tamponi",
-   "formula": "C6H13NO4S",
+   "id": "cluster_acetonitrile_acetic_acid_1_1",
+   "name": "acetonitrile/acido acetico (cluster 1:1)",
+   "class": "solventi",
+   "formula": "C4H7NO2",
    "ions": [
     "[M+H]+",
-    "[M-H]-"
+    "[M+Na]+"
    ],
-   "polarity": "both",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
+   "polarity": "positive",
+   "source": "Keller 2008"
   },
   {
-   "id": "pfoa",
-   "name": "acido perfluoroottanoico (PFOA)",
-   "class": "fluorurati del sistema LC",
-   "formula": "C8HF15O2",
+   "id": "cluster_acetonitrile_dimethylformamide_1_1",
+   "name": "acetonitrile/dimetilformammide (cluster 1:1)",
+   "class": "solventi",
+   "formula": "C5H10N2O",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "dimetilamminopiridina_dmap_c7h10n2",
+   "name": "dimetilamminopiridina (DMAP)",
+   "class": "varie",
+   "formula": "C7H10N2",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "cluster_methanol_water_3_2",
+   "name": "metanolo/acqua (cluster 3:2)",
+   "class": "solventi",
+   "formula": "C3H16O5",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "fenildietilammina_c10h15n",
+   "name": "fenildietilammina",
+   "class": "varie",
+   "formula": "C10H15N",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "1_8_diazabiciclo_5_4_0_undec_7_ene_dbu_c9h16n2",
+   "name": "1,8-diazabiciclo[5.4.0]undec-7-ene (DBU)",
+   "class": "varie",
+   "formula": "C9H16N2",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "natfa_c2f3o2na",
+   "name": "trifluoroacetato di sodio (NaTFA)",
+   "class": "varie",
+   "formula": "C2F3O2Na",
+   "ions": [
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "dimetilftalato_frammento",
+   "name": "dimetilftalato, frammento (perdita di CH3OH)",
+   "class": "plastificanti",
+   "formula": "C9H6O3",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "dietilenglicole_monobutiletere_dgbe_c8h18o3",
+   "name": "dietilenglicole monobutiletere (DGBE)",
+   "class": "varie",
+   "formula": "C8H18O3",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "butilidrossianisolo_bha_c11h16o2",
+   "name": "butilidrossianisolo (BHA)",
+   "class": "varie",
+   "formula": "C11H16O2",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "difenilchetone_c13h10o",
+   "name": "difenilchetone",
+   "class": "varie",
+   "formula": "C13H10O",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "cluster_methanol_water_4_3",
+   "name": "metanolo/acqua (cluster 4:3)",
+   "class": "solventi",
+   "formula": "C4H22O7",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "glicole_etere_c8h18o3",
+   "name": "glicole etere",
+   "class": "varie",
+   "formula": "C8H18O3",
+   "ions": [
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "n_n_dicicloesilurea_dcu_c13h24n2o",
+   "name": "N,N'-dicicloesilurea (DCU)",
+   "class": "varie",
+   "formula": "C13H24N2O",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "trietilammina_cloridrato_dimero",
+   "name": "trietilammina cloridrato, dimero (−Cl)",
+   "class": "tamponi",
+   "formula": "C12H32N2Cl",
+   "ions": [
+    "[M]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "catione_tritile_c19h15",
+   "name": "catione tritile",
+   "class": "varie",
+   "formula": "C19H15",
+   "ions": [
+    "[M]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "trit_c15h24o",
+   "name": "Triton 101 (alchilfenolo etossilato)",
+   "class": "tensioattivi",
+   "formula": "C2H4O",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H4O",
+    "n": [
+     1,
+     20
+    ],
+    "end": "C15H24O"
+   }
+  },
+  {
+   "id": "catione_monometossitritile_c20h17o",
+   "name": "catione monometossitritile",
+   "class": "varie",
+   "formula": "C20H17O",
+   "ions": [
+    "[M]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "n_n_bis_2_idrossietil_dodecanammide_c16h33no3",
+   "name": "N,N-bis(2-idrossietil)dodecanammide",
+   "class": "varie",
+   "formula": "C16H33NO3",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "trit_c15h30o",
+   "name": "Triton 101R (alcol etossilato, ridotto)",
+   "class": "tensioattivi",
+   "formula": "C2H4O",
+   "ions": [
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H4O",
+    "n": [
+     1,
+     20
+    ],
+    "end": "C15H30O"
+   }
+  },
+  {
+   "id": "trit_c14h28o",
+   "name": "Triton X-100R / X-114R / X-405R / X-45R (ridotto)",
+   "class": "tensioattivi",
+   "formula": "C2H4O",
+   "ions": [
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H4O",
+    "n": [
+     2,
+     20
+    ],
+    "end": "C14H28O"
+   }
+  },
+  {
+   "id": "dietilenglicole_monobutiletere_dgbe_dimero",
+   "name": "dietilenglicole monobutiletere (DGBE) (dimero)",
+   "class": "dimeri",
+   "formula": "C16H36O6",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "behentrimonio_cloruro_btac_228_c25h54n",
+   "name": "behentrimonio cloruro (BTAC-228)",
+   "class": "varie",
+   "formula": "C25H54N",
+   "ions": [
+    "[M]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "n_n_dicicloesilurea_dcu_dimero",
+   "name": "N,N'-dicicloesilurea (DCU) (dimero)",
+   "class": "dimeri",
+   "formula": "C26H48N4O2",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "oligomero_ciclico_del_nylon_66_c24h44n4o4",
+   "name": "oligomero ciclico del nylon 66",
+   "class": "varie",
+   "formula": "C24H44N4O4",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_slpr",
+   "name": "peptide SLPR (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C20H37N7O6",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "dipalmitildimetilammonio_c34h72n",
+   "name": "dipalmitildimetilammonio",
+   "class": "varie",
+   "formula": "C34H72N",
+   "ions": [
+    "[M]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_iqvr",
+   "name": "peptide IQVR (artefatto simile alla tripsina)",
+   "class": "peptidi",
+   "formula": "C22H42N8O6",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "didodecil_3_3_tiodipropionato_ddtdp_c30h58o4s",
+   "name": "didodecil 3,3′-tiodipropionato (DDTDP)",
+   "class": "varie",
+   "formula": "C30H58O4S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "stearilpalmitildimetilammonio_c36h76n",
+   "name": "stearilpalmitildimetilammonio",
+   "class": "varie",
+   "formula": "C36H76N",
+   "ions": [
+    "[M]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "didodecil_3_3_tiodipropionato_ddtdp_c30h58o5s",
+   "name": "DDTDP ossidato a sulfossido",
+   "class": "varie",
+   "formula": "C30H58O5S",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "didodecil_3_3_tiodipropionato_ddtdp_c30h58o6s",
+   "name": "DDTDP ossidato a solfone",
+   "class": "varie",
+   "formula": "C30H58O6S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "distearildimetilammonio_c38h80n",
+   "name": "distearildimetilammonio",
+   "class": "varie",
+   "formula": "C38H80N",
+   "ions": [
+    "[M]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_vslpr",
+   "name": "peptide VSLPR (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C25H46N8O7",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "chaps_c32h58n2o7s",
+   "name": "CHAPS",
+   "class": "varie",
+   "formula": "C32H58N2O7S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_qtiasn",
+   "name": "peptide QTIASN (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C25H44N8O11",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_gltaer",
+   "name": "peptide GLTAER (cheratina umana, frammento di sorgente)",
+   "class": "peptidi",
+   "formula": "C26H47N9O10",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sgiqvr",
+   "name": "peptide SGIQVR (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C27H50N10O9",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_tvslpr",
+   "name": "peptide TVSLPR (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C29H53N9O9",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "oligomero_ciclico_del_nylon_66_c36h66n6o6",
+   "name": "oligomero ciclico del nylon 66",
+   "class": "varie",
+   "formula": "C36H66N6O6",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ldselk",
+   "name": "peptide LDSELK (cheratina)",
+   "class": "peptidi",
+   "formula": "C30H53N7O12",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_glvliaf",
+   "name": "peptide GLVLIAF (albumina sierica bovina (BSA))",
+   "class": "peptidi",
+   "formula": "C37H61N7O8",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_gpfpilv",
+   "name": "peptide GPFPILV (caseina alfa-S1 bovina)",
+   "class": "peptidi",
+   "formula": "C38H59N7O8",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_atvslpr",
+   "name": "peptide ATVSLPR (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C32H58N10O10",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_patlnsr",
+   "name": "peptide PATLNSR (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C31H55N11O11",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "diisoottilftalato_dimero",
+   "name": "diisoottilftalato (dimero)",
+   "class": "dimeri",
+   "formula": "C48H76O8",
+   "ions": [
+    "[M+K]+",
+    "[M+NH4]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lsspatln",
+   "name": "peptide LSSPATLN (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C34H59N9O13",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_seidnvk",
+   "name": "peptide SEIDNVK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C33H57N9O14",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_saaslnsr",
+   "name": "peptide SAASLNSR (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C31H56N12O13",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_laaddfr",
+   "name": "peptide LAADDFR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C35H54N10O12",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lasyldk",
+   "name": "peptide LASYLDK (cheratina)",
+   "class": "peptidi",
+   "formula": "C37H60N8O12",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "tween_c18h34o6",
+   "name": "Tween 20 (polisorbato)",
+   "class": "tensioattivi",
+   "formula": "C2H4O",
+   "ions": [
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H4O",
+    "n": [
+     10,
+     32
+    ],
+    "end": "C18H34O6"
+   }
+  },
+  {
+   "id": "pep_pgvvslpr",
+   "name": "peptide PGVVSLPR (artefatto simile alla tripsina)",
+   "class": "peptidi",
+   "formula": "C37H65N11O10",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_fasfidk",
+   "name": "peptide FASFIDK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C40H58N8O11",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_peiqnvk",
+   "name": "peptide PEIQNVK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C36H62N10O12",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sisisvar",
+   "name": "peptide SISISVAR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C35H65N11O12",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_vatvslpr",
+   "name": "peptide VATVSLPR (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C37H67N11O11",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_afidkvr",
+   "name": "peptide AFIDKVR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C39H65N11O10",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sflinnr",
+   "name": "peptide SFLINNR (cheratina umana, frammento di sorgente)",
+   "class": "peptidi",
+   "formula": "C38H62N12O11",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ieiatyr",
+   "name": "peptide IEIATYR (cheratina umana, frammento di sorgente)",
+   "class": "peptidi",
+   "formula": "C39H64N10O12",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "tween_c22h42o6",
+   "name": "Tween 40 (polisorbato)",
+   "class": "tensioattivi",
+   "formula": "C2H4O",
+   "ions": [
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H4O",
+    "n": [
+     10,
+     32
+    ],
+    "end": "C22H42O6"
+   }
+  },
+  {
+   "id": "pep_qatvslpr",
+   "name": "peptide QATVSLPR (artefatto simile alla tripsina)",
+   "class": "peptidi",
+   "formula": "C37H66N12O12",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_slvnlggsk",
+   "name": "peptide SLVNLGGSK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C37H67N11O13",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_slyglggsk",
+   "name": "peptide SLYGLGGSK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C39H64N10O13",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_rvyvhpi",
+   "name": "peptide RVYVHPI (standard di angiotensina)",
+   "class": "peptidi",
+   "formula": "C42H66N12O9",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "tween_c24h44o6",
+   "name": "Tween 80 (polisorbato)",
+   "class": "tensioattivi",
+   "formula": "C2H4O",
+   "ions": [
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H4O",
+    "n": [
+     10,
+     32
+    ],
+    "end": "C24H44O6"
+   }
+  },
+  {
+   "id": "tween_c24h46o6",
+   "name": "Tween 60 (polisorbato)",
+   "class": "tensioattivi",
+   "formula": "C2H4O",
+   "ions": [
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H4O",
+    "n": [
+     10,
+     32
+    ],
+    "end": "C24H46O6"
+   }
+  },
+  {
+   "id": "pep_vqtvslpr",
+   "name": "peptide VQTVSLPR (artefatto simile alla tripsina)",
+   "class": "peptidi",
+   "formula": "C39H70N12O12",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "oligomero_ciclico_del_nylon_66_c48h88n8o8",
+   "name": "oligomero ciclico del nylon 66",
+   "class": "varie",
+   "formula": "C48H88N8O8",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_nkpgvytk",
+   "name": "peptide NKPGVYTK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C41H67N11O12",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_rvyvhpf",
+   "name": "peptide RVYVHPF (standard di angiotensina, bovina)",
+   "class": "peptidi",
+   "formula": "C45H64N12O9",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_rvyihpf",
+   "name": "peptide RVYIHPF (standard di angiotensina, umana)",
+   "class": "peptidi",
+   "formula": "C46H66N12O9",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_yvnwiqq",
+   "name": "peptide YVNWIQQ (artefatto simile alla tripsina)",
+   "class": "peptidi",
+   "formula": "C45H63N11O12",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ieiselnr",
+   "name": "peptide IEISELNR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C41H72N12O15",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_gtsypdvlk",
+   "name": "peptide GTSYPDVLK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C44H70N10O15",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ikewyek",
+   "name": "peptide IKEWYEK (cheratina)",
+   "class": "peptidi",
+   "formula": "C48H70N10O13",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lqaeieglk",
+   "name": "peptide LQAEIEGLK (cheratina)",
+   "class": "peptidi",
+   "formula": "C44H77N11O15",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_seitelrr",
+   "name": "peptide SEITELRR (cheratina)",
+   "class": "peptidi",
+   "formula": "C41H74N14O15",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_apilsdssck",
+   "name": "peptide APILSDSSCK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C42H73N11O16S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sipyqvsln",
+   "name": "peptide SIPYQVSLN (artefatto simile alla tripsina)",
+   "class": "peptidi",
+   "formula": "C46H73N11O15",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ssypgqitgn",
+   "name": "peptide SSYPGQITGN (artefatto simile alla tripsina)",
+   "class": "peptidi",
+   "formula": "C43H66N12O17",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_neqfisask",
+   "name": "peptide NEQFISASK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C44H70N12O16",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_vldeltltk",
+   "name": "peptide VLDELTLTK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C46H82N10O16",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_tllegeesr",
+   "name": "peptide TLLEGEESR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C42H72N12O18",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_irdwyqr",
+   "name": "peptide IRDWYQR (cheratina)",
+   "class": "peptidi",
+   "formula": "C47H69N15O12",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_yldgltaer",
+   "name": "peptide YLDGLTAER (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C45H72N12O16",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lsspatlnsr",
+   "name": "peptide LSSPATLNSR (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C43H76N14O16",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lksaaslnsr",
+   "name": "peptide LKSAASLNSR (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C43H79N15O15",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_tlldidntr",
+   "name": "peptide TLLDIDNTR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C44H77N13O17",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_diiravgays",
+   "name": "peptide DIIRAVGAYS (lysyl endopeptidase (Lys-C))",
+   "class": "peptidi",
+   "formula": "C47H77N13O15",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lasyldkvr",
+   "name": "peptide LASYLDKVR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C48H81N13O14",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_stmqelnsr",
+   "name": "peptide STMQELNSR (cheratina)",
+   "class": "peptidi",
+   "formula": "C41H72N14O17S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_faafidkvr",
+   "name": "peptide FAAFIDKVR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C51H79N13O12",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lagleealqk",
+   "name": "peptide LAGLEEALQK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C47H82N12O16",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_gneqfisask",
+   "name": "peptide GNEQFISASK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C46H73N13O17",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_fasfidkvr",
+   "name": "peptide FASFIDKVR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C51H79N13O13",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_vtmqnlndr",
+   "name": "peptide VTMQNLNDR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C43H75N15O16S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_gneqfinaak",
+   "name": "peptide GNEQFINAAK (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C47H74N14O16",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_daeawfnek",
+   "name": "peptide DAEAWFNEK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C50H68N12O17",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_hgnshqgepr",
+   "name": "peptide HGNSHQGEPR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C44H67N19O16",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_qeyeqliak",
+   "name": "peptide QEYEQLIAK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C50H80N12O17",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_iithpnfngn",
+   "name": "peptide IITHPNFNGN (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C50H75N15O15",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lseleaalqr",
+   "name": "peptide LSELEAALQR (cheratina)",
+   "class": "peptidi",
+   "formula": "C48H84N14O17",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_dyqelmntk",
+   "name": "peptide DYQELMNTK (cheratina)",
+   "class": "peptidi",
+   "formula": "C48H76N12O18S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ssgtsypdvlk",
+   "name": "peptide SSGTSYPDVLK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C50H80N12O19",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_qgvdadinglr",
+   "name": "peptide QGVDADINGLR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C47H80N16O18",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_leneiqtyr",
+   "name": "peptide LENEIQTYR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C50H80N14O18",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_mfcagyleggk",
+   "name": "peptide MFCAGYLEGGK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C52H78N12O15S2",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_tldndimlik",
+   "name": "peptide TLDNDIMLIK (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C51H90N12O17S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_yeelqitagr",
+   "name": "peptide YEELQITAGR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C51H82N14O18",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_qvldnltmek",
+   "name": "peptide QVLDNLTMEK (kereatin)",
+   "class": "peptidi",
+   "formula": "C50H87N13O18S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_yeelqvtvgr",
+   "name": "peptide YEELQVTVGR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C52H84N14O18",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_tldndimlir",
+   "name": "peptide TLDNDIMLIR (artefatto simile alla tripsina)",
+   "class": "peptidi",
+   "formula": "C51H90N14O17S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_taaendfvtlk",
+   "name": "peptide TAAENDFVTLK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C53H85N13O19",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ssggtsypdvlk",
+   "name": "peptide SSGGTSYPDVLK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C52H83N13O20",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_egneqfinaak",
+   "name": "peptide EGNEQFINAAK (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C52H81N15O19",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "chaps_dimero",
+   "name": "CHAPS (dimero)",
+   "class": "dimeri",
+   "formula": "C64H116N4O14S2",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sggggggglgsggsir",
+   "name": "peptide SGGGGGGGLGSGGSIR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C47H81N19O20",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_fssssgygggssr",
+   "name": "peptide FSSSSGYGGGSSR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C50H74N16O21",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_yipiqyvlsr",
+   "name": "peptide YIPIQYVLSR (caseina alfa-S1 bovina)",
+   "class": "peptidi",
+   "formula": "C60H94N14O15",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_gfssgsavvsggsr",
+   "name": "peptide GFSSGSAVVSGGSR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C51H83N17O20",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sllegegssggggr",
+   "name": "peptide SLLEGEGSSGGGGR (cheratina)",
+   "class": "peptidi",
+   "formula": "C49H83N17O22",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_llhgvatvslpr",
+   "name": "peptide LLHGVATVSLPR (artefatto simile alla tripsina)",
+   "class": "peptidi",
+   "formula": "C57H99N17O15",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_tnaenefvtik",
+   "name": "peptide TNAENEFVTIK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C55H88N14O20",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ylgyleqllr",
+   "name": "peptide YLGYLEQLLR (caseina alfa-S1 bovina)",
+   "class": "peptidi",
+   "formula": "C60H94N14O16",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sdqsrldselk",
+   "name": "peptide SDQSRLDSELK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C51H88N16O22",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_laldieiatyr",
+   "name": "peptide LALDIEIATYR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C58H96N14O18",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_yeqlaeqnrk",
+   "name": "peptide YEQLAEQNRK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C54H87N17O19",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_drvyvhpfhl",
+   "name": "peptide DRVYVHPFHL (standard di angiotensina, bovina)",
+   "class": "peptidi",
+   "formula": "C61H87N17O14",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_drvyihpfhl",
+   "name": "peptide DRVYIHPFHL (standard di angiotensina, umana)",
+   "class": "peptidi",
+   "formula": "C62H89N17O14",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_aleeanadlevk",
+   "name": "peptide ALEEANADLEVK (cheratina)",
+   "class": "peptidi",
+   "formula": "C55H92N14O22",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_nskieiselnr",
+   "name": "peptide NSKIEISELNR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C54H95N17O20",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sldldsiiaevk",
+   "name": "peptide SLDLDSIIAEVK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C57H99N13O21",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_hlvdepqnlik",
+   "name": "peptide HLVDEPQNLIK (albumina sierica bovina (BSA))",
+   "class": "peptidi",
+   "formula": "C58H96N16O18",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ikfemeqnlr",
+   "name": "peptide IKFEMEQNLR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C57H94N16O17S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_vegneqfisask",
+   "name": "peptide VEGNEQFISASK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C56H89N15O21",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_nkyedeinkr",
+   "name": "peptide NKYEDEINKR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C55H89N17O20",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_dqivdltvgnnk",
+   "name": "peptide DQIVDLTVGNNK (cheratina)",
+   "class": "peptidi",
+   "formula": "C55H94N16O21",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_tldndimlirl",
+   "name": "peptide TLDNDIMLIRL (artefatto simile alla tripsina)",
+   "class": "peptidi",
+   "formula": "C57H101N15O18S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_hggggggfggggfgsr",
+   "name": "peptide HGGGGGGFGGGGFGSR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C55H77N21O18",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_nvqdaiadaeqr",
+   "name": "peptide NVQDAIADAEQR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C53H88N18O22",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_taaendfvtlkk",
+   "name": "peptide TAAENDFVTLKK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C59H97N15O20",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_skaeaeslyqsk",
+   "name": "peptide SKAEAESLYQSK (cheratina)",
+   "class": "peptidi",
+   "formula": "C57H93N15O22",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_asleaaiadaeqr",
+   "name": "peptide ASLEAAIADAEQR (cheratina)",
+   "class": "peptidi",
+   "formula": "C55H93N17O22",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_iglggrggsggsygr",
+   "name": "peptide IGLGGRGGSGGSYGR (cheratina)",
+   "class": "peptidi",
+   "formula": "C55H91N21O19",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lndledalqqak",
+   "name": "peptide LNDLEDALQQAK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C57H96N16O22",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_qsveadinglrr",
+   "name": "peptide QSVEADINGLRR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C55H96N20O20",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sqyeqlaeqnr",
+   "name": "peptide SQYEQLAEQNR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C56H88N18O22",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_risnstsptsfva",
+   "name": "peptide RISNSTSPTSFVA (lysyl endopeptidase (Lys-C))",
+   "class": "peptidi",
+   "formula": "C58H95N17O21",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_vftswtgggaaasr",
+   "name": "peptide VFTSWTGGGAAASR (lysyl endopeptidase (Lys-C))",
+   "class": "peptidi",
+   "formula": "C60H90N18O19",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lndleealqqak",
+   "name": "peptide LNDLEEALQQAK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C58H98N16O22",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_dlnmdnivaeik",
+   "name": "peptide DLNMDNIVAEIK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C58H99N15O21S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_aleesnyelegk",
+   "name": "peptide ALEESNYELEGK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C59H92N14O24",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_slnnqfasfidk",
+   "name": "peptide SLNNQFASFIDK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C62H94N16O20",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ffvapfpevfgk",
+   "name": "peptide FFVAPFPEVFGK (caseina alfa-S1 bovina)",
+   "class": "peptidi",
+   "formula": "C72H97N13O15",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_qsleaslaetegr",
+   "name": "peptide QSLEASLAETEGR (cheratina)",
+   "class": "peptidi",
+   "formula": "C56H95N17O24",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_tnaenefvtikk",
+   "name": "peptide TNAENEFVTIKK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C61H100N16O21",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_tvmenfvafvdk",
+   "name": "peptide TVMENFVAFVDK (albumina sierica bovina (BSA))",
+   "class": "peptidi",
+   "formula": "C64H98N14O19S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_pyfesfinnlr",
+   "name": "peptide PYFESFINNLR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C66H94N16O18",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_vdalndeinflr",
+   "name": "peptide VDALNDEINFLR (cheratina)",
+   "class": "peptidi",
+   "formula": "C62H99N17O21",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_legltdeinflr",
+   "name": "peptide LEGLTDEINFLR (cheratina)",
+   "class": "peptidi",
+   "formula": "C63H102N16O21",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lgldieiatyrr",
+   "name": "peptide LGLDIEIATYRR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C63H106N18O19",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lqgivswgsgcaqk",
+   "name": "peptide LQGIVSWGSGCAQK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C62H100N18O19S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_irleneiqtyr",
+   "name": "peptide IRLENEIQTYR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C62H103N19O20",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_nnqfasfidkvr",
+   "name": "peptide NNQFASFIDKVR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C64H99N19O19",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_rhpeyavsvllr",
+   "name": "peptide RHPEYAVSVLLR (albumina sierica bovina (BSA))",
+   "class": "peptidi",
+   "formula": "C65H106N20O17",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lpdifeaqiaglr",
+   "name": "peptide LPDIFEAQIAGLR (cheratina)",
+   "class": "peptidi",
+   "formula": "C66H107N17O19",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_aiggglssvgggsstik",
+   "name": "peptide AIGGGLSSVGGGSSTIK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C60H106N18O23",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_evtinqsllaplr",
+   "name": "peptide EVTINQSLLAPLR (cheratina)",
+   "class": "peptidi",
+   "formula": "C64H112N18O20",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_wellqqvdtstr",
+   "name": "peptide WELLQQVDTSTR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C64H102N18O22",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_fleqqnqvlqtk",
+   "name": "peptide FLEQQNQVLQTK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C65H106N18O21",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_fleqqnkvletk",
+   "name": "peptide FLEQQNKVLETK (cheratina)",
+   "class": "peptidi",
+   "formula": "C66H109N17O21",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lgeygfqnalivr",
+   "name": "peptide LGEYGFQNALIVR (albumina sierica bovina (BSA))",
+   "class": "peptidi",
+   "formula": "C68H106N18O19",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_fyapellyyank",
+   "name": "peptide FYAPELLYYANK (albumina sierica bovina (BSA))",
+   "class": "peptidi",
+   "formula": "C74H102N14O19",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sqyeqlaeqnrk",
+   "name": "peptide SQYEQLAEQNRK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C62H100N20O23",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_dscqgdsggpvvcsgk",
+   "name": "peptide DSCQGDSGGPVVCSGK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C57H94N18O25S2",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_nvvegneqfisask",
+   "name": "peptide NVVEGNEQFISASK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C65H104N18O24",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lgehnidvlegneq",
+   "name": "peptide LGEHNIDVLEGNEQ (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C65H103N19O26",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_daflgsflyeysr",
+   "name": "peptide DAFLGSFLYEYSR (albumina sierica bovina (BSA))",
+   "class": "peptidi",
+   "formula": "C74H102N16O22",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_nklndledalqqak",
+   "name": "peptide NKLNDLEDALQQAK (cheratina)",
+   "class": "peptidi",
+   "formula": "C67H114N20O25",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_kvpqvstptlvevsr",
+   "name": "peptide KVPQVSTPTLVEVSR (albumina sierica bovina (BSA))",
+   "class": "peptidi",
+   "formula": "C72H126N20O23",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sgggfssgsagiinyqr",
+   "name": "peptide SGGGFSSGSAGIINYQR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C70H108N22O25",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_tkpsqargfhpragr",
+   "name": "peptide TKPSQARGFHPRAGR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C71H116N28O19",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lgedninvvegneqf",
+   "name": "peptide LGEDNINVVEGNEQF (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C71H109N19O28",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_slvnlggsksisisvar",
+   "name": "peptide SLVNLGGSKSISISVAR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C72H130N22O24",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_gslgggfssggfsggsfsr",
+   "name": "peptide GSLGGGFSSGGFSGGSFSR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C73H106N22O26",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_fsscgggggsfgagggfgsr",
+   "name": "peptide FSSCGGGGGSFGAGGGFGSR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C71H101N23O25S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lgehnidvlegneqf",
+   "name": "peptide LGEHNIDVLEGNEQF (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C74H112N20O27",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_qisnlqqsisdaeqr",
+   "name": "peptide QISNLQQSISDAEQR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C69H117N23O28",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_vcnyvswikqtiasn",
+   "name": "peptide VCNYVSWIKQTIASN (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C77H120N20O23S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_nnlepilegyisnlr",
+   "name": "peptide NNLEPILEGYISNLR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C77H125N21O25",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_nidvlegneqfinaak",
+   "name": "peptide NIDVLEGNEQFINAAK (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C77H123N21O27",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ggsggsyggggsgggygggsgsr",
+   "name": "peptide GGSGGSYGGGGSGGGYGGGSGSR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C69H102N26O31",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_leaelgnmqglvedfk",
+   "name": "peptide LEAELGNMQGLVEDFK (cheratina)",
+   "class": "peptidi",
+   "formula": "C78H125N19O27S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_nvqaleielqsqlalk",
+   "name": "peptide NVQALEIELQSQLALK (cheratina)",
+   "class": "peptidi",
+   "formula": "C79H137N21O26",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sdqygrvftswtgggaaa",
+   "name": "peptide SDQYGRVFTSWTGGGAAA (lysyl endopeptidase (Lys-C))",
+   "class": "peptidi",
+   "formula": "C80H115N23O27",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_hgvqeleielqsqlsk",
+   "name": "peptide HGVQELEIELQSQLSK (cheratina)",
+   "class": "peptidi",
+   "formula": "C79H132N22O28",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sisisvagggggfgaaggfggr",
+   "name": "peptide SISISVAGGGGGFGAAGGFGGR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C79H123N25O26",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_snmdnmfesyinnlr",
+   "name": "peptide SNMDNMFESYINNLR (cheratina)",
+   "class": "peptidi",
+   "formula": "C77H118N22O27S2",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_tlndmrqeyeqliak",
+   "name": "peptide TLNDMRQEYEQLIAK (cheratina)",
+   "class": "peptidi",
+   "formula": "C79H130N22O27S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lgehnidvlegneqfin",
+   "name": "peptide LGEHNIDVLEGNEQFIN (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C84H129N23O30",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_thnlepyfesfinnlr",
+   "name": "peptide THNLEPYFESFINNLR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C91H132N24O27",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ssggsssvkfvsttysgvtr",
+   "name": "peptide SSGGSSSVKFVSTTYSGVTR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C84H136N24O32",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ssggsssvrfvsttysgvtr",
+   "name": "peptide SSGGSSSVRFVSTTYSGVTR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C84H136N26O32",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lgehnidvlegneqfinaa",
+   "name": "peptide LGEHNIDVLEGNEQFINAA (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C90H139N25O32",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_elqsqisdtsvvlsmdnsr",
+   "name": "peptide ELQSQISDTSVVLSMDNSR (cheratina)",
+   "class": "peptidi",
+   "formula": "C85H145N25O35S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_thnlepyfesfinnlrr",
+   "name": "peptide THNLEPYFESFINNLRR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C97H144N28O28",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_iithpnfngntldndimli",
+   "name": "peptide IITHPNFNGNTLDNDIMLI (artefatto simile alla tripsina)",
+   "class": "peptidi",
+   "formula": "C95H151N25O30S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lgedninvvegneqfisask",
+   "name": "peptide LGEDNINVVEGNEQFISASK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C92H147N25O35",
+   "ions": [
+    "[M+H]+",
+    "[M+K]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sdlemqyetlqeelmalk",
+   "name": "peptide SDLEMQYETLQEELMALK (cheratina)",
+   "class": "peptidi",
+   "formula": "C93H151N21O34S2",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_nklndledalqqakedlar",
+   "name": "peptide NKLNDLEDALQQAKEDLAR (cheratina)",
+   "class": "peptidi",
+   "formula": "C91H154N28O34",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lgehnidvlegneqfinaak",
+   "name": "peptide LGEHNIDVLEGNEQFINAAK (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C96H151N27O33",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_adlefqieslteelaylkk",
+   "name": "peptide ADLEFQIESLTEELAYLKK (cheratina)",
+   "class": "peptidi",
+   "formula": "C102H162N22O34",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sivhpsynsntlnndimlik",
+   "name": "peptide SIVHPSYNSNTLNNDIMLIK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C99H161N27O32S",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_iithpnfngntldndimlik",
+   "name": "peptide IITHPNFNGNTLDNDIMLIK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C101H163N27O31S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_aeaeslyqskyeelqitagr",
+   "name": "peptide AEAESLYQSKYEELQITAGR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C99H156N26O36",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_lqgivswgsgcaqknkpgvytk",
+   "name": "peptide LQGIVSWGSGCAQKNKPGVYTK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C103H165N29O30S",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_qisnlqqsisdaeqrgenalk",
+   "name": "peptide QISNLQQSISDAEQRGENALK (cheratina)",
+   "class": "peptidi",
+   "formula": "C95H161N31O37",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_nqilnlttdnanillqidnar",
+   "name": "peptide NQILNLTTDNANILLQIDNAR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C100H171N31O35",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ggggggygsggssygsgggsygsgggggggr",
+   "name": "peptide GGGGGGYGSGGSSYGSGGGSYGSGGGGGGGR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C93H134N34O41",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_iikhpnysswtlnndimlik",
+   "name": "peptide IIKHPNYSSWTLNNDIMLIK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C110H174N28O30S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_aafggsggrgsssgggyssgsssygsggr",
+   "name": "peptide AAFGGSGGRGSSSGGGYSSGSSSYGSGGR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C99H149N35O42",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_skaeaeslyqskyeelqitagr",
+   "name": "peptide SKAEAESLYQSKYEELQITAGR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C108H173N29O39",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_eietyhnlleggqedfessgagk",
+   "name": "peptide EIETYHNLLEGGQEDFESSGAGK (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C107H160N28O42",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sivhpsynsntlnndimliklk",
+   "name": "peptide SIVHPSYNSNTLNNDIMLIKLK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C111H184N30O34S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_vasislptscasagtqclisgwgntk",
+   "name": "peptide VASISLPTSCASAGTQCLISGWGNTK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C108H178N30O37S2",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_evtqlrhgvqeleielqsqlsk",
+   "name": "peptide EVTQLRHGVQELEIELQSQLSK (cheratina)",
+   "class": "peptidi",
+   "formula": "C110H186N32O38",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_skeeaealyhskyeelqvtvgr",
+   "name": "peptide SKEEAEALYHSKYEELQVTVGR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C112H176N30O39",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_nkpgvytkvcnyvswikqtiasn",
+   "name": "peptide NKPGVYTKVCNYVSWIKQTIASN (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C118H185N31O34S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_sgyhfcggslinsqwvvsaahcyk",
+   "name": "peptide SGYHFCGGSLINSQWVVSAAHCYK (tripsina bovina)",
+   "class": "peptidi",
+   "formula": "C117H168N32O33S2",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ggggsfgysygggsgggfsasslgggfgggsr",
+   "name": "peptide GGGGSFGYSYGGGSGGGFSASSLGGGFGGGSR (cheratina)",
+   "class": "peptidi",
+   "formula": "C115H161N35O42",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_iqvrlgehnidvlegneqfinaak",
+   "name": "peptide IQVRLGEHNIDVLEGNEQFINAAK (tripsina suina)",
+   "class": "peptidi",
+   "formula": "C118H191N35O38",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_nvstgdvnvemnaapgvdltqllnnmr",
+   "name": "peptide NVSTGDVNVEMNAAPGVDLTQLLNNMR (cheratina)",
+   "class": "peptidi",
+   "formula": "C118H198N36O43S2",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_nyspyyntiddlkdqivdltvgnnk",
+   "name": "peptide NYSPYYNTIDDLKDQIVDLTVGNNK (cheratina)",
+   "class": "peptidi",
+   "formula": "C128H196N32O45",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_fleqqnqvlqtkwellqqvdtstr",
+   "name": "peptide FLEQQNQVLQTKWELLQQVDTSTR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C129H206N36O42",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_ggsggshgggsgfggesggsygggeeasgsgggygggsgk",
+   "name": "peptide GGSGGSHGGGSGFGGESGGSYGGGEEASGSGGGYGGGSGK (cheratina)",
+   "class": "peptidi",
+   "formula": "C127H183N43O57",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_gsygsggssygsgggsygsgggggghgsygsgsssggyr",
+   "name": "peptide GSYGSGGSSYGSGGGSYGSGGGGGGHGSYGSGSSSGGYR (cheratina umana)",
+   "class": "peptidi",
+   "formula": "C133H186N44O57",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pep_iithpnfngntldndimlirlsspatlnsr",
+   "name": "peptide IITHPNFNGNTLDNDIMLIRLSSPATLNSR (artefatto simile alla tripsina)",
+   "class": "peptidi",
+   "formula": "C144H237N43O46S",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "anione_cn",
+   "name": "ione cianuro (frammento di acetonitrile)",
+   "class": "ioni",
+   "formula": "CN",
+   "ions": [
+    "[M]-"
+   ],
+   "polarity": "negative",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "anione_po3",
+   "name": "metafosfato (da acido fosforico)",
+   "class": "ioni",
+   "formula": "PO3",
+   "ions": [
+    "[M]-"
+   ],
+   "polarity": "negative",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "anione_so3",
+   "name": "ione SO3 (da acido solforico)",
+   "class": "ioni",
+   "formula": "SO3",
+   "ions": [
+    "[M]-"
+   ],
+   "polarity": "negative",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "methanesulfuric_acid",
+   "name": "acido metansolfonico",
+   "class": "acidi e anioni",
+   "formula": "CH4O3S",
    "ions": [
     "[M-H]-"
    ],
    "polarity": "negative",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
+   "source": "Keller 2008"
   },
   {
-   "id": "pfos",
-   "name": "perfluoroottansolfonato (PFOS)",
-   "class": "fluorurati del sistema LC",
-   "formula": "C8HF17O3S",
+   "id": "sulfuric_acid",
+   "name": "acido solforico",
+   "class": "acidi e anioni",
+   "formula": "H2SO4",
    "ions": [
     "[M-H]-"
    ],
    "polarity": "negative",
-   "source": "elenco generale dei fondi LC-MS (non Keller)"
-  },
-  {
-   "id": "silox_mz_355.0699",
-   "name": "polisilossano ciclico D5, [M+H-CH4]+ (ione ricorrente)",
-   "class": "polisilossani",
-   "formula": null,
-   "mz": 355.0699,
-   "polarity": "positive",
-   "ions": [],
    "source": "Keller 2008"
   },
   {
-   "id": "silox_mz_429.0887",
-   "name": "polisilossano ciclico D6, [M+H-CH4]+ (ione ricorrente)",
-   "class": "polisilossani",
-   "formula": null,
-   "mz": 429.0887,
-   "polarity": "positive",
-   "ions": [],
+   "id": "phosphoric_acid",
+   "name": "acido fosforico",
+   "class": "acidi e anioni",
+   "formula": "H3PO4",
+   "ions": [
+    "[M-H]-"
+   ],
+   "polarity": "negative",
    "source": "Keller 2008"
   },
   {
-   "id": "silox_mz_503.1075",
-   "name": "polisilossano ciclico D7, [M+H-CH4]+ (ione ricorrente)",
-   "class": "polisilossani",
-   "formula": null,
-   "mz": 503.1075,
-   "polarity": "positive",
-   "ions": [],
+   "id": "anione_i",
+   "name": "ioduro",
+   "class": "ioni",
+   "formula": "I",
+   "ions": [
+    "[M]-"
+   ],
+   "polarity": "negative",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "pentafluoropropionic_acid_perf",
+   "name": "acido pentafluoropropionico",
+   "class": "acidi e anioni",
+   "formula": "C3HF5O2",
+   "ions": [
+    "[M-H]-"
+   ],
+   "polarity": "negative",
    "source": "Keller 2008"
   }
  ]
