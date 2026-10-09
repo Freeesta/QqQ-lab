@@ -253,5 +253,15 @@
   "og.leg.ion": "Legenda del grafico dell'origine; {mz} = m/z dello ione studiato.",
   "og.leg.par": "Legenda del grafico dell'origine; {mz} = m/z del progenitore.",
   "og.lossHint": "Suggerimento su una riga della tabella; {dm} = differenza di massa dal candidato, {lost} = stessa differenza arrotondata.",
-  "og.waitN": "Contatore di secondi durante il calcolo; {s} = secondi trascorsi."
+  "og.waitN": "Contatore di secondi durante il calcolo; {s} = secondi trascorsi.",
+  "bn.active": "Etichetta nella barra del banco; {type} = tipo di cella.",
+  "bn.com.hint": "«Segui» / «Follow» = la casella bn.com.follow.",
+  "bn.idn.hint": "«Cerca nelle librerie» = lib.search.title.",
+  "bn.dec.n": "Voce del menu dei decimali; {n} = numero di decimali.",
+  "bn.drop": "Suggerimento del pulsante «×» di un grafico impilato; {name} = etichetta del grafico.",
+  "bn.h.nParams": "Riga sopra la tabella dell'intestazione di una scansione; {n} = numero di parametri.",
+  "bn.iso.failed": "Avviso quando il profilo isotopico non si calcola; {message} = testo dell'errore.",
+  "bn.l.count": "Riga sopra l'elenco delle scansioni; {n} = numero di scansioni.",
+  "bn.maxRanges": "Avviso quando si supera il numero massimo di grafici impilati; {n} = massimo.",
+  "bn.pks.done": "Messaggio dopo «Integra in tutte le celle»; {t} = tempo del picco in minuti, {n} = tracce integrate."
 }
