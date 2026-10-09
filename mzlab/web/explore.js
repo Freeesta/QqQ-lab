@@ -2607,6 +2607,7 @@ async function showMethod(sel) {
 
   const scanLike = m.kind === "full" || m.kind === "ms2";
   const expTbl = `<table>${row(I18N.t("method.row.polarity"), pol)}${scanLike ? row(I18N.t("method.row.massRange"), m.scan_window ? `m/z ${m.scan_window[0]}-${m.scan_window[1]}` : "") : ""}${row(I18N.t("method.row.duration"), m.rt_max > 0 ? `${m.rt_min.toFixed(2)}-${m.rt_max.toFixed(2)} min` : "")}${scanLike ? row(I18N.t("method.row.scans"), m.scans || "") + row(I18N.t("method.row.cycle"), m.cycle_s ? m.cycle_s.toFixed(2) + " s" : "") : ""}${m.kind === "ms2" ? row(I18N.t("method.row.precursors"), m.precursors.join(", ")) + row(I18N.t("method.row.ce"), m.ce.length ? m.ce.join(", ") + " eV" : "") : ""}</table>`;
+  const labName = x => x.sample ? I18N.t("method.name", { n: x.sample }) : x.name;       // «Metodo 1»: the .dam holds several methods, one per sample
   const trTbl = m.transitions.length ? `<table><tr><th>${I18N.t("method.tr.name")}</th><th class="num">Q1 (m/z)</th><th class="num">Q3 (m/z)</th><th class="num">CE (eV)</th><th class="num">Dwell (ms)</th></tr>${m.transitions.map(t => `<tr><td>${EH(t.name || "")}</td><td class="num">${EH(String(t.q1))}</td><td class="num">${EH(String(t.q3))}</td><td class="num">${EH(String(t.ce ?? ""))}</td><td class="num">${t.dwell != null ? Math.round(t.dwell * 1000) : ""}</td></tr>`).join("")}</table>` : "";
   h += `<div class="msub"><span class="tag">${kindOf(f)}</span> <b>${EH(f.label)}</b> <span class="muted">· ${EH(m.instrument)} (${EH(m.serial)})</span></div><div class="mgrid">`;
   h += sec(I18N.t("method.sec.experiment"), `<div class="sm hw">${HOW[m.kind === "full" ? (f.mode === "ems" ? "ems" : "q1") : m.kind] || ""}</div>${expTbl}${trTbl}`);
@@ -2624,7 +2625,7 @@ async function showMethod(sel) {
   }
   if (lab) {
     const pr = a => a.map(s => `<tr><td class="muted">${EH(s.label)}</td><td>${s.id === "ihe" ? I18N.t(s.value ? "method.source.on" : "method.source.off") : s.value + " " + s.unit}</td></tr>`).join("");
-    const pick = labs.length > 1 ? `<div class="sm" style="margin:2px 0 6px">${I18N.t("method.source.pick", { select: `<select id="m-sel">${labs.map((x, i) => `<option value="${i}" ${i === li ? "selected" : ""}>${EH(x.name)}</option>`).join("")}</select>` })}</div>` : `<div class="muted sm" style="margin:2px 0 6px">${I18N.t("method.source.from", { name: EH(lab.name) })}</div>`;
+    const pick = labs.length > 1 ? `<div class="sm" style="margin:2px 0 6px">${I18N.t("method.source.pick", { select: `<select id="m-sel">${labs.map((x, i) => `<option value="${i}" ${i === li ? "selected" : ""}>${EH(labName(x))}</option>`).join("")}</select>` })}</div>` : `<div class="muted sm" style="margin:2px 0 6px">${I18N.t("method.source.from", { name: EH(labName(lab)) })}</div>`;
     h += sec(I18N.t("method.source.title"), pick + (lab.error ? `<div class="fail">${EH(lab.error_key ? I18N.t(lab.error_key, lab.params) : lab.error)}</div>` : lab.source.length || lab.compound.length ? `<table>${pr(lab.source)}${pr(lab.compound)}</table>` : `<div class="muted sm">${I18N.t("method.source.none")}</div>`));
   }
   h += "</div>";

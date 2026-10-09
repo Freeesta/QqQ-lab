@@ -97,10 +97,10 @@ const LISTE = (() => {
     const e = esc || (s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
     const row = it => {
       const ser = it.series && runs && runs.get(it.list + ":" + it.series.id + "#" + it.series.n);
-      return `<div class="cont-row"><b>${e(it.name)}</b>${it.mzonly ? ` <span class="sm">solo m/z</span>` : ` <span class="sm">${e(it.adduct || "")}${it.formula ? ", " + e(it.formula.replace(/x(\d+)$/, " ×$1")) : ""}</span>`}<div class="sm">m/z teorica ${it.mz.toFixed(4)} · ${it.err >= 0 ? "+" : ""}${it.err.toFixed(1)} ppm · ${e(it.list === "keller" ? (it.source ? it.source.split(",")[0] : it.listName) : it.listName || it.list)}${ser ? ` · <b>${e(ser)}</b>` : ""}</div></div>`;
+      return `<div class="cont-row"><b>${e(it.name)}</b>${it.mzonly ? ` <span class="sm">${I18N.t("lst.mzOnly")}</span>` : ` <span class="sm">${e(it.adduct || "")}${it.formula ? ", " + e(it.formula.replace(/x(\d+)$/, " ×$1")) : ""}</span>`}<div class="sm">${I18N.t("lst.theoMz")} ${it.mz.toFixed(4)} · ${it.err >= 0 ? "+" : ""}${it.err.toFixed(1)} ppm · ${e(it.list === "keller" ? (it.source ? it.source.split(",")[0] : it.listName) : it.listName || it.list)}${ser ? ` · <b>${e(ser)}</b>` : ""}</div></div>`;
     };
     const shown = matches.slice(0, MAXROWS), more = matches.length - shown.length;
-    return `<div class="cont"><div class="sm cont-h">Compatibile con un contaminante noto:</div>${shown.map(row).join("")}${more > 0 ? `<div class="sm">altre ${more}</div>` : ""}</div>`;
+    return `<div class="cont"><div class="sm cont-h">${I18N.t("lst.compatible")}</div>${shown.map(row).join("")}${more > 0 ? `<div class="sm">${I18N.t("lst.more", { n: more })}</div>` : ""}</div>`;
   }
 
   // CSV parsing: supports comma or semicolon, double quotes, Italian decimal comma (e.g. 150,5), NORMAN suspect lists
@@ -181,16 +181,16 @@ const LISTE = (() => {
   // Creates the list object for laboratory contaminants
   const labList = rows => ({
     id: "laboratorio",
-    name: "Contaminanti del laboratorio",
-    source: "dell'utente",
-    license: "dell'utente",
+    name: I18N.t("lst.lab.name"),
+    source: I18N.t("lst.user.of"),
+    license: I18N.t("lst.user.of"),
     builtin: false,
     items: (rows || []).map((r, i) => ({
       id: "lab" + i,
       name: r.name || `m/z ${r.mz}`,
-      cls: "laboratorio",
+      cls: I18N.t("lst.lab.cls"),
       formula: r.formula || null,
-      adduct: r.adduct || "ione osservato",
+      adduct: r.adduct || I18N.t("lst.lab.observed"),
       z: 1,
       mz: +r.mz,
       pol: r.polarity || 0,
@@ -210,7 +210,7 @@ const LISTE = (() => {
       return {
         id: (id || "usr") + "_" + i,
         name: r.name || (r.formula ? r.formula : `m/z ${mz}`),
-        cls: "lista utente",
+        cls: I18N.t("lst.user.source"),
         formula: r.formula || null,
         adduct,
         z: 1,
@@ -224,10 +224,10 @@ const LISTE = (() => {
 
     return {
       id: id || ("usr_" + Date.now()),
-      name: name || filename || "Lista utente",
+      name: name || filename || I18N.t("lst.user.name"),
       filename: filename || "",
-      source: "lista utente",
-      license: "dell'utente",
+      source: I18N.t("lst.user.source"),
+      license: I18N.t("lst.user.of"),
       builtin: false,
       items
     };
@@ -350,7 +350,7 @@ const LISTE = (() => {
   function textFor(mz, polarity, ppm) {
     const idx = ST.idx || ensure(); if (!idx || !isOn()) return "";
     const m = find(idx, polarity, mz, ppm); if (!m.length) return "";
-    return m.slice(0, 2).map(x => `${x.name} (${x.adduct || "solo m/z"}${x.formula ? ", " + x.formula.replace(/x(\d+)$/, " ×$1") : ""}; ${x.err >= 0 ? "+" : ""}${x.err.toFixed(1)} ppm)`).join("; ") + (m.length > 2 ? ` e altre ${m.length - 2}` : "");
+    return m.slice(0, 2).map(x => `${x.name} (${x.adduct || I18N.t("lst.mzOnly")}${x.formula ? ", " + x.formula.replace(/x(\d+)$/, " ×$1") : ""}; ${x.err >= 0 ? "+" : ""}${x.err.toFixed(1)} ppm)`).join("; ") + (m.length > 2 ? " " + I18N.t("lst.textMore", { n: m.length - 2 }) : "");
   }
 
   function addLab(mz, o = {}) {
@@ -361,10 +361,10 @@ const LISTE = (() => {
 
   // Quick dialog to add peak to laboratory contaminants
   async function askAdd(mz, polarity) {
-    const name = typeof ask === "function" ? await ask(`Aggiungi m/z ${(+mz).toFixed(4)} ai contaminanti del laboratorio. Nome (facoltativo)`, `m/z ${(+mz).toFixed(4)}`) : "";
+    const name = typeof ask === "function" ? await ask(I18N.t("lst.askAdd", { mz: (+mz).toFixed(4) }), `m/z ${(+mz).toFixed(4)}`) : "";
     if (name === null || name === undefined) return;
     addLab(mz, { name, polarity: polarity === "positive" ? 1 : polarity === "negative" ? -1 : 0 });
-    if (typeof toast === "function") toast("Aggiunto ai contaminanti del laboratorio");
+    if (typeof toast === "function") toast(I18N.t("lst.added"));
   }
 
   // Dialog for laboratory contaminants
@@ -373,23 +373,23 @@ const LISTE = (() => {
     const draw = () => {
       const rows = labRows();
       if (typeof big === "function") {
-        big("Contaminanti del laboratorio", `<div class="muted sm" style="margin-bottom:6px">Le tue sostanze di fondo (es. dai bianchi dello strumento): salvate in questo browser.</div>
-          <div class="bar"><button id="lab-xl" type="button">Esporta CSV</button><button id="lab-im" type="button">Importa CSV…</button><button id="lab-add" type="button" class="go">Aggiungi</button><input type="file" id="lab-f" accept=".csv,.txt" hidden></div>
-          <table class="lct"><tr><th class="num"><i>m/z</i></th><th>Nome</th><th>Formula</th><th>Polarità</th><th>Nota</th><th></th></tr>
+        big(I18N.t("lst.lab.name"), `<div class="muted sm" style="margin-bottom:6px">${I18N.t("lst.lab.intro")}</div>
+          <div class="bar"><button id="lab-xl" type="button">${I18N.t("lst.lab.export")}</button><button id="lab-im" type="button">${I18N.t("lst.lab.import")}</button><button id="lab-add" type="button" class="go">${I18N.t("lst.lab.add")}</button><input type="file" id="lab-f" accept=".csv,.txt" hidden></div>
+          <table class="lct"><tr><th class="num"><i>m/z</i></th><th>${I18N.t("lst.col.name")}</th><th>${I18N.t("lst.col.formula")}</th><th>${I18N.t("lst.col.polarity")}</th><th>${I18N.t("lst.col.note")}</th><th></th></tr>
           ${rows.map((r, i) => `<tr><td><input data-i="${i}" data-c="mz" value="${r.mz}" style="width:84px"></td><td><input data-i="${i}" data-c="name" value="${EHt(r.name)}"></td><td><input data-i="${i}" data-c="formula" value="${EHt(r.formula)}" style="width:110px"></td>
-            <td><select data-i="${i}" data-c="polarity"><option value="0"${!r.polarity ? " selected" : ""}>entrambe</option><option value="1"${r.polarity === 1 ? " selected" : ""}>positiva</option><option value="-1"${r.polarity === -1 ? " selected" : ""}>negativa</option></select></td>
-            <td><input data-i="${i}" data-c="note" value="${EHt(r.note)}"></td><td><button data-del="${i}" type="button" title="Toglie questa riga">×</button></td></tr>`).join("") || `<tr><td colspan="6" class="muted">Nessuna sostanza. Clic destro su un picco → «Aggiungi ai contaminanti del laboratorio…», oppure «Aggiungi».</td></tr>`}</table>`, () => {
+            <td><select data-i="${i}" data-c="polarity"><option value="0"${!r.polarity ? " selected" : ""}>${I18N.t("lst.pol.both")}</option><option value="1"${r.polarity === 1 ? " selected" : ""}>${I18N.t("lst.pol.pos")}</option><option value="-1"${r.polarity === -1 ? " selected" : ""}>${I18N.t("lst.pol.neg")}</option></select></td>
+            <td><input data-i="${i}" data-c="note" value="${EHt(r.note)}"></td><td><button data-del="${i}" type="button" title="${I18N.t("lst.lab.removeRow")}">×</button></td></tr>`).join("") || `<tr><td colspan="6" class="muted">${I18N.t("lst.lab.empty")}</td></tr>`}</table>`, () => {
           document.querySelectorAll("#bigbody [data-c]").forEach(inp => inp.onchange = () => {
             const r = labRows(), x = r[+inp.dataset.i]; if (!x) return;
             const c = inp.dataset.c; x[c] = c === "mz" ? parseFloat(String(inp.value).replace(",", ".")) || x.mz : c === "polarity" ? +inp.value : inp.value; saveRows(r);
           });
           document.querySelectorAll("#bigbody [data-del]").forEach(b => b.onclick = () => { const r = labRows(); r.splice(+b.dataset.del, 1); saveRows(r); draw(); });
-          const bAdd = document.querySelector("#lab-add"); if (bAdd) bAdd.onclick = () => { addLab(100.0, { name: "nuovo fondo" }); draw(); };
+          const bAdd = document.querySelector("#lab-add"); if (bAdd) bAdd.onclick = () => { addLab(100.0, { name: I18N.t("lst.lab.newName") }); draw(); };
           const bXl = document.querySelector("#lab-xl"); if (bXl) bXl.onclick = () => { if (typeof dl === "function") dl("contaminanti_laboratorio.csv", csvOut(labRows()), "text/csv"); };
           const bIm = document.querySelector("#lab-im"); const fIm = document.querySelector("#lab-f");
           if (bIm && fIm) {
             bIm.onclick = () => fIm.click();
-            fIm.onchange = async e => { const f = e.target.files[0]; if (!f) return; const n = csvParse(await f.text()); saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(`${n.length} righe importate`); };
+            fIm.onchange = async e => { const f = e.target.files[0]; if (!f) return; const n = csvParse(await f.text()); saveRows([...labRows(), ...n]); draw(); if (typeof toast === "function") toast(I18N.t("lst.lab.imported", { n: n.length })); };
           }
         });
       }
@@ -483,63 +483,62 @@ const LISTE = (() => {
       <div class="liste-panel" style="display:flex;flex-direction:column;gap:10px;padding:8px 12px;height:100%;box-sizing:border-box;overflow:auto">
         <div class="card" style="padding:10px 12px;background:var(--soft,#f8fafc);border:1px solid var(--line,#e2e8f0);border-radius:8px">
           <div style="font-size:12.5px;line-height:1.45;color:var(--ink,#1e293b)">
-            <b>Risoluzione unitaria (LR):</b> le coincidenze casuali sono frequenti e la corrispondenza nominale è solo un indizio, non un'identificazione (principio didattico 1).
-            Cerca sempre la serie omologa (<b>PEG: &Delta;44 Da</b>, <b>silossani: &Delta;74 Da</b>, cluster dei solventi LC-MS) o verifica la massa esatta e gli addotti a risoluzione più alta.
+            ${I18N.t("lst.note")}
           </div>
         </div>
 
         <div class="liste-bar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
           <label style="display:inline-flex;align-items:center;gap:4px">
             <span><i>m/z</i></span>
-            <input type="text" id="lst-mz" value="${EH(state.mz)}" placeholder="es. 445.1 o 279" style="width:110px;padding:3px 6px">
+            <input type="text" id="lst-mz" value="${EH(state.mz)}" placeholder="${I18N.t("lst.mzPh")}" style="width:110px;padding:3px 6px">
           </label>
-          <span class="seg" id="lst-mode-seg" title="Modalità tolleranza: Da nominale (risoluzione unitaria) o ppm (alta risoluzione)">
-            <button type="button" data-m="da" class="${state.mode === "da" ? "on" : ""}">Nominale (&plusmn; Da)</button>
-            <button type="button" data-m="ppm" class="${state.mode === "ppm" ? "on" : ""}">Alta ris. (ppm)</button>
+          <span class="seg" id="lst-mode-seg" title="${I18N.t("lst.modeTitle")}">
+            <button type="button" data-m="da" class="${state.mode === "da" ? "on" : ""}">${I18N.t("lst.mode.nominal")}</button>
+            <button type="button" data-m="ppm" class="${state.mode === "ppm" ? "on" : ""}">${I18N.t("lst.mode.hr")}</button>
           </span>
           <label style="display:inline-flex;align-items:center;gap:4px" id="lst-tol-wrap">
             <span id="lst-tol-lbl">${state.mode === "da" ? "&plusmn; Da" : "&plusmn; ppm"}</span>
             <input type="number" id="lst-tol" value="${state.mode === "da" ? state.tolDa : state.tolPpm}" step="${state.mode === "da" ? "0.1" : "1"}" min="0.001" style="width:64px;padding:3px 6px">
           </label>
           <label style="display:inline-flex;align-items:center;gap:4px">
-            <span>Cerca</span>
-            <input type="text" id="lst-txt" value="${EH(state.text)}" placeholder="nome, formula o classe…" style="width:150px;padding:3px 6px">
+            <span>${I18N.t("lst.search")}</span>
+            <input type="text" id="lst-txt" value="${EH(state.text)}" placeholder="${I18N.t("lst.searchPh")}" style="width:150px;padding:3px 6px">
           </label>
-          <span class="seg" id="lst-pol-seg" title="Filtro polarità">
+          <span class="seg" id="lst-pol-seg" title="${I18N.t("lst.polFilter")}">
             <button type="button" data-p="1" class="${state.pol === 1 ? "on" : ""}">ESI+</button>
             <button type="button" data-p="-1" class="${state.pol === -1 ? "on" : ""}">ESI&minus;</button>
-            <button type="button" data-p="0" class="${state.pol === 0 ? "on" : ""}">Tutte</button>
+            <button type="button" data-p="0" class="${state.pol === 0 ? "on" : ""}">${I18N.t("lst.all")}</button>
           </span>
         </div>
 
         <div style="display:flex;align-items:center;gap:12px;font-size:12px;flex-wrap:wrap">
-          <span class="muted">Liste attive:</span>
+          <span class="muted">${I18N.t("lst.active")}</span>
           <span id="lst-src-checks" style="display:inline-flex;gap:10px;flex-wrap:wrap"></span>
           <span style="flex:1"></span>
-          <button type="button" id="lst-btn-lab" style="font-size:11.5px;padding:2px 8px">Fondo laboratorio…</button>
-          <button type="button" id="lst-btn-upload" style="font-size:11.5px;padding:2px 8px" class="go">+ Carica CSV sospetti…</button>
+          <button type="button" id="lst-btn-lab" style="font-size:11.5px;padding:2px 8px">${I18N.t("lst.btnLab")}</button>
+          <button type="button" id="lst-btn-upload" style="font-size:11.5px;padding:2px 8px" class="go">${I18N.t("lst.btnUpload")}</button>
           <input type="file" id="lst-file-in" accept=".csv,.txt" hidden>
         </div>
 
         <div id="lst-userlists-bar" style="font-size:12px;padding:4px 8px;background:var(--panel,#fff);border:1px dashed var(--line,#cbd5e1);border-radius:6px" hidden></div>
 
         <div style="display:flex;align-items:baseline;justify-content:space-between">
-          <span id="lst-count" class="muted sm">Caricamento…</span>
+          <span id="lst-count" class="muted sm">${I18N.t("lst.loading")}</span>
         </div>
 
         <div id="lst-table-wrap" style="flex:1;min-height:220px;overflow:auto;border:1px solid var(--line,#e2e8f0);border-radius:6px;background:var(--panel,#fff)">
           <table class="lct" style="width:100%;border-collapse:collapse;font-size:12px">
             <thead>
               <tr style="position:sticky;top:0;background:var(--soft,#f1f5f9);z-index:2">
-                <th class="num" style="width:84px"><i>m/z</i> teorica</th>
+                <th class="num" style="width:84px"><i>m/z</i> ${I18N.t("lst.th.theo")}</th>
                 <th class="num" style="width:70px">&Delta;</th>
-                <th>Nome</th>
-                <th>Serie / Unità</th>
-                <th>Ione</th>
-                <th>Formula</th>
-                <th>Pol.</th>
-                <th>Classe</th>
-                <th>Fonte</th>
+                <th>${I18N.t("lst.col.name")}</th>
+                <th>${I18N.t("lst.th.series")}</th>
+                <th>${I18N.t("lst.th.ion")}</th>
+                <th>${I18N.t("lst.col.formula")}</th>
+                <th>${I18N.t("lst.th.pol")}</th>
+                <th>${I18N.t("lst.th.class")}</th>
+                <th>${I18N.t("lst.th.source")}</th>
               </tr>
             </thead>
             <tbody id="lst-tbody"></tbody>
@@ -573,13 +572,13 @@ const LISTE = (() => {
 
       if (ST.userLists.length) {
         elUListBar.hidden = false;
-        elUListBar.innerHTML = `<span class="muted">Liste utente caricate:</span> ` + ST.userLists.map(u => `
+        elUListBar.innerHTML = `<span class="muted">${I18N.t("lst.userLoaded")}</span> ` + ST.userLists.map(u => `
           <span style="display:inline-flex;align-items:center;gap:4px;background:var(--soft,#f1f5f9);padding:2px 6px;border-radius:4px;margin-right:6px">
             <b>${EH(u.name)}</b> <span class="muted">(${u.items.length})</span>
-            <button type="button" data-del-ul="${EH(u.id)}" title="Elimina questa lista" style="border:none;background:none;cursor:pointer;color:var(--muted);padding:0 2px">&times;</button>
+            <button type="button" data-del-ul="${EH(u.id)}" title="${I18N.t("lst.userDelete")}" style="border:none;background:none;cursor:pointer;color:var(--muted);padding:0 2px">&times;</button>
           </span>`).join("");
         elUListBar.querySelectorAll("[data-del-ul]").forEach(b => {
-          b.onclick = async () => { await deleteUserList(b.dataset.del-ul); renderSourceChecks(); render(); };
+          b.onclick = async () => { await deleteUserList(b.dataset.delUl); renderSourceChecks(); render(); };
         });
       } else {
         elUListBar.hidden = true;
@@ -589,7 +588,7 @@ const LISTE = (() => {
     function render() {
       const idx = ST.idx;
       if (!idx) {
-        elCount.textContent = "Caricamento liste in corso…";
+        elCount.textContent = I18N.t("lst.loadingLists");
         return;
       }
 
@@ -625,10 +624,10 @@ const LISTE = (() => {
 
       const limit = 400;
       const shown = items.slice(0, limit);
-      elCount.innerHTML = `Trovati <b>${items.length}</b> ioni${items.length > limit ? ` (mostrati i primi ${limit})` : ""}${hasMz ? (isNom ? ` entro &plusmn;${tolVal} Da nominale da m/z ${qMz}` : ` entro &plusmn;${tolVal} ppm da m/z ${qMz}`) : ""}`;
+      elCount.innerHTML = I18N.t("lst.found", { n: items.length }) + (items.length > limit ? " " + I18N.t("lst.firstShown", { limit }) : "") + (hasMz ? " " + I18N.t(isNom ? "lst.withinDa" : "lst.withinPpm", { tol: tolVal, mz: qMz }) : "");
 
       if (!shown.length) {
-        elTbody.innerHTML = `<tr><td colspan="9" class="muted" style="text-align:center;padding:16px">Nessuna sostanza corrisponde ai criteri impostati.</td></tr>`;
+        elTbody.innerHTML = `<tr><td colspan="9" class="muted" style="text-align:center;padding:16px">${I18N.t("lst.noMatch")}</td></tr>`;
         return;
       }
 
@@ -636,13 +635,13 @@ const LISTE = (() => {
         const delta = hasMz ? (isNom ? (it.diffDa != null ? (it.diffDa >= 0 ? "+" : "") + it.diffDa.toFixed(3) + " Da" : "")
                                     : (it.err != null ? (it.err >= 0 ? "+" : "") + it.err.toFixed(1) + " ppm" : "")) : "";
         const polBadge = it.pol === 1 ? `<span class="pol pos" style="font-size:10px">ESI+</span>` : it.pol === -1 ? `<span class="pol neg" style="font-size:10px">ESI&minus;</span>` : `<span class="pol both" style="font-size:10px">&plusmn;</span>`;
-        const seriesInfo = it.series ? `<span class="sm" title="Membro n=${it.series.n}">n=${it.series.n}</span>` : "";
+        const seriesInfo = it.series ? `<span class="sm" title="${I18N.t("lst.member", { n: it.series.n })}">n=${it.series.n}</span>` : "";
         return `<tr>
           <td class="num font-mono"><b>${it.mz.toFixed(4)}</b></td>
           <td class="num sm muted">${delta}</td>
           <td><b>${EH(it.name)}</b></td>
           <td>${seriesInfo}</td>
-          <td>${EH(it.adduct || "solo m/z")}</td>
+          <td>${EH(it.adduct || I18N.t("lst.mzOnly"))}</td>
           <td>${it.formula ? fmtSub(it.formula) : "<span class='muted'>&ndash;</span>"}</td>
           <td>${polBadge}</td>
           <td class="sm muted">${EH(it.cls || "")}</td>
@@ -693,7 +692,7 @@ const LISTE = (() => {
           renderSourceChecks();
           render();
         } catch (err) {
-          if (typeof toast === "function") toast("Errore nel caricamento CSV: " + err.message);
+          if (typeof toast === "function") toast(I18N.t("lst.csvError", { message: err.message }));
         }
       };
     }
@@ -732,8 +731,8 @@ const LISTE = (() => {
       dlg.id = "listedlg";
       dlg.style.cssText = "max-width:min(1100px,96vw);width:96vw;max-height:92vh;border:1px solid var(--line,#cbd5e1);border-radius:10px;padding:12px;background:var(--panel,#fff);box-shadow:0 12px 36px rgba(0,0,0,.28);box-sizing:border-box";
       dlg.innerHTML = `<div class="top" style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <h3 style="margin:0;flex:1">Liste di riferimento e contaminanti</h3>
-        <button id="listex" class="x" title="Chiudi">&times;</button>
+        <h3 style="margin:0;flex:1">${I18N.t("lst.title")}</h3>
+        <button id="listex" class="x" title="${I18N.t("common.close")}">&times;</button>
       </div><div id="listebody" style="max-height:80vh;overflow:auto"></div>`;
       document.body.appendChild(dlg);
       dlg.querySelector("#listex").onclick = () => dlg.close();

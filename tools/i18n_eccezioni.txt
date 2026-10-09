@@ -13,3 +13,7 @@ mzlab/web/explore.js	Spettro di massa
 mzlab/web/explore.js	Ione estratto (XIC)
 mzlab/web/explore.js	Spettro degli ioni prodotto
 mzlab/web/explore.js	Spettro composito
+mzlab/web/liste.js	massa
+mzlab/web/liste.js	nome
+mzlab/web/liste.js	ione
+mzlab/web/liste.js	addotto
