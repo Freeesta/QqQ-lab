@@ -60,6 +60,21 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                                    float(q["prec"]) if q.get("prec") else None, q.get("filt") or None))
         if path == "/api/filters":       # the scan types of a file (scan filters) with their counts: what the filter menu of a cell lists
             return _json(app.filters(int(q["k"])))
+        if path == "/api/scaninfo":      # every name / value pair of the header of a scan, as the file has it
+            try:
+                return _json(app.scaninfo(int(q["k"]), int(q["sid"])))
+            except (ValueError, KeyError) as e:
+                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
+        if path == "/api/scanlist":      # the scans of a level / scan type in columns (the list of scans of the bench)
+            try:
+                return _json(app.scanlist(int(q["k"]), int(q.get("level", 1)), q.get("filt") or None))
+            except (ValueError, KeyError) as e:
+                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
+        if path == "/api/fileinfo":      # what the mzML says about the file and the instrument
+            try:
+                return _json(app.fileinfo(int(q["k"])))
+            except (ValueError, KeyError) as e:
+                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
         if path == "/api/xic":
             return _json(app.xic([int(x) for x in q["k"].split(",") if x], float(q["mz"]),
                                  float(q.get("tol", 0.35)), int(q.get("level", 1))))
