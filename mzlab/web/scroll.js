@@ -85,7 +85,7 @@ function lockButton(p) {
   const on = !!p.lock;
   b.innerHTML = on ? IC_LOCK : IC_UNLOCK; b.classList.toggle("on", on);
   b.style.left = p.cv.offsetLeft + 8 + "px"; b.style.top = p.cv.offsetTop + 0 + "px"; b.hidden = !!p._exp;       // in the top-left margin above the y-axis label ("Intensità (cps)")
-  b.title = on ? "Asse delle intensità bloccato: clic per sbloccare" : "Blocca l'asse delle intensità: così vedi crescere e calare i picchi fra una scansione e l'altra";
+  b.title = I18N.t(on ? "lock.on.title" : "lock.off.title");
 }
 function toggleLock(p) {
   if (p.lock) p.lock = null;

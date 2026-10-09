@@ -25,19 +25,19 @@
   const ORGANIC = new Set(["H", "C", "N", "O", "F", "P", "S", "Cl", "Br", "I", "Na", "K", "Si"]);
   function info(e) {
     const main = e.iso.length ? e.iso.reduce((a, b) => (b[2] > a[2] ? b : a)) : null;
-    let h = `<div class="pt-big"><span>${e.z}</span><b>${H(e.s)}</b></div><div><b style="font-size:15px">${H(e.n)}</b></div>
-      <div>peso atomico medio <b>${e.w != null ? e.w : "n.d."}</b> <span class="muted">(media pesata sugli isotopi naturali)</span></div>`;
+    let h = `<div class="pt-big"><span>${e.z}</span><b>${H(e.s)}</b></div><div><b style="font-size:15px">${H(I18N.t(`el.${e.s}`))}</b></div>
+      <div>${I18N.t("tbl.pt.avgWeight", { w: e.w != null ? e.w : I18N.t("tbl.na") })}</div>`;
     if (main) {
-      h += `<div>massa monoisotopica <b>${main[1].toFixed(5)}</b> <span class="muted">(<sup>${main[0]}</sup>${H(e.s)}, l'isotopo più abbondante: è quella che si usa in MS)</span></div>
-        <table class="sm" style="margin-top:6px"><tr><th>isotopo</th><th class="num">massa esatta</th><th class="num">abbondanza %</th><th class="num">&Delta; dal principale</th><th></th></tr>` +
+      h += `<div>${I18N.t("tbl.pt.mono", { m: main[1].toFixed(5), a: main[0], s: H(e.s) })}</div>
+        <table class="sm" style="margin-top:6px"><tr><th>${I18N.t("tbl.pt.col.iso")}</th><th class="num">${I18N.t("tbl.pt.col.mass")}</th><th class="num">${I18N.t("tbl.pt.col.abund")}</th><th class="num">${I18N.t("tbl.pt.col.delta")}</th><th></th></tr>` +
         e.iso.map(i => `<tr><td><sup>${i[0]}</sup>${H(e.s)}</td><td class="num">${i[1] != null ? i[1].toFixed(5) : ""}</td><td class="num">${i[2]}</td>` +
           `<td class="num">${i === main || i[1] == null ? "" : (i[1] - main[1] > 0 ? "+" : "") + (i[1] - main[1]).toFixed(4)}</td>` +
           `<td><i class="pt-bar" style="width:${Math.max(1, Math.round(i[2] * 0.8))}px"></i></td></tr>`).join("") + "</table>";
       if (e.iso.length > 1) {
         const sec = e.iso.filter(i => i !== main).reduce((a, b) => (b[2] > a[2] ? b : a));
-        h += `<div class="muted sm" style="margin-top:4px">Ogni atomo di ${H(e.s)} nella molecola dà un picco a ${sec[0] - main[0] > 0 ? "+" : ""}${sec[0] - main[0]} con circa il ${(100 * sec[2] / main[2]).toFixed(sec[2] / main[2] < 0.1 ? 1 : 0)}% dell'intensità del picco principale.</div>`;
+        h += `<div class="muted sm" style="margin-top:4px">${I18N.t("tbl.pt.peak", { s: H(e.s), off: (sec[0] - main[0] > 0 ? "+" : "") + (sec[0] - main[0]), pct: (100 * sec[2] / main[2]).toFixed(sec[2] / main[2] < 0.1 ? 1 : 0) })}</div>`;
       }
-    } else h += `<div class="muted sm" style="margin-top:6px">Elemento raro in LC-MS: abbondanze isotopiche non incluse nel programma.</div>`;
+    } else h += `<div class="muted sm" style="margin-top:6px">${I18N.t("tbl.pt.rare")}</div>`;
     return h;
   }
   function periodic() {
@@ -46,7 +46,7 @@
     // Data sources (kept here, not shown in the page): exact masses = isotope table of OpenChemLib; abundances = representative
     // isotopic compositions, IUPAC (CIAAW); average atomic weight = Ketcher element list. Hovering an element shows masses and isotopes
     // (click pins it); the most common elements of organic molecules are highlighted.
-    return `<div class="pt">${cells}<div class="pt-info" id="pt-info">${info(EL.C)}</div><div class="pt-gap">lantanidi e attinidi</div></div>`;
+    return `<div class="pt">${cells}<div class="pt-info" id="pt-info">${info(EL.C)}</div><div class="pt-gap">${I18N.t("tbl.pt.gap")}</div></div>`;
   }
   function bindPeriodic(root) {
     let pinned = null; const box = root.querySelector("#pt-info");
@@ -60,26 +60,26 @@
   // ---------------------------------------------------------------- adducts
   // k: how many molecules M; add/sub: what is added or removed; z: charge
   const ADD = [
-    { n: "[M+H]+", k: 1, add: "H", z: 1, exp: 1, note: "lo ione più comune in ESI+ con acido formico in fase mobile (come in questo laboratorio)" },
-    { n: "[M+NH4]+", k: 1, add: "NH4", z: 1, exp: 1, note: "solo se la fase mobile contiene ammonio (formiato, acetato); tipico di esteri, chetoni, zuccheri" },
-    { n: "[M+Na]+", k: 1, add: "Na", z: 1, exp: 1, note: "sodio da vetreria, acqua, campione: frequentissimo; frammenta poco in MS/MS" },
-    { n: "[M+K]+", k: 1, add: "K", z: 1, exp: 1, note: "come il sodio, meno intenso" },
-    { n: "[M+H-H2O]+", k: 1, add: "H", sub: "H2O", z: 1, note: "perdita d'acqua in sorgente (alcoli, acidi carbossilici)" },
-    { n: "[M+CH3OH+H]+", k: 1, add: "CH5O", z: 1, note: "con metanolo in fase mobile" },
-    { n: "[M+H+ACN]+", k: 1, add: "C2H4N", z: 1, note: "con acetonitrile in fase mobile" },
-    { n: "[M+2H]2+", k: 1, add: "H2", z: 2, note: "carica doppia: m/z circa dimezzato, isotopi distanti 0.5" },
-    { n: "[2M+H]+", k: 2, add: "H", z: 1, note: "dimero: compare a concentrazioni alte" },
-    { n: "[2M+Na]+", k: 2, add: "Na", z: 1, note: "dimero con sodio" },
-    { n: "[M]+", k: 1, add: "", z: 1, note: "catione già formato (es. ammonio quaternario): si inserisce la formula del <b>catione</b>, perché la massa sottrae l'elettrone. Per il radicale catione M<sup>+&bull;</sup> si inserisce invece la formula della molecola <b>neutra</b>" },
-    { n: "[M]-", k: 1, add: "", z: -1, note: "anione già formato (es. una formula copiata con la carica dal Disegno): si inserisce la formula dell'<b>anione</b>, perché la massa somma l'elettrone" },
-    { n: "[M-H]-", k: 1, sub: "H", z: -1, exp: 1, note: "lo ione più comune in ESI&minus; (acidi, fenoli, sulfonati)" },
-    { n: "[M+HCOO]-", k: 1, add: "CHO2", z: -1, exp: 1, note: "con acido formico in fase mobile" },
-    { n: "[M+Cl]-", k: 1, add: "Cl", z: -1, exp: 1, note: "con solventi clorurati o campioni salini (cerca la coppia 35/37 a 3:1)" },
-    { n: "[M+CH3COO]-", k: 1, add: "C2H3O2", z: -1, note: "con acido acetico o acetato di ammonio" },
-    { n: "[M-H-H2O]-", k: 1, sub: "H3O", z: -1, note: "perdita d'acqua in sorgente" },
-    { n: "[M+Na-2H]-", k: 1, add: "Na", sub: "H2", z: -1, note: "sale sodico" },
-    { n: "[M-2H]2-", k: 1, sub: "H2", z: -2, note: "carica doppia" },
-    { n: "[2M-H]-", k: 2, sub: "H", z: -1, note: "dimero" },
+    { n: "[M+H]+", k: 1, add: "H", z: 1, exp: 1, note: "tbl.add.note.mh" },
+    { n: "[M+NH4]+", k: 1, add: "NH4", z: 1, exp: 1, note: "tbl.add.note.mnh4" },
+    { n: "[M+Na]+", k: 1, add: "Na", z: 1, exp: 1, note: "tbl.add.note.mna" },
+    { n: "[M+K]+", k: 1, add: "K", z: 1, exp: 1, note: "tbl.add.note.mk" },
+    { n: "[M+H-H2O]+", k: 1, add: "H", sub: "H2O", z: 1, note: "tbl.add.note.mhh2o" },
+    { n: "[M+CH3OH+H]+", k: 1, add: "CH5O", z: 1, note: "tbl.add.note.mch3oh" },
+    { n: "[M+H+ACN]+", k: 1, add: "C2H4N", z: 1, note: "tbl.add.note.mhacn" },
+    { n: "[M+2H]2+", k: 1, add: "H2", z: 2, note: "tbl.add.note.m2h" },
+    { n: "[2M+H]+", k: 2, add: "H", z: 1, note: "tbl.add.note.2mh" },
+    { n: "[2M+Na]+", k: 2, add: "Na", z: 1, note: "tbl.add.note.2mna" },
+    { n: "[M]+", k: 1, add: "", z: 1, note: "tbl.add.note.mcat" },
+    { n: "[M]-", k: 1, add: "", z: -1, note: "tbl.add.note.man" },
+    { n: "[M-H]-", k: 1, sub: "H", z: -1, exp: 1, note: "tbl.add.note.mminush" },
+    { n: "[M+HCOO]-", k: 1, add: "CHO2", z: -1, exp: 1, note: "tbl.add.note.mhcoo" },
+    { n: "[M+Cl]-", k: 1, add: "Cl", z: -1, exp: 1, note: "tbl.add.note.mcl" },
+    { n: "[M+CH3COO]-", k: 1, add: "C2H3O2", z: -1, note: "tbl.add.note.mch3coo" },
+    { n: "[M-H-H2O]-", k: 1, sub: "H3O", z: -1, note: "tbl.add.note.mmhh2o" },
+    { n: "[M+Na-2H]-", k: 1, add: "Na", sub: "H2", z: -1, note: "tbl.add.note.mna2h" },
+    { n: "[M-2H]2-", k: 1, sub: "H2", z: -2, note: "tbl.add.note.mm2h" },
+    { n: "[2M-H]-", k: 2, sub: "H", z: -1, note: "tbl.add.note.2mminush" },
   ];
   ADD.forEach(a => { a.shift = (a.add ? massOf(a.add) : 0) - (a.sub ? massOf(a.sub) : 0) - a.z * ELECTRON; });
   window.QADD = ADD;                                      // for the tests: the shifts are compared with the Python lists
@@ -92,50 +92,50 @@
   function calcAdductDiffs() {
     const shift = n => { const a = ADD.find(x => x.n === n); return a ? a.shift : 0; };
     return [
-      { p: 1, pair: "[M+Na]+ &minus; [M+H]+", d: shift("[M+Na]+") - shift("[M+H]+"), nom: 22, note: "coppia frequentissima: conferma quasi certa della massa neutra M", src: "Huang 1999" },
-      { p: 1, pair: "[M+NH4]+ &minus; [M+H]+", d: shift("[M+NH4]+") - shift("[M+H]+"), nom: 17, note: "con sali d'ammonio (formiato/acetato)", src: "Huang 1999" },
-      { p: 1, pair: "[M+K]+ &minus; [M+H]+", d: shift("[M+K]+") - shift("[M+H]+"), nom: 38, note: "addotto potassio (spesso presente con sodio)", src: "Huang 1999" },
-      { p: 1, pair: "[M+K]+ &minus; [M+Na]+", d: shift("[M+K]+") - shift("[M+Na]+"), nom: 16, note: "distanza caratteristica tra addotti alcalini K e Na", src: "Huang 1999" },
-      { p: 1, pair: "[M+H+ACN]+ &minus; [M+H]+", d: shift("[M+H+ACN]+") - shift("[M+H]+"), nom: 41, note: "addotto con acetonitrile della fase mobile", src: "Huang 1999" },
-      { p: 1, pair: "[M+CH3OH+H]+ &minus; [M+H]+", d: shift("[M+CH3OH+H]+") - shift("[M+H]+"), nom: 32, note: "addotto con metanolo della fase mobile", src: "Huang 1999" },
-      { p: 1, pair: "[2M+H]+ &minus; [M+H]+", d: null, nom: "M", note: "dimero: la differenza &Delta; corrisponde esattamente alla massa neutra M", src: "Huang 1999" },
-      { p: 1, pair: "[M+H]+ &minus; [M+H-H2O]+", d: shift("[M+H]+") - shift("[M+H-H2O]+"), nom: 18, note: "perdita d'acqua in sorgente (alcoli, acidi)", src: "Huang 1999" },
+      { p: 1, pair: "[M+Na]+ &minus; [M+H]+", d: shift("[M+Na]+") - shift("[M+H]+"), nom: 22, note: "tbl.diff.note.1", src: "Huang 1999" },
+      { p: 1, pair: "[M+NH4]+ &minus; [M+H]+", d: shift("[M+NH4]+") - shift("[M+H]+"), nom: 17, note: "tbl.diff.note.2", src: "Huang 1999" },
+      { p: 1, pair: "[M+K]+ &minus; [M+H]+", d: shift("[M+K]+") - shift("[M+H]+"), nom: 38, note: "tbl.diff.note.3", src: "Huang 1999" },
+      { p: 1, pair: "[M+K]+ &minus; [M+Na]+", d: shift("[M+K]+") - shift("[M+Na]+"), nom: 16, note: "tbl.diff.note.4", src: "Huang 1999" },
+      { p: 1, pair: "[M+H+ACN]+ &minus; [M+H]+", d: shift("[M+H+ACN]+") - shift("[M+H]+"), nom: 41, note: "tbl.diff.note.5", src: "Huang 1999" },
+      { p: 1, pair: "[M+CH3OH+H]+ &minus; [M+H]+", d: shift("[M+CH3OH+H]+") - shift("[M+H]+"), nom: 32, note: "tbl.diff.note.6", src: "Huang 1999" },
+      { p: 1, pair: "[2M+H]+ &minus; [M+H]+", d: null, nom: "M", note: "tbl.diff.note.7", src: "Huang 1999" },
+      { p: 1, pair: "[M+H]+ &minus; [M+H-H2O]+", d: shift("[M+H]+") - shift("[M+H-H2O]+"), nom: 18, note: "tbl.diff.note.8", src: "Huang 1999" },
 
-      { p: -1, pair: "[M+HCOO]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+HCOO]-") - shift("[M-H]-"), nom: 46, note: "con acido formico / formiato in fase mobile", src: "Huang 1999" },
-      { p: -1, pair: "[M+CH3COO]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+CH3COO]-") - shift("[M-H]-"), nom: 60, note: "con acido acetico / acetato in fase mobile", src: "Huang 1999" },
-      { p: -1, pair: "[M+Cl]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+Cl]-") - shift("[M-H]-"), nom: 36, note: "addotto cloruro (doppietto isotopico 35/37 a 3:1)", src: "Huang 1999" },
-      { p: -1, pair: "[M+Na-2H]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+Na-2H]-") - shift("[M-H]-"), nom: 22, note: "sale sodico in ESI&minus;", src: "Huang 1999" },
-      { p: -1, pair: "[2M&minus;H]&minus; &minus; [M&minus;H]&minus;", d: null, nom: "M", note: "dimero: la differenza &Delta; corrisponde alla massa neutra M", src: "Huang 1999" },
-      { p: -1, pair: "[M&minus;H]&minus; &minus; [M&minus;H-H2O]&minus;", d: shift("[M-H]-") - shift("[M-H-H2O]-"), nom: 18, note: "perdita d'acqua in sorgente in ESI&minus;", src: "Huang 1999" },
+      { p: -1, pair: "[M+HCOO]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+HCOO]-") - shift("[M-H]-"), nom: 46, note: "tbl.diff.note.9", src: "Huang 1999" },
+      { p: -1, pair: "[M+CH3COO]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+CH3COO]-") - shift("[M-H]-"), nom: 60, note: "tbl.diff.note.10", src: "Huang 1999" },
+      { p: -1, pair: "[M+Cl]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+Cl]-") - shift("[M-H]-"), nom: 36, note: "tbl.diff.note.11", src: "Huang 1999" },
+      { p: -1, pair: "[M+Na-2H]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+Na-2H]-") - shift("[M-H]-"), nom: 22, note: "tbl.diff.note.12", src: "Huang 1999" },
+      { p: -1, pair: "[2M&minus;H]&minus; &minus; [M&minus;H]&minus;", d: null, nom: "M", note: "tbl.diff.note.13", src: "Huang 1999" },
+      { p: -1, pair: "[M&minus;H]&minus; &minus; [M&minus;H-H2O]&minus;", d: shift("[M-H]-") - shift("[M-H-H2O]-"), nom: 18, note: "tbl.diff.note.14", src: "Huang 1999" },
     ];
   }
   window.QADD_DIFFS = calcAdductDiffs();
 
   function diffsHtml() {
     const l = calcAdductDiffs();
-    const rows = l.map(d => `<tr><td><b>${d.pair}</b></td><td class="num">${d.d != null ? (d.d >= 0 ? "+" : "") + d.d.toFixed(4) : "+M"}</td><td class="num">${d.nom != null ? (typeof d.nom === "number" ? (d.nom >= 0 ? "+" : "") + d.nom : "+" + d.nom) : ""}</td><td class="sm">${d.p > 0 ? "ESI+" : "ESI&minus;"}</td><td class="muted sm">${d.note}</td></tr>`).join("");
-    return `<div style="margin-top:16px"><h4 style="margin:10px 0 4px">Differenze caratteristiche tra addotti (riconoscere coppie nello spettro)</h4>
-      <div class="muted sm" style="margin-bottom:6px">In spettrometria ESI lo stesso composto genera spesso più addotti contemporaneamente. Le distanze costanti fra i picchi dello stesso tempo di ritenzione (es. <b>+22 Da</b> tra [M+H]<sup>+</sup> e [M+Na]<sup>+</sup>, o <b>+17 Da</b> tra [M+H]<sup>+</sup> e [M+NH<sub>4</sub>]<sup>+</sup>) permettono di individuare le coppie nello spettro e confermare la massa neutra <i>M</i>. Fonte: Huang N. et al., <i>J. Am. Soc. Mass Spectrom.</i> 10 (1999) 1166&ndash;1173.</div>
-      <table><tr><th>Coppia di addotti</th><th class="num">&Delta; <i>m/z</i> esatto</th><th class="num">&Delta; nominale</th><th>Modo</th><th>Nota e significato didattico</th></tr>${rows}</table></div>`;
+    const rows = l.map(d => `<tr><td><b>${d.pair}</b></td><td class="num">${d.d != null ? (d.d >= 0 ? "+" : "") + d.d.toFixed(4) : "+M"}</td><td class="num">${d.nom != null ? (typeof d.nom === "number" ? (d.nom >= 0 ? "+" : "") + d.nom : "+" + d.nom) : ""}</td><td class="sm">${d.p > 0 ? "ESI+" : "ESI&minus;"}</td><td class="muted sm">${I18N.t(d.note)}</td></tr>`).join("");
+    return `<div style="margin-top:16px"><h4 style="margin:10px 0 4px">${I18N.t("tbl.diff.title")}</h4>
+      <div class="muted sm" style="margin-bottom:6px">${I18N.t("tbl.diff.intro")}</div>
+      <table><tr><th>${I18N.t("tbl.diff.col.pair")}</th><th class="num">${I18N.t("tbl.diff.col.exact")}</th><th class="num">${I18N.t("tbl.diff.col.nominal")}</th><th>${I18N.t("tbl.diff.col.mode")}</th><th>${I18N.t("tbl.diff.col.note")}</th></tr>${rows}</table></div>`;
   }
 
   function adducts(M) {
     const ref = { 1: ADD[0], "-1": ADD.find(a => a.n === "[M-H]-") };
     const row = (a, pol) => {
-      const expr = `${a.k > 1 ? a.k : ""}M ${sgn(a.shift)} ${Math.abs(a.shift).toFixed(4)}${Math.abs(a.z) > 1 ? `, diviso ${Math.abs(a.z)}` : ""}`;
+      const expr = `${a.k > 1 ? a.k : ""}M ${sgn(a.shift)} ${Math.abs(a.shift).toFixed(4)}${Math.abs(a.z) > 1 ? I18N.t("tbl.add.divided", { z: Math.abs(a.z) }) : ""}`;
       const d = a === ref[pol] || Math.abs(a.z) > 1 || a.k > 1 ? "" : sgn(a.shift - ref[pol].shift) + Math.abs(a.shift - ref[pol].shift).toFixed(4);
-      return `<tr${a.exp ? ' class="exp"' : ""}><td><b>${fmtAd(a.n)}</b></td><td>${expr}</td><td class="num">${M != null ? mzOf(a, M).toFixed(4) : ""}</td><td class="num">${M != null ? rh(mzOf(a, M), 0) : ""}</td><td class="num">${d}</td><td class="muted sm">${a.note}</td></tr>`;
+      return `<tr${a.exp ? ' class="exp"' : ""}><td><b>${fmtAd(a.n)}</b></td><td>${expr}</td><td class="num">${M != null ? mzOf(a, M).toFixed(4) : ""}</td><td class="num">${M != null ? rh(mzOf(a, M), 0) : ""}</td><td class="num">${d}</td><td class="muted sm">${I18N.t(a.note)}</td></tr>`;
     };
     const rows = pol => { const l = ADD.filter(a => Math.sign(a.z) === pol);
-      return l.filter(a => a.exp).map(a => row(a, pol)).join("") + `<tr class="admore" data-pol="${pol}"><td colspan="6" style="padding-top:8px"><a href="#" class="adtog">${AD_MORE[pol] ? "&#9662;" : "&#9656;"} Altri addotti (meno comuni)</a></td></tr>` + (AD_MORE[pol] ? l.filter(a => !a.exp).map(a => row(a, pol)).join("") : ""); };
-    const head = pol => `<tr><th>addotto</th><th>m/z =</th><th class="num">m/z esatto</th><th class="num"><i>m/z</i> nominale</th><th class="num">&Delta; da ${pol > 0 ? "[M+H]<sup>+</sup>" : "[M&minus;H]<sup>&minus;</sup>"}</th><th>quando si vede</th></tr>`;
-    const blk = pol => `<h4>${pol > 0 ? "ESI positivo" : "ESI negativo"}</h4><table>${head(pol)}${rows(pol)}</table>`;
+      return l.filter(a => a.exp).map(a => row(a, pol)).join("") + `<tr class="admore" data-pol="${pol}"><td colspan="6" style="padding-top:8px"><a href="#" class="adtog">${AD_MORE[pol] ? "&#9662;" : "&#9656;"} ${I18N.t("tbl.add.more")}</a></td></tr>` + (AD_MORE[pol] ? l.filter(a => !a.exp).map(a => row(a, pol)).join("") : ""); };
+    const head = pol => `<tr><th>${I18N.t("tbl.add.col.adduct")}</th><th>m/z =</th><th class="num">${I18N.t("tbl.add.col.exact")}</th><th class="num">${I18N.t("tbl.add.col.nominal")}</th><th class="num">${I18N.t("tbl.add.col.delta", { ref: pol > 0 ? "[M+H]<sup>+</sup>" : "[M&minus;H]<sup>&minus;</sup>" })}</th><th>${I18N.t("tbl.add.col.when")}</th></tr>`;
+    const blk = pol => `<h4>${I18N.t(pol > 0 ? "tbl.add.esiPos" : "tbl.add.esiNeg")}</h4><table>${head(pol)}${rows(pol)}</table>`;
     const neg = typeof E !== "undefined" && E.files.some(f => f.polarity === "negative") && !E.files.some(f => f.polarity === "positive");      // the polarity of the loaded files first
     return (neg ? blk(-1) + blk(1) : blk(1) + blk(-1)) + diffsHtml();
   }
   function adductTab() {
-    return `<div class="bar"><label>M (massa neutra) o formula <input id="ad-in" placeholder="es. 363.0665 oppure C14H13F4N3O2S" style="width:260px"></label><span id="ad-msg" class="muted sm"></span></div>
-      <div class="sm">Un <b>addotto</b> è lo ione che la molecola M forma nella sorgente legandosi a un piccolo ione presente in soluzione (H<sup>+</sup>, Na<sup>+</sup>, NH<sub>4</sub><sup>+</sup>, K<sup>+</sup> in positivo; HCOO<sup>−</sup> o Cl<sup>−</sup> in negativo) o cedendo un protone ([M−H]<sup>−</sup>). Nello spettro non si vede M, ma l'm/z dei suoi addotti: per questo lo stesso composto può dare più picchi, sempre alla stessa distanza fra loro (per esempio circa 22 tra [M+H]<sup>+</sup> e [M+Na]<sup>+</sup>).</div>
+    return `<div class="bar"><label>${I18N.t("tbl.add.input")} <input id="ad-in" placeholder="${I18N.t("tbl.add.placeholder")}" style="width:260px"></label><span id="ad-msg" class="muted sm"></span></div>
+      <div class="sm">${I18N.t("tbl.add.intro")}</div>
       <div id="ad-tbl">${adducts(null)}</div>`;
   }
   function bindAdducts(root) {
@@ -150,7 +150,7 @@
       try { const r = await (await fetch("api/formula?f=" + encodeURIComponent(t))).json(); if (r.error) throw new Error(r.error);
         let M = r.neutral; try { M = massOf(r.formula); } catch (_) { /* element without isotope data here: use the server value */ }
         msg.innerHTML = `${sub(r.formula)}: M = ${M.toFixed(4)}`; lastM = M; redo(); }
-      catch (e) { msg.textContent = "formula non valida"; lastM = null; redo(); }
+      catch (e) { msg.textContent = I18N.t("tbl.add.invalid"); lastM = null; redo(); }
     };
   }
 
@@ -159,9 +159,9 @@
   // describe for even-electron ions in ESI-MS/MS. A loss is only a hypothesis: it must be checked against the structure.
   function lossRefs() {
     const L = (u, t) => `<a href="${u}" target="_blank" rel="noopener">${t}</a>`;
-    return `<div class="muted sm" style="margin-top:8px"><b>Riferimenti</b><ol style="margin:4px 0 0 18px;padding:0;line-height:1.5">
+    return `<div class="muted sm" style="margin-top:8px"><b>${I18N.t("tbl.loss.refs")}</b><ol style="margin:4px 0 0 18px;padding:0;line-height:1.5">
       <li>Levsen K., Schiebel H.-M., Terlouw J. K., et al. <i>Even-electron ions: a systematic study of the neutral species lost in the dissociation of quasi-molecular ions.</i> J. Mass Spectrom. 2007, 42, 1024-1044. ${L("https://analyticalsciencejournals.onlinelibrary.wiley.com/doi/10.1002/jms.1234", "link")}</li>
-      <li>De Vijlder T., Valkenborg D., Lemi&egrave;re F., Romijn E. P., Laukens K., Cuyckens F. <i>A tutorial in small molecule identification via electrospray ionization-mass spectrometry: the practical art of structural elucidation.</i> Mass Spectrom. Rev. 2018, 37, 607-629. ${L("https://pmc.ncbi.nlm.nih.gov/articles/PMC6099382/", "link (accesso libero)")}</li>
+      <li>De Vijlder T., Valkenborg D., Lemi&egrave;re F., Romijn E. P., Laukens K., Cuyckens F. <i>A tutorial in small molecule identification via electrospray ionization-mass spectrometry: the practical art of structural elucidation.</i> Mass Spectrom. Rev. 2018, 37, 607-629. ${L("https://pmc.ncbi.nlm.nih.gov/articles/PMC6099382/", I18N.t("tbl.loss.refFree"))}</li>
       <li>Demarque D. P., Crotti A. E. M., Vessecchi R., Lopes J. L. C., Lopes N. P. <i>Fragmentation reactions using electrospray ionization mass spectrometry: an important tool for the structural elucidation and characterization of synthetic and natural products.</i> Nat. Prod. Rep. 2016, 33, 432-455. ${L("https://pubs.rsc.org/en/content/articlelanding/2016/np/c5np00073d", "link")}</li>
       <li>Hol&ccaron;apek M., Jir&aacute;sko R., L&iacute;sa M. <i>Basic rules for the interpretation of atmospheric pressure ionization mass spectra of small molecules.</i> J. Chromatogr. A 2010, 1217, 3908-3921. ${L("https://pubmed.ncbi.nlm.nih.gov/20303090/", "link")}</li></ol></div>`;
   }
@@ -175,35 +175,35 @@
   const polChip = p => {
     const cls = p === "+" ? "pol pos" : p === "-" ? "pol neg" : "pol both";
     const txt = p === "+" ? "ESI+" : p === "-" ? "ESI&minus;" : "ESI+/-";
-    const tip = p === "+" ? "Polarità: tipico di ESI+" : p === "-" ? "Polarità: tipico di ESI−" : "Polarità: tipico di entrambi (ESI+ e ESI−)";
+    const tip = I18N.t(p === "+" ? "tbl.loss.polPos" : p === "-" ? "tbl.loss.polNeg" : "tbl.loss.polBoth");
     return `<span class="${cls}" title="${tip}">${txt}</span>`;
   };
   const lossRow = (l, o) => {
     const m = massOf(l.f), id = l.f;
-    return `<div class="nlr${o.hit.has(id) ? " hit" : ""}" data-f="${id}"><div class="nlm">${Math.round(m)}${hrOn() ? `<small class="muted" title="Massa esatta, da elements.py" style="display:block;font-size:10.5px;font-weight:400">${m.toFixed(4)}</small>` : ""}</div><div class="nlf"><b>${fl(l.f)}</b><span class="muted">${H(l.name)}</span></div>
-      <div class="nls">${H(l.seen)}</div><div class="nlpp">${polChip(l.pol)}</div><button class="nld" type="button" data-d="${id}" aria-expanded="${NL.open.has(id)}">Dettagli</button>
-      ${l.rad ? `<div class="nlrad">• ${H(LOSS_RAD)}</div>` : ""}
-      <div class="nldet"${NL.open.has(id) ? "" : " hidden"}><div>massa esatta <b>${m.toFixed(4)}</b> · <span class="muted">meccanismo:</span> ${H(l.mech)}</div><div class="muted sm">Fonti: ${H(LOSS_REFS)}${l.rad ? "; regola degli elettroni pari: Holčapek 2010" : ""}</div></div></div>`;
+    return `<div class="nlr${o.hit.has(id) ? " hit" : ""}" data-f="${id}"><div class="nlm">${Math.round(m)}${hrOn() ? `<small class="muted" title="${I18N.t("tbl.loss.exactTitle")}" style="display:block;font-size:10.5px;font-weight:400">${m.toFixed(4)}</small>` : ""}</div><div class="nlf"><b>${fl(l.f)}</b><span class="muted">${H(I18N.t(l.name))}</span></div>
+      <div class="nls">${H(I18N.t(l.seen))}</div><div class="nlpp">${polChip(l.pol)}</div><button class="nld" type="button" data-d="${id}" aria-expanded="${NL.open.has(id)}">${I18N.t("tbl.loss.details")}</button>
+      ${l.rad ? `<div class="nlrad">• ${H(I18N.t(LOSS_RAD))}</div>` : ""}
+      <div class="nldet"${NL.open.has(id) ? "" : " hidden"}><div>${I18N.t("tbl.loss.detail", { m: m.toFixed(4), mech: H(I18N.t(l.mech)) })}</div><div class="muted sm">${I18N.t(l.rad ? "tbl.loss.sourcesRad" : "tbl.loss.sources", { refs: H(LOSS_REFS) })}</div></div></div>`;
   };
   function lossList() {
     const hit = new Set(), q = parseFloat(String(NL.q).replace(",", "."));
     const vis = LOSSES.filter(l => !NL.pol || l.pol === "±" || l.pol === NL.pol).sort((a, b) => massOf(a.f) - massOf(b.f));
     if (isFinite(q)) vis.forEach(l => { if (Math.abs(massOf(l.f) - q) <= NL_TOL()) hit.add(l.f); });
     const groups = []; vis.forEach(l => { const n = Math.round(massOf(l.f)), g = groups[groups.length - 1]; if (g && g.n === n) g.ls.push(l); else groups.push({ n, ls: [l] }); });
-    return groups.map(g => g.ls.length < 2 ? lossRow(g.ls[0], { hit }) : `<div class="nlg"><div class="nlgn">Stessa massa nominale (${g.n}): a risoluzione unitaria non si distinguono, servono altri indizi.${g.n === 80 ? ` Controlla <i>M+2</i> con il profilo isotopico nello spettro (clic destro; Br: M e M+2 quasi uguali).` : ""}</div>${g.ls.map(l => lossRow(l, { hit })).join("")}</div>`).join("");
+    return groups.map(g => g.ls.length < 2 ? lossRow(g.ls[0], { hit }) : `<div class="nlg"><div class="nlgn">${I18N.t("tbl.loss.sameNominal", { n: g.n })}${g.n === 80 ? " " + I18N.t("tbl.loss.checkM2") : ""}</div>${g.ls.map(l => lossRow(l, { hit })).join("")}</div>`).join("");
   }
   function lossCombosHtml() {
     const q = parseFloat(String(NL.q).replace(",", ".")); if (!isFinite(q) || q <= 0) return "";
     const c = lossCombos(q, massOf, NL_TOL()), nm = l => `<b>${fl(l.f)}</b>`, nd = NL_DEC();
     const li = [...c.single.map(x => `<li>${nm(x[0])} <span class="muted">(${massOf(x[0].f).toFixed(nd)})</span></li>`), ...c.pairs.map(p => `<li>${nm(p[0])} + ${nm(p[1])} <span class="muted">(${(massOf(p[0].f) + massOf(p[1].f)).toFixed(nd)})</span></li>`), ...c.reps.map(r => `<li>${r.n} &times; ${nm(r.l)} <span class="muted">(${(r.n * massOf(r.l.f)).toFixed(nd)})</span></li>`)];
-    return `<div class="nlc"><b>Possibili perdite (da verificare sullo spettro)</b>${li.length ? `<ul>${li.join("")}</ul>` : `<div class="muted sm">Nessuna perdita o combinazione della lista entro &plusmn;${hrOn() ? "0.003" : "0.5"}.</div>`}</div>`;
+    return `<div class="nlc"><b>${I18N.t("tbl.loss.possible")}</b>${li.length ? `<ul>${li.join("")}</ul>` : `<div class="muted sm">${I18N.t("tbl.loss.none", { tol: hrOn() ? "0.003" : "0.5" })}</div>`}</div>`;
   }
   function lossTab() {
-    return `<div class="nlintro"><p>Nella cella di collisione (q2) lo ione selezionato urta le molecole del gas: parte della sua energia di movimento diventa energia interna (vibrazioni). Lo ione la scarica <b>rompendo un legame</b>, spesso dopo un <b>riarrangiamento</b> in cui un atomo di idrogeno si sposta: si stacca una piccola molecola stabile e <b>neutra</b> (H<sub>2</sub>O, CO, NH<sub>3</sub>, CO<sub>2</sub>…), che il rivelatore non vede, mentre la carica resta sul frammento. Per questo nello spettro MS<sup>2</sup> si legge la perdita come differenza: <b>&Delta;m = <i>m/z</i> del precursore &minus; <i>m/z</i> del frammento</b>.</p>
-      <a href="#" id="nl-more-t" aria-expanded="${NL.more}">${NL.more ? "&#9662;" : "&#9656;"} Più dettagli</a>
-      <p id="nl-more"${NL.more ? "" : " hidden"}>Gli ioni dell'electrospray hanno quasi sempre un numero pari di elettroni ([M+H]<sup>+</sup>, [M&minus;H]<sup>&minus;</sup>) e tendono a perdere molecole intere a guscio chiuso, non radicali (regola degli elettroni pari): le perdite di radicali come &bull;CH<sub>3</sub>, &bull;NO<sub>2</sub> o &bull;Cl sono eccezioni, possibili quando il frammento è stabilizzato da un anello aromatico (gruppi metossilici, nitro o atomi di cloro legati all'anello). Le perdite più comuni passano per stati di transizione ciclici a quattro o sei atomi, che costano poca energia; aumentando l'energia di collisione (CE) compaiono rotture più difficili e <b>perdite in cascata</b> (per esempio &minus;18 e poi &minus;44, cioè &minus;62 in totale). A risoluzione unitaria alcune perdite hanno la stessa massa nominale (28 = CO oppure C<sub>2</sub>H<sub>4</sub>): servono altri indizi, come il profilo isotopico o le altre perdite dello stesso ione.</p></div>
-      <div class="nlbar"><label>Cerca &Delta;m <input id="nl-q" inputmode="decimal" autocomplete="off" placeholder="es. 62" value="${H(NL.q)}" title="Scrivi la differenza di massa osservata: evidenzia le perdite con quel valore (±0.5) e mostra coppie e ripetizioni che la compongono"></label>
-      <span class="seg" id="nl-pol" title="Polarità tipica della perdita"><button data-p="+" class="${NL.pol === "+" ? "on" : ""}">ESI+</button><button data-p="-" class="${NL.pol === "-" ? "on" : ""}">ESI&minus;</button><button data-p="" class="${NL.pol === "" ? "on" : ""}">tutte</button></span></div>
+    return `<div class="nlintro"><p>${I18N.t("tbl.loss.intro")}</p>
+      <a href="#" id="nl-more-t" aria-expanded="${NL.more}">${NL.more ? "&#9662;" : "&#9656;"} ${I18N.t("tbl.loss.moreLink")}</a>
+      <p id="nl-more"${NL.more ? "" : " hidden"}>${I18N.t("tbl.loss.more")}</p></div>
+      <div class="nlbar"><label>${I18N.t("tbl.loss.search")} <input id="nl-q" inputmode="decimal" autocomplete="off" placeholder="${I18N.t("tbl.loss.searchPh")}" value="${H(NL.q)}" title="${I18N.t("tbl.loss.searchTitle")}"></label>
+      <span class="seg" id="nl-pol" title="${I18N.t("tbl.loss.polTitle")}"><button data-p="+" class="${NL.pol === "+" ? "on" : ""}">ESI+</button><button data-p="-" class="${NL.pol === "-" ? "on" : ""}">ESI&minus;</button><button data-p="" class="${NL.pol === "" ? "on" : ""}">${I18N.t("tbl.loss.all")}</button></span></div>
       <div id="nl-res">${lossCombosHtml()}</div><div id="nl-list">${lossList()}</div>` + lossRefs();
   }
   function bindLoss(root, show) {
@@ -213,7 +213,7 @@
       root.querySelectorAll("[data-go]").forEach(a => a.onclick = e => { e.preventDefault(); show(a.dataset.go); });
     };
     wire();
-    root.querySelector("#nl-more-t").onclick = e => { e.preventDefault(); NL.more = !NL.more; root.querySelector("#nl-more").hidden = !NL.more; e.currentTarget.setAttribute("aria-expanded", NL.more); e.currentTarget.innerHTML = (NL.more ? "&#9662;" : "&#9656;") + " Più dettagli"; };
+    root.querySelector("#nl-more-t").onclick = e => { e.preventDefault(); NL.more = !NL.more; root.querySelector("#nl-more").hidden = !NL.more; e.currentTarget.setAttribute("aria-expanded", NL.more); e.currentTarget.innerHTML = (NL.more ? "&#9662;" : "&#9656;") + " " + I18N.t("tbl.loss.moreLink"); };
     root.querySelector("#nl-q").oninput = e => { NL.q = e.target.value; list(); };
     root.querySelectorAll("#nl-pol button").forEach(b => b.onclick = () => { NL.pol = b.dataset.p; root.querySelectorAll("#nl-pol button").forEach(x => x.classList.toggle("on", x === b)); list(); });
   }
@@ -239,7 +239,7 @@
     return out;
   }
   function elementDist(s) {
-    const e = EL[s]; if (!e || !e.iso.length) throw new Error(`abbondanze isotopiche non disponibili per ${s}`);
+    const e = EL[s]; if (!e || !e.iso.length) throw new Error(I18N.t("tbl.iso.unavailable", { s }));
     const main = e.iso.reduce((a, b) => (b[2] > a[2] ? b : a)), d = new Map();
     for (const [A, m, pct] of e.iso) { const p = pct / 100; if (m == null || p <= 0) continue; const o = A - main[0]; d.set(o, [p, m * p]); }
     // keep only non-negative offsets relative to the lightest isotope: shift so the lightest is 0
@@ -264,11 +264,11 @@
     for (const [s, k] of Object.entries(M)) n[s] = k * a.k;
     if (a.add) for (const [s, k] of Object.entries(counts(a.add))) n[s] = (n[s] || 0) + k;
     if (a.sub) for (const [s, k] of Object.entries(counts(a.sub))) n[s] = (n[s] || 0) - k;
-    if (Object.values(n).some(k => k < 0)) throw new Error("l'addotto toglie più atomi di quanti ce ne sono");
+    if (Object.values(n).some(k => k < 0)) throw new Error(I18N.t("tbl.iso.adductTooMany"));
     return { n, z: a.z, ad: a.n };
   }
   // ---------------------------------------------------------------- dialog with three tabs (Tavola periodica, Addotti, Perdite neutre)
-  const TABS = [["pt", "Tavola periodica", periodic, bindPeriodic], ["ad", "Addotti", adductTab, bindAdducts], ["ls", "Perdite neutre", lossTab, bindLoss]];
+  const TABS = [["pt", I18N.t("icon.pt"), periodic, bindPeriodic], ["ad", I18N.t("icon.adduct"), adductTab, bindAdducts], ["ls", I18N.t("icon.nl"), lossTab, bindLoss]];
   function open(which, opt = {}) {
     const d = Qs("#refdlg"), body = Qs("#refbody");
     if (which === "ls") { if (!d.open) lossPolStart(); if (opt.q != null) NL.q = String(opt.q); }

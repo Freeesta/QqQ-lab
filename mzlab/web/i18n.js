@@ -109,7 +109,7 @@
   }
 
   const loc = typeof location !== "undefined" ? location : {}, nav = typeof navigator !== "undefined" ? navigator : {};
-  lang = detect(loc.search, store.get(), nav.language || (nav.languages && nav.languages[0]));
+  lang = LANGS.includes(root.I18N_LANG) ? root.I18N_LANG : detect(loc.search, store.get(), nav.language || (nav.languages && nav.languages[0]));   // I18N_LANG: set before this script by pages that exist in one language only (the Teoria)
   setLangAttr();
   if (typeof document !== "undefined") {
     const go = () => apply(document);

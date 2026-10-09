@@ -87,7 +87,7 @@
     w.__perf = true;
     window[name] = w;
   }
-  function hook() { wrapFn("draw", "draw"); wrapFn("setTab", "scheda"); wrapFn("stepScan", "passo"); wrapFn("openXic", "finestra XIC"); }
+  function hook() { wrapFn("draw", "draw"); wrapFn("setTab", I18N.t("perf.hook.tab")); wrapFn("stepScan", I18N.t("perf.hook.step")); wrapFn("openXic", I18N.t("perf.hook.xic")); }
   hook();
   window.addEventListener("load", hook);
 
@@ -108,7 +108,7 @@
   document.head.appendChild(css);
   const box = document.createElement("div");
   box.id = "perfbox";
-  box.innerHTML = `<header><b>Misure (?perf)</b><button id="perf-copy" title="Copia tutto come testo">Copia</button><button id="perf-clear" title="Azzera le righe">Azzera</button><button id="perf-min" title="Riduci o allarga">–</button></header><pre id="perf-out"></pre>`;
+  box.innerHTML = `<header><b>${I18N.t("perf.title")}</b><button id="perf-copy" title="${I18N.t("perf.copy.title")}">${I18N.t("perf.copy")}</button><button id="perf-clear" title="${I18N.t("perf.clear.title")}">${I18N.t("perf.clear")}</button><button id="perf-min" title="${I18N.t("perf.min.title")}">–</button></header><pre id="perf-out"></pre>`;
   document.body.appendChild(box);
   const out = box.querySelector("#perf-out");
   let min = false, pending = false;
@@ -116,8 +116,8 @@
 
   function env() {
     const n = navigator, c = n.connection || {};
-    return [`${n.userAgent}`, `schermo ${screen.width}x${screen.height}, finestra ${innerWidth}x${innerHeight}, devicePixelRatio ${devicePixelRatio}, core ${n.hardwareConcurrency || "?"}, memoria ${n.deviceMemory || "?"} GB, rete ${c.effectiveType || "?"}`,
-      `versione del programma: ${window.APP_NAME || "?"} · ${document.title}`, `motore: ${window.QQQ_BROWSER ? "Pyodide nel browser" : "server locale"}`];
+    return [`${n.userAgent}`, I18N.t("perf.env", { sw: screen.width, sh: screen.height, iw: innerWidth, ih: innerHeight, dpr: devicePixelRatio, cores: n.hardwareConcurrency || "?", mem: n.deviceMemory || "?", net: c.effectiveType || "?" }),
+      I18N.t("perf.version", { app: window.APP_NAME || "?", title: document.title }), I18N.t("perf.engine", { engine: I18N.t(window.QQQ_BROWSER ? "perf.engine.browser" : "perf.engine.local") })];
   }
   function startLines() {
     const nav = performance.getEntriesByType("navigation")[0], o = [];
@@ -129,10 +129,10 @@
     if (!short) lines.push(...env(), ...startLines(), "");
     else lines.push(...startLines());
     const list = short ? rows.slice(-18) : rows;
-    for (const r of list) lines.push((`${(r.t / 1000).toFixed(2).padStart(7)} s  ${r.kind.padEnd(7)} ${r.what}` + (r.kind === "start" ? `  (${f1(r.ms)} ms dall'apertura)` : `  ${f1(r.ms)} ms`) + (r.extra ? `  (${r.extra})` : "")).replace(/\s+$/, ""));
+    for (const r of list) lines.push((`${(r.t / 1000).toFixed(2).padStart(7)} s  ${r.kind.padEnd(7)} ${r.what}` + (r.kind === "start" ? "  " + I18N.t("perf.sinceOpen", { ms: f1(r.ms) }) : `  ${f1(r.ms)} ms`) + (r.extra ? `  (${r.extra})` : "")).replace(/\s+$/, ""));
     const keys = Object.keys(stat).sort();
     if (keys.length) {
-      lines.push("", "riassunto (n · media · massimo, ms)");
+      lines.push("", I18N.t("perf.summary"));
       for (const k of keys) { const s = stat[k]; lines.push(`${k.padEnd(28)} ${String(s.n).padStart(4)} · ${f1(s.sum / s.n).padStart(7)} · ${f1(s.max).padStart(7)}`); }
     }
     return lines.join("\n");
@@ -141,7 +141,7 @@
     const t = text(false);
     try { await navigator.clipboard.writeText(t); }
     catch (_) { const a = document.createElement("textarea"); a.value = t; document.body.appendChild(a); a.select(); try { document.execCommand("copy"); } catch (e) { /* the text stays in the box */ } a.remove(); }
-    const b = box.querySelector("#perf-copy"); b.textContent = "Copiato"; setTimeout(() => { b.textContent = "Copia"; }, 1500);
+    const b = box.querySelector("#perf-copy"); b.textContent = I18N.t("perf.copied"); setTimeout(() => { b.textContent = I18N.t("perf.copy"); }, 1500);
   };
   box.querySelector("#perf-clear").onclick = () => { rows.length = 0; for (const k of Object.keys(stat)) delete stat[k]; schedule(); };
   box.querySelector("#perf-min").onclick = () => { min = !min; out.hidden = min; };

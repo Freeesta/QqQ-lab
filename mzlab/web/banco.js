@@ -50,10 +50,10 @@ const BANCO = (() => {
       if (nt && q.tab !== nt && q.tab !== "mrm") {                           // another experiment: the files of the cell are the ones of that experiment (same physical file)
         const f0 = q.type === "spec" ? E.files[q.k] : null; q.tab = nt;
         if (f0) { const sib = E.files.find(x => !x.gone && baseOf(x) === baseOf(f0) && x.kind === nt); if (sib) q.k = sib.k; }
-        q.title = q.type === "chrom" ? "Cromatogramma" : nt === "ms2" ? "Spettro degli ioni prodotto" : "Spettro di massa"; q.sel = null;
+        q.title = q.type === "chrom" ? PT.chrom : nt === "ms2" ? PT.product : PT.spec; q.sel = null;
       }
       q.filt = key || null;
-      if (g && g.level > 1) { q.prec = null; if (q.type === "chrom") q.title = "Cromatogramma"; }       // the type of scan already says which precursor: not one chosen before
+      if (g && g.level > 1) { q.prec = null; if (q.type === "chrom") q.title = PT.chrom; }       // the type of scan already says which precursor: not one chosen before
       if (q.type === "chrom") q.flv = g ? g.level : null;
       else { if (g) q.level = g.level; q.zoom = null; q.zoomY = null; q.lock = null; q.si = null; q.meas = null; }
       ctl(q); draw(q);
@@ -336,7 +336,7 @@ const BANCO = (() => {
     b.querySelector("#hri-rep").onclick = async () => { if (!sp) return nearMsg("Serve una cella con uno spettro."); const o = await read(); if (o) apply(sp, o, true); };
     b.querySelector("#hri-new").onclick = async () => {
       if (!sp) return nearMsg("Serve una cella con uno spettro."); const o = await read(); if (!o) return;
-      const n = addPanel("spec", { tab: sp.tab, k: sp.k, level: sp.level, r0: sp.r0, r1: sp.r1, filt: sp.filt || null, title: "Simulazione isotopica", link: null, x: 0, y: E.panels.reduce((m, q) => Math.max(m, q.y + q.h + 10), 0), w: hostWidth(), h: 300, full: true });
+      const n = addPanel("spec", { tab: sp.tab, k: sp.k, level: sp.level, r0: sp.r0, r1: sp.r1, filt: sp.filt || null, title: PT.isosim, link: null, x: 0, y: E.panels.reduce((m, q) => Math.max(m, q.y + q.h + 10), 0), w: hostWidth(), h: 300, full: true });
       relayout(); fitHost(); apply(n, o, false); setActive(n); n.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
     };
     b.querySelector("#hri-off").onclick = () => { if (sp) { sp.iso = null; draw(sp); } };
@@ -364,10 +364,10 @@ const BANCO = (() => {
       const t0 = parseFloat(b.querySelector("#hri-t0").value.replace(",", ".")), t1 = parseFloat(b.querySelector("#hri-t1").value.replace(",", ".")); if (!(t1 > t0)) return nearMsg("Scegli un intervallo di tempo (trascina sul cromatogramma o scrivi i due estremi).");
       const f = cFile(c); if (!f) return;
       let s = E.panels.find(q => q.id === ist.compId && q.type === "spec");
-      if (!s) { s = addPanel("spec", { tab: c.tab, k: f.k, level: cLevel(c), r0: t0, r1: t1, filt: c.filt || null, title: "Spettro composito", x: 0, y: E.panels.reduce((m, q) => Math.max(m, q.y + q.h + 10), 0), w: hostWidth(), h: 300, full: true, link: null }); ist.compId = s.id; relayout(); fitHost(); }
+      if (!s) { s = addPanel("spec", { tab: c.tab, k: f.k, level: cLevel(c), r0: t0, r1: t1, filt: c.filt || null, title: PT.composite, x: 0, y: E.panels.reduce((m, q) => Math.max(m, q.y + q.h + 10), 0), w: hostWidth(), h: 300, full: true, link: null }); ist.compId = s.id; relayout(); fitHost(); }
       s.r0 = t0; s.r1 = t1; s.k = f.k; s.filt = c.filt || null; s.level = cLevel(c); s.si = null; s.rel = !!b.querySelector("#hri-nrm").checked;
       const m0 = parseFloat(b.querySelector("#hri-m0").value.replace(",", ".")), m1 = parseFloat(b.querySelector("#hri-m1").value.replace(",", ".")); s.zoom = m1 > m0 ? [m0, m1] : null;
-      s.title = `Spettro composito · RT ${num(t0, 2)}–${num(t1, 2)} min`; ctl(s); draw(s); setActive(s); uiSave();
+      s.title = ptComposite(num(t0, 2), num(t1, 2)); ctl(s); draw(s); setActive(s); uiSave();
     };
     b.querySelector("#hri-go").onclick = run;
     b.querySelector("#hri-fol").onchange = e => { ist.follow = e.target.checked; ist.followP = c.id; };
@@ -449,7 +449,7 @@ const BANCO = (() => {
   function follow(p) {
     if (!ist.follow || !sync() || p.id !== ist.followP || !p.sel || !(p.sel[1] > p.sel[0])) return;
     const s = E.panels.find(q => q.id === ist.compId && q.type === "spec"), f = cFile(p); if (!s || !f) return;
-    s.r0 = p.sel[0]; s.r1 = p.sel[1]; s.k = f.k; s.si = null; s.title = `Spettro composito · RT ${num(s.r0, 2)}–${num(s.r1, 2)} min`; ctl(s); draw(s);
+    s.r0 = p.sel[0]; s.r1 = p.sel[1]; s.k = f.k; s.si = null; s.title = ptComposite(num(s.r0, 2), num(s.r1, 2)); ctl(s); draw(s);
   }
   function bar() {
     const host = Q("#dtabs"); if (!host) return;

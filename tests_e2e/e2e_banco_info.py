@@ -50,13 +50,13 @@ try:
             c = "E.panels.find(p=>p.type==='chrom'&&p.tab==='full')"
             pg.evaluate(f"(()=>{{const c={c};setActive(c);c.sel=[{c}._a.full[0]+2,{c}._a.full[0]+4];draw(c)}})()"); pg.wait_for_timeout(800)
             tab("com"); n0 = pg.evaluate("E.panels.length"); pg.click("#hri-go"); pg.wait_for_timeout(2500)
-            s = pg.evaluate("(()=>{const s=E.panels.find(p=>/composito/.test(p.title));return s?{r0:s.r0,r1:s.r1,n:s._a&&s._a.data?s._a.data[0].d.mz.length:0}:null})()")
+            s = pg.evaluate("(()=>{const s=E.panels.find(p=>/composito|@composite/.test(p.title));return s?{r0:s.r0,r1:s.r1,n:s._a&&s._a.data?s._a.data[0].d.mz.length:0}:null})()")
             assert pg.evaluate("E.panels.length") == n0 + 1 and s and s["n"] > 10, s
             pg.evaluate(f"(()=>{{const c={c};setActive(c);c.sel=[{c}._a.full[0]+6,{c}._a.full[0]+8];draw(c)}})()"); pg.wait_for_timeout(600)
             pg.evaluate("document.querySelector('#hri-tabs [data-t=com]').click()"); pg.wait_for_timeout(600)
             pg.check("#hri-fol") if False else pg.evaluate("document.querySelector('#hri-fol').click()")
             pg.evaluate(f"(()=>{{const c={c};c.sel=[{c}._a.full[0]+10,{c}._a.full[0]+12];draw(c)}})()"); pg.wait_for_timeout(2500)
-            s2 = pg.evaluate("(()=>{const s=E.panels.find(p=>/composito/.test(p.title));return [s.r0,s.r1]})()")
+            s2 = pg.evaluate("(()=>{const s=E.panels.find(p=>/composito|@composite/.test(p.title));return [s.r0,s.r1]})()")
             assert abs(s2[0] - (pg.evaluate(f"{c}._a.full[0]") + 10)) < 0.01, s2
         step("tab 7: the composite spectrum of an interval, and «Segui» keeps it on the selection", comp)
         def launchers():
