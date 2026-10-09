@@ -131,7 +131,8 @@ def main() -> None:
         bridge = ROOT / "qqq_lab" / "__init__.py"
         if bridge.exists():
             z.write(bridge, bridge.relative_to(ROOT).as_posix())
-    # identical copy for already published encrypted TP Mine (remove in Phase 3)
+    # identical copy kept because the published tpmine.enc still contains the old 20_tpmine.js that fetches qqq_lab.zip
+    # (remove in phase 3b, after tpmine.enc is rebuilt with `python3 tools/build_tpmine.py`)
     shutil.copy2(static / "mzlab.zip", static / "qqq_lab.zip")
     # Pyodide: core + numpy
     py = static / "pyodide"

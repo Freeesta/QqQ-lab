@@ -14,8 +14,8 @@ from pathlib import Path
 
 import numpy as np
 
-from qqq_lab.chem import elements as E
-from qqq_lab.reader.mzml import Run
+from mzlab.chem import elements as E
+from mzlab.reader.mzml import Run
 
 from .. import chem
 from . import features as FT

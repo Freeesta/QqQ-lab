@@ -11,8 +11,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from qqq_lab import ionfamily
-from qqq_lab.chem import elements as E
+from mzlab import ionfamily
+from mzlab.chem import elements as E
 
 from . import formula as F
 

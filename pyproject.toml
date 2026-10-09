@@ -14,7 +14,7 @@ license = { text = "MIT" }
 test = ["pytest"]
 
 [tool.setuptools.packages.find]
-include = ["mzlab*", "qqq_lab"]
+include = ["mzlab*", "qqq_lab"]  # qqq_lab = transitional bridge, removed in phase 3b (see AGENTS.md §9)
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

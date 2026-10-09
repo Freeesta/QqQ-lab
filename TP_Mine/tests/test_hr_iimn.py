@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import msn_synth as S  # noqa: E402
-from qqq_lab.reader.mzml import PeakTable, Run  # noqa: E402
+from mzlab.reader.mzml import PeakTable, Run  # noqa: E402
 from tpmine.hr import iimn, msn  # noqa: E402
 
 NS = 600

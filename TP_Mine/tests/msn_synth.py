@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from qqq_lab.chem import elements as E
+from mzlab.chem import elements as E
 
 
 def mass_of(formula: str) -> float:
