@@ -1,6 +1,7 @@
 File di esempio di mzLab (già QqQ lab)
 ==========================
-Tre gruppi di file (ESI positivo, risoluzione unitaria, SCIEX 3200 QTRAP) di una soluzione degradata per fotocatalisi con TiO2.
+Tre gruppi di file (ESI positivo, risoluzione unitaria, SCIEX 3200 QTRAP) di una soluzione degradata per fotocatalisi con TiO2,
+più un file ad alta risoluzione.
 
 FULL SCAN: cinque file, campionati a 0, 5, 10, 15 e 30 minuti di trattamento.
 
@@ -22,7 +23,13 @@ MRM: quattro standard a concentrazione crescente (curva di taratura).
   Esempio_MRM_std_7.2ppm.mzML   7,2 ppm
   Esempio_MRM_std_18ppm.mzML    18 ppm
 
+HRMS (alta risoluzione): un file Orbitrap (ESI positivo, DDA) di un altro composto degradato per fotocatalisi con TiO2,
+a un tempo intermedio del trattamento. È un ritaglio: una finestra di tempi di ritenzione con il composto e i suoi prodotti,
+Full Scan + MS2 (centroidi). Dati di ricerca, pubblicati come esempio con il permesso dell'autore. Si apre nella modalità ad alta risoluzione.
+
+  Esempio_HRMS_DDA.mzML       Orbitrap, Full Scan + MS2 (DDA)
+
 Il numero dopo «t» nel nome è il tempo di trattamento in minuti, il numero prima di «ppm» la concentrazione: mzLab li legge da soli.
-Si aprono con il pulsante «Prova con i file di esempio» della pagina iniziale (si sceglie fra Full Scan, MS2 e MRM e si scarica solo il gruppo scelto), oppure scaricandoli e
-trascinandoli nella pagina (https://freeesta.github.io/mzlab/). Sono dati reali del laboratorio, pubblicati
+Si aprono con il pulsante «Prova con i file di esempio» della pagina iniziale (si sceglie fra Full Scan, MS2, MRM e HRMS e si scarica solo il gruppo scelto), oppure scaricandoli e
+trascinandoli nella pagina (https://freeesta.github.io/mzlab/). I primi tre gruppi sono dati reali del laboratorio, pubblicati
 come esempio didattico (formato mzML convertito con ProteoWizard MSConvert).

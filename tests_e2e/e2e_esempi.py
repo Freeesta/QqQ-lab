@@ -1,4 +1,4 @@
-"""The example files published with the site: one button (inside box 1, under the drop zone) offers a CHOICE (Full Scan / MS2 / MRM); only the chosen set is downloaded, on the click, with neutral names (the unknown pollutant is never named) and each set opens."""
+"""The example files published with the site: one button (inside box 1, under the drop zone) offers a CHOICE (Full Scan / MS2 / MRM / HRMS); only the chosen set is downloaded, on the click, with neutral names (the unknown pollutant is never named) and each set opens."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 r = Run(port=8883, wd="/tmp/wd83")
@@ -8,7 +8,7 @@ try:
         pg = r.page(p)
         reqs = []; pg.on("request", lambda q: reqs.append(q.url) if "/esempi/" in q.url else None)
         pg.wait_for_timeout(1500); assert not reqs, ("nothing is downloaded before the click", reqs)
-        pg.click("#demobtn"); pg.wait_for_timeout(300); assert pg.is_visible("#demochoice") and pg.locator("#demochoice [data-demo]").count() == 3 and not reqs, "the button only opens the choice"
+        pg.click("#demobtn"); pg.wait_for_timeout(300); assert pg.is_visible("#demochoice") and pg.locator("#demochoice [data-demo]").count() == 4 and not reqs, "the button only opens the choice"
         pg.click("#demochoice [data-demo=full]"); pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===5", timeout=30000); pg.wait_for_timeout(500)
         t = pg.inner_text("#flist"); assert t.count("Full Scan") >= 1 and "Esempio_FullScan_t30" in t, t
         tm = pg.evaluate("[...document.querySelectorAll('#flist [data-k=time]')].map(x=>+x.value)"); assert sorted(tm) == [0, 5, 10, 15, 30], tm
@@ -35,6 +35,15 @@ try:
         assert all("MRM" in u for u in reqs), reqs
         pg.click("text=Carica dati"); ready(pg); assert pg.evaluate("tabFiles('mrm').length") == 4 and "flufenacet" not in pg.inner_text("body").lower()
         steps.append(("choice MRM: 4 standards with concentrations 0.6/2.4/7.2/18, MRM tab, only that set downloaded", "ok"))
+        # HRMS: one Orbitrap DDA file (Full Scan + MS2), opened in the high-resolution mode like a file loaded by hand
+        pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500); reqs.clear()
+        pg.click("#demobtn"); pg.click("#demochoice [data-demo=hrms]"); pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length>=1", timeout=60000); pg.wait_for_timeout(500)
+        assert "Esempio_HRMS_DDA" in pg.inner_text("#flist") and all("HRMS" in u for u in reqs) and len(reqs) == 1, reqs
+        pg.click("text=Carica dati"); ready(pg)
+        fl = pg.evaluate("E.files.map(f=>[f.file,f.lv,!!(f.prof1&&f.prof1.hr),f.prof1&&f.prof1.dec,!!f.dda])")
+        assert any(f[1] == 1 and f[2] and f[3] >= 4 for f in fl) and any(f[1] == 2 and f[4] for f in fl), fl
+        assert pg.evaluate("tabFiles('full').length") >= 1 and pg.evaluate("tabFiles('ms2').length") >= 1, fl
+        steps.append(("choice HRMS: one Orbitrap DDA file, only that file downloaded, opens in high resolution with Full Scan and MS2", "ok"))
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

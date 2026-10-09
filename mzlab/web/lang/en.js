@@ -188,6 +188,8 @@ I18N.add("en", {
   "load.demo.ms2.size": "2 files · 10 MB",
   "load.demo.mrm.title": "4 MRM standards of increasing concentration (0.6, 2.4, 7.2 and 18 ppm)",
   "load.demo.mrm.size": "4 files · 2 MB",
+  "load.demo.hrms.title": "1 high-resolution file (Orbitrap, DDA): Full Scan and MS2 of a degraded sample, one retention-time window",
+  "load.demo.hrms.size": "1 file · 6 MB",
   "load.demo.progress": "Downloading the example files: {i} of {n} ({mb} MB)…",
   "load.demo.opening": "Opening the example files…",
   "load.demo.error": "Cannot download the example files: {message}",
