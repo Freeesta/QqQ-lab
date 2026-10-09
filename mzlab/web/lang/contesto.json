@@ -263,5 +263,15 @@
   "bn.iso.failed": "Avviso quando il profilo isotopico non si calcola; {message} = testo dell'errore.",
   "bn.l.count": "Riga sopra l'elenco delle scansioni; {n} = numero di scansioni.",
   "bn.maxRanges": "Avviso quando si supera il numero massimo di grafici impilati; {n} = massimo.",
-  "bn.pks.done": "Messaggio dopo «Integra in tutte le celle»; {t} = tempo del picco in minuti, {n} = tracce integrate."
+  "bn.pks.done": "Messaggio dopo «Integra in tutte le celle»; {t} = tempo del picco in minuti, {n} = tracce integrate.",
+  "err.formula.unreadable": "{formula} = testo scritto dall'utente.",
+  "err.formula.element": "{element} = simbolo, {formula} = formula scritta dall'utente.",
+  "err.formula.parens": "{formula} = formula scritta dall'utente.",
+  "err.adduct.unknown": "{adduct} = nome dell'addotto.",
+  "err.comp.element": "{part} = testo scritto dall'utente.",
+  "err.comp.unknown": "{symbol} = simbolo.",
+  "err.comp.range": "{symbol} = simbolo.",
+  "err.comp.ion": "{ion} = nome dello ione.",
+  "err.tree.formula": "{formula} = testo scritto dall'utente.",
+  "err.tree.tooMany": "{n} = numero di percorsi."
 }

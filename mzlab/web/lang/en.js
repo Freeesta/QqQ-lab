@@ -1881,5 +1881,22 @@ I18N.add("en", {
   "bn.m.xic": "Extracted ion (XIC)…",
   "bn.m.png": "Image (PNG)",
   "bn.m.data": "Data (tab-separated text)",
-  "bn.h.click": "Click on the chromatogram (or choose a spectrum) to see the parameters of a scan."
+  "bn.h.click": "Click on the chromatogram (or choose a spectrum) to see the parameters of a scan.",
+  "err.formula.empty": "Empty formula.",
+  "err.formula.unreadable": "Cannot read the formula {formula}.",
+  "err.formula.element": "Unknown element {element} in {formula}.",
+  "err.formula.parens": "Unbalanced parentheses in {formula}.",
+  "err.adduct.unknown": "Unknown adduct: {adduct}",
+  "err.comp.element": "Cannot read the element «{part}» (write C:0-13).",
+  "err.comp.unknown": "Unknown element: {symbol}.",
+  "err.comp.range": "{symbol}: the maximum is below the minimum.",
+  "err.comp.mz": "The m/z must be positive.",
+  "err.comp.ion": "Unknown ion type: {ion}.",
+  "err.comp.charge": "The charge does not agree with the ion type.",
+  "err.comp.unit": "The unit of the tolerance is ppm or mDa.",
+  "err.comp.many": "Too many combinations: narrow the ranges of the elements.",
+  "err.tree.formula": "Invalid formula: {formula}",
+  "err.tree.noPath": "The file has no MSn scans with the fragmentation path in the filter (an MS3 or higher file is needed).",
+  "err.tree.needStages": "The tree is for MSn files with at least two stages of fragmentation (MS3 or higher).",
+  "err.tree.tooMany": "{n} fragmentation paths: too many for a tree (it is meant for MSn infusion)."
 });

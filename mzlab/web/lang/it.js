@@ -1881,5 +1881,22 @@ I18N.add("it", {
   "bn.m.xic": "Ione estratto (XIC)…",
   "bn.m.png": "Immagine (PNG)",
   "bn.m.data": "Dati (testo con tabulazioni)",
-  "bn.h.click": "Clic sul cromatogramma (o scegli uno spettro) per vedere i parametri di una scansione."
+  "bn.h.click": "Clic sul cromatogramma (o scegli uno spettro) per vedere i parametri di una scansione.",
+  "err.formula.empty": "Formula vuota.",
+  "err.formula.unreadable": "Non riesco a leggere la formula {formula}.",
+  "err.formula.element": "Elemento sconosciuto {element} in {formula}.",
+  "err.formula.parens": "Parentesi non bilanciate in {formula}.",
+  "err.adduct.unknown": "Addotto sconosciuto: {adduct}",
+  "err.comp.element": "Non riesco a leggere l'elemento «{part}» (scrivi C:0-13).",
+  "err.comp.unknown": "Elemento sconosciuto: {symbol}.",
+  "err.comp.range": "{symbol}: il massimo è sotto il minimo.",
+  "err.comp.mz": "L'm/z deve essere positivo.",
+  "err.comp.ion": "Tipo di ione sconosciuto: {ion}.",
+  "err.comp.charge": "La carica non è coerente con il tipo di ione.",
+  "err.comp.unit": "L'unità della tolleranza è ppm o mDa.",
+  "err.comp.many": "Troppe combinazioni: restringi gli intervalli degli elementi.",
+  "err.tree.formula": "Formula non valida: {formula}",
+  "err.tree.noPath": "Il file non ha scansioni MSn con il percorso di frammentazione nel filtro (serve un file MS3 o superiore).",
+  "err.tree.needStages": "L'albero serve per file MSn con almeno due stadi di frammentazione (MS3 o superiore).",
+  "err.tree.tooMany": "{n} percorsi di frammentazione: sono troppi per un albero (è pensato per l'infusione MSn)."
 });

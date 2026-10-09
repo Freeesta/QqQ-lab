@@ -10,6 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from .elements import ADDUCT_SHIFT, ELECTRON, MASS, mass, parse_formula
+from ..i18n import UserError
 
 # adducts that elements.py does not have: ions of this list only. shift = mass added to the neutral, z = charge; mz = (M + shift) / z
 _NH4 = ADDUCT_SHIFT["[M+NH4]+"]
@@ -37,7 +38,7 @@ def ion_shift(adduct: str) -> tuple[float, int]:
         return ADDUCT_SHIFT[adduct], 1
     if adduct in EXTRA:
         return EXTRA[adduct]
-    raise ValueError(f"adduct sconosciuto: {adduct}")
+    raise UserError("err.adduct.unknown", {"adduct": adduct}, f"unknown adduct: {adduct}")
 
 
 def _mass(formula: str) -> float:
