@@ -79,8 +79,8 @@ const BARRA = (() => {
       pinBtn.classList.toggle("pinned", _pinned);
       pinBtn.classList.toggle("on", _pinned);
       pinBtn.title = _pinned
-        ? "Sblocca la barra laterale (apri in sovrimpressione)"
-        : "Fissa la barra laterale (ridimensiona i grafici)";
+        ? I18N.t("sidebar.unpin")
+        : I18N.t("sidebar.pin");
       pinBtn.setAttribute("aria-pressed", _pinned ? "true" : "false");
     }
     applyWidth();
@@ -91,22 +91,10 @@ const BARRA = (() => {
   }
 
   // Tab titles
-  const TAB_TITLES = {
-    file: "File",
-    calc: "Calcolatrice m/z",
-    losses: "Perdite neutre (Δm)",
-    adducts: "Addotti ESI",
-    lists: "Liste di riferimento",
-    hdr: "1 · Intestazione scansione",
-    lst: "2 · Elenco scansioni",
-    fil: "3 · File e strumento",
-    cmp: "4 · Composizione elementare",
-    iso: "5 · Simulazione isotopica",
-    pks: "6 · Rilevamento picchi",
-    com: "7 · Spettro composito",
-    idn: "8 · Identificazione librerie",
-    tre: "9 · Albero MSn"
-  };
+  const TAB_TITLES = {};
+  ["file", "calc", "losses", "adducts", "lists"].forEach(k => { TAB_TITLES[k] = I18N.t(`sidebar.tab.${k}`); });
+  ["hdr", "lst", "fil", "cmp", "iso", "pks", "com", "idn", "tre"].forEach(k => { TAB_TITLES[k] = I18N.t(`sidebar.sec.${k}`); });
+
 
   // Switch tab
   function setTab(tabId, opt = {}) {

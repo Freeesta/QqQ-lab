@@ -53,19 +53,19 @@ function specClick(p, px, py) {                  // a click on the spectrum (no 
   const s = p._a.snap(px); if (s) measClick(p, s.m);
 }
 function measMenu(p, m) {                          // entries of the right-click menu of the spectrum
-  const out = [{ label: "Misura da questo picco", fn: () => measSet(p, m) }];
+  const out = [{ label: I18N.t("spec.measure"), fn: () => measSet(p, m) }];
   if (p.meas && p.meas.list.length) p.meas.list.slice(-3).forEach(q => {
     const d = Math.abs(q.b - q.a).toFixed(p._a && p._a.hrp ? Math.min(4, p._a.dec) : 1);
     out.push({
-      label: `Cerca ${d} nelle perdite neutre`,
-      tip: "Apre la tabella delle perdite neutre con questa differenza già scritta nel campo di ricerca",
+      label: I18N.t("spec.measure.toLosses", { d }),
+      tip: I18N.t("spec.measure.toLosses.tip"),
       fn: () => {
         if (window.BARRA && BARRA.isDataView()) BARRA.setTab("losses", { q: d });
         else if (window.QQQRef) QQQRef.open("ls", { q: d });
       }
     });
   });
-  if (p.meas) out.push({ label: "Togli le misure", fn: () => measClear(p) });
+  if (p.meas) out.push({ label: I18N.t("spec.measure.clear"), fn: () => measClear(p) });
   return out;
 }
 
@@ -74,11 +74,11 @@ function specParams(p, btn) {
   const old = p.el.querySelector(".sp-pop"); if (old) { old.remove(); return; }
   const pop = document.createElement("div"); pop.className = "sp-pop";
   const cur = { rel: specRel(p), thr: p.thr ?? SPEC_DEF.thr, nlab: p.nlab ?? SPEC_DEF.nlab, dec: p.dec ?? (p._a ? p._a.dec : SPEC_DEF.dec) };
-  pop.innerHTML = `<label title="Si etichettano solo i picchi sopra questa percentuale del picco più alto; gli altri restano disegnati">Etichette: oltre <input data-s="thr" type="number" min="0" max="100" step="1" value="${cur.thr}"> %</label>
-    <label title="Numero massimo di etichette m/z">al massimo <input data-s="nlab" type="number" min="1" max="60" step="1" value="${cur.nlab}"></label>
-    <label>Decimali di <i>m/z</i> <select data-s="dec">${(p._a && p._a.hrp ? [0, 1, 2, 3, 4, 5] : [0, 1, 2]).map(n => `<option ${cur.dec === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>
-    ${(p._a && p._a.data || []).some(x => x.d.pmz) ? `<label title="File in profilo: la linea è lo spettro com'è registrato; i bastoncini sono le cime, una per massa nominale (grafico pulito per la relazione). Le etichette e la tabella usano sempre le cime.">Spettro <select data-s="sticks"><option value="0" ${p.sticks ? "" : "selected"}>Profilo (linea)</option><option value="1" ${p.sticks ? "selected" : ""}>Bastoncini (un picco per massa nominale)</option></select></label>` : ""}
-    <button data-s="reset" title="Torna ai valori di partenza">Ripristina predefiniti</button>`;
+  pop.innerHTML = `<label title="${I18N.t("spec.par.thr.title")}">${I18N.t("spec.par.thr", { input: `<input data-s="thr" type="number" min="0" max="100" step="1" value="${cur.thr}">` })}</label>
+    <label title="${I18N.t("spec.par.nlab.title")}">${I18N.t("spec.par.nlab", { input: `<input data-s="nlab" type="number" min="1" max="60" step="1" value="${cur.nlab}">` })}</label>
+    <label>${I18N.t("spec.par.dec", { select: `<select data-s="dec">${(p._a && p._a.hrp ? [0, 1, 2, 3, 4, 5] : [0, 1, 2]).map(n => `<option ${cur.dec === n ? "selected" : ""}>${n}</option>`).join("")}</select>` })}</label>
+    ${(p._a && p._a.data || []).some(x => x.d.pmz) ? `<label title="${I18N.t("spec.par.sticks.title")}">${I18N.t("spec.par.sticks", { select: `<select data-s="sticks"><option value="0" ${p.sticks ? "" : "selected"}>${I18N.t("spec.par.sticks.profile")}</option><option value="1" ${p.sticks ? "selected" : ""}>${I18N.t("spec.par.sticks.sticks")}</option></select>` })}</label>` : ""}
+    <button data-s="reset" title="${I18N.t("spec.par.reset.title")}">${I18N.t("spec.par.reset")}</button>`;
   const pr = p.el.getBoundingClientRect(), br = btn.getBoundingClientRect();
   p.el.appendChild(pop); pop.style.left = Math.max(4, Math.min(br.left - pr.left, p.el.clientWidth - pop.offsetWidth - 6)) + "px"; pop.style.top = br.bottom - pr.top + 4 + "px";
   const apply = () => { draw(p); uiSave(); };
@@ -136,7 +136,7 @@ function toggleTl(p) {
 // ---------------------------------------------------------------- one line under the spectrum: which scan it is
 function scanLine(p, data, d0) {
   const f = data[0].f, parts = [], i = p.si != null ? p.si : d0.i0, n = d0.n;       // only what the title does not say: which scan(s), and for MS2 the precursor and the energy
-  parts.push(d0.scans === 1 && i != null ? `scansione ${i + 1}${n ? "/" + n : ""}` : `media di ${d0.scans} scansioni`);
-  if (p.level === 2) { const ce = p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null; parts.push(`precursore ${p.prec != null ? p.prec : "?"}` + (ce != null ? ` · CE ${ce} eV` : "")); }
+  parts.push(d0.scans === 1 && i != null ? I18N.t("spec.scanLine.one", { i: i + 1, of: n ? "/" + n : "" }) : I18N.t("spec.scanLine.avg", { n: d0.scans }));
+  if (p.level === 2) { const ce = p.prec != null ? ((f.ms2_exps || []).find(x => Math.abs(x.prec - p.prec) < 0.6) || {}).ce : null; parts.push(I18N.t("spec.scanLine.prec", { prec: p.prec != null ? p.prec : "?" }) + (ce != null ? I18N.t("spec.scanLine.ce", { ce }) : "")); }
   return parts.join(" · ");
 }

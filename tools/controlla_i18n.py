@@ -42,6 +42,21 @@ carica caricare scegli scegliere apri aprire chiudi chiudere annulla salva salva
 mostra nascondi seleziona trascina rilascia aggiungi rimuovi copia incolla nuovo nuova nuovi vecchio file-non
 dati spettro spettri picco picchi errore errori attendi attendere caricamento prova esempio esempi aiuto
 perché quando dove come anche ancora già ora poi solo senza dopo prima fra tra dalla dallo dalle dagli sia siamo
+cromatogramma cromatogrammi traccia tracce tempi picco segnale intensità asse assi fondo scheda schede pannello pannelli grafico grafici
+campione campioni bianco bianchi integrazione integrare aree tabella tabelle riga righe colonna colonne valore valori nome nomi tipo tipi
+esperimento esperimenti precursore precursori ione ioni frammenti frammento perdita perdite neutra neutre massa masse formule addotto addotti
+libreria librerie contaminante contaminanti risoluzione bassa alta ingrandisce ingrandire ingrandito riduci allarga vista intera barra
+laterale voce voci clic destro sinistro doppio rotella tasto tasti premi premere selezionato selezionati selezione scelta attivo attiva attivi
+acceso spento spenta accesa vuoto vuota mancano manca serve servono puoi possono vedere vedi guarda leggi scrivi scrivere scritto copiato
+salvato esporta esportare immagine sovrapposti impilati cascata sottrai sottrazione sottratto livello retta curva mediana massimo minimo
+intervallo larghezza altezza lunghezza unità secondi minuti ore giorni avviso attenzione alcuni alcune almeno oltre sopra sotto accanto
+dentro fuori quale quali cui mentre però quindi invece infatti ormai sempre mai meno molto poco troppo bene male durante fino verso circa
+tramite nell nella sull sugli dall dell nello sullo dagli negli quel quella quelli numero numeri picchi cosa cose modo modi
+nessuno scheda chiaro scuro rilevamento rilevato rilevati tolto tolti toglie togliere aggiunge aggiungere aggiunto trovato trova trovare
+mostrare mostrato nascosto nascondere cambia cambiare cambiato cerca cercare ricerca risultato risultati fonte fonti didascalia titolo
+etichetta etichette decimali decimale lingua testo colori colore tema impostazioni strumento strumenti metodo metodi acquisizione
+sovrapporre disegna disegnare disegnato disegni struttura strutture molecola molecole carica cariche positivo negativo positiva negativa
+vuol dire significa significato esempio esempi spiegazione guida aiuto domanda domande risposta risposte
 """.split())
 
 PARAM_RE = re.compile(r"\{([A-Za-z_][\w]*)")
@@ -189,35 +204,79 @@ def check_static_html(it: dict, errs: list) -> None:
 
 # ---------------------------------------------------------------- Italian outside the catalogs
 def js_strings(src: str):
-    """Yields (line, text) for every string literal outside comments (tolerant: regex literals can confuse it, see the exceptions file)."""
-    i, n, line = 0, len(src), 1
-    while i < n:
-        c = src[i]
-        if c == "\n":
-            line += 1
-        if src.startswith("//", i):
-            j = src.find("\n", i)
-            i = n if j < 0 else j
-            continue
-        if src.startswith("/*", i):
-            j = src.find("*/", i + 2)
-            j = n if j < 0 else j + 2
-            line += src.count("\n", i, j)
-            i = j
-            continue
-        if c in "\"'`":
-            j, q = i + 1, c
-            while j < n and src[j] != q:
-                if src[j] == "\\":
+    """Yields (line, text) for every string literal outside comments. Template literals are split: the static text between the ${...} is one
+    string, and the code inside each ${...} is scanned again (nested strings and templates). Tolerant: regex literals can confuse it (see the
+    exceptions file)."""
+    n = len(src)
+
+    def scan(i: int, line: int, stop_at_brace: bool):
+        depth = 0
+        while i < n:
+            c = src[i]
+            if c == "\n":
+                line += 1
+            if src.startswith("//", i):
+                j = src.find("\n", i)
+                i = n if j < 0 else j
+                continue
+            if src.startswith("/*", i):
+                j = src.find("*/", i + 2)
+                j = n if j < 0 else j + 2
+                line += src.count("\n", i, j)
+                i = j
+                continue
+            if stop_at_brace:
+                if c == "{":
+                    depth += 1
+                elif c == "}":
+                    if depth == 0:
+                        return i + 1, line
+                    depth -= 1
+            if c in "\"'":
+                j = i + 1
+                while j < n and src[j] != c:
+                    if src[j] == "\\":
+                        j += 1
+                    elif src[j] == "\n":
+                        break
                     j += 1
-                elif src[j] == "\n" and q != "`":
-                    break
-                j += 1
-            yield line, src[i + 1:j]
-            line += src.count("\n", i, j)
-            i = j + 1
-            continue
-        i += 1
+                yield line, src[i + 1:j]
+                i = j + 1
+                continue
+            if c == "`":
+                i += 1
+                start, ln0 = i, line
+                while i < n and src[i] != "`":
+                    if src[i] == "\\":
+                        i += 2
+                        continue
+                    if src.startswith("${", i):
+                        yield ln0, src[start:i]
+                        line += src.count("\n", start, i)
+                        sub = scan(i + 2, line, True)
+                        while True:
+                            try:
+                                item = next(sub)
+                                yield item
+                            except StopIteration as stop:
+                                i, line = stop.value
+                                break
+                        start, ln0 = i, line
+                        continue
+                    i += 1
+                yield ln0, src[start:i]
+                line += src.count("\n", start, i)
+                i += 1
+                continue
+            i += 1
+        return i, line
+
+    gen = scan(0, 1, False)
+    while True:
+        try:
+            yield next(gen)
+        except StopIteration:
+            return
 
 
 def load_exceptions() -> set[tuple[str, str]]:

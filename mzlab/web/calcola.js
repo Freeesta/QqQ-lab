@@ -22,7 +22,7 @@ function calcEval(t, ans = 0) {
     if (c === "-") { i++; return -factor(); }
     if (c === "+") { i++; return factor(); }
     if (c === "(") { i++; const v = expr(); if (peek() !== ")") fail(""); i++; return v; }
-    const n = num(); if (n == null) fail(i >= s.length ? "" : "non capisco questo segno"); return n;
+    const n = num(); if (n == null) fail(i >= s.length ? "" : I18N.t("calc.err.sign")); return n;
   }
   function term() {
     let v = factor();
@@ -34,7 +34,7 @@ function calcEval(t, ans = 0) {
     while (peek() === "+" || peek() === "-") { const o = s[i++], r = term(); v = o === "+" ? v + r : v - r; }
     return v;
   }
-  try { const v = expr(); if (i < s.length) fail(peek() === ")" ? "parentesi chiusa di troppo" : ""); return isFinite(v) ? { v } : { err: "risultato troppo grande" }; }
+  try { const v = expr(); if (i < s.length) fail(peek() === ")" ? I18N.t("calc.err.closeParen") : ""); return isFinite(v) ? { v } : { err: I18N.t("calc.err.tooBig") }; }
   catch (e) { return e && "err" in e ? e : { err: "" }; }
 }
 // 4 decimals at most, trailing zeros removed, never scientific notation for normal numbers

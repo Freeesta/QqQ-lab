@@ -11,6 +11,7 @@ import struct
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from ..i18n import message
 from .ole import Ole
 
 NAMES = {  # standard Analyst names (kept in English on purpose: they are the names used on the instrument and in papers)
@@ -198,7 +199,7 @@ def read_methods(path) -> list[dict]:
             res = []
             for s in subs:
                 m = _method(ole, f"MethodSubtree/{s}/")
-                m["name"] = s.replace("Method", "Metodo ")
+                m["name"] = s.replace("Method", "Method ")
                 m["sample"] = int(re.sub(r"\D", "", s) or 0)
                 res.append(m)
             return res
@@ -226,9 +227,9 @@ def check_against(data: dict, lab: dict) -> list[dict]:
         rows.append({"what": what, "method": method, "data": got, "status": status})
     kind = data.get("kind")
     m_mrm = all(e["kind"] == "mrm" for e in exps)
-    m_name = "MRM" if m_mrm else "scansione (full scan o ioni prodotto)"
-    d_name = {"full": "full scan", "ms2": "ioni prodotto (MS/MS)", "mrm": "MRM"}.get(kind, "non riconosciuto")
-    add("Tipo di esperimento", m_name, d_name, "ok" if (kind == "mrm") == m_mrm and kind in ("full", "ms2", "mrm") else "diff")
+    m_name = "MRM" if m_mrm else message("chk.type.scan")
+    d_name = {"full": message("chk.type.full"), "ms2": message("chk.type.ms2"), "mrm": "MRM"}.get(kind) or message("chk.type.unknown")
+    add(message("chk.type"), m_name, d_name, "ok" if (kind == "mrm") == m_mrm and kind in ("full", "ms2", "mrm") else "diff")
     fmt = lambda v: f"{v:g}"  # noqa: E731
     if kind == "mrm" and m_mrm:
         m_tr = [t for e in exps for t in e["transitions"]]
@@ -238,38 +239,38 @@ def check_against(data: dict, lab: dict) -> list[dict]:
             hit = next((i for i, x in enumerate(d_tr) if i not in used and x.get("q1") is not None and abs(x["q1"] - t["q1"]) <= 0.2 and abs(x["q3"] - t["q3"]) <= 0.2), None)
             mtxt = f"CE {fmt(t['ce'])} eV, dwell {fmt(t['dwell'])} ms" if t.get("ce") is not None else f"dwell {fmt(t['dwell'])} ms"
             if hit is None:
-                add(f"Transizione {fmt(t['q1'])} > {fmt(t['q3'])}", mtxt, "assente nel file", "diff")
+                add(message("chk.transition", q1=fmt(t["q1"]), q3=fmt(t["q3"])), mtxt, message("chk.absentFile"), "diff")
                 continue
             used.add(hit)
             x = d_tr[hit]
             dw = x["dwell"] * 1000 if x.get("dwell") is not None and x["dwell"] < 5 else x.get("dwell")
             ok = (x.get("ce") is None or t.get("ce") is None or abs(x["ce"] - t["ce"]) < 0.5) and (dw is None or abs(dw - t["dwell"]) < 1)
-            add(f"Transizione {fmt(t['q1'])} > {fmt(t['q3'])}", mtxt, f"CE {fmt(x['ce'])} eV, dwell {fmt(dw)} ms" if x.get("ce") is not None and dw is not None else "presente", "ok" if ok else "diff")
+            add(message("chk.transition", q1=fmt(t["q1"]), q3=fmt(t["q3"])), mtxt, f"CE {fmt(x['ce'])} eV, dwell {fmt(dw)} ms" if x.get("ce") is not None and dw is not None else message("chk.present"), "ok" if ok else "diff")
         for i, x in enumerate(d_tr):
             if i not in used and x.get("q1") is not None:
-                add(f"Transizione {fmt(x['q1'])} > {fmt(x['q3'])}", "assente nel metodo", "presente nel file", "diff")
+                add(message("chk.transition", q1=fmt(x["q1"]), q3=fmt(x["q3"])), message("chk.absentMethod"), message("chk.presentFile"), "diff")
     elif kind in ("full", "ms2") and not m_mrm:
         rngs = [e.get("range") for e in exps]
         win = data.get("scan_window")
         if win and all(rngs):
             lo, hi = min(r[0] for r in rngs), max(r[1] for r in rngs)
-            add("Intervallo di massa (m/z)", f"{fmt(lo)}-{fmt(hi)}", f"{fmt(win[0])}-{fmt(win[1])}", "ok" if abs(lo - win[0]) <= 1 and abs(hi - win[1]) <= 1 else "diff")
+            add(message("chk.massRange"), f"{fmt(lo)}-{fmt(hi)}", f"{fmt(win[0])}-{fmt(win[1])}", "ok" if abs(lo - win[0]) <= 1 and abs(hi - win[1]) <= 1 else "diff")
         elif win:
-            add("Intervallo di massa (m/z)", "non decodificabile per tutti gli esperimenti", f"{fmt(win[0])}-{fmt(win[1])}", "na")
+            add(message("chk.massRange"), message("chk.notDecodable"), f"{fmt(win[0])}-{fmt(win[1])}", "na")
         if kind == "ms2":
             ces = sorted({c for e in exps for c in e.get("ce", [])})
             dce = sorted(data.get("ce") or [])
             if ces and dce:
-                add("Energia di collisione (eV)", ", ".join(map(fmt, ces)), ", ".join(map(fmt, dce)), "ok" if len(ces) == len(dce) and all(abs(a - b) < 0.5 for a, b in zip(ces, dce)) else "diff")
+                add(message("chk.ce"), ", ".join(map(fmt, ces)), ", ".join(map(fmt, dce)), "ok" if len(ces) == len(dce) and all(abs(a - b) < 0.5 for a, b in zip(ces, dce)) else "diff")
             prec = data.get("precursors") or []
             if prec:
-                add("Esperimenti (un precursore ciascuno)", str(len(exps)), f"{len(prec)} precursori: {', '.join(fmt(p) for p in prec)}", "ok" if len(prec) == len(exps) else "diff")
+                add(message("chk.experiments"), str(len(exps)), message("chk.precursorsN", n=len(prec), list=", ".join(fmt(p) for p in prec)), "ok" if len(prec) == len(exps) else "diff")
     rt = (lab.get("lc") or {}).get("run_time")
     if rt and data.get("rt_max"):
-        add("Durata della corsa (min)", fmt(rt), f"il file arriva a {data['rt_max']:.1f}", "ok" if data["rt_max"] <= rt + 0.1 else "diff")
+        add(message("chk.runTime"), fmt(rt), message("chk.reachesTo", t=f"{data['rt_max']:.1f}"), "ok" if data["rt_max"] <= rt + 0.1 else "diff")
     pda = (lab.get("lc") or {}).get("pda")
     if pda:
-        add("PDA", "attivo", "segnale presente (TWC)" if data.get("pda") else "segnale assente nel file", "ok" if data.get("pda") else "diff")
+        add(message("chk.pda"), message("chk.pdaOn"), message("chk.pdaSignal") if data.get("pda") else message("chk.pdaNone"), "ok" if data.get("pda") else "diff")
     return rows
 
 

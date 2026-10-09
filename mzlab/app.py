@@ -264,10 +264,10 @@ class App:
         over every full-scan file of the session (k = the file the student is looking at, used as the reference). No verdict."""
         from . import ionfamily
         if not self.session:
-            raise ValueError("nessuna sessione aperta")
+            raise UserError("err.session.none", text="no session open")
         full = [(i, it) for i, it in enumerate(self.session.items) if it.kind() != "mrm" and it.type != "blank" and len(it.run.table(1).rt)]
         if not full:
-            raise ValueError("servono file full scan")
+            raise UserError("err.origin.needFullScan", text="full scan files are needed")
         samples = [{"label": it.label, "time": it.time, "table": it.run.table(1), "key": str(it.path)} for _, it in full]
         ref = next((j for j, (i, _) in enumerate(full) if i == k), None)
         ms2 = None
@@ -312,7 +312,7 @@ class App:
     def nearest_scan(self, k: int, rt: float, filter: str | None = None, level: int = 1, precursor: float | None = None) -> dict:
         ans = self._item(k).nearest_scan(rt, level, precursor, filter)
         if not ans:
-            raise ValueError("Nessuna scansione in questo file.")
+            raise UserError("err.scan.none", text="no scan in this file")
         return ans
 
     def filters(self, k: int) -> dict:
@@ -352,15 +352,15 @@ class App:
         """Single scans i0..i1 of file k (for scan-by-scan navigation); each one equals /api/spectrum on a window holding only that scan."""
         item = self._item(k)
         if item.kind() == "mrm":
-            raise ValueError("Questo file è MRM: contiene solo cromatogrammi di transizioni, non scansioni.")
+            raise UserError("err.scan.mrm", text="this file is MRM: it contains only transition chromatograms")
         if i0 > i1:
-            raise ValueError("intervallo di scansioni non valido: i0 è maggiore di i1")
+            raise UserError("err.scan.range", text="invalid scan range: i0 is greater than i1")
         if i1 - i0 + 1 > self.MAX_SPECTRA:
-            raise ValueError(f"al massimo {self.MAX_SPECTRA} scansioni per richiesta")
+            raise UserError("err.scan.maxRequest", {"n": self.MAX_SPECTRA}, f"at most {self.MAX_SPECTRA} scans per request")
         pt = item.ptol(level, precursor, hr)
         n = item.scan_count(level, precursor, pt, filt)
         if i0 < 0 or i0 >= n:
-            raise ValueError(f"scansione fuori dal file (il file ne ha {n})")
+            raise UserError("err.scan.outsideN", {"n": n}, f"scan outside the file (the file has {n})")
         return {"n": n, "scans": [{"i": s["i"], "sid": s["sid"], "rt": round(s["rt"], 4), **self._spec_json(item, level, s["mz"], s["y"], merge, hr)}
                                   for s in item.scans(i0, i1, level, precursor, prec_tol=pt, bin_da=bin_da, hr=hr, filt=filt)]}
 
@@ -370,16 +370,16 @@ class App:
         for a profile scan, its profile line (pmz float64, py float32; np values each). nl = highest intensity, tic = sum of the intensities."""
         item = self._item(k)
         if item.kind() == "mrm":
-            raise ValueError("Questo file è MRM: contiene solo cromatogrammi di transizioni, non scansioni.")
+            raise UserError("err.scan.mrm", text="this file is MRM: it contains only transition chromatograms")
         if i0 > i1:
-            raise ValueError("intervallo di scansioni non valido: i0 è maggiore di i1")
+            raise UserError("err.scan.range", text="invalid scan range: i0 is greater than i1")
         if i1 - i0 + 1 > self.MAX_SPECTRA:
-            raise ValueError(f"al massimo {self.MAX_SPECTRA} scansioni per richiesta")
+            raise UserError("err.scan.maxRequest", {"n": self.MAX_SPECTRA}, f"at most {self.MAX_SPECTRA} scans per request")
         pt = item.ptol(level, precursor, hr)
         ids, rts = item._scan_ids(level, precursor, pt, filt)       # one scan filter = one scan type (a path of fragmentation, MS1, ...)
         n = len(ids)
         if i0 < 0 or i0 >= n:
-            raise ValueError(f"scansione fuori dal file (il file ne ha {n})")
+            raise UserError("err.scan.outsideN", {"n": n}, f"scan outside the file (the file has {n})")
         i1 = min(i1, n - 1)
         if filt:
             rows = []
@@ -415,7 +415,7 @@ class App:
 
     def scanavg(self, k: int, sids: list[int], hr: bool = True) -> dict:
         if len(sids) > 200:
-            raise ValueError("al massimo 200 scansioni per media")
+            raise UserError("err.scan.maxAverage", {"n": 200}, "at most 200 scans per average")
         return self._item(k).scan_avg(sids, hr)
 
     def ionmap(self, k: int, level: int) -> dict:

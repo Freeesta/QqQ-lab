@@ -6,3 +6,5 @@ mzlab/web/index.html	Esempio_MS2_t
 mzlab/web/index.html	Esempio_MRM_std_
 mzlab/web/index.html	static/esempi/
 mzlab/web/index.html	static/teoria/glossario-dati.js
+mzlab/web/index.html	static/teoria/tema.js
+mzlab/web/draw.js	qqq.disegno.strumenti
