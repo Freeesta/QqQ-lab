@@ -8,6 +8,8 @@ def step(name, fn):
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_cromato.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 XP = "E.panels.find(p=>p.type==='xic')"
+def tick(pg, sel):      # a checkbox of the dialog that is drawn again after each change: a DOM click (Playwright's check() fights with the new element in WebKit and Firefox)
+    pg.wait_for_selector(sel, timeout=30000); pg.evaluate("s=>{const e=document.querySelector(s); if(!e.checked) e.click()}", sel)
 r = Run(port=8881, wd="/tmp/wd81")
 try:
     with sync_playwright() as p:
@@ -22,14 +24,14 @@ try:
             t = pg.inner_text("#bigbody"); assert "S/N" in t and "N (piatti)" not in t and pg.locator("#ig-par").is_checked() is False, t[:300]
         step("columns are optional and off by default", default_off)
         def params():
-            pg.check("#ig-par"); pg.wait_for_timeout(400)
+            tick(pg, "#ig-par"); pg.wait_for_timeout(400)
             rows = pg.evaluate("[...document.querySelectorAll('#bigbody table tr')].map(r=>[...r.children].map(c=>c.textContent))"); h, d = rows[0], rows[1]
             i = [j for j, x in enumerate(h) if x.startswith("w")][0]
             w, N, T = float(d[i]), float(d[i + 1]), float(d[i + 2]); print(w, N, T)
             assert 0.05 < w < 0.6 and N > 100 and 0.5 < T < 6, (w, N, T)
         step("w1/2, N and tailing appear with the switch", params)
         def sn():
-            pg.check("#ig-sn"); pg.wait_for_timeout(400)
+            tick(pg, "#ig-sn"); pg.wait_for_timeout(400)
             assert pg.locator("button[data-nz]").count() == 1, "no noise stretch yet: the cell asks for it"
             pg.click("button[data-nz]"); pg.wait_for_timeout(300); assert not pg.evaluate("document.querySelector('#bigdlg').open")
             c = pg.evaluate(f"(()=>{{const p={XP},r=p.cv.getBoundingClientRect();p.el.scrollIntoView({{block:'center'}});const q=p.cv.getBoundingClientRect();return {{x0:q.left+p._a.X(2),x1:q.left+p._a.X(5),y:q.top+q.height/2}}}})()")
@@ -47,7 +49,9 @@ try:
             pg.evaluate("E.panels.filter(p=>p.type==='xic').forEach(p=>p.el.querySelector('.x').click())"); pg.wait_for_timeout(300)
             ch = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom'&&p.tab==='full')")
             assert "a cascata" in pg.evaluate(f"E.panels[{ch}].el.querySelector('[data-o=mode]').innerText")
-            pg.select_option(f".pnl.chrom [data-o=mode]", "cas"); pg.wait_for_function(f"(()=>{{const a=E.panels[{ch}]._a;return !!(a && a.cas && a.sr && a.sr.length===4)}})()", timeout=60000)
+            pg.select_option(f".pnl.chrom [data-o=mode]", "cas")
+            try: pg.wait_for_function(f"(()=>{{const a=E.panels[{ch}]._a;return !!(a && a.cas && a.sr && a.sr.length===4)}})()", timeout=60000)
+            except Exception: raise AssertionError("state: " + str(pg.evaluate(f"(()=>{{const p=E.panels[{ch}],a=p._a;return {{mode:p.mode,cas:a&&a.cas,n:a&&a.sr&&a.sr.length,files:E.files.map(f=>[f.label,f.vis,f.kind]),tab:E.tab}}}})()")))
             a = pg.evaluate(f"(()=>{{const a=E.panels[{ch}]._a;return {{cas:a.cas,n:a.sr.length}}}})()"); assert a["cas"] and a["n"] == 4, a
             pg.evaluate(f"E.panels[{ch}].el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
             box = pg.locator(".pnl.chrom canvas").first.bounding_box(); pg.mouse.move(box["x"] + 300, box["y"] + 150); pg.wait_for_timeout(2000)
