@@ -58,12 +58,9 @@ function uipOpen(btn) {
     UIP.merge = e.target.checked; uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof redrawAll === "function") redrawAll();
   };
-<<<<<<< HEAD
   const uipCont = d.querySelector("#uip-cont"); if (uipCont) uipCont.onchange = e => { if (window.LISTE) LISTE.setOn(e.target.checked); };
   const uipLab = d.querySelector("#uip-lab"); if (uipLab) uipLab.onclick = () => { d.remove(); if (window.LISTE) LISTE.openLab(); };
-=======
   const uipTog = d.querySelector("#uip-tog"); if (uipTog) uipTog.onchange = e => { if (typeof setTogether === "function") setTogether(e.target.checked); };
->>>>>>> origin/main
   const uipLib = d.querySelector("#uip-lib"); if (uipLib) uipLib.onclick = () => { d.remove(); if (window.LIB) LIB.open(); };
   const hrChanged = () => {
     uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
