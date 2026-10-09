@@ -16,7 +16,11 @@ _NH4 = ADDUCT_SHIFT["[M+NH4]+"]
 _CH3COO = mass(parse_formula("C2H3O2")) + ELECTRON
 _NA2H = mass(parse_formula("Na")) - 2 * mass(parse_formula("H")) + ELECTRON
 _CF3COO = mass(parse_formula("C2F3O2")) + ELECTRON
+_ACN = mass(parse_formula("C2H3N"))
+_CH4 = mass(parse_formula("CH4"))
 EXTRA = {
+    "[M+CH3CN+H]+": (ADDUCT_SHIFT["[M+H]+"] + _ACN, 1), "[M+CH3CN+NH4]+": (_NH4 + _ACN, 1), "[M+CH3CN+Na]+": (ADDUCT_SHIFT["[M+Na]+"] + _ACN, 1),
+    "[M+H-CH4]+": (ADDUCT_SHIFT["[M+H]+"] - _CH4, 1),
     "[M]+": (-ELECTRON, 1), "[M]-": (ELECTRON, 1),
     "[M+2H]2+": (2 * ADDUCT_SHIFT["[M+H]+"], 2), "[M+2NH4]2+": (2 * _NH4, 2), "[M+2Na]2+": (2 * ADDUCT_SHIFT["[M+Na]+"], 2),
     "[M+H+NH4]2+": (ADDUCT_SHIFT["[M+H]+"] + _NH4, 2),

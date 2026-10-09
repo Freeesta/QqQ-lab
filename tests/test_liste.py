@@ -22,18 +22,12 @@ from mzlab.chem.elements import ADDUCT_SHIFT, ELECTRON, mass, parse_formula  # n
 NODE = shutil.which("node")
 
 
-def test_guo_cluster_solventi_inclusi():
+def test_cluster_solventi_keller():
     b = builtin()
     items = b["items"]
-    # Check that sources contain both Keller and Guo
-    assert "Guo" in b["source"]
-    assert any("Guo 2006" in x.get("source", "") for x in items)
-    # Verify water clusters: [(H2O)2+H]+ at ~37.0284, [(H2O)3+H]+ at ~55.0390
-    h2o = [x for x in items if x["id"] == "acqua" and x["adduct"] == "[M+H]+"]
-    assert len(h2o) >= 5
-    mzs = [x["mz"] for x in h2o]
-    assert pytest.approx(37.0284, abs=5e-4) in mzs
-    assert pytest.approx(55.0390, abs=5e-4) in mzs
+    # the built-in list comes from Keller 2008 only
+    assert "Keller" in b["source"] and "Guo" not in b["source"]
+    assert all("Keller 2008" in x.get("source", "") for x in items)
 
     # Verify methanol clusters: [MeOH+H]+ ~33.0335, [2MeOH+H]+ ~65.0597, [MeOH+Na]+ ~55.0154
     meoh = [x for x in items if x["id"] == "metanolo"]
