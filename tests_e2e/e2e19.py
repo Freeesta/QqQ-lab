@@ -14,7 +14,7 @@ try:
             assert pg.locator("#qq-load").count() == 0, "second loading screen still there"
             assert pg.locator("#ldmsg").count() == 1
         step("only the loading screen with the funny phrases exists", load)
-        pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(1000)
+        stage(pg, [mz(f) for f in FILES])
         pg.click("text=Carica dati"); ready(pg)
         pg.click("#dtabs [data-t=ms2]"); ready(pg)
         def pair():
