@@ -44,12 +44,12 @@ document.addEventListener("DOMContentLoaded", () => {
       TP.line(ax, s.ts, s.Rs.map(r => r * 1e6), col(1), 2.4);
       // secondary axis: q / qR in [0,1]
       const Y2 = f => ax.Y(f * v.r0 * 1.05);
-      ax.ctx.strokeStyle = col(2); ax.ctx.lineWidth = 1.6; ax.ctx.beginPath();
-      s.ts.forEach((t, i) => i ? ax.ctx.lineTo(ax.X(t), Y2(s.fr[i])) : ax.ctx.moveTo(ax.X(t), Y2(s.fr[i]))); ax.ctx.stroke();
+      ax.ctx.strokeStyle = col(2); ax.ctx.lineWidth = 1.6; ax.ctx.setLineDash(TP.DASH[1]); ax.ctx.beginPath();
+      s.ts.forEach((t, i) => i ? ax.ctx.lineTo(ax.X(t), Y2(s.fr[i])) : ax.ctx.moveTo(ax.X(t), Y2(s.fr[i]))); ax.ctx.stroke(); ax.ctx.setLineDash([]);
       ax.ctx.restore();
       const ctx = ax.ctx; ctx.fillStyle = col(2); ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.font = "12px system-ui,sans-serif";
       [0, 0.5, 1].forEach(f => ctx.fillText(Math.round(f * 100) + "%", ax.W - ax.m.r + 6, Y2(f)));
-      TP.legend(ax, [["raggio", col(1)], ["carica / limite di Rayleigh", col(2)], ["fissioni", "#e4cfc3"]], ax.m.l + 120);
+      TP.legend(ax, [["raggio", col(1)], ["carica / limite di Rayleigh", col(2), TP.DASH[1]], ["fissioni", "#e4cfc3"]], ax.m.l + 120);
       out.innerHTML = `Tensione superficiale stimata ${TP.fmt(s.g * 1000, 1)} mN/m; carica iniziale ≈ <b>${s.z0.toLocaleString("it-IT")}</b> cariche elementari (70% del limite). ` +
         `La goccia madre subisce <b>${s.n}</b> fissioni prima di scendere sotto 10 nm; ognuna espelle ~20 goccioline figlie (2% della massa, 15% della carica), che a loro volta evaporano e si dividono.`;
     }
@@ -65,8 +65,8 @@ document.addEventListener("DOMContentLoaded", () => {
     function draw() {
       const xs = []; for (let x = -2; x <= 1.0001; x += 0.02) xs.push(x);
       const ax = TP.axes(c, { x0: -2, x1: 1, y0: 10, y1: 1e6, logy: true, xl: "log₁₀ diametro (µm)", yl: "cariche al limite zᵣ", xticks: [-2, -1, 0, 1], xfmt: x => ["10 nm", "100 nm", "1 µm", "10 µm"][x + 2], m: { l: 62 } });
-      [["w", col(1)], ["m", col(3)], ["a", col(2)]].forEach(([k, cc]) => TP.line(ax, xs, xs.map(x => qR(SOLV[k][1], Math.pow(10, x) * 0.5e-6) / E), cc, 2.2));
-      TP.legend(ax, [["acqua", col(1)], ["metanolo", col(3)], ["acetonitrile", col(2)]]);
+      [["w", col(1)], ["m", col(3)], ["a", col(2)]].forEach(([k, cc], i) => TP.line(ax, xs, xs.map(x => qR(SOLV[k][1], Math.pow(10, x) * 0.5e-6) / E), cc, 2.2, TP.DASH[i]));
+      TP.legend(ax, [["acqua", col(1)], ["metanolo", col(3), TP.DASH[1]], ["acetonitrile", col(2), TP.DASH[2]]]);
       const R = Math.pow(10, v.d) * 0.5e-6; ax.ctx.fillStyle = col(4);
       ["w", "a"].forEach(k => { ax.ctx.beginPath(); ax.ctx.arc(ax.X(v.d), ax.Y(qR(SOLV[k][1], R) / E), 5, 0, 7); ax.ctx.fill(); });
       const zw = qR(SOLV.w[1], R) / E, za = qR(SOLV.a[1], R) / E;
@@ -97,8 +97,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const ax = TP.axes(c, { x0: -9, x1: -3, y0: 1e-11, y1: 1e-4, logy: true, xl: "log₁₀ concentrazione dell'analita (M)", yl: "segnale dell'analita (u.a.)", xticks: [-9, -8, -7, -6, -5, -4, -3], m: { l: 62 } });
       TP.line(ax, xs, xs.map(x => Q * kA * Math.pow(10, x) / (kE * e)), "#c9c5bb", 1.2, [4, 4]);
       TP.line(ax, xs, y0, col(1), 2.4);
-      if (m) TP.line(ax, xs, y1, col(2), 2.4);
-      TP.legend(ax, [["senza matrice", col(1)]].concat(m ? [["con matrice coeluente", col(2)]] : []), ax.m.l + 260);
+      if (m) TP.line(ax, xs, y1, col(2), 2.4, TP.DASH[1]);
+      TP.legend(ax, [["senza matrice", col(1)]].concat(m ? [["con matrice coeluente", col(2), TP.DASH[1]]] : []), ax.m.l + 260);
       const a7 = 1e-7, s0 = IA(a7, e, 0, km), s1 = IA(a7, e, m, km);
       out.innerHTML = `Modello semplificato: la carica in eccesso disponibile è fissa (~10⁻⁵ M) e se la dividono le specie in proporzione a k·[C]. ` +
         `Il segnale cresce linearmente finché l'analita è una frazione piccola delle specie cariche, poi <b>satura</b>. ` +

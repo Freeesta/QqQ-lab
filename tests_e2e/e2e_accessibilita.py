@@ -1,5 +1,5 @@
 """«Lettura facilitata» of Teoria and Pratica: Aa panel, fonts, WCAG spacing, backgrounds (contrast), ruler that never takes clicks, concentration mode,
-reduced motion (simulations start paused), reading aloud (speechSynthesis stubbed), persistence, Ripristina, and the Teoria inside the app (#tframe)."""
+reduced motion (simulations start paused), screen readers (landmarks, names, canvas labels), keyboard, high-contrast figures, reading aloud (speechSynthesis stubbed), persistence, Ripristina, and the Teoria inside the app (#tframe)."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 import json
@@ -145,6 +145,111 @@ try:
             assert f.evaluate("document.documentElement.getAttribute('data-a11y-bg')") == "blue"
             pg.screenshot(path=SH + "a11y_nell_app.png")
         step("the Teoria inside the app (#tframe) applies and changes the preferences", inapp)
+        def pages():
+            q = fresh("index.html")
+            pgs = q.evaluate("CHAPTERS.map(c=>c[0])"); q.close()
+            assert len(pgs) >= 30, pgs
+            for name in pgs:
+                q = fresh(name)
+                v = q.evaluate("""(()=>{const hs=[...document.querySelectorAll('main h1,main h2,main h3,main h4')].map(h=>+(h.getAttribute('aria-level')||h.tagName[1]));let bad=0;
+                  for(let i=1;i<hs.length;i++) if(hs[i]>hs[i-1]+1) bad++;
+                  return {lang:document.documentElement.lang,h1:document.querySelectorAll('h1').length,main:document.querySelectorAll('main').length,bad,
+                    nav:[...document.querySelectorAll('nav')].every(n=>n.getAttribute('aria-label')),skip:!!document.querySelector('a.skip'),cur:document.querySelectorAll('#side a[aria-current=page]').length}})()""")
+                assert v["lang"] == "it" and v["h1"] == 1 and v["main"] == 1 and v["nav"] and v["skip"] and v["cur"] == 1, (name, v)
+                assert v["bad"] == 0, (name, "heading levels skip", v)
+                q.close()
+        step("every page: lang, one h1, headings in order, main, named nav, skip link", pages)
+        def skip():
+            q = fresh("04-lc.html"); q.keyboard.press("Tab")
+            assert q.evaluate("document.activeElement.className") == "skip" and q.is_visible("a.skip")
+            q.keyboard.press("Enter"); q.wait_for_timeout(100)
+            assert q.evaluate("document.activeElement.tagName") == "MAIN", q.evaluate("document.activeElement.tagName")
+            q.close()
+        step("«Salta al contenuto»: first Tab, Enter moves the focus into main", skip)
+        def names():
+            for name in ("index.html", "09-quadrupolo.html", "10-qqq.html", "pratica.html", "pratica-ei.html", "pratica-formula.html", "pratica-quadrupolo.html"):
+                q = fresh(name); q.click("#a11y-btn")
+                snap = q.locator("body").aria_snapshot()
+                bad = [l.strip() for l in snap.splitlines() if __import__("re").match(r"^\s*- (button|link|combobox|slider|textbox|checkbox|radio|spinbutton)( \[[^\]]*\])*:?$", l)]
+                assert not bad, (name, bad[:5])
+                n = q.evaluate("document.querySelectorAll('canvas').length"); assert n == q.evaluate("document.querySelectorAll('canvas[role=img][aria-label],canvas[role=group][aria-label]').length"), (name, "canvas without role/label")
+                q.close()
+        step("accessible names: no unnamed button, link, field; every canvas role+label", names)
+        def canvases():
+            q = fresh("09-quadrupolo.html")
+            labs = q.evaluate("[...document.querySelectorAll('.sim canvas')].map(c=>c.getAttribute('aria-label'))")
+            assert labs and all(l.startswith("Grafico: ") for l in labs) and sum("Asse orizzontale" in l and "Asse verticale" in l for l in labs) >= 2, labs
+            q.close()
+            q = fresh("06-esi.html"); q.evaluate("document.querySelector('#sim-drop').scrollIntoView()"); q.wait_for_timeout(300)
+            assert q.get_attribute("#sim-drop output", "aria-live") == "polite"
+            assert q.get_attribute("#sim-drop .btns button >> nth=0", "aria-pressed") in ("true", "false") if q.locator("#sim-drop .btns button").count() else True
+            q.close()
+        step("canvases say what they show (title + axes); values in a polite live region", canvases)
+        def tour(name, limit=400):
+            q = fresh(name); seen = set(); last = None; n = 0; vis = 0
+            for _ in range(limit):
+                q.keyboard.press("Tab"); n += 1
+                k = q.evaluate("""(()=>{const e=document.activeElement;if(!e||e===document.body)return null;const c=getComputedStyle(e);
+                  return {id:e.tagName+'|'+(e.id||e.textContent||'').slice(0,40)+'|'+[...document.querySelectorAll(e.tagName)].indexOf(e),o:c.outlineStyle!=='none'&&parseFloat(c.outlineWidth)>0||c.boxShadow!=='none'||c.borderBottomStyle==='dotted'||e.matches('.g')}})()""")
+                if k is None: break                               # the focus left the page: no trap
+                if k["id"] in seen: raise AssertionError(f"{name}: keyboard trap at {k['id']}")
+                seen.add(k["id"]); vis += 1 if k["o"] else 0
+            assert len(seen) >= 8, (name, len(seen))
+            assert vis >= len(seen) - 2, (name, "focus not visible", vis, len(seen))
+            q.close()
+        step("keyboard tour of a Teoria page: all reachable, visible focus, no trap", lambda: tour("09-quadrupolo.html"))
+        def gioco():
+            q = fresh("pratica-ei.html"); q.wait_for_timeout(500)
+            assert q.locator("#game canvas[role=group]").count() == 1
+            q.focus("#game canvas"); q.keyboard.press("ArrowRight"); q.wait_for_timeout(150)
+            t1 = q.inner_text("#game .fb.hi"); assert "Selezionato m/z" in t1, t1
+            q.keyboard.press("Shift+ArrowRight"); q.wait_for_timeout(150)
+            assert "Δm" in q.inner_text("#game .fb.hi")
+            assert q.get_attribute("#game .fb.hi", "aria-live") == "polite"
+            assert "frecce" in q.get_attribute("#game canvas", "aria-label")
+            for _ in range(40):                                               # leave the spectrum: the focus never gets stuck
+                q.keyboard.press("Tab")
+            assert q.evaluate("document.activeElement.tagName") != "CANVAS"
+            q.close()
+        step("game «Dallo spettro alla struttura»: pick peaks and Δm with the arrows, answer announced", gioco)
+        def hc():
+            for scheme, need in (("light", 7), ("dark", 7)):
+                q = fresh("09-quadrupolo.html", scheme=scheme, prefs={"bg": "hc"})
+                bg = "getComputedStyle(document.body).backgroundColor"
+                for c in ("#24231f", "#9b978c", "#6b675c", "#2b5c8a", "#c2410c", "#b42318", "#0e7490", "#b45309"):
+                    got = q.evaluate(f"(()=>{{const x=document.createElement('canvas').getContext('2d');x.strokeStyle='{c}';return x.strokeStyle}})()")
+                    ratio = cr(q, f"'{got}'" if got.startswith("rgb") else "(()=>{const d=document.createElement('i');d.style.color='%s';document.body.appendChild(d);const v=getComputedStyle(d).color;d.remove();return v})()" % got, bg)
+                    assert ratio >= 3, (scheme, c, got, ratio)
+                    if c in ("#24231f", "#9b978c", "#6b675c"): assert ratio >= need, (scheme, c, got, ratio)
+                for i in range(1, 7):
+                    assert cr(q, "(()=>{const d=document.createElement('i');d.style.color='var(--c%d)';document.body.appendChild(d);const v=getComputedStyle(d).color;d.remove();return v})()" % i, bg) >= 3, (scheme, i)
+                q.close()
+        step("figures in «Alto contrasto» (light and dark): axes, text, series >= 3:1 (axes and text 7:1)", hc)
+        def hc_live():
+            q = fresh("09-quadrupolo.html", prefs={}); a = q.evaluate("document.querySelector('.sim canvas').toDataURL()")
+            q.click("#a11y-btn"); q.check("input[name=a11y-bg][value=hc]"); q.wait_for_timeout(500)
+            assert a != q.evaluate("document.querySelector('.sim canvas').toDataURL()"), "figure not redrawn"
+            q.close()
+        step("choosing «Alto contrasto» redraws the figures", hc_live)
+        def dashes():
+            q = fresh("06-esi.html"); q.evaluate("document.querySelector('#sim-rayleigh').scrollIntoView()"); q.wait_for_timeout(300)
+            assert q.evaluate("TP.DASH.length") == 4 and q.evaluate("TP.DASH[0]") is None
+            q.close()
+        step("series of the figures are told apart by dashes too", dashes)
+        def figure_texts():
+            for name in ("02-fotocatalisi.html", "03-cromatografia.html", "04-lc.html", "05-gc.html", "06-esi.html", "07-ei-ci.html", "09-quadrupolo.html", "10-qqq.html",
+                         "14-frammentazione-esi.html", "15-ei-metodo.html", "18-strategia.html", "index.html", "20-disegno.html"):
+                q = fresh(name)
+                v = q.evaluate("""[...document.querySelectorAll('main svg[role=img],main img')].map(e=>{const a=(e.getAttribute('aria-label')||e.getAttribute('alt')||'');
+                  const d=e.getAttribute('aria-describedby')&&document.getElementById(e.getAttribute('aria-describedby'));
+                  return {alt:a.length,d:d?d.tagName+':'+d.querySelector('summary').textContent+':'+d.innerText.replace(d.querySelector('summary').textContent,'').trim().split(/\\s+/).length:null}})""")
+                assert v, name
+                for x in v:
+                    assert 0 < x["alt"] <= 125, (name, x)
+                    if x["d"]: t, sm, n = x["d"].split(":"); assert t == "DETAILS" and sm == "Descrizione della figura" and int(n) <= 85, (name, x)
+                if name != "20-disegno.html": assert any(x["d"] for x in v), (name, "scheme without long description")
+                q.close()
+        step("figures: short alt (<= 125 characters) and long description in <details> (<= 85 words) linked by aria-describedby", figure_texts)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

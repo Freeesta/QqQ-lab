@@ -55,7 +55,7 @@ function spectrumCard(el, it, opt = {}) {
   const box = document.createElement("div"); box.className = "eispec"; el.appendChild(box);
   box.innerHTML = `<h4>${opt.title || "Composto incognito"}</h4>`;
   const c = TP.canvas(box, opt.h || 280);
-  const read = document.createElement("div"); read.className = "fb hi"; box.appendChild(read);
+  const read = document.createElement("div"); read.className = "fb hi"; read.setAttribute("aria-live", "polite"); box.appendChild(read);
   let ax = null;
   const draw = () => { ax = EISPEC.plot(c, it, { sel: S.sel, keys: opt.keys }); };
   c.onresize = draw; draw();
@@ -63,18 +63,33 @@ function spectrumCard(el, it, opt = {}) {
   box.insertAdjacentHTML("beforeend", `<p class="src">${EISPEC.source(it)}</p>`);
   if (opt.click !== false) {
     c.cv.style.cursor = "crosshair";
-    c.cv.addEventListener("click", ev => {
-      const r = c.cv.getBoundingClientRect(), x = ev.clientX - r.left;
-      let best = null, bd = 12;
-      it.peaks.forEach(([m, v]) => { const d = Math.abs(ax.X(m) - x); if (d < bd && v >= 2) { bd = d; best = m; } });
-      if (best == null) return;
-      S.sel = ev.shiftKey && S.sel.length ? [S.sel[0], best] : [best];
+    const pick = (best, second) => {
+      S.sel = second && S.sel.length ? [S.sel[0], best] : [best];
       draw();
       const [a, b] = S.sel;
       read.innerHTML = b != null ? `m/z ${a} → ${b}: Δm = <b>${Math.abs(a - b)}</b>${LOSSNAME[Math.abs(a - b)] ? ` (perdita tipica: ${LOSSNAME[Math.abs(a - b)]})` : ""}` :
         `Selezionato m/z <b>${a}</b> (${pct(peak(it, a) / 9.99)} del picco base). Maiusc+clic su un altro picco per la differenza.`;
+    };
+    c.cv.addEventListener("click", ev => {
+      const r = c.cv.getBoundingClientRect(), x = ev.clientX - r.left;
+      let best = null, bd = 12;
+      it.peaks.forEach(([m, v]) => { const d = Math.abs(ax.X(m) - x); if (d < bd && v >= 2) { bd = d; best = m; } });
+      if (best != null) pick(best, ev.shiftKey);
     });
-    read.innerHTML = "Clic su un picco per selezionarlo; Maiusc+clic su un secondo picco per la differenza di massa.";
+    // keyboard: the arrows walk through the peaks (Shift = second peak, as Shift+click); Home / End go to the first / last
+    const ms = it.peaks.filter(p => p[1] >= 2).map(p => p[0]).sort((p, q) => p - q);
+    c.cv.tabIndex = 0; c.cv.setAttribute("role", "group");
+    c.cv.dataset.title = (opt.title || "Spettro EI") + " (selezione dei picchi con le frecce sinistra e destra; Maiusc+freccia per un secondo picco)";
+    draw();
+    c.cv.addEventListener("keydown", ev => {
+      if (!ms.length || !/^(ArrowLeft|ArrowRight|Home|End)$/.test(ev.key)) return;
+      ev.preventDefault();
+      const cur = S.sel.length ? S.sel[S.sel.length - 1] : null;
+      let i = cur == null ? (ev.key === "ArrowLeft" || ev.key === "End" ? ms.length - 1 : 0) : ms.indexOf(cur) + (ev.key === "ArrowLeft" ? -1 : ev.key === "ArrowRight" ? 1 : 0);
+      if (ev.key === "Home") i = 0; if (ev.key === "End") i = ms.length - 1;
+      pick(ms[Math.max(0, Math.min(ms.length - 1, i))], ev.shiftKey);
+    });
+    read.innerHTML = "Clic su un picco per selezionarlo (da tastiera: frecce sul grafico); Maiusc+clic o Maiusc+freccia su un secondo picco per la differenza di massa.";
   } else read.remove();
   return { redraw: draw };
 }
