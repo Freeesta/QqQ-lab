@@ -63,9 +63,10 @@ try:
             assert "PEG" in o2 and "serie" not in o2, o2                         # two members are not a series
         step("PEG: three consecutive members = «serie PEG (n = 7-11)»; two are not", series)
         def lab():
-            pg.evaluate("setTimeout(()=>LISTE.askAdd(250.1234, 'positive'),0)"); pg.wait_for_selector("#askok", timeout=5000); pg.fill("#askin", "mio fondo"); pg.click("#askok"); pg.wait_for_timeout(800)
-            pg.evaluate(f"(()=>{{const p={SP};p.zoom=[240,260];draw(p)}})()"); pg.wait_for_timeout(1500)
-            h = hov(pg, 250.1234); assert h and "mio fondo" in h and "Contaminanti del laboratorio" in h, h
+            pg.evaluate(f"(()=>{{const p={SP};p.zoom=[200,300];draw(p)}})()"); pg.wait_for_timeout(1500)
+            mz0 = pg.evaluate(f"(()=>{{const p={SP};const d=p._a.data[0].d;let k=-1;d.mz.forEach((m,i)=>{{if(m>200&&m<300&&(k<0||d.y[i]>d.y[k]))k=i}});return d.mz[k]}})()")
+            pg.evaluate(f"setTimeout(()=>LISTE.askAdd({mz0}, 'positive'),0)"); pg.wait_for_selector("#askok", timeout=5000); pg.fill("#askin", "mio fondo"); pg.click("#askok"); pg.wait_for_timeout(1200)
+            h = hov(pg, mz0); assert h and "mio fondo" in h and "Contaminanti del laboratorio" in h, h
             assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.contaminanti')).length") == 1
             csv = pg.evaluate("LISTE.csvOut(LISTE.labRows())"); assert csv.startswith("mz,name,formula,polarity,note") and "mio fondo" in csv
         step("laboratory contaminants: added from the menu, seen in the box, saved as CSV", lab)

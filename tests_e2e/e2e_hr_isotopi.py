@@ -34,6 +34,23 @@ try:
             pg.evaluate(f"E.panels.find(q=>q.id=={sp}).el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
             leg = pg.evaluate(f"E.panels.find(q=>q.id=={sp}).el.innerText"); assert "profilo teorico" in leg and "R " in leg, leg[-300:]
         step("the legend of the simulation says the resolving power used", menu)
+        def curve():
+            v = pg.evaluate("(()=>{const i=QQQRef.ionCounts('C13H24N4O3S','[M+H]+');const pat=HR.mergeBy(HR.isoFine(i.n,i.z),m=>0.01);const c=HR.isoCurve(pat,m=>0.01,10);const mx=Math.max(...c.y);const k=c.y.indexOf(mx);return {mx,mz:c.x[k],n:c.x.length,top:pat.reduce((a,b)=>b.rel>a.rel?b:a).mz,w10:HR.WDEF['10']}})()")
+            assert abs(v["mx"] - 100) < 1e-6 and abs(v["mz"] - v["top"]) < 0.005 and v["n"] > 100, v
+            assert abs(v["w10"] - 1.8227) < 1e-3
+        step("Gaussian profile: maximum 100 on the most intense peak", curve)
+        def ui():
+            pg.evaluate("document.querySelector('#hri-tabs [data-t=iso]').click()"); pg.wait_for_timeout(500)
+            pg.fill("#hri-f", "C13H24N4O3S"); pg.select_option("#hri-st", "profilo"); pg.fill("#hri-r", "60000")
+            n0 = pg.evaluate("E.panels.length")
+            pg.click("#hri-new"); pg.wait_for_function(f"E.panels.length=={n0}+1", timeout=15000); pg.wait_for_timeout(800)
+            q = pg.evaluate("(()=>{const s=E.panels[E.panels.length-1];return {t:s.type,st:s.iso.style,R:s.iso.R,only:s.iso.only}})()")
+            assert q == {"t": "spec", "st": "profilo", "R": 60000, "only": False}, q
+            pg.click("#hri-rep"); pg.wait_for_timeout(1200)
+            q = pg.evaluate("(()=>{const s=E.panels.find(q=>q.type==='spec'&&q.iso&&q.iso.only);return s?s.id:null})()"); assert q is not None
+            pg.select_option("#hri-rm", "ppm"); pg.fill("#hri-r", "5"); pg.click("#hri-go"); pg.wait_for_timeout(800)
+            fw = pg.evaluate("(()=>{const s=E.panels.find(q=>q.type==='spec'&&q.iso&&!q.iso.only&&q.iso.fw);return s&&s.iso.fw})()"); assert fw == {"mode": "ppm", "v": 5}, fw
+        step("tab Isotopi: Nuova cella, Sostituisci, width in ppm", ui)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

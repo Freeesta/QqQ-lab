@@ -61,7 +61,7 @@ try:
             tab("cmp"); pg.click("#hri-go"); pg.wait_for_selector("#cmp-mz", timeout=10000); pg.evaluate("document.querySelector('#bigdlg').close()")
             tab("iso"); pg.fill("#hri-f", "C13H24N4O3S"); pg.fill("#hri-r", "35000"); pg.click("#hri-go"); pg.wait_for_timeout(1500)
             assert pg.evaluate("E.panels.some(p=>p.type==='spec'&&p.iso&&p.iso.formula==='C13H24N4O3S'&&p.iso.R===35000)")
-            tab("pks"); assert "Parametri" in body()
+            tab("pks"); assert "Parametri" in body() and pg.is_visible("#hri-all") and pg.is_visible("#hri-tab")
             tab("idn"); assert "Identifica tutte" in body()
             tab("tre"); pg.click("#hri-go"); pg.wait_for_selector("#mt-out", timeout=10000); pg.evaluate("document.querySelector('#bigdlg').close()")
         step("tabs 4-9 open the functions that already exist (formulae, isotopes, peaks, libraries, MSn tree)", launchers)
