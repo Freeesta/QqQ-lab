@@ -82,15 +82,24 @@ def fetch(name: str, dest: Path, src_dir: Path | None) -> None:
         shutil.copyfileobj(r, fh)
 
 
-def check_no_private(out: Path) -> None:
-    """Of TP Mine only the encrypted tpmine.enc and the public loader may be in the site; no private source in plain text."""
-    for f in out.rglob("*"):
-        if not f.is_file() or "vendor" in f.parts or "pyodide" in f.parts:
-            continue
-        if f.name.startswith("tpmine") and f.name not in ("tpmine-loader.js", "tpmine.enc"):
-            raise SystemExit(f"{f}: a TP Mine file that must not be published")
-        if f.suffix in (".js", ".py", ".html", ".json", ".txt", ".css", ".mjs", ".toml") and b"TPMINE-PRIVATE" in f.read_bytes():
-            raise SystemExit(f"{f}: contains private TP Mine source in plain text")
+def pack_mzfinder(static: Path) -> None:
+    """mzFinder (sources in TP_Mine/) in plain text in static/mzfinder/: the loader fetches it only after the 5 clicks on the logo."""
+    src = ROOT / "TP_Mine"
+    if not (src / "js").is_dir():
+        return
+    dst = static / "mzfinder"
+    dst.mkdir()
+    js = [f.name for f in sorted((src / "js").glob("*.js"))]
+    files = [f.name for f in sorted((src / "files").glob("*"))] if (src / "files").is_dir() else []
+    for n in js:
+        shutil.copy2(src / "js" / n, dst / n)
+    for n in files:
+        shutil.copy2(src / "files" / n, dst / n)
+    with zipfile.ZipFile(dst / "tpmine.zip", "w", zipfile.ZIP_DEFLATED) as z:
+        for f in sorted((src / "py").rglob("*")):
+            if f.is_file() and "__pycache__" not in f.parts and f.suffix != ".pyc":
+                z.write(f, f.relative_to(src / "py").as_posix())
+    (dst / "indice.json").write_text(json.dumps({"js": js, "files": files, "py": "tpmine.zip"}, indent=1), encoding="utf-8")
 
 
 def main() -> None:
@@ -121,19 +130,14 @@ def main() -> None:
     (out / "index.html").write_text(html, encoding="utf-8")
     (static / "index.html").unlink()
     (out / ".nojekyll").write_text("", encoding="utf-8")
-    # the Python code (mzlab package + qqq_lab transitional bridge package)
+    # the Python code (mzlab package)
     with zipfile.ZipFile(static / "mzlab.zip", "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted([*(ROOT / "mzlab").rglob("*.py"), *(ROOT / "mzlab" / "chem").glob("*.json")]):       # the list of known contaminants is data of the package
             rel = f.relative_to(ROOT)
             if "web" in rel.parts or "__pycache__" in rel.parts:
                 continue
             z.write(f, rel.as_posix())
-        bridge = ROOT / "qqq_lab" / "__init__.py"
-        if bridge.exists():
-            z.write(bridge, bridge.relative_to(ROOT).as_posix())
-    # identical copy kept because the published tpmine.enc still contains the old 20_tpmine.js that fetches qqq_lab.zip
-    # (remove in phase 3b, after tpmine.enc is rebuilt with `python3 tools/build_tpmine.py`)
-    shutil.copy2(static / "mzlab.zip", static / "qqq_lab.zip")
+    pack_mzfinder(static)
     # Pyodide: core + numpy
     py = static / "pyodide"
     py.mkdir()
@@ -152,7 +156,6 @@ def main() -> None:
             h.update(f.relative_to(out).as_posix().encode() + f.read_bytes())
     big = PYODIDE + "-" + hashlib.sha1("".join(f"{f.name}{f.stat().st_size}" for f in sorted((static / "vendor").rglob("*")) if f.is_file()).encode()).hexdigest()[:8]
     (out / "sw.js").write_text(sw.replace("__APP__", h.hexdigest()[:10]).replace("__BIG__", big), encoding="utf-8")
-    check_no_private(out)
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
     print(f"site/ ready: {size / 1e6:.1f} MB")
 
