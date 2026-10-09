@@ -1,0 +1,43 @@
+{
+  "fonti": {
+    "IUPAC2013": "Murray K.K. et al., Definitions of terms relating to mass spectrometry (IUPAC Recommendations 2013), Pure Appl. Chem. 85 (2013) 1515-1609",
+    "Thermo": "Thermo Scientific Xcalibur / FreeStyle (terminologia del banco HR)",
+    "Schymanski2014": "Schymanski E.L. et al., Environ. Sci. Technol. 48 (2014) 2097"
+  },
+  "voci": [
+    {"id": "precursor", "it": ["ione precursore", "precursore"], "en": ["precursor ion", "precursor"], "evita_en": ["parent ion"], "nota": "", "fonte": "IUPAC2013"},
+    {"id": "product", "it": ["ione prodotto", "ioni prodotto", "frammento"], "en": ["product ion", "fragment ion", "fragment"], "evita_en": ["daughter ion"], "nota": "", "fonte": "IUPAC2013"},
+    {"id": "neutralLoss", "it": ["perdita neutra", "perdite neutre"], "en": ["neutral loss"], "evita_en": [], "nota": "", "fonte": "IUPAC2013"},
+    {"id": "cid", "it": ["dissociazione indotta da collisione"], "en": ["collision-induced dissociation", "CID"], "evita_en": [], "nota": "collision-activated dissociation solo in citazioni", "fonte": "IUPAC2013"},
+    {"id": "hcd", "it": ["HCD"], "en": ["higher-energy collisional dissociation", "HCD"], "evita_en": [], "nota": "", "fonte": "Thermo"},
+    {"id": "ce", "it": ["energia di collisione"], "en": ["collision energy"], "evita_en": [], "nota": "", "fonte": "IUPAC2013"},
+    {"id": "isoWin", "it": ["finestra di isolamento"], "en": ["isolation window"], "evita_en": [], "nota": "", "fonte": "Thermo"},
+    {"id": "xic", "it": ["XIC", "cromatogramma dello ione estratto"], "en": ["XIC", "extracted ion chromatogram"], "evita_en": [], "nota": "EIC solo come sinonimo nella guida", "fonte": "IUPAC2013"},
+    {"id": "tic", "it": ["TIC"], "en": ["TIC", "total ion current"], "evita_en": ["total ion count"], "nota": "", "fonte": "IUPAC2013"},
+    {"id": "bpc", "it": ["BPC"], "en": ["BPC", "base peak chromatogram"], "evita_en": [], "nota": "", "fonte": "Thermo"},
+    {"id": "mrm", "it": ["MRM"], "en": ["MRM", "multiple reaction monitoring"], "evita_en": [], "nota": "IUPAC preferisce SRM: nella guida «MRM (SRM)» una volta", "fonte": "IUPAC2013"},
+    {"id": "productScan", "it": ["Product Ion (MS2)"], "en": ["product ion scan", "Product Ion (MS2)"], "evita_en": [], "nota": "", "fonte": "IUPAC2013"},
+    {"id": "fullScan", "it": ["Full Scan"], "en": ["full scan", "Full Scan"], "evita_en": [], "nota": "", "fonte": "Thermo"},
+    {"id": "dda", "it": ["DDA"], "en": ["DDA", "data-dependent acquisition"], "evita_en": [], "nota": "", "fonte": "Thermo"},
+    {"id": "exactMass", "it": ["massa esatta"], "en": ["exact mass"], "evita_en": [], "nota": "calcolata", "fonte": "IUPAC2013"},
+    {"id": "accurateMass", "it": ["massa accurata"], "en": ["accurate mass"], "evita_en": [], "nota": "misurata: non confondere con exact mass", "fonte": "IUPAC2013"},
+    {"id": "monoiso", "it": ["massa monoisotopica"], "en": ["monoisotopic mass"], "evita_en": [], "nota": "", "fonte": "IUPAC2013"},
+    {"id": "massError", "it": ["errore di massa"], "en": ["mass error"], "evita_en": [], "nota": "mass accuracy solo per la proprietà dello strumento", "fonte": "IUPAC2013"},
+    {"id": "resolution", "it": ["risoluzione"], "en": ["resolution", "resolving power"], "evita_en": [], "nota": "R = m/Δm; nel banco HR si usa il termine del vendor", "fonte": "IUPAC2013"},
+    {"id": "unitRes", "it": ["risoluzione unitaria"], "en": ["unit resolution"], "evita_en": [], "nota": "low resolution solo in «HR/LR»", "fonte": "IUPAC2013"},
+    {"id": "isotopePattern", "it": ["profilo isotopico"], "en": ["isotope pattern"], "evita_en": ["isotopic profile"], "nota": "", "fonte": "IUPAC2013"},
+    {"id": "isotopologue", "it": ["isotopologo", "isotopologhi"], "en": ["isotopologue"], "evita_en": [], "nota": "isotope peak solo per il picco", "fonte": "IUPAC2013"},
+    {"id": "rdbe", "it": ["RDB"], "en": ["RDBE", "rings plus double bonds"], "evita_en": [], "nota": "DBE accettato", "fonte": "IUPAC2013"},
+    {"id": "adduct", "it": ["addotto", "addotti"], "en": ["adduct"], "evita_en": [], "nota": "", "fonte": "IUPAC2013"},
+    {"id": "isf", "it": ["frammentazione nella sorgente"], "en": ["in-source fragmentation"], "evita_en": [], "nota": "", "fonte": "Thermo"},
+    {"id": "blank", "it": ["bianco"], "en": ["blank"], "evita_en": [], "nota": "", "fonte": "IUPAC2013"},
+    {"id": "background", "it": ["fondo"], "en": ["background"], "evita_en": [], "nota": "", "fonte": "IUPAC2013"},
+    {"id": "baseline", "it": ["linea di base"], "en": ["baseline"], "evita_en": [], "nota": "", "fonte": "IUPAC2013"},
+    {"id": "calib", "it": ["retta di taratura"], "en": ["calibration curve"], "evita_en": [], "nota": "", "fonte": "IUPAC2013"},
+    {"id": "candidate", "it": ["formule compatibili", "candidato", "candidati"], "en": ["candidate"], "evita_en": ["correct formula", "identified formula"], "nota": "il programma propone, non decide", "fonte": "Schymanski2014"},
+    {"id": "libMatch", "it": ["corrispondenza forte", "corrispondenza possibile"], "en": ["strong match", "possible match"], "evita_en": ["confirmed", "identified"], "nota": "", "fonte": "Schymanski2014"},
+    {"id": "analog", "it": ["analogo", "analoghi"], "en": ["analog"], "evita_en": [], "nota": "structural analog", "fonte": "Schymanski2014"},
+    {"id": "confidence", "it": ["livello di confidenza"], "en": ["confidence level"], "evita_en": [], "nota": "Schymanski", "fonte": "Schymanski2014"},
+    {"id": "contaminant", "it": ["contaminante noto", "contaminanti noti"], "en": ["known contaminant"], "evita_en": [], "nota": "", "fonte": "IUPAC2013"}
+  ]
+}

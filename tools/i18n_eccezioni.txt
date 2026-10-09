@@ -1,0 +1,1 @@
+# Motivated exceptions for tools/controlla_i18n.py: <file><TAB><text snippet of the string literal>

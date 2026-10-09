@@ -4,6 +4,7 @@
 <link rel="icon" href="static/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="static/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png"><link rel="apple-touch-icon" href="static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>{APP} • Analisi dati MS</title><script src="static/appname.js"></script>
+<script src="static/i18n.js"></script><script src="static/lang/it.js"></script><script src="static/lang/en.js"></script>
 <script>(function(){try{var p=JSON.parse(localStorage.getItem("qqq.prefs")||"{}");var d=p.theme==="dark"||(p.theme!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.setAttribute("data-theme","dark");else if(p.theme==="light")document.documentElement.setAttribute("data-theme","light");}catch(e){}})()</script>
 <style>
 :root{color-scheme:light;--bg:#f7f8fa;--panel:#ffffff;--line:#e2e5ea;--ink:#25282c;--muted:#687080;--accent:#2b5c8a;--ok:#047857;--bad:#b42318;--warn:#92400e;--sel:#edf2f8}
@@ -93,7 +94,7 @@ dialog input{width:100%;margin:6px 0 10px}dialog .row{display:flex;gap:8px;justi
 html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-behavior:contain}
 #v-draw.noside{grid-template-columns:1fr}#v-draw.noside aside{display:none}#side-toggle{font-size:12px}
 #keys-body table{border-collapse:collapse;width:100%}#keys-body td{padding:2px 4px;border-bottom:1px solid var(--line);font-size:12px}#keys-body td:first-child{white-space:nowrap;font-weight:600}
-#v-theory{padding:0}#tframe{display:block;width:100%;height:calc(100vh - 52px);border:0;background:#fff}
+#v-theory{padding:0}#tframe[hidden]{display:none}#theory-sorry{max-width:560px;margin:12vh auto;padding:0 16px;text-align:center}#theory-sorry p{color:var(--muted);line-height:1.5}#theory-sorry button{margin-top:10px}#tframe{display:block;width:100%;height:calc(100vh - 52px);border:0;background:#fff}
 #kload{position:absolute;left:0;right:0;top:40px;text-align:center;font-size:15px;z-index:1;pointer-events:none}#kld-dots span{display:inline-block;width:5px;visibility:hidden}
 #kframe{width:100%;height:max(calc(100vh - var(--hh,48px) - 24px),700px);min-height:520px;border:1px solid var(--line);border-radius:6px;background:#fff}
 .sm{font-size:12px}
@@ -151,7 +152,7 @@ html.phone #phinfo{display:inline-flex;margin-left:auto;align-items:center;justi
 html.phone body>:not(header):not(#phone):not(script):not(style){display:none!important}
 </style></head><body>
 <header><img class="logo" src="static/logo-64.png" width="26" height="26" alt="{APP}" title="{APP}">
-  <nav id="nav"><button data-v="data" class="on">Dati</button><button data-v="draw">Disegno</button><button data-v="theory" title="Teoria: TP, fotocatalisi, LC, ESI, quadrupolo, triplo quadrupolo">Teoria</button></nav><span class="sp"></span>
+  <nav id="nav"><button data-v="data" class="on" data-i18n="nav.data">Dati</button><button data-v="draw" data-i18n="nav.draw">Disegno</button><button data-v="theory" data-i18n="nav.theory" data-i18n-title="nav.theory.title" title="Teoria: TP, fotocatalisi, LC, ESI, quadrupolo, triplo quadrupolo">Teoria</button></nav><span class="sp"></span>
   <button id="newrun" class="ib" hidden title="Inizia una nuova sessione (la precedente resta nella cartella di lavoro)"><span class="ic" data-ic="newrun"></span><span class="lb">Nuova sessione</span><span class="sb">Nuova</span></button>
   <button id="np-pt" class="ib" title="Tavola periodica con masse esatte e abbondanze isotopiche"><span class="ic" data-ic="pt"></span><span class="lb">Tavola periodica</span><span class="sb">Tavola</span></button><button id="np-ad" class="ib" title="Tabella degli addotti ESI e delle perdite neutre più comuni"><span class="ic" data-ic="adduct"></span>Addotti</button>
   <button id="np-calc2" class="ib" title="Calcolatrice m/z: scrivi una formula bruta e ottieni l'm/z dello ione (anche arrotondato come lo vede lo strumento)"><span class="ic" data-ic="calc"></span><span class="lb">Calcolatrice m/z</span><span class="sb">Calcolatrice</span></button><button id="np-nl" class="ib" title="Perdite neutre più comuni"><span class="ic" data-ic="nl"></span><span class="lb">Perdite neutre</span><span class="sb">Perdite</span></button><button id="np-liste" class="ib" title="Liste di riferimento e contaminanti noti (Keller, Guo, laboratorio e sospetti)"><span class="ic" data-ic="liste"></span><span class="lb">Liste</span><span class="sb">Liste</span></button>
@@ -178,7 +179,7 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
   <div id="methwarn" class="mwarn" role="alert" hidden></div>
   <div id="dpanels"></div></div>
 </section>
-<section id="v-theory" hidden><iframe id="tframe" aria-label="Teoria"></iframe></section>
+<section id="v-theory" hidden><div id="theory-sorry" hidden><h2 data-i18n="theory.sorry.title">Teoria</h2><p data-i18n="theory.sorry.message">Spiacenti: la sezione Teoria non è ancora disponibile in inglese. Una versione inglese è prevista in una prossima versione.</p><button id="theory-it" type="button" data-i18n="theory.sorry.openItalian">Apri comunque la versione italiana</button></div><iframe id="tframe" aria-label="Teoria"></iframe></section>
 <section id="v-draw" hidden>
  <div style="position:relative"><div style="text-align:right;margin-bottom:3px"><button id="side-toggle" type="button" title="Nascondi o mostra i riquadri a destra: più spazio per disegnare">Nascondi i riquadri &#9656;</button></div><div id="kload" hidden>Carico l'editor<span id="kld-dots"><span>.</span><span>.</span><span>.</span></span></div><iframe id="kframe" aria-label="Editor chimico" loading="lazy" sandbox="allow-scripts allow-same-origin allow-modals allow-downloads"></iframe></div>
  <aside>
@@ -332,7 +333,10 @@ const ST={files:[],methods:[]};
 function applyView(){const v=S.view,d=v==="data";
   $("#start").hidden=!(d&&(!S.sess||S.adding));$("#v-data").hidden=!(d&&S.sess&&!S.adding);$("#cancadd").hidden=!(S.sess&&S.adding);renderLoaded();
   $("#v-draw").hidden=v!=="draw";document.documentElement.classList.toggle("in-draw",v==="draw");$("#v-theory").hidden=v!=="theory";
-  if(v==="theory"&&!$("#tframe").getAttribute("src"))$("#tframe").src="static/teoria/index.html"; // theory module, loaded on first open
+  // The Teoria is Italian only: in English a courtesy page is shown, with a button that opens the Italian Teoria for this visit only
+  if(v!=="theory")S.theoryIt=false;
+  const sorry=v==="theory"&&I18N.lang==="en"&&!S.theoryIt;$("#theory-sorry").hidden=!sorry;$("#tframe").hidden=sorry;
+  if(v==="theory"&&!sorry&&!$("#tframe").getAttribute("src"))$("#tframe").src="static/teoria/index.html"; // theory module, loaded on first open
   document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   document.dispatchEvent(new CustomEvent("tpview",{detail:{view:v}}))}
 // the header stays in view (sticky): --hh is its real height (it can wrap on a narrow window), used by the file list, the full-screen panel and the scrolls to a panel
@@ -341,6 +345,7 @@ function applyView(){const v=S.view,d=v==="data";
 window.hdrH=()=>document.querySelector("header").offsetHeight;
 function setView(v){S.view=v;applyView();if(v==="data"&&!window.qqReady&&!window.QQQ_PHONE)$("#loading").hidden=false}   // no automatic scroll when the view changes (decision 7/10): panels, zoom, cursor and active graph are state and stay
 document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.dataset.v));
+$("#theory-it").onclick=()=>{S.theoryIt=true;applyView()};
 
 // ------------------------------------------------------------------ start screen: upload, check times and types, open
 const sz=b=>b>1e6?(b/1e6).toFixed(1)+" MB":Math.max(1,Math.round(b/1e3))+" kB";
