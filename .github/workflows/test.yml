@@ -29,7 +29,7 @@ jobs:
         run: python -m pytest -q tests
 
   # The e2e smoke tests (tools/verifica.py --fumo: SMOKE) against the local Python server, in other browsers and systems.
-  # webkit = the engine of Safari. No Pyodide here: the engine of the site is tried by hand (see AGENTS.md, "Prestazioni e compatibilità").
+  # webkit = the engine of Safari (on macOS only: the ubuntu webkit job duplicated it and hung in the install step). No Pyodide here: the engine of the site is tried by hand (see AGENTS.md, "Prestazioni e compatibilità").
   browser:
     name: browser (${{ matrix.os }}, ${{ matrix.browser }})
     strategy:
@@ -38,11 +38,10 @@ jobs:
         include:
           - { os: ubuntu-latest, browser: chromium }
           - { os: ubuntu-latest, browser: firefox }
-          - { os: ubuntu-latest, browser: webkit }
           - { os: windows-latest, browser: chromium }
           - { os: macos-latest, browser: webkit }
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
