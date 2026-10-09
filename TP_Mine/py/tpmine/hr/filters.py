@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from qqq_lab import ionfamily
+from mzlab import ionfamily
 
 from . import formula as F
 from .features import Alignment, Features

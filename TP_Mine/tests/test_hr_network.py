@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from qqq_lab.chem import elements as E
+from mzlab.chem import elements as E
 from tpmine.hr import features as FT
 from tpmine.hr import formula as F
 from tpmine.hr import network as NW

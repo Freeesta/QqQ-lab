@@ -1,6 +1,6 @@
 # TPMINE-PRIVATE
 """TP Mine engine: parent -> candidate transformation products -> XIC, peaks, kinetics, isotopes, MS2, confidence, and an untargeted
-search of unexpected ions. Runs in Pyodide (numpy only) and on a normal Python; the reader is the one of qqq_lab."""
+search of unexpected ions. Runs in Pyodide (numpy only) and on a normal Python; the reader is the one of mzlab."""
 from __future__ import annotations
 
 import copy
@@ -10,8 +10,8 @@ from pathlib import Path
 
 import numpy as np
 
-from qqq_lab.chem import elements as E
-from qqq_lab.reader.mzml import Run
+from mzlab.chem import elements as E
+from mzlab.reader.mzml import Run
 
 from . import chem, mrm
 from .peaks import find_peak
@@ -475,7 +475,7 @@ class Experiment:
         return confidence(bool(e.get("formula")), a["label"], ms2)
 
     def _isf_eval(self, p_rt: float | None, max_ions: int = 30) -> dict:
-        """In-source-fragment evidence for the ions that co-elute with the parent (tpmine.isf over qqq_lab.ionfamily): {entry id: compact result}.
+        """In-source-fragment evidence for the ions that co-elute with the parent (tpmine.isf over mzlab.ionfamily): {entry id: compact result}.
         Never raises: on any failure the caller falls back to the plain "lighter and co-eluting" heuristic."""
         if not p_rt or not self.full:
             return {}

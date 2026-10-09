@@ -10,7 +10,7 @@ import re
 
 import numpy as np
 
-from qqq_lab.chem import elements as E
+from mzlab.chem import elements as E
 
 from .formula import VALENCE, element_order
 

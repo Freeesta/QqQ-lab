@@ -113,6 +113,7 @@ Unico documento per gli agenti. Descrive lo STATO ATTUALE (la storia è in git: 
 - **Librerie, D6**: «Cerca tutte le MS2 del file» (comando `searchAll` del worker già pronto; manca l'interfaccia che legge le MS2 con `/api/dda` e `/api/scan`).
 - **Test più veloci**: sostituire le pause fisse rimaste negli e2e più lunghi (e2e6, e2e24, e2e7, e2e_hr_dda, e2e_studenti) con `ready(pg)` o attese di condizioni; accorpare i test piccoli nati per sessione che caricano gli stessi file (ognuno paga ~10 s di avvio).
 - **TP Mine ad alta risoluzione (fatto il 8/10/2026, PR #22-#28 e successive)**: lettore (`<precursor>` multipli, carica, cammino MSn), `ionfamily.ms2_similarity` modificato per la modalità HR; resta da fare da Federico `python3 tools/build_tpmine.py` + commit di `tpmine.enc`, e la prova a mano nel sito con i 13 file veri (Pyodide).
+- **Fase 3 della rinomina**: la parte sicura è fatta (tutto il codice, TP Mine compreso, usa `mzlab`; restano solo ponte `qqq_lab/__init__.py`, `tests/test_alias.py`, `qqq_lab.zip` nel sito, DB `"qqq_lab"`, chiavi `qqq.*`). **Fase 3b, dopo che Federico ha ricostruito `tpmine.enc` (`python3 tools/build_tpmine.py` + commit)**: togliere il ponte `qqq_lab/`, `tests/test_alias.py`, la copia `qqq_lab.zip` in `tools/build_site.py` e la voce `qqq_lab` in `pyproject.toml`.
 - **Prove a mano che restano a Federico**: Safari su iPad con Apple Pencil; file Exploris/Fusion interi sul sito; un telefono vero (iPhone e Android, verticale e orizzontale).
 
 ## 10. In coda (NON fare senza il via libera di Federico)

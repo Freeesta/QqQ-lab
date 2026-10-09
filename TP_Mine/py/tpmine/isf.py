@@ -2,7 +2,7 @@
 """ISF classifier of TP Mine: for every candidate ion, the probability that it is an in-source fragment / isotope / adduct of the
 parent or a real transformation product, with the evidence and the doubtful cases with their reason.
 
-The PUBLIC module `qqq_lab.ionfamily` measures (profile similarity, F/P ratio, kinetics, MCR-ALS, ...) and never concludes; the verdict
+The PUBLIC module `mzlab.ionfamily` measures (profile similarity, F/P ratio, kinetics, MCR-ALS, ...) and never concludes; the verdict
 lives only here. Model: a regularised logistic regression (IRLS, L2) on standardised, independent-ish evidence features, calibrated
 (`calibrate`) on synthetic scenes with known truth (hard negatives: a product that co-elutes with another shape) and, when the real mzML
 are available, on the real flufenacet series (positives = ions at the parent's peak at t0, easy negatives = formed ions at other RT).
@@ -20,7 +20,7 @@ import math
 
 import numpy as np
 
-from qqq_lab import ionfamily as F
+from mzlab import ionfamily as F
 
 try:
     from .isf_model import MODEL
@@ -346,7 +346,7 @@ NEG_ROLES = {"tp", "tp_coelute"}               # tp_isobaric is reserved for the
 
 def _synthetic_rows(n_series: int = 8, seed0: int = 4000):
     """Feature rows of synthetic series with known truth: noise 0.7-1.6, scan interval 0.7/1/1.5 s, random detector saturation."""
-    from qqq_lab import demo
+    from mzlab import demo
     rng = np.random.default_rng(seed0)
     rows, y, grp = [], [], []
     for s in range(n_series):
@@ -370,8 +370,8 @@ def _real_rows(real_dir, parent: float = 364.35):
     peak already at t0, easy negatives = formed ions 5-60 s away from the parent's apex."""
     import importlib.util
     from pathlib import Path
-    from qqq_lab.project import guess_sample
-    from qqq_lab.reader.mzml import Run
+    from mzlab.project import guess_sample
+    from mzlab.reader.mzml import Run
     vp = Path(F.__file__).resolve().parents[1] / "tools" / "validate_ionfamily.py"
     spec = importlib.util.spec_from_file_location("validate_ionfamily", vp)
     V = importlib.util.module_from_spec(spec)

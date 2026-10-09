@@ -1,10 +1,10 @@
 # TPMINE-PRIVATE
 """Tests of the private TP Mine engine. Run: PYTHONPATH=<repo>:<this folder>/py python3 -m pytest -q <this folder>/tests
-(the repo folder gives qqq_lab: reader and masses). Real-data tests need QQQ_MZML (the Data/mzML folder) and are skipped otherwise."""
+(the repo folder gives mzlab: reader and masses). Real-data tests need QQQ_MZML (the Data/mzML folder) and are skipped otherwise."""
 import json, os, sys
 from pathlib import Path
 import pytest
-from qqq_lab.chem.elements import fmt, mass
+from mzlab.chem.elements import fmt, mass
 from tpmine import api, chem, mrm
 from tpmine.demo import make_demo
 from tpmine.engine import Experiment, guess_sample
