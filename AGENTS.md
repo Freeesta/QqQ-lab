@@ -1,12 +1,12 @@
-# AGENTS.md - mzLab (repository Freeesta/QqQ-lab, pacchetto mzlab)
+# AGENTS.md - mzLab (repository Freeesta/mzlab, pacchetto mzlab)
 
 Unico documento per gli agenti: descrive lo STATO ATTUALE (la storia è in git e nelle PR). Leggilo una volta sola; poi `grep -n` sul codice invece di leggere file interi.
 
 **Non leggere**: `mzlab/web/vendor/`, `mzlab/web/teoria/pratica/ei-dati.js`, `mzlab/web/elements.js`, `mzlab/web/teoria/glossario-dati.js`, `mzlab/web/tpmine.enc`, `mzlab/web/esempi/`, `.git/`, `.verifica/`, `tests_e2e/shots/`, `__pycache__/`, `.pytest_cache/`, `*.egg-info/`, `site/`, `../_cestino/`.
 
 ## 1. Il progetto
-- **mzLab** (repository `Freeesta/QqQ-lab`, pacchetto `mzlab`; nome visibile scritto SOLO in `mzlab/web/appname.js`): programma DIDATTICO per l'esperienza 3 del laboratorio di analisi degli inquinanti (UniTO; titolare Federico Cristaudo). Gli studenti analizzano dati LC-MS di un triplo quadrupolo SCIEX 3200 QTRAP (risoluzione unitaria, ESI+) per trovare i prodotti di trasformazione (TP) di un inquinante degradato per fotocatalisi su TiO2. Legge anche file HR (Orbitrap, Q-TOF) e DDA.
-- **Distribuzione**: SOLO il sito https://freeesta.github.io/QqQ-lab/ (GitHub Pages, `.github/workflows/pages.yml` a ogni push su `main`). Tutto gira nel browser (Pyodide = Python + numpy in WebAssembly); i file degli studenti non lasciano il loro computer. Nessun tracciamento, nessuna statistica sui visitatori (decisione di Federico: massima privacy).
+- **mzLab** (repository `Freeesta/mzlab`, pacchetto `mzlab`; nome visibile scritto SOLO in `mzlab/web/appname.js`): programma DIDATTICO per l'esperienza 3 del laboratorio di analisi degli inquinanti (UniTO; titolare Federico Cristaudo). Gli studenti analizzano dati LC-MS di un triplo quadrupolo SCIEX 3200 QTRAP (risoluzione unitaria, ESI+) per trovare i prodotti di trasformazione (TP) di un inquinante degradato per fotocatalisi su TiO2. Legge anche file HR (Orbitrap, Q-TOF) e DDA.
+- **Distribuzione**: SOLO il sito https://freeesta.github.io/mzlab/ (GitHub Pages, `.github/workflows/pages.yml` a ogni push su `main`). Tutto gira nel browser (Pyodide = Python + numpy in WebAssembly); i file degli studenti non lasciano il loro computer. Nessun tracciamento, nessuna statistica sui visitatori (decisione di Federico: massima privacy).
 - **Principi da non violare**:
   1. **Il programma NON dà le risposte** (niente «ecco i TP», niente rette di taratura o tabelle della relazione calcolate: gli studenti le fanno in Excel). Vale per il mondo LR (i dati dell'esperienza). Il mondo HR è uno strumento di ricerca: librerie, formule e analoghi sono ammessi, sempre come candidati con punteggio e prove, mai come verità. Altra eccezione: TP Mine (sez. 7), nascosto e cifrato, solo per Federico.
   2. Leggero e senza build: Python ≥ 3.11 + numpy; front end HTML/JS semplice, nessun bundler, nessuna dipendenza pesante.
@@ -14,7 +14,7 @@ Unico documento per gli agenti: descrive lo STATO ATTUALE (la storia è in git e
   4. Onestà scientifica: a risoluzione unitaria un m/z è un candidato, non un'identificazione (spiegato in Teoria, senza avvisi ripetuti nell'interfaccia).
   5. **Teoria e Pratica**: non si traducono e non si aggiungono né tolgono parti senza un'istruzione esplicita di Federico; l'accessibilità (presentazione) è ammessa.
   6. **Accessibilità**: colori solo da variabili CSS, rispetto di `prefers-reduced-motion`, tastiera e `aria-label`, grafici leggibili dai daltonici (Okabe-Ito).
-- **Dati del laboratorio**: MAI nel repository (pubblico). Stanno nel repository PRIVATO `Freeesta/QqQ-lab-dati` (`mzML/`, `dam/`, `HRMS/`). Unica eccezione (voluta da Federico): i file anonimi in `mzlab/web/esempi/` (5 Full Scan `Esempio_FullScan_t*.mzML`, 2 MS2 `Esempio_MS2_t*.mzML`, 4 standard MRM `Esempio_MRM_std_*ppm.mzML`; il nome dà tipo, tempo e concentrazione). Il nome del composto dell'esperienza e degli inquinanti dei metodi non deve comparire nell'interfaccia, nella Teoria, nei giochi o negli esempi (i test lo controllano).
+- **Dati del laboratorio**: MAI nel repository (pubblico). Stanno nel repository PRIVATO `Freeesta/mzlab-dati` (`mzML/`, `dam/`, `HRMS/`). Unica eccezione (voluta da Federico): i file anonimi in `mzlab/web/esempi/` (5 Full Scan `Esempio_FullScan_t*.mzML`, 2 MS2 `Esempio_MS2_t*.mzML`, 4 standard MRM `Esempio_MRM_std_*ppm.mzML`; il nome dà tipo, tempo e concentrazione). Il nome del composto dell'esperienza e degli inquinanti dei metodi non deve comparire nell'interfaccia, nella Teoria, nei giochi o negli esempi (i test lo controllano).
 
 ## 2. Regole di lavoro
 - **Consegna = sito pubblicato.** Un lavoro è finito quando è in `main` E il workflow «pages» di quel commit è riuscito: a Federico basta ricaricare (Cmd/Ctrl+Shift+R). Controlla il deploy con gli strumenti GitHub (`actions_list` su `pages.yml`, ramo `main`) e, se fallisce, correggi.
@@ -123,7 +123,7 @@ Unico documento per gli agenti: descrive lo STATO ATTUALE (la storia è in git e
 - `ask()` restituisce `null` anche per il testo vuoto: per «valore predefinito» usare una parola («auto»).
 - Il sito vecchio e quello nuovo hanno la stessa origine (`freeesta.github.io`): il service worker di reindirizzamento non deve mai cancellare le cache.
 - Ogni pulsante header o icona con `data-ic` deve essere presente in `QICON` (`icons-modi.js`), altrimenti `replace` fallisce all'avvio.
-- Il proxy GitHub del cloud può ignorare la cancellazione di rami remoti: Federico li cancella da https://github.com/Freeesta/QqQ-lab/branches.
+- Il proxy GitHub del cloud può ignorare la cancellazione di rami remoti: Federico li cancella da https://github.com/Freeesta/mzlab/branches.
 
 ## 9. Lavori aperti
 - **Compatibilità e velocità**: tasti per sistema (⌘ sul Mac, Ctrl altrove), canvas nitidi con `devicePixelRatio` 1,25/1,5, nomi di file con accenti, funzioni JS assenti in Safari 16.4.

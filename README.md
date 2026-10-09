@@ -6,7 +6,7 @@ Programma didattico per esplorare dati LC-MS e cercare i **prodotti di trasforma
 
 ## Uso
 
-Apri **https://freeesta.github.io/QqQ-lab/** in un browser recente (Chrome, Edge, Firefox, Safari) su computer o tablet. Non si installa nulla: Python e numpy girano **dentro il browser** (Pyodide). La prima volta si scaricano circa 10-15 MB; dopo funziona anche senza internet e si può installare come app (Chrome/Edge: «Installa» nella barra degli indirizzi; Safari: Aggiungi al Dock o alla schermata Home).
+Apri **https://freeesta.github.io/mzlab/** in un browser recente (Chrome, Edge, Firefox, Safari) su computer o tablet. Non si installa nulla: Python e numpy girano **dentro il browser** (Pyodide). La prima volta si scaricano circa 10-15 MB; dopo funziona anche senza internet e si può installare come app (Chrome/Edge: «Installa» nella barra degli indirizzi; Safari: Aggiungi al Dock o alla schermata Home).
 
 - **I tuoi file non lasciano il computer**: la pagina non li invia a nessun server e non raccoglie dati sui visitatori. Sessione, disegni e progressi restano nello spazio del browser e si ripristinano alla riapertura (stesso computer, stesso browser).
 - Trascina i file `.mzML` (e, se vuoi, il `.dam` del metodo), controlla tempi e tipi, premi **Carica dati**. Senza file: **«Prova con i file di esempio»**.
