@@ -282,8 +282,50 @@
     show(which); if (!d.open) d.showModal();
     if (which === "ls" && opt.q != null) setTimeout(() => { const i = body.querySelector("#nl-q"); if (i) { i.focus(); i.select(); } }, 50);
   }
+  function mountLosses(container, opt = {}) {
+    lossPolStart();
+    if (opt.q != null) NL.q = String(opt.q);
+    container.innerHTML = lossTab();
+    bindLoss(container, id => {
+      if (id === "pt" || id === "ad") {
+        if (window.BARRA && BARRA.isDataView()) {
+          BARRA.setTab(id === "pt" ? "ptable" : "adducts");
+        } else {
+          open(id);
+        }
+      }
+    });
+    if (opt.q != null) {
+      setTimeout(() => { const i = container.querySelector("#nl-q"); if (i) { i.focus(); i.select(); } }, 50);
+    }
+  }
+
+  function mountAdducts(container) {
+    container.innerHTML = adductTab();
+    bindAdducts(container);
+  }
+
+  function setLossQuery(q) {
+    NL.q = String(q || "");
+    const qInp = document.querySelector("#nl-q");
+    if (qInp) {
+      qInp.value = NL.q;
+      qInp.dispatchEvent(new Event("input", { bubbles: true }));
+      setTimeout(() => { qInp.focus(); qInp.select(); }, 50);
+    }
+  }
+
   Qs("#np-pt").onclick = () => open("pt");
-  Qs("#np-ad").onclick = () => open("ad");
-  Qs("#np-nl").onclick = () => open("ls");
-  window.QQQRef = { open, massOf, mono, isoPattern, ionCounts, ADD, adductDiffs: calcAdductDiffs };
+  Qs("#np-ad").onclick = () => {
+    if (window.BARRA && BARRA.isDataView()) BARRA.setTab("adducts");
+    else open("ad");
+  };
+  Qs("#np-nl").onclick = () => {
+    if (window.BARRA && BARRA.isDataView()) BARRA.setTab("losses");
+    else open("ls");
+  };
+  window.QQQRef = {
+    open, massOf, mono, isoPattern, ionCounts, ADD, adductDiffs: calcAdductDiffs,
+    mountLosses, mountAdducts, setLossQuery, periodic, bindPeriodic, adductTab, bindAdducts, lossTab, bindLoss
+  };
 })();

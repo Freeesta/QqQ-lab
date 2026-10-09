@@ -54,7 +54,17 @@ function specClick(p, px, py) {                  // a click on the spectrum (no 
 }
 function measMenu(p, m) {                          // entries of the right-click menu of the spectrum
   const out = [{ label: "Misura da questo picco", fn: () => measSet(p, m) }];
-  if (p.meas && p.meas.list.length) p.meas.list.slice(-3).forEach(q => { const d = Math.abs(q.b - q.a).toFixed(p._a && p._a.hrp ? Math.min(4, p._a.dec) : 1); out.push({ label: `Cerca ${d} nelle perdite neutre`, tip: "Apre la tabella delle perdite neutre con questa differenza già scritta nel campo di ricerca", fn: () => QQQRef.open("ls", { q: d }) }); });      // the ruler only shows the number; the table is opened on student's request
+  if (p.meas && p.meas.list.length) p.meas.list.slice(-3).forEach(q => {
+    const d = Math.abs(q.b - q.a).toFixed(p._a && p._a.hrp ? Math.min(4, p._a.dec) : 1);
+    out.push({
+      label: `Cerca ${d} nelle perdite neutre`,
+      tip: "Apre la tabella delle perdite neutre con questa differenza già scritta nel campo di ricerca",
+      fn: () => {
+        if (window.BARRA && BARRA.isDataView()) BARRA.setTab("losses", { q: d });
+        else if (window.QQQRef) QQQRef.open("ls", { q: d });
+      }
+    });
+  });
   if (p.meas) out.push({ label: "Togli le misure", fn: () => measClear(p) });
   return out;
 }
