@@ -71,6 +71,7 @@
     { n: "[2M+H]+", k: 2, add: "H", z: 1, note: "dimero: compare a concentrazioni alte" },
     { n: "[2M+Na]+", k: 2, add: "Na", z: 1, note: "dimero con sodio" },
     { n: "[M]+", k: 1, add: "", z: 1, note: "catione già formato (es. ammonio quaternario): si inserisce la formula del <b>catione</b>, perché la massa sottrae l'elettrone. Per il radicale catione M<sup>+&bull;</sup> si inserisce invece la formula della molecola <b>neutra</b>" },
+    { n: "[M]-", k: 1, add: "", z: -1, note: "anione già formato (es. una formula copiata con la carica dal Disegno): si inserisce la formula dell'<b>anione</b>, perché la massa somma l'elettrone" },
     { n: "[M-H]-", k: 1, sub: "H", z: -1, exp: 1, note: "lo ione più comune in ESI&minus; (acidi, fenoli, sulfonati)" },
     { n: "[M+HCOO]-", k: 1, add: "CHO2", z: -1, exp: 1, note: "con acido formico in fase mobile" },
     { n: "[M+Cl]-", k: 1, add: "Cl", z: -1, exp: 1, note: "con solventi clorurati o campioni salini (cerca la coppia 35/37 a 3:1)" },

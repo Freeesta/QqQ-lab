@@ -106,6 +106,21 @@ def test_dda_ms2_is_unchanged(tmp_path):
     assert r.collision_energy == 38.33 and r.path == ((317.1642, "HCD", 38.33),)
 
 
+def test_release_gives_back_the_read_ahead_window_and_reads_again(tmp_path):
+    f = "FTMS + p NSI Full ms [50.0000-340.0000]"
+    path = _write(tmp_path / "rel.mzML", [_spec(1, 1, 0.1, f), _spec(2, 1, 0.2, f)])
+    for mode in ("file", "mmap"):
+        r = Run(path, mode=mode)
+        a = r.read(0)
+        r.release()
+        if mode == "file":
+            assert r._mm._buf == b""
+        b = r.read(1)
+        r.release()
+        assert np.array_equal(r.read(0)[0], a[0]) and len(b[0]) == len(a[0])
+        r.close()
+
+
 def _dati():
     d = os.environ.get("MZLAB_DATI", os.environ.get("QQQ_DATI"))
     if d and Path(d).is_dir():

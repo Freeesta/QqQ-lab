@@ -286,7 +286,7 @@ class Item:
         rt, y = self._total(kind, level, mz0, mz1)
         if prec is not None and level > 1 and len(rt):
             t = self._tbl(level)
-            pr = np.array([self.run.scans[i].precursor or -1.0 for i in t.scan_ids])
+            pr = np.array([sum(self.run.scans[i].iso)/2 if self.run.scans[i].iso else self.run.scans[i].precursor or -1.0 for i in t.scan_ids])
             sm = np.abs(pr - prec) <= 0.6
             if len(sm) == len(rt):
                 return rt[sm], y[sm]
@@ -377,7 +377,7 @@ class Item:
             return (*e, 0)
         ok = (t.rt >= min(rt0, rt1)) & (t.rt <= max(rt0, rt1))
         if level > 1 and precursor is not None:
-            prec = np.array([self.run.scans[i].precursor or -1.0 for i in t.scan_ids])
+            prec = np.array([sum(self.run.scans[i].iso)/2 if self.run.scans[i].iso else self.run.scans[i].precursor or -1.0 for i in t.scan_ids])
             ok &= np.abs(prec - precursor) <= prec_tol
         n = int(ok.sum())
         if n == 0:
@@ -430,7 +430,7 @@ class Item:
         d = self.profile(s.level, hr)["dec"] + 1
         return {"sid": sid, "no": self._no(s), "parent_no": self._no(r.scans[s.parent]) if s.parent is not None else None,
                 "rt": round(float(s.rt), 4), "level": s.level, "mz": [round(float(v), d) for v in mz], "y": [round(float(v), 1) for v in y],
-                "prec": round(float(s.precursor), d) if s.precursor else None, "lo": round(float(s.iso[0]), d) if s.iso else None, "hi": round(float(s.iso[1]), d) if s.iso else None,
+                "prec": round(float(sum(s.iso) / 2), d) if s.iso else round(float(s.precursor), d) if s.precursor else None, "lo": round(float(s.iso[0]), d) if s.iso else None, "hi": round(float(s.iso[1]), d) if s.iso else None,
                 "act": s.act, "ce": s.collision_energy, "nce": bool(r.nce), "res": s.res, "an": s.an, "parent": s.parent, "filter": s.filter,
                 "profile": bool(s.profile)}
 
@@ -462,7 +462,7 @@ class Item:
         t = self._tbl(level)
         ids, rt = t.scan_ids, t.rt
         if level > 1 and precursor is not None and len(ids):
-            pr = np.array([self.run.scans[i].precursor or -1.0 for i in ids])
+            pr = np.array([sum(self.run.scans[i].iso)/2 if self.run.scans[i].iso else self.run.scans[i].precursor or -1.0 for i in ids])
             sm = np.abs(pr - precursor) <= prec_tol
             ids, rt = ids[sm], rt[sm]
         return ids, rt
@@ -493,6 +493,21 @@ class Item:
                 mz, y = np.bincount(inv, weights=y * mz) / np.maximum(sy, 1e-12), sy
             out.append({"i": i, "sid": int(ids[i]), "rt": float(rt[i]), "mz": mz, "y": y})
         return out
+
+    def nearest_scan(self, rt: float, level: int = 1, precursor: float | None = None, filter: str | None = None) -> dict | None:
+        """Returns the scan of the given filter/level/precursor closest to the requested RT."""
+        t = self._tbl(level)
+        ids = t.scan_ids
+        if filter is not None:
+            ids = [i for i in ids if self.run.scans[i].filter == filter]
+        elif precursor is not None:
+            ids = [i for i in ids if abs((sum(self.run.scans[i].iso)/2 if self.run.scans[i].iso else self.run.scans[i].precursor or -100.0) - precursor) <= 0.6]
+        if len(ids) == 0:
+            return None
+        rts = np.array([self.run.scans[i].rt for i in ids])
+        idx = np.argmin(np.abs(rts - rt))
+        s = self.run.scans[ids[idx]]
+        return {"rt": float(s.rt), "sid": s.index, "filter": s.filter}
 
     def spectrum(self, rt0: float, rt1: float, level: int = 1, precursor: float | None = None,
                  prec_tol: float = 0.6, bin_da: float = 0.1, min_rel: float = 0.0, bg: dict | None = None, hr: bool = False):
@@ -556,6 +571,7 @@ def mixed_text(run) -> str:
 class Session:
     def __init__(self, samples: list[dict], root: Path):
         self.items: list[Item] = []
+        has_hr, has_lr = False, False
         for s in samples:
             name, _, tag = str(s["file"]).partition("#")      # "x.mzML#MS2" = the MS2 part of a mixed file (as saved in the notebook)
             f = Path(name)
@@ -565,10 +581,21 @@ class Session:
             parts = file_parts(run)
             common = (s.get("label") or label, s["time"] if s.get("time") is not None else t, s.get("type") or typ)
             if not parts:
-                self.items.append(Item(name, *common[:1], common[1], common[2], path, s.get("conc"), s.get("cunit"), run=run))
-                continue
-            for p in ([q for q in parts if q["tag"] == tag] if tag else parts):
-                self.items.append(Item(f"{name}#{p['tag']}", common[0], common[1], common[2], path, s.get("conc"), s.get("cunit"), part=p, run=run))
+                item = Item(name, *common[:1], common[1], common[2], path, s.get("conc"), s.get("cunit"), run=run)
+                self.items.append(item)
+                hr_info = item.hr_info()
+            else:
+                for p in ([q for q in parts if q["tag"] == tag] if tag else parts):
+                    item = Item(f"{name}#{p['tag']}", common[0], common[1], common[2], path, s.get("conc"), s.get("cunit"), part=p, run=run)
+                    self.items.append(item)
+                    hr_info = item.hr_info()
+            if hr_info["prof1"]["hr"] or hr_info["prof2"]["hr"]:
+                has_hr = True
+            else:
+                has_lr = True
+        
+        if has_hr and has_lr:
+            raise ValueError("HR_MIX")
 
     def info(self) -> list[dict]:
         return [it.info() for it in self.items]

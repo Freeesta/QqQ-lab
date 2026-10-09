@@ -33,9 +33,9 @@ try:
         step("normalisation off without a reference file", norm)
         def toggle():
             on = lambda: pg.evaluate("[...document.querySelectorAll('[data-o=view]')].map(b=>b.classList.contains('on')+':'+b.dataset.v)")
-            assert on() == ["true:2d", "false:cross", "false:ridge", "false:3d"], on()
+            assert on() == ["true:2d", "false:3d"], on()
             pg.locator("[data-o=view][data-v='3d']").first.click(); pg.wait_for_timeout(1500)
-            assert on() == ["false:2d", "false:cross", "false:ridge", "true:3d"], on()
+            assert on() == ["false:2d", "true:3d"], on()
         step("2D/3D alternating switch", toggle)
         def adding():
             pg.click("#addf"); pg.wait_for_timeout(600)

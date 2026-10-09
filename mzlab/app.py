@@ -14,7 +14,7 @@ import numpy as np
 
 from .explore import Session, sniff
 from .peaks import merge_unit, pad_zeros, profile_peaks
-from .reader.methodinfo import check_against, read_methods
+from .reader.methodinfo import check_against, method_kind, read_methods
 from .project import guess_conc, guess_sample
 
 
@@ -245,6 +245,19 @@ class App:
                 m["lab_pick"] = [i for i, d in enumerate(diffs) if d == best][-1]
         return m
 
+    def method_warnings(self) -> dict:
+        """The loaded .dam methods whose experiment type (MRM / Full Scan / MS2) is not among the types of the open files."""
+        if not self.session:
+            return {"warnings": []}
+        have = sorted({it.kind() for it in self.session.items})
+        names = {"full": "Full Scan", "ms2": "MS2", "mrm": "MRM"}
+        out = []
+        for x in self.lab_methods():
+            g = method_kind(x)
+            if g and g not in have:
+                out.append({"method": x.get("name"), "expects": names[g], "files": [names[h] for h in have if h in names]})
+        return {"warnings": out}
+
     def origin(self, k: int, mz: float, parent: float, rt0: float | None = None, rt1: float | None = None, formula: str | None = None) -> dict:
         """"Da dove viene questo ione?": the evidence of mzlab.ionfamily for the ion at mz against the candidate precursor `parent`,
         over every full-scan file of the session (k = the file the student is looking at, used as the reference). No verdict."""
@@ -268,6 +281,18 @@ class App:
         return ionfamily.origin_report(samples, mz, parent, rt0, rt1, ref, formula_p=formula or None, top=25, ms2=ms2)   # 25 co-eluting ions are plenty to read (and the browser version is ~10x slower)
 
     @staticmethod
+    def _spec_arrays(item, level: int, mz, y, merge: bool, hr: bool = True) -> dict:
+        """What _spec_json sends, as numpy arrays (not rounded, not listed): mode, mz/y (peaks) and, for profile spectra, pmz/py (the profile line)."""
+        hr = item.hr_on(level, hr)
+        if item.spectrum_mode(level) == "profile":
+            pm, py = profile_peaks(mz, y)
+            lm, ly = pad_zeros(mz, y, item._step(level))
+            return {"mode": "profile", "mz": np.asarray(pm, float), "y": np.asarray(py, float), "pmz": np.asarray(lm, float), "py": np.asarray(ly, float)}
+        if merge and not hr:
+            mz, y = merge_unit(mz, y)
+        return {"mode": item.spectrum_mode(level), "mz": np.asarray(mz, float), "y": np.asarray(y, float)}
+
+    @staticmethod
     def _spec_json(item, level: int, mz, y, merge: bool, hr: bool = True) -> dict:
         """A spectrum for the front end. Centroids: the peaks (merged by unit window if asked). Profile: `mz`/`y` are the PEAKS (one per
         nominal mass, `peaks.profile_peaks`) and `pmz`/`py` the profile points, drawn as a line; labels, table, ruler and clicks use the peaks."""
@@ -282,6 +307,12 @@ class App:
         if merge and not hr:
             mz, y = merge_unit(mz, y)
         return {"mode": item.spectrum_mode(level), "mz": r3(mz), "y": r1(y)}
+
+    def nearest_scan(self, k: int, rt: float, filter: str | None = None, level: int = 1, precursor: float | None = None) -> dict:
+        ans = self._item(k).nearest_scan(rt, level, precursor, filter)
+        if not ans:
+            raise ValueError("Nessuna scansione in questo file.")
+        return ans
 
     def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None, merge: bool = False, hr: bool = True) -> dict:
         if bg is not None:
@@ -308,6 +339,46 @@ class App:
             raise ValueError(f"scansione fuori dal file (il file ne ha {n})")
         return {"n": n, "scans": [{"i": s["i"], "sid": s["sid"], "rt": round(s["rt"], 4), **self._spec_json(item, level, s["mz"], s["y"], merge, hr)}
                                   for s in item.scans(i0, i1, level, precursor, prec_tol=pt, bin_da=bin_da, hr=hr)]}
+
+    def scanbin(self, k: int, i0: int, i1: int, level: int = 1, precursor=None, filt: str | None = None, hr: bool = True, merge: bool = False) -> bytes:
+        """Single scans i0..i1 (at most 60) as one binary block, for navigation: 4 bytes (little endian) = length of the JSON header, the JSON header
+        {n, scans: [{i, sid, rt, no, filter, mode, n, np, nl, tic}]}, then for every scan its peaks (m/z float64, intensity float32; n values each) and,
+        for a profile scan, its profile line (pmz float64, py float32; np values each). nl = highest intensity, tic = sum of the intensities."""
+        item = self._item(k)
+        if item.kind() == "mrm":
+            raise ValueError("Questo file è MRM: contiene solo cromatogrammi di transizioni, non scansioni.")
+        if i0 > i1:
+            raise ValueError("intervallo di scansioni non valido: i0 è maggiore di i1")
+        if i1 - i0 + 1 > self.MAX_SPECTRA:
+            raise ValueError(f"al massimo {self.MAX_SPECTRA} scansioni per richiesta")
+        pt = item.ptol(level, precursor, hr)
+        ids, rts = item._scan_ids(level, precursor, pt)
+        if filt:                                                    # one scan filter = one scan type (a path of fragmentation, MS1, ...)
+            keep = [j for j in range(len(ids)) if item.run.scans[int(ids[j])].filter == filt]
+            ids, rts = ids[keep], rts[keep]
+        n = len(ids)
+        if i0 < 0 or i0 >= n:
+            raise ValueError(f"scansione fuori dal file (il file ne ha {n})")
+        i1 = min(i1, n - 1)
+        if filt:
+            rows = []
+            for j in range(i0, i1 + 1):
+                mz, y = item.run.read(int(ids[j]))
+                rows.append({"i": j, "sid": int(ids[j]), "rt": float(rts[j]), "mz": mz, "y": y})
+        else:
+            rows = item.scans(i0, i1, level, precursor, prec_tol=pt, bin_da=0.1, hr=hr)
+        head, body = [], []
+        for r in rows:
+            sc = item.run.scans[r["sid"]]
+            a = self._spec_arrays(item, level, r["mz"], r["y"], merge, hr)
+            npk = len(a["mz"]); npr = len(a["pmz"]) if "pmz" in a else 0
+            head.append({"i": r["i"], "sid": r["sid"], "rt": round(r["rt"], 4), "no": item._no(sc), "filter": sc.filter, "mode": a["mode"], "n": npk, "np": npr,
+                         "nl": float(a["y"].max()) if npk else 0.0, "tic": float(a["y"].sum()) if npk else 0.0})
+            body.append(a["mz"].astype("<f8").tobytes()); body.append(a["y"].astype("<f4").tobytes())
+            if npr:
+                body.append(a["pmz"].astype("<f8").tobytes()); body.append(a["py"].astype("<f4").tobytes())
+        hb = json.dumps({"n": n, "scans": head}).encode("utf-8")
+        return len(hb).to_bytes(4, "little") + hb + b"".join(body)
 
     def dda(self, k: int, hr: bool = True) -> dict:
         """The MS2 scans of the physical file of item k with parent / isolation / activation (see Item.dda)."""

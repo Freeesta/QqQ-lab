@@ -66,8 +66,16 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                                     float(q["rt0"]) if q.get("rt0") else None, float(q["rt1"]) if q.get("rt1") else None, q.get("formula")))
         if path == "/api/mrm":
             return _json(app.mrm([int(x) for x in q["k"].split(",") if x]))
+        if path == "/api/method_warnings":
+            return _json(app.method_warnings())
         if path == "/api/method":
             return _json(app.method(int(q["k"])))
+        if path == "/api/nearest_scan":
+            return _json(app.nearest_scan(
+                int(q["k"]), float(q["rt"]),
+                filter=q.get("filter"), level=int(q.get("level", 1)),
+                precursor=float(q["precursor"]) if q.get("precursor") else None
+            ))
         if path == "/api/spectrum":
             pr = q.get("precursor")
             bg = None
@@ -80,6 +88,14 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             try:
                 return _json(app.spectra(int(q["k"]), int(q["i0"]), int(q["i1"]), int(q.get("level", 1)),
                                          float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), q.get("merge") == "1", q.get("hr") != "0"))
+            except (ValueError, KeyError) as e:
+                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
+        if path == "/api/scanbin":       # the same scans as /api/spectra, as a binary block (no JSON, no decimals): see App.scanbin
+            pr = q.get("prec", q.get("precursor"))
+            try:
+                body = app.scanbin(int(q["k"]), int(q["i0"]), int(q["i1"]), int(q.get("level", 1)), float(pr) if pr not in (None, "") else None,
+                                   q.get("filter") or None, q.get("hr") != "0", q.get("merge") == "1")
+                return 200, "application/octet-stream", body, {}
             except (ValueError, KeyError) as e:
                 return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
         if path in ("/api/dda", "/api/scan", "/api/scanavg"):       # DDA and single scans as stored in the file (high resolution, B2)
@@ -96,6 +112,18 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                 return _json(formula_mz(q.get("f", ""), q.get("adduct") or None))
             except ValueError as e:      # a typo in the formula is the user's, not a server fault
                 return _json({"error": str(e)}, 400)
+        if path == "/api/composition":    # formulas that fit an exact m/z (mzlab.chem.composition): candidates, never a verdict
+            try:
+                from .chem.composition import compose, parse_elements
+                rdb = [float(x) for x in (q.get("rdb") or "-1,100").split(",")]
+                el = parse_elements(q["elements"]) if q.get("elements") else None
+                return _json(compose(float(q["mz"]), elements=el, ion=q.get("ion") or "[M+H]+", z=int(q["z"]) if q.get("z") else None,
+                                     tol=float(q.get("tol", 5)), unit=q.get("unit", "ppm"), rdb=(rdb[0], rdb[1]), nitrogen=q.get("n", "none"),
+                                     rules=[x for x in (q.get("rules") or "").split(",") if x], max_results=min(int(q.get("max", 10)), 200),
+                                     parent=q.get("parent") or None, m1=float(q["m1"]) if q.get("m1") else None, m2=float(q["m2"]) if q.get("m2") else None,
+                                     iso_tol=float(q.get("isotol", 0.2))))
+            except (ValueError, KeyError, IndexError) as e:
+                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante o non valido: {e}"}, 400)
         if path == "/api/map":
             return _json(app.ionmap(int(q["k"]), int(q.get("level", 1))))
         return _json({"error": "unknown endpoint"}, 404)

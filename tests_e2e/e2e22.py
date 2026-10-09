@@ -19,25 +19,24 @@ try:
         pg.set_input_files("#pick", synth.make_series("/tmp/s22", [0, 15, 60])); pg.wait_for_timeout(1000)
         pg.click("text=Carica dati"); ready(pg)
         def legacy():
-            assert pg.evaluate("UIP.font") == 90 and not pg.evaluate("'tips' in UIP") and pg.evaluate("document.querySelectorAll('.pnum:not([hidden])').length") >= 1
-        step("an old saved value (tips/num false) is read: font kept, the removed options ignored", legacy)
+            assert pg.evaluate("UIP.font") is None and not pg.evaluate("'tips' in UIP") and pg.evaluate("document.querySelectorAll('.pnum:not([hidden])').length") >= 1
+        step("an old saved value (font, tips/num false) is read: the removed options are ignored", legacy)
         def gear():
             pg.click("#np-set"); pg.wait_for_timeout(200); assert pg.is_visible("#uipset")
-            pg.click("#uipset [data-f='1']"); pg.click("#uipset [data-f='1']"); pg.wait_for_timeout(300)
-            assert pg.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--z').trim()") == "1.15", "font"
+            assert pg.locator("#uipset [data-f]").count() == 0, "no text size buttons any more"
             pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(500)
             assert pg.evaluate("document.documentElement.dataset.theme") == "dark"
             saved = pg.evaluate("JSON.parse(localStorage.getItem('qqq.prefs'))"); print(saved)
-            assert saved == {"font": 115, "theme": "dark", "pal": "time", "merge": True}, saved
-        step("gear: font and theme, saved in localStorage (only font, theme, pal)", gear)
+            assert saved == {"theme": "dark", "pal": "time", "merge": True}, saved
+        step("gear: theme, saved in localStorage (theme, pal, merge)", gear)
         def reload():
             pg.reload(); pg.wait_for_timeout(2500)
-            assert pg.evaluate("document.documentElement.dataset.theme") == "dark" and pg.evaluate("UIP.font") == 115
+            assert pg.evaluate("document.documentElement.dataset.theme") == "dark" and pg.evaluate("UIP.font") is None
         step("settings survive a reload", reload)
         def reset():
             pg.click("#np-set"); pg.wait_for_timeout(200)
-            pg.select_option("#uip-th", "auto"); pg.click("#uipset [data-f='-1']"); pg.wait_for_timeout(400)
-            assert pg.evaluate("UIP.font") == 100 and pg.evaluate("!document.documentElement.dataset.theme")
+            pg.select_option("#uip-th", "auto"); pg.wait_for_timeout(400)
+            assert pg.evaluate("!document.documentElement.dataset.theme")
         step("back to defaults", reset)
     r.close()
 except Exception as e:

@@ -33,7 +33,7 @@ function start() {
   starting.finally(() => { clearInterval(kldTimer); Q("#kload").hidden = true; }).catch(() => {});
   starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); });
     k.editor.subscribe("selectionChange", () => requestAnimationFrame(showInfo));
-    hideMacro(fr); fitZoom(k, fr); changed(); drawLabels();
+    hideMacro(fr); fitZoom(k, fr); changed(); drawLabels(); frameExtras(fr);
     
     const doc = fr.contentDocument;
     if (doc && doc.body) {
@@ -75,10 +75,11 @@ function hideMacro(fr) {
       'grid-template-areas:"toolbar-top toolbar-top toolbar-top toolbar-top" "toolbar-bottom toolbar-left canvas toolbar-right"!important}' +
       '[class*="App-module_app"] [class*="BottomToolbar-module_root"]{flex-direction:column!important;flex-wrap:nowrap!important;align-self:start;height:auto!important;width:auto!important;padding:8px 0 8px 8px!important;margin:0!important}' +
       '[class*="App-module_app"] [class*="BottomToolbar-module_group"]{flex-direction:column!important;height:auto!important;width:auto!important}' +
-      '[class*="App-module_top"] [data-testid="select-drop-down-button"] { width: 28px !important; max-width: 28px !important; height: 28px !important; overflow: hidden !important; border-radius: 4px; align-self: center; padding: 0 !important; margin: 0 !important; display: flex !important; align-items: center !important; justify-content: flex-start !important; } ' +
-      '[class*="App-module_top"] [data-testid="select-drop-down-button"] svg { width: 16px !important; height: 16px !important; margin: 0 0 0 6px !important; flex-shrink: 0 !important; } ' +
-      '[class*="App-module_top"] [data-testid="select-drop-down-button"] svg:nth-of-type(n+2), [class*="App-module_top"] [data-testid="select-drop-down-button"] svg ~ svg { display: none !important; } ' +
-      '[class*="App-module_top"] [data-testid="hand"], [class*="App-module_top"] [data-testid="erase"], [class*="App-module_top"] [data-testid="text"] { height: 28px !important; width: 28px !important; display: flex; align-items: center; justify-content: center; align-self: center; border-radius: 4px; padding: 0 !important; } ';
+      '[class*="App-module_top"] [data-testid="select-drop-down-button"] { width: 28px !important; min-width: 28px !important; max-width: 28px !important; height: 28px !important; min-height: 28px !important; max-height: 28px !important; overflow: hidden !important; border-radius: 4px; align-self: center; padding: 0 !important; margin: 0 !important; display: block !important; box-sizing: border-box !important; flex-shrink: 0 !important; } ' +
+      '[class*="App-module_top"] [data-testid="select-drop-down-button"] > button { width: 28px !important; min-width: 28px !important; max-width: 28px !important; height: 28px !important; min-height: 28px !important; max-height: 28px !important; padding: 0 !important; margin: 0 !important; border-radius: 4px; display: flex !important; align-items: center !important; justify-content: center !important; box-sizing: border-box !important; border: none !important; flex-shrink: 0 !important; } ' +
+      '[class*="App-module_top"] [data-testid="select-drop-down-button"] > button svg { width: 16px !important; min-width: 16px !important; height: 16px !important; min-height: 16px !important; margin: 0 !important; padding: 0 !important; flex-shrink: 0 !important; display: block !important; position: static !important; } ' +
+      '[class*="App-module_top"] [data-testid="select-drop-down-button"] > svg { display: none !important; width: 0 !important; height: 0 !important; opacity: 0 !important; } ' +
+      '[class*="App-module_top"] [data-testid="hand"], [class*="App-module_top"] [data-testid="erase"], [class*="App-module_top"] [data-testid="text"] { width: 28px !important; min-width: 28px !important; max-width: 28px !important; height: 28px !important; min-height: 28px !important; max-height: 28px !important; display: flex !important; align-items: center !important; justify-content: center !important; align-self: center !important; border-radius: 4px !important; padding: 0 !important; margin: 0 !important; box-sizing: border-box !important; flex-shrink: 0 !important; } ';
       
 
     // Move Hand, Select, Erase, Text to top toolbar right after Cut
@@ -124,6 +125,7 @@ function hideMacro(fr) {
     d.addEventListener("contextmenu", async ev => {
       const st = K && K.editor && K.editor.struct();
       if (!st || st.isBlank()) return;
+      const hl = labelHit(ev); if (hl) { ev.preventDefault(); ev.stopPropagation(); labelMenu(ev, hl, fr); return; }      // right click on the label under a molecule
       ev.preventDefault();
       ev.stopPropagation();
       const sel = K.editor.selection() || {};
@@ -404,7 +406,7 @@ function structures() {
 }
 // reaction arrows: what changes from the structure before the arrow to the one after it (e.g. "+O", "-CH2")
 function arrowDeltas() {
-  if (!K) return [];
+  if (!K || !Q("#lb-a").checked) return [];            // optional, off by default: the students do this calculation themselves
   const comps = structures(), out = [];
   K.editor.struct().rxnArrows.forEach(ar => {
     const [p0, p1] = ar.pos, left = p0.x <= p1.x ? p0 : p1, right = p0.x <= p1.x ? p1 : p0, ym = (p0.y + p1.y) / 2;
@@ -440,7 +442,7 @@ function labelParts(d0) {
   }
   return lines;
 }
-const labelsOn = () => Q("#lb-f").checked || Q("#lb-m").checked;
+const labelsOn = () => Q("#lb-f").checked || Q("#lb-m").checked || Q("#lb-a").checked;
 function drawLabels() {
   if (!K) return;
   const svg = K.editor.render.paper.canvas, doc = svg.ownerDocument, ns = "http://www.w3.org/2000/svg", sc = K.editor.render.options.microModeScale || 40;
@@ -450,8 +452,8 @@ function drawLabels() {
   g.textContent = "";
   if (!labelsOn()) return;
   const text = (x, y, lines, color, size) => lines.forEach((parts, i) => g.appendChild(svgLabel(doc, parts, x, y + i * size * 1.3, size, color)));
-  for (const d of structures()) text(d.cx * sc, d.y * sc + 30, labelParts(d), "#3b3b3b", 13);
-  for (const a of arrowDeltas()) text(a.x * sc, a.y * sc - 12, [a.parts], "#2b5c8a", 12);
+  for (const d of structures()) text(d.cx * sc, d.y * sc + 30, labelParts(d), window.isDark && window.isDark() ? "#e4e7eb" : "#3b3b3b", 13);
+  for (const a of arrowDeltas()) text(a.x * sc, a.y * sc - 12, [a.parts], window.isDark && window.isDark() ? "#7db4e6" : "#2b5c8a", 12);
 }
 // the same labels as Ketcher text objects, only in the copy of the drawing that is exported
 const SUBC = "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089", SUPC = "\u2070\u00b9\u00b2\u00b3\u2074\u2075\u2076\u2077\u2078\u2079";
@@ -473,12 +475,13 @@ function ketWithLabels(ket) {
   for (const a of arrowDeltas()) { const t = plain(a.parts); add([a.parts], a.x - t.length * 0.09, -(a.y - 0.75), 14); }
   return JSON.stringify(j);
 }
-["#lb-f", "#lb-m", "#lb-dec"].forEach(id => Q(id).addEventListener("change", () => {
-  drawLabels(); NB.labF = Q("#lb-f").checked; NB.labM = Q("#lb-m").checked; NB.labDec = +Q("#lb-dec").value; nbSave();
+["#lb-f", "#lb-m", "#lb-dec", "#lb-a"].forEach(id => Q(id).addEventListener("change", () => {
+  drawLabels(); NB.labA = Q("#lb-a").checked; NB.labF = Q("#lb-f").checked; NB.labM = Q("#lb-m").checked; NB.labDec = +Q("#lb-dec").value; nbSave();
 }));
 document.addEventListener("nbloaded", () => {      // older notebooks only have NB.labels (both on)
   Q("#lb-f").checked = NB.labF !== undefined ? NB.labF : NB.labels !== false; Q("#lb-m").checked = NB.labM !== undefined ? NB.labM : NB.labels !== false;
   Q("#lb-dec").value = String(Math.min(5, Math.max(0, +NB.labDec || 0)));
+  Q("#lb-a").checked = NB.labA === true;
   Q("#ex-name").value = NB.drawName || stamp();
   drawLabels();
 });
@@ -667,7 +670,65 @@ document.addEventListener("nbloaded", () => { if (K) { restored = false; restore
 // "Nuova sessione": the drawing and its controls go back to the start (the notebook was already emptied)
 document.addEventListener("nbreset", () => {
   clearTimeout(timer);
-  Q("#lb-f").checked = true; Q("#lb-m").checked = true; Q("#lb-dec").value = "0"; Q("#ex-nobg").checked = false; syncBg();
+  Q("#lb-f").checked = true; Q("#lb-m").checked = true; Q("#lb-a").checked = false; Q("#lb-dec").value = "0"; Q("#ex-nobg").checked = false; syncBg();
   Q("#ex-name").value = stamp(); Q("#ex-smi").value = ""; dnote(""); exwarn(""); usedNames.clear();
   if (K) { try { K.editor.clear(); } catch (_) { /* nothing to clear */ } restored = true; requestAnimationFrame(() => { drawLabels(); showInfo(); }); }
 });
+
+// ------------------------------------------------------------------ label under a molecule: right click = copy the formula or the mass
+// geometry of the labels (same numbers as drawLabels): a box per structure, in the user units of Ketcher's svg
+function labelBoxes() {
+  if (!K || !(Q("#lb-f").checked || Q("#lb-m").checked)) return [];
+  const sc = K.editor.render.options.microModeScale || 40, size = 13;
+  return structures().map(d => {
+    const lines = labelParts(d), w = Math.max(...lines.map(l => textWidth(l, size))), x = d.cx * sc, y = d.y * sc + 30;
+    return { d, x0: x - w / 2 - 6, x1: x + w / 2 + 6, y0: y - size - 4, y1: y + (lines.length - 1) * size * 1.3 + 8 };
+  });
+}
+function labelHit(ev) {
+  try {
+    const svg = K.editor.render.paper.canvas, m = svg.getScreenCTM(); if (!m) return null;
+    const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; const u = pt.matrixTransform(m.inverse());
+    const b = labelBoxes().find(b => u.x >= b.x0 && u.x <= b.x1 && u.y >= b.y0 && u.y <= b.y1);
+    return b ? b.d : null;
+  } catch (_) { return null; }
+}
+// formula as the student can paste it in the Data view: Hill formula, then the charge (C10H14N+, C6H5O2-)
+const formulaText = d => d.formula + (d.q ? (Math.abs(d.q) > 1 ? Math.abs(d.q) : "") + (d.q > 0 ? "+" : "-") : "");
+const massText = d => { const raw = d.q ? (d.mass - d.q * ELECTRON) / Math.abs(d.q) : d.mass, dec = +Q("#lb-dec").value; return dec ? rh(raw, dec).toFixed(dec) : String(roundHalfUp(raw)); };
+function labelMenu(ev, d, fr) {
+  const m = Q("#ctx"); if (!m) return;
+  const fr0 = fr.getBoundingClientRect(), mx = fr0.left + ev.clientX, my = fr0.top + ev.clientY;
+  m.innerHTML = "";
+  const item = (label, text) => { const e = document.createElement("div"); e.textContent = label; e.onclick = () => { navigator.clipboard.writeText(text).catch(() => {}); m.hidden = true; if (window.toast) toast("Copiato"); }; m.appendChild(e); };
+  item(`Copia la formula (${formulaText(d)})`, formulaText(d));
+  item(`Copia la massa (${d.q ? "m/z " : ""}${massText(d)})`, massText(d));
+  m.hidden = false;
+  m.style.left = Math.min(mx, innerWidth - 270) + "px"; m.style.top = Math.max(4, Math.min(my, innerHeight - m.offsetHeight - 8)) + "px";
+}
+// ------------------------------------------------------------------ side cards: hide / show (more room to draw), remembered in this browser
+const SKEY = "qqq.disegno.riquadri";
+function sideApply(hidden) {
+  Q("#v-draw").classList.toggle("noside", hidden);
+  const b = Q("#side-toggle"); b.innerHTML = hidden ? "&#9666; Mostra i riquadri" : "Nascondi i riquadri &#9656;";
+  try { localStorage.setItem(SKEY, hidden ? "0" : "1"); } catch (_) { /* storage not available */ }
+  setTimeout(() => { if (kFit) kFit(); if (K) { try { fitZoom(K, Q("#kframe")); } catch (_) { /* not critical */ } } }, 60);
+}
+Q("#side-toggle").onclick = () => sideApply(!Q("#v-draw").classList.contains("noside"));
+try { if (localStorage.getItem(SKEY) === "0") { Q("#v-draw").classList.add("noside"); Q("#side-toggle").innerHTML = "&#9666; Mostra i riquadri"; } } catch (_) { /* default: visible */ }
+// ------------------------------------------------------------------ trackpad: a two-finger swipe sideways moves the drawing; it must not go back in the page history
+function frameExtras(fr) {
+  const d = fr.contentDocument; if (!d) return;
+  d.documentElement.style.overscrollBehaviorX = "none"; d.body.style.overscrollBehaviorX = "none";
+  d.addEventListener("wheel", e => { if (!e.ctrlKey && Math.abs(e.deltaX) > Math.abs(e.deltaY)) e.preventDefault(); }, { passive: false });
+}
+// ------------------------------------------------------------------ shortcuts card: depends on the device (macOS / Windows and Linux / tablet)
+(() => {
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent), coarse = matchMedia("(pointer:coarse)").matches, mod = mac ? "\u2318" : "Ctrl";
+  const rows = [[`${mod} C / V / X`, "Copia, incolla, taglia la selezione"], [`${mod} Z`, "Annulla"], [mac ? "\u21e7 \u2318 Z" : "Ctrl Y", "Ripeti"], [`${mod} A`, "Seleziona tutto"],
+    [mac ? "\u232b" : "Canc", "Elimina la selezione"], ["Maiusc + clic", "Aggiunge alla selezione"], ["Trascina la selezione", "Sposta atomi o molecole"], ["Esc", "Torna allo strumento di selezione"],
+    ["Tasto destro", "Menu: copia SMILES, centra il disegno; sull'etichetta sotto una molecola: copia formula e massa"]];
+  if (coarse) rows.push(["Due dita", "Sposta la tela; pizzico per lo zoom"], ["Penna", "Disegna e seleziona come il mouse"], ["Tocco lungo", "Apre il menu (come il tasto destro)"]);
+  else rows.push(["Due dita (trackpad)", "Sposta il disegno; pizzico per lo zoom"]);
+  Q("#keys-body").innerHTML = `<table>${rows.map(r => `<tr><td>${EH(r[0])}</td><td>${EH(r[1])}</td></tr>`).join("")}</table>`;
+})();

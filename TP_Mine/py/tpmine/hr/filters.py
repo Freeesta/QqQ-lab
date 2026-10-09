@@ -89,24 +89,31 @@ def formula_feasible(mz: np.ndarray, space: F.FormulaSpace, ppm: float = 3.0) ->
     return space.count(np.asarray(mz, float), ppm) > 0
 
 
-def flat_mask(treated_area: np.ndarray, ratio: float = 3.0, min_present: int = 4) -> np.ndarray:
-    """True where max / min over the treated samples that have the feature is below `ratio` AND the feature is present in at least `min_coverage` of
-    the treated samples: a profile that does not change with the treatment. A product seen in 2-3 samples only, with similar areas, is a transient,
-    not a flat profile (with max/min alone, 4 of the 17 reference products were lost)."""
+def flat_mask(treated_area: np.ndarray, ratio: float = 3.0, min_present: int = 2, transient: tuple = (3, 4)) -> np.ndarray:
+    """True where max / min over the treated samples that have the feature is below `ratio` and the feature is present in at least `min_present` of them
+    (a profile that does not change with the treatment: the reference rule). Exception: a feature present in 3 or 4 CONSECUTIVE treated samples and
+    absent in the others is a transient (formed and consumed), not a flat profile; the same count of samples scattered at random is noise and stays
+    flat. With the groups cut too finely (a wobbling ion split in pieces) the plain rule lost 4 of the 17 reference products; with the groups of
+    `align` as they are now it loses one, a three-sample transient, which the exception keeps (48 candidates more, of 446)."""
     a = np.where(treated_area > 0, treated_area, np.inf)
     mn = a.min(1)
     mx = treated_area.max(1)
+    pres = treated_area > 0
+    n = pres.sum(1)
+    first = np.argmax(pres, 1)
+    last = pres.shape[1] - 1 - np.argmax(pres[:, ::-1], 1)
+    consecutive = (last - first + 1 == n) & (n >= transient[0]) & (n <= transient[1])
     with np.errstate(invalid="ignore", divide="ignore"):
-        return ((mx / mn) < ratio) & ((treated_area > 0).sum(1) >= min_present)
+        return ((mx / mn) < ratio) & (n >= min_present) & ~consecutive
 
 
 def run_filters(al: Alignment, feats: list[Features], times, types=None, parent_ion: dict | None = None, *, fold: float = 5.0, min_treated: int = 2,
-                rt_min: float = 0.7, min_height: float = 2e5, ppm: float = 5.0, rt_tol: float = 0.15, feasible_ppm: float = 3.0, flat_ratio: float = 3.0) -> Funnel:
+                rt_min: float = 0.7, min_height: float = 2e5, ppm: float = 5.0, rt_tol: float = 0.15, feasible_ppm: float = 3.0, flat_ratio: float = 3.0, flat_min_present: int = 2, isf_masses=None, parent_rt: float | None = None) -> Funnel:
     """Steps (the count after each is in `Funnel.steps`):
     1. fold = largest treated area / (largest reference area + eps) > `fold`, in at least `min_treated` treated samples, RT after `rt_min`;
     2. isotopologues (13C, 34S, 18O of a stronger feature with the same apex) removed;
     3. formula feasibility against the parent (if a parent ion is given): a formula within 3 ppm that a product can have;
-    4. flat profiles (max / min over the treated < `flat_ratio`) removed."""
+    4. flat profiles (max / min over the treated < `flat_ratio`) removed, except the masses of the parent's fragments next to the parent (`isf_masses`, `parent_rt`)."""
     ref_c, tr_c = split_columns(times, types)
     if len(tr_c) == 0:
         raise ValueError("servono campioni trattati (tempo > 0) per cercare ciò che compare con il trattamento")
@@ -128,7 +135,10 @@ def run_filters(al: Alignment, feats: list[Features], times, types=None, parent_
         space, _ = tp_space(parent_ion)
         idx = idx[formula_feasible(al.mz[idx], space, feasible_ppm)]
         steps.append({"name": "formula", "text": f"con una formula possibile derivata dal progenitore ({feasible_ppm:g} ppm)", "n": int(len(idx))})
-    idx = idx[~flat_mask(al.area[idx][:, tr_c], flat_ratio)]
+    flat = flat_mask(al.area[idx][:, tr_c], flat_ratio, flat_min_present)
+    if isf_masses is not None and len(isf_masses) and parent_rt is not None:
+        flat &= ~isf_coincident(al, idx, isf_masses, parent_rt)       # a mass of the parent's fragments beside the parent: a product seen in two samples is not told from noise, it is flagged
+    idx = idx[~flat]
     steps.append({"name": "piatti", "text": f"senza profili piatti (massimo/minimo < {flat_ratio:g})", "n": int(len(idx))})
     return Funnel(idx=idx, steps=steps, fold=fl, reference=ref, n_treated=ntr, isotopologue=isomask)
 

@@ -28,16 +28,15 @@ try:
         def gear():
             pg.click("#np-set"); pg.wait_for_timeout(200)
             t = pg.inner_text("#uipset"); print(repr(t))
-            assert pg.locator("#uipset .row").count() == 8, pg.locator("#uipset .row").count()      # text size, theme, colours, the merge of the centroids (1.3) and the libraries (part D) and the three high-resolution rows (Masse)
-            assert "Dimensione testo" in t and "Tema" in t and "Colori dei grafici" in t
+            assert pg.locator("#uipset .row").count() == 3, pg.locator("#uipset .row").count()      # theme, colours and the merge of the centroids (the text size is the browser's: Ctrl/Cmd + and −); the libraries and the high-resolution rows only appear with MS2 / high-resolution files open
+            assert "Dimensione testo" not in t and "Tema" in t and "Colori dei grafici" in t
             for bad in ("Dimensione del testo dell", "Vale per menu", "tutorial", "Installare", "Numera", "suggerimenti", "Mostra"):
                 assert bad.lower() not in t.lower(), bad
             assert pg.locator("#uipset input[type=checkbox]").count() == 1 and pg.locator("#uip-merge").count() == 1      # only the merge of the centroids
             assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["Per tempo (predefinito)", "Accessibili", "Alto contrasto", "Arcobaleno"]
             assert pg.input_value("#uip-pal") == "time"
-            pg.click("#uipset [data-f='1']"); pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(400)
-            assert pg.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--z').trim()") == "1.15"
-            pg.select_option("#uip-th", "auto"); pg.click("#uipset [data-f='-1']"); pg.wait_for_timeout(300)
+            pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(400)
+            pg.select_option("#uip-th", "auto"); pg.wait_for_timeout(300)
             assert pg.evaluate("UIP.tips") is None and pg.evaluate("UIP.num") is None and pg.evaluate("typeof TUT") == "undefined" and pg.evaluate("typeof tipOf") == "undefined"
             assert pg.evaluate("document.querySelectorAll('.pnum:not([hidden])').length") >= 1, "panel numbers stay on"
             assert pg.evaluate("document.querySelectorAll('[title]').length") > 40, "tooltips stay on"
@@ -94,7 +93,7 @@ try:
         step("4 palettes: colours change at once, hc >= 4.5:1 and +1 px, cb has line styles, order by time kept", palettes)
         def persists():
             pg.select_option("#uip-pal", "cb"); pg.wait_for_timeout(300)
-            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.prefs'))") == {"font": 100, "theme": "auto", "pal": "cb", "merge": True}
+            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.prefs'))") == {"theme": "auto", "pal": "cb", "merge": True}
             pg.reload(); pg.wait_for_timeout(3500)
             assert pg.evaluate("UIP.pal") == "cb"
             c = [hexof(x[1]) for x in pg.evaluate(COLORS)]; assert c and c[0] == "#00204d", c       # cividis start: colours recomputed with the saved palette
@@ -127,7 +126,7 @@ try:
             pg.click("#newrun"); pg.wait_for_timeout(500); pg.click("#askok"); pg.wait_for_timeout(3000)
             print("after:", pg.evaluate("[E.files.length, localStorage.getItem('qqq.extra'), localStorage.getItem('qqq.prefs')]"))
             assert pg.evaluate("E.files.length") == 0 and pg.evaluate("localStorage.getItem('qqq.extra')") is None and pg.evaluate("localStorage.getItem('qqq.prefs')") is None
-            assert pg.evaluate("UIP.pal") == "time" and pg.evaluate("document.documentElement.dataset.pal") == "time" and pg.evaluate("UIP.font") == 100
+            assert pg.evaluate("UIP.pal") == "time" and pg.evaluate("document.documentElement.dataset.pal") == "time" and pg.evaluate("UIP.font") is None
             assert pg.evaluate("(NB.session||null)") is None and pg.evaluate("Object.keys(NB).filter(k=>k!=='ui'&&k!=='session').length") == 0
             st = pg.evaluate("fetch('api/notebook').then(r=>r.json())"); assert not st.get("session"), st
         step("Nuova sessione: warning text, cancel changes nothing, confirm clears files, notebook, preferences", new_session)

@@ -54,6 +54,7 @@
     else if (init.body != null) body = typeof init.body === "string" ? new TextEncoder().encode(init.body) : new Uint8Array(await new Response(init.body).arrayBuffer());
     const id = ++seq;
     const r = await new Promise(res => { pending.set(id, res); worker.postMessage({ id, method, url, body, blob }, body ? [body.buffer] : []); });
+    if (r.buf) return new Response(r.buf, { status: r.status, headers: { "Content-Type": r.ctype || "application/octet-stream", "X-Py-Ms": String(r.ms || 0) } });
     return new Response(r.text, { status: r.status, headers: { "Content-Type": "application/json", "X-Py-Ms": String(r.ms || 0) } });   // X-Py-Ms: time in Python, for the ?perf meter
   };
   window.EventSource = class { constructor() {} close() {} };                  // "the tab is open" signal: only for the local program

@@ -11,21 +11,24 @@ const IC_PARAM = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" st
 const IC_LINK = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.8 9.2a2.6 2.6 0 0 0 3.7 0l2.4-2.4a2.6 2.6 0 0 0-3.7-3.7l-.7.7"/><path d="M9.2 6.8a2.6 2.6 0 0 0-3.7 0L3.1 9.2a2.6 2.6 0 0 0 3.7 3.7l.7-.7"/></svg>';
 
 // y axis in % of the highest peak: the default is % for the MS2 spectra (the relative intensities of the fragments are what is compared), cps for Full Scan
-const specRel = p => p.rel ?? p.level === 2;
+const specRel = p => p.rel ?? false;
 const SPEC_DEF = { thr: 5, nlab: 10, dec: 1 };
 const sgn1 = (v, d = 1) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(d);
 
 // ---------------------------------------------------------------- ruler: p.meas = { ref: m/z | null, list: [{a, b}] }
+// a measure belongs to one view of one spectrum: a new zoom of the m/z axis, another scan or another file/level cancels it
+const measKey = p => JSON.stringify([p.zoom, p.r0, p.r1, p.k, p.level, p.si, p.prec, p.all]);
 function measClick(p, m) {
-  p.meas = p.meas || { ref: null, list: [] };
+  p.meas = p.meas || { ref: null, list: [], key: measKey(p) };
   if (p.meas.ref == null) p.meas.ref = m;
   else if (Math.abs(m - p.meas.ref) > (p._a && p._a.hrp ? 0.001 : 0.04)) p.meas.list.push({ a: p.meas.ref, b: m });          // one more measure from the same reference
   draw(p); uiSave();
 }
-function measSet(p, m) { p.meas = p.meas || { ref: null, list: [] }; p.meas.ref = m; draw(p); uiSave(); }
+function measSet(p, m) { p.meas = p.meas || { ref: null, list: [], key: measKey(p) }; p.meas.ref = m; draw(p); uiSave(); }
 function measClear(p) { p.meas = null; p.rul = false; const b = p.el.querySelector('[data-a="rul"]'); if (b) b.classList.remove("on"); draw(p); uiSave(); }
 function drawMeas(p, g, X, Y, W) {
   const m = p.meas; if (!m || p._exp && false) return;
+  if (m.key == null) m.key = measKey(p); else if (m.key !== measKey(p)) { p.meas = null; return; }       // zoom or scan changed: the measure is cancelled
   const ac = css("--accent"), x0 = M.l, x1 = W - M.r;
   g.save(); g.beginPath(); g.rect(x0, M.t - 1, x1 - x0, 400); g.clip();
   g.strokeStyle = g.fillStyle = ac; g.lineWidth = 1; g.font = fpx(12); g.textAlign = "center";
@@ -42,8 +45,11 @@ function drawMeas(p, g, X, Y, W) {
   });
   g.restore();
 }
-function specClick(p, px) {                       // a click on the spectrum (no drag): the ruler picks the nearest peak
+function specClick(p, px, py) {                  // a click on the spectrum (no drag): the ruler picks the nearest visible label, else the nearest peak
   if (!(p.rul || (p.meas && p.meas.ref != null)) || !p._a || !p._a.snap) return;
+  let lb = null, bd = 34;                          // the m/z labels are the targets (start and end alike): the nearest one within 34 px, whatever the height of the click
+  (p._a.lbls || []).forEach(l => { if (l.m == null) return; const d = Math.abs(l.x + l.w / 2 - px); if (d < bd) { bd = d; lb = l; } });
+  if (lb) { measClick(p, lb.m); return; }
   const s = p._a.snap(px); if (s) measClick(p, s.m);
 }
 function measMenu(p, m) {                          // entries of the right-click menu of the spectrum
@@ -58,8 +64,7 @@ function specParams(p, btn) {
   const old = p.el.querySelector(".sp-pop"); if (old) { old.remove(); return; }
   const pop = document.createElement("div"); pop.className = "sp-pop";
   const cur = { rel: specRel(p), thr: p.thr ?? SPEC_DEF.thr, nlab: p.nlab ?? SPEC_DEF.nlab, dec: p.dec ?? (p._a ? p._a.dec : SPEC_DEF.dec) };
-  pop.innerHTML = `<label>Asse y <select data-s="rel"><option value="0" ${cur.rel ? "" : "selected"}>assoluto (cps)</option><option value="1" ${cur.rel ? "selected" : ""}>% del picco più alto</option></select></label>
-    <label title="Si etichettano solo i picchi sopra questa percentuale del picco più alto; gli altri restano disegnati">Etichette: oltre <input data-s="thr" type="number" min="0" max="100" step="1" value="${cur.thr}"> %</label>
+  pop.innerHTML = `<label title="Si etichettano solo i picchi sopra questa percentuale del picco più alto; gli altri restano disegnati">Etichette: oltre <input data-s="thr" type="number" min="0" max="100" step="1" value="${cur.thr}"> %</label>
     <label title="Numero massimo di etichette m/z">al massimo <input data-s="nlab" type="number" min="1" max="60" step="1" value="${cur.nlab}"></label>
     <label>Decimali di <i>m/z</i> <select data-s="dec">${(p._a && p._a.hrp ? [0, 1, 2, 3, 4, 5] : [0, 1, 2]).map(n => `<option ${cur.dec === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>
     ${(p._a && p._a.data || []).some(x => x.d.pmz) ? `<label title="File in profilo: la linea è lo spettro com'è registrato; i bastoncini sono le cime, una per massa nominale (grafico pulito per la relazione). Le etichette e la tabella usano sempre le cime.">Spettro <select data-s="sticks"><option value="0" ${p.sticks ? "" : "selected"}>Profilo (linea)</option><option value="1" ${p.sticks ? "selected" : ""}>Bastoncini (un picco per massa nominale)</option></select></label>` : ""}
@@ -69,10 +74,9 @@ function specParams(p, btn) {
   const apply = () => { draw(p); uiSave(); };
   pop.querySelectorAll("[data-s]").forEach(x => {
     const k = x.dataset.s;
-    if (k === "reset") x.onclick = () => { p.rel = null; p.sticks = false; p.thr = SPEC_DEF.thr; p.nlab = SPEC_DEF.nlab; p.dec = null; pop.remove(); specParams(p, btn); apply(); };
+    if (k === "reset") x.onclick = () => { p.sticks = false; p.thr = SPEC_DEF.thr; p.nlab = SPEC_DEF.nlab; p.dec = null; pop.remove(); specParams(p, btn); apply(); };
     else x.onchange = () => {
-      if (k === "rel") p.rel = x.value === "1";
-      else if (k === "sticks") p.sticks = x.value === "1";
+      if (k === "sticks") p.sticks = x.value === "1";
       else p[k] = Math.max(k === "nlab" ? 1 : 0, Math.min(k === "thr" ? 100 : k === "nlab" ? 60 : 5, Math.round(+x.value || 0)));
       apply();
     };

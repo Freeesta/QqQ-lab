@@ -1,4 +1,4 @@
-"""The example files published with the site: one button (inside box 1, under the drop zone) loads the five example Full Scan files, with neutral names: the unknown pollutant is never named (t0, t5, t10, t15, t30) and they open."""
+"""The example files published with the site: one button (inside box 1, under the drop zone) offers a CHOICE (Full Scan / MS2 / MRM); only the chosen set is downloaded, on the click, with neutral names (the unknown pollutant is never named) and each set opens."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 r = Run(port=8883, wd="/tmp/wd83")
@@ -6,7 +6,10 @@ steps = []
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.click("#demobtn"); pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===5", timeout=30000); pg.wait_for_timeout(500)
+        reqs = []; pg.on("request", lambda q: reqs.append(q.url) if "/esempi/" in q.url else None)
+        pg.wait_for_timeout(1500); assert not reqs, ("nothing is downloaded before the click", reqs)
+        pg.click("#demobtn"); pg.wait_for_timeout(300); assert pg.is_visible("#demochoice") and pg.locator("#demochoice [data-demo]").count() == 3 and not reqs, "the button only opens the choice"
+        pg.click("#demochoice [data-demo=full]"); pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===5", timeout=30000); pg.wait_for_timeout(500)
         t = pg.inner_text("#flist"); assert t.count("Full Scan") >= 1 and "Esempio_FullScan_t30" in t, t
         tm = pg.evaluate("[...document.querySelectorAll('#flist [data-k=time]')].map(x=>+x.value)"); assert sorted(tm) == [0, 5, 10, 15, 30], tm
         assert pg.locator("#demo a").count() == 0, "no download links any more"
@@ -15,7 +18,23 @@ try:
         pg.click("text=Carica dati"); ready(pg)
         assert pg.evaluate("tabFiles('full').length") == 5 and pg.evaluate("E.panels.some(p=>p.type==='spec'&&p._a)")
         assert "flufenacet" not in pg.inner_text("body").lower(), "the compound is never named after the files are open"
-        steps.append(("demo button loads 5 files with times 0/5/10/15/30, no links, button in box 1, no compound name, data open", "ok"))
+        assert all("FullScan" in u for u in reqs), ("only the Full Scan set was downloaded", reqs)
+        steps.append(("choice Full Scan: 5 files with times 0/5/10/15/30, only that set downloaded, no links, button in box 1, no compound name, data open", "ok"))
+        # MS2: two files, times 15 and 60, the product-ion type
+        pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500); reqs.clear()
+        pg.click("#demobtn"); pg.click("#demochoice [data-demo=ms2]"); pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length===2", timeout=30000); pg.wait_for_timeout(500)
+        tm = pg.evaluate("[...document.querySelectorAll('#flist [data-k=time]')].map(x=>+x.value)"); assert sorted(tm) == [15, 60], tm
+        t = pg.inner_text("#flist"); assert "MS2" in t and "Esempio_MS2_t15" in t, t
+        assert all("MS2" in u for u in reqs), reqs
+        pg.click("text=Carica dati"); ready(pg); assert pg.evaluate("tabFiles('ms2').length") == 2 and "flufenacet" not in pg.inner_text("body").lower()
+        steps.append(("choice MS2: 2 files with times 15/60, MS2 tab, only that set downloaded", "ok"))
+        # MRM: four standards with the concentration read from the name
+        pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500); reqs.clear()
+        pg.click("#demobtn"); pg.click("#demochoice [data-demo=mrm]"); pg.wait_for_function("document.querySelectorAll('#flist [data-k=conc]').length===4", timeout=30000); pg.wait_for_timeout(500)
+        cc = pg.evaluate("[...document.querySelectorAll('#flist [data-k=conc]')].map(x=>+x.value)"); assert sorted(cc) == [0.6, 2.4, 7.2, 18], cc
+        assert all("MRM" in u for u in reqs), reqs
+        pg.click("text=Carica dati"); ready(pg); assert pg.evaluate("tabFiles('mrm').length") == 4 and "flufenacet" not in pg.inner_text("body").lower()
+        steps.append(("choice MRM: 4 standards with concentrations 0.6/2.4/7.2/18, MRM tab, only that set downloaded", "ok"))
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

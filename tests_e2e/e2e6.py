@@ -33,7 +33,7 @@ try:
         step("only the general (i) is left: it opens the info box; the guide is the first Teoria chapter; panel titles carry the short explanation", helpq)
         def xlsxexcel():
             pg.click("#dtabs [data-t=mrm]"); ready(pg)
-            with pg.expect_download() as d: pg.locator(".pnl.mrm [data-a=xlsx]").first.click()
+            with pg.expect_download() as d: dlmenu(pg, ".pnl.mrm", "xlsx")
             f = d.value; assert f.suggested_filename.endswith(".xlsx"), f.suggested_filename
             rows = xlsx_rows(f.path()); head = [c[1] for c in rows[0] if c]
             print("XLSX:", f.suggested_filename, head[:2], rows[1][:2])
@@ -50,7 +50,7 @@ try:
             pg.click("#funfold"); pg.wait_for_timeout(600); assert pg.evaluate("E.panels[0].w") == w0 and pg.is_visible("#dfiles")
         step("file list collapses and the panels widen", fold)
         def png():
-            with pg.expect_download() as d: pg.locator(".pnl.chrom [data-a=png]").first.click()
+            with pg.expect_download() as d: dlmenu(pg, ".pnl.chrom", "png")
             path = "/tmp/wd6_chrom.png"; d.value.save_as(path)
             px = pg.evaluate("""async p=>{const i=new Image();i.src=p;await i.decode();const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const g=c.getContext('2d');g.drawImage(i,0,0);return [...g.getImageData(2,2,1,1).data]}""",
                              "data:image/png;base64," + __import__("base64").b64encode(open(path, "rb").read()).decode())
@@ -184,7 +184,26 @@ try:
             t = pg.evaluate(LBL); assert " ".join(t) == "C8H10NO2+ m/z 152", t
             pg.screenshot(path=SH + "67_ion_choice.png")
         step("a drawn charge: C8H10NO2+ m/z 152", ion_choice)
+        def arrow_off():
+            assert not pg.is_checked("#lb-a"), "the arrow labels are off by default"
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1>>CC(=O)Nc1ccc(O)c(O)c1')"); pg.wait_for_timeout(1500)
+            t = pg.evaluate(LBL); assert not any("\u0394m" in x for x in t), t
+        step("arrow labels (neutral loss, Δm) are off by default", arrow_off)
+        def labelmenu():
+            pg.evaluate(KQ + ".setMolecule('CC(=O)[NH2+]c1ccc(O)cc1')"); pg.wait_for_timeout(1200)
+            xy = pg.evaluate("(()=>{const fr=document.getElementById('kframe'),r=fr.getBoundingClientRect(),t=fr.contentWindow.document.querySelector('#qqq-labels text').getBoundingClientRect();return [r.left+t.x+t.width/2,r.top+t.y+t.height/2]})()")
+            pg.mouse.click(xy[0], xy[1], button="right"); pg.wait_for_timeout(400)
+            t = pg.inner_text("#ctx"); print(t)
+            assert "Copia la formula (C8H10NO2+)" in t and "Copia la massa (m/z 152)" in t, t
+            pg.keyboard.press("Escape")
+        step("right click on the label under a molecule: copy formula and mass", labelmenu)
+        def side():
+            assert pg.is_visible("#v-draw aside")
+            pg.click("#side-toggle"); pg.wait_for_timeout(300); assert not pg.is_visible("#v-draw aside")
+            pg.click("#side-toggle"); pg.wait_for_timeout(300); assert pg.is_visible("#v-draw aside")
+        step("the side cards can be hidden and shown again", side)
         def nh3():
+            pg.check("#lb-a")
             pg.evaluate(KQ + ".setMolecule('Oc1ccc([NH3+])cc1>>Oc1cc[c+]cc1')"); pg.wait_for_timeout(1500)
             t = pg.evaluate(LBL); print("NH3:", t)
             assert any(x.startswith("\u2212NH3") and x.endswith("\u0394m \u221217") for x in t), t
@@ -217,6 +236,7 @@ try:
             assert b1 > b0 * 1.6, (b0, b1); pg.evaluate(KQ + ".editor.zoom(1)")
         step("label follows the zoom", zoom)
         def off():
+            pg.uncheck("#lb-a"); pg.wait_for_timeout(300)           # (the arrow labels are optional and were switched on by the previous steps)
             n0 = len(pg.evaluate(LBL)); assert n0 >= 1
             pg.uncheck("#lb-f"); pg.uncheck("#lb-m"); pg.wait_for_timeout(300); assert pg.evaluate(LBL) == []
             pg.check("#lb-f"); pg.check("#lb-m"); pg.wait_for_timeout(300); assert len(pg.evaluate(LBL)) == n0

@@ -30,11 +30,19 @@ def get(app, path, **q):
 
 
 @pytest.fixture(scope="module")
-def app(d):
-    a = App(d / "wd")
-    for n in ("e", "f", "b", "q", "ida"):
-        shutil.copy(d / f"{n}.mzML", d / "wd" / f"{n}.mzML")
-    a.open_session({"samples": [{"file": f"{n}.mzML"} for n in ("e", "f", "b", "q", "ida")]})
+def app_hr(d):
+    a = App(d / "wd_hr")
+    for n in ("e", "f", "b"):
+        shutil.copy(d / f"{n}.mzML", d / "wd_hr" / f"{n}.mzML")
+    a.open_session({"samples": [{"file": f"{n}.mzML"} for n in ("e", "f", "b")]})
+    return a
+
+@pytest.fixture(scope="module")
+def app_lr(d):
+    a = App(d / "wd_lr")
+    for n in ("q", "ida"):
+        shutil.copy(d / f"{n}.mzML", d / "wd_lr" / f"{n}.mzML")
+    a.open_session({"samples": [{"file": f"{n}.mzML"} for n in ("q", "ida")]})
     return a
 
 
@@ -99,17 +107,18 @@ def test_old_files_are_unchanged(d):
     assert s2 and all(ida.scans[s.parent].level == 1 for s in s2) and all(abs(s.iso[1] - s.iso[0] - 1.0) < 1e-9 for s in s2)
 
 
-def test_item_info_hr_block(app):
-    inf = {i["file"]: i for i in app.session.info()}
+def test_item_info_hr_block(app_hr, app_lr):
+    inf = {i["file"]: i for i in app_hr.session.info()}
+    inf.update({i["file"]: i for i in app_lr.session.info()})
     e = inf["e.mzML#MS2"]
     assert e["dda"] and e["nce"] and e["res1"] == 45000 and e["res2"] == 15000 and e["prof2"]["dec"] == 4
     assert not inf["q.mzML"]["dda"] and inf["ida.mzML#MS2"]["dda"]                          # an IDA file of the QTRAP is also DDA
     assert len(e["ms2_events"]) == e["ms2"]                                                  # no cap
 
 
-def test_api_dda(app):
-    k = [i for i, it in enumerate(app.session.items) if it.file == "e.mzML#MS2"][0]
-    code, j = get(app, "/api/dda", k=k)
+def test_api_dda(app_hr):
+    k = [i for i, it in enumerate(app_hr.session.items) if it.file == "e.mzML#MS2"][0]
+    code, j = get(app_hr, "/api/dda", k=k)
     assert code == 200 and len(j["sid"]) == len(j["rt"]) == len(j["prec"]) == len(j["parent"]) == len(j["lo"]) == len(j["act"]) == 142
     assert j["nce"] and set(j["act"]) == {"HCD"} and all(p is not None for p in j["parent"])
     assert len(j["ms1"]["sid"]) == 650 and j["ms1"]["sid"][0] == 0
@@ -117,59 +126,84 @@ def test_api_dda(app):
     assert all(m == j["prt"][i] for i, m in enumerate(j["prt"])) and all(j["prt"][i] <= j["rt"][i] for i in range(len(j["rt"])))
 
 
-def test_api_scan_is_the_scan_as_stored(app, d):
-    k = [i for i, it in enumerate(app.session.items) if it.file == "e.mzML#MS2"][0]
-    j = get(app, "/api/dda", k=k)[1]
+def test_api_scan_is_the_scan_as_stored(app_hr, d):
+    k = [i for i, it in enumerate(app_hr.session.items) if it.file == "e.mzML#MS2"][0]
+    j = get(app_hr, "/api/dda", k=k)[1]
     sid = j["sid"][3]
-    code, s = get(app, "/api/scan", k=k, sid=sid)
+    code, s = get(app_hr, "/api/scan", k=k, sid=sid)
     r = Run(d / "e.mzML")
     mz, y = r.read(sid)
     assert code == 200 and len(s["mz"]) == len(mz) and np.allclose(s["mz"], mz, atol=1e-5) and s["level"] == 2
     assert s["nce"] and s["res"] == 15000 and s["an"] == "FTMS" and s["parent"] == j["parent"][3] and "hcd30.00" in s["filter"] and s["act"] == "HCD"
-    assert get(app, "/api/scan", k=k, sid=999999)[0] == 400
+    assert get(app_hr, "/api/scan", k=k, sid=999999)[0] == 400
 
 
-def test_api_scan_keeps_close_centroids_apart(app):
-    k = [i for i, it in enumerate(app.session.items) if it.file == "e.mzML#MS1"][0]
-    j = get(app, "/api/dda", k=k)[1]
+def test_api_scan_keeps_close_centroids_apart(app_hr):
+    k = [i for i, it in enumerate(app_hr.session.items) if it.file == "e.mzML#MS1"][0]
+    j = get(app_hr, "/api/dda", k=k)[1]
     # the survey scan at RT 16.0 holds 412.1000 and 412.1364 as two peaks (they are 0.0364 Da apart: no merging into bins of 0.1 Da)
     sid = min(j["ms1"]["sid"], key=lambda i: abs(j["ms1"]["rt"][j["ms1"]["sid"].index(i)] - 16.0))
-    s = get(app, "/api/scan", k=k, sid=sid)[1]
+    s = get(app_hr, "/api/scan", k=k, sid=sid)[1]
     mz = np.array(s["mz"])
     assert (abs(mz - 412.1000) < 0.002).any() and (abs(mz - 412.1364) < 0.002).any()
 
 
-def test_api_scanavg(app):
-    k = [i for i, it in enumerate(app.session.items) if it.file == "e.mzML#MS1"][0]
-    code, a = get(app, "/api/scanavg", k=k, sids="0,1,2")
+def test_api_scanavg(app_hr):
+    k = [i for i, it in enumerate(app_hr.session.items) if it.file == "e.mzML#MS1"][0]
+    code, a = get(app_hr, "/api/scanavg", k=k, sids="0,1,2")
     assert code == 200 and a["n"] == 3 and a["level"] == 1 and len(a["mz"]) == len(a["y"]) > 100
-    tot = sum(sum(get(app, "/api/scan", k=k, sid=i)[1]["y"]) for i in (0, 1, 2)) / 3
+    tot = sum(sum(get(app_hr, "/api/scan", k=k, sid=i)[1]["y"]) for i in (0, 1, 2)) / 3
     assert abs(sum(a["y"]) - tot) < 1e-3 * tot + 5                                          # mean per scan
-    assert get(app, "/api/scanavg", k=k, sids="")[0] == 400
+    assert get(app_hr, "/api/scanavg", k=k, sids="")[0] == 400
 
 
-def test_sid_in_spectrum_and_spectra(app):
-    k = [i for i, it in enumerate(app.session.items) if it.file == "e.mzML#MS1"][0]
-    j = get(app, "/api/dda", k=k)[1]
+def test_sid_in_spectrum_and_spectra(app_hr):
+    k = [i for i, it in enumerate(app_hr.session.items) if it.file == "e.mzML#MS1"][0]
+    j = get(app_hr, "/api/dda", k=k)[1]
     rt = j["ms1"]["rt"][5]
-    code, s = get(app, "/api/spectrum", k=k, rt0=rt - 1e-4, rt1=rt + 1e-4, level=1)
+    code, s = get(app_hr, "/api/spectrum", k=k, rt0=rt - 1e-4, rt1=rt + 1e-4, level=1)
     assert code == 200 and s["scans"] == 1 and s["sid"] == j["ms1"]["sid"][5]
-    code, many = get(app, "/api/spectra", k=k, i0=2, i1=4, level=1)
+    code, many = get(app_hr, "/api/spectra", k=k, i0=2, i1=4, level=1)
     assert [x["sid"] for x in many["scans"]] == j["ms1"]["sid"][2:5]
-    code, s = get(app, "/api/spectrum", k=k, rt0=rt - 0.5, rt1=rt + 0.5, level=1)
+    code, s = get(app_hr, "/api/spectrum", k=k, rt0=rt - 0.5, rt1=rt + 0.5, level=1)
     assert "sid" not in s
 
 
-def test_method_has_the_scan_parameters_only_for_high_resolution(app):
-    ke = [i for i, it in enumerate(app.session.items) if it.file == "e.mzML#MS1"][0]
-    kq = [i for i, it in enumerate(app.session.items) if it.file == "q.mzML"][0]
-    m = get(app, "/api/method", k=ke)[1]["scan_params"]
+def test_method_has_the_scan_parameters_only_for_high_resolution(app_hr, app_lr):
+    ke = [i for i, it in enumerate(app_hr.session.items) if it.file == "e.mzML#MS1"][0]
+    kq = [i for i, it in enumerate(app_lr.session.items) if it.file == "q.mzML"][0]
+    m = get(app_hr, "/api/method", k=ke)[1]["scan_params"]
     assert m["ms1"]["res"] == 45000 and m["ms1"]["window"] == [50.0, 900.0] and m["ms1"]["an"] == "FTMS" and m["ms1"]["inject"] is None
     assert m["ms2"]["act"] == ["HCD"] and m["ms2"]["nce"] is True and m["ms2"]["ce"] == [30.0] and m["ms2"]["iso"] == [0.75] and m["ms2"]["res"] == 15000
     assert m["instrument"] == "Orbitrap Exploris 120" and 0.1 < m["ms2"]["per_cycle"] < 1
-    assert "scan_params" not in get(app, "/api/method", k=kq)[1]
+    assert "scan_params" not in get(app_lr, "/api/method", k=kq)[1]
 
 
-def test_formula_has_five_decimals(app):
-    code, j = get(app, "/api/formula", f="C14H13F4N3O2S", adduct="[M+H]+")
+def test_formula_has_five_decimals(app_hr):
+    code, j = get(app_hr, "/api/formula", f="C14H13F4N3O2S", adduct="[M+H]+")
     assert code == 200 and j["mz"] == round(j["mz5"], 4) and len(str(j["mz5"]).split(".")[1]) == 5
+
+def test_nearest_scan_gets_the_closest_scan_in_time(app_hr):
+    k = [i for i, it in enumerate(app_hr.session.items) if it.file == "e.mzML#MS2"][0]
+    # In 'e.mzML', MS2 scans are DDA. Let's find one.
+    code, j = get(app_hr, "/api/dda", k=k)
+    rts = j["rt"]
+    rt0 = rts[0]
+    rt1 = rts[1]
+    mid = (rt0 + rt1) / 2
+    # test closer to rt0
+    code, r = get(app_hr, "/api/nearest_scan", k=k, rt=mid - 0.001, level=2)
+    assert r["rt"] == rt0
+    # test closer to rt1
+    code, r = get(app_hr, "/api/nearest_scan", k=k, rt=mid + 0.001, level=2)
+    assert r["rt"] == rt1
+
+
+def test_precursor_is_the_centre_of_the_isolation_window(app_hr):
+    k = [i for i, it in enumerate(app_hr.session.items) if it.file == "e.mzML#MS2"][0]
+    code, j = get(app_hr, "/api/dda", k=k)
+    sc = app_hr.session.items[k].run.scans
+    sid = next(s.index for s in sc if s.level == 2 and s.iso)
+    code, r = get(app_hr, "/api/scan", k=k, sid=sid)
+    s = sc[sid]
+    assert code == 200 and abs(r["prec"] - sum(s.iso) / 2) < 1e-3

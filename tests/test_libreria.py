@@ -172,3 +172,27 @@ def test_archive_index_round_trip():
       const u=L.unpackIndex(L.packIndex(idx,9));
       console.log(JSON.stringify({n:u.n,tp:u.totalPeaks,prec:Array.from(u.prec),ord:Array.from(u.ord),pol:Array.from(u.pol),off:Array.from(u.off)}));""")
     assert r == {"n": 3, "tp": 9, "prec": [100.25, 200.75, 300.5], "ord": [1, 2, 0], "pol": [1, -1, 0], "off": [0, 3, 5, 9]}
+
+
+def test_modified_cosine_matches_at_shift_zero_and_at_the_precursor_difference():
+    out = run("""
+const lib={prec:300.1,mz:Float32Array.from([60.5,100.1,150.2,200.3,250.4]),it:Float32Array.from([100,400,900,300,200])};
+const q  ={prec:316.1,mz:Float32Array.from([60.5,100.1,166.2,216.3,266.4]),it:Float32Array.from([100,400,900,300,200])};   // +15.9949-ish: the last three peaks carry the modification
+const r=L.modCosine(q,lib,0.01);
+const plain=L.score({mz:q.mz,it:q.it},{mz:lib.mz,it:lib.it},0.01);
+console.log(JSON.stringify({cos:r.cos,matched:r.matched,shifted:r.shifted,delta:r.delta,plain:plain.cos}));""")
+    assert out["matched"] == 5 and out["shifted"] == 3 and out["cos"] > 0.99 and out["plain"] < 0.5 and abs(out["delta"] - 16.0) < 1e-6
+
+
+def test_analog_search_keeps_modified_neighbours_and_drops_unrelated_ones():
+    out = run("""
+const mk=(prec,pk)=>({prec,mz:Float32Array.from(pk.map(p=>p[0])),it:Float32Array.from(pk.map(p=>p[1]))});
+const specs=[mk(300.1,[[60.5,100],[100.1,400],[150.2,900],[200.3,300],[250.4,200]]),            // 0: the analogue (query = this + 16)
+             mk(310.0,[[55.0,100],[95.0,300],[120.0,800],[180.0,300],[222.0,100]]),             // 1: unrelated
+             mk(316.1,[[60.5,100],[100.1,400],[166.2,900],[216.3,300],[266.4,200]]),            // 2: the identity (same precursor): not an analogue
+             mk(900.0,[[60.5,100],[100.1,400],[150.2,900],[200.3,300],[250.4,200]])];           // 3: far away
+const idx=L.buildIndex(specs.map(s=>s.prec),[1,1,1,1],[0,5,10,15,20]);
+const q=mk(316.1,[[60.5,100],[100.1,400],[166.2,900],[216.3,300],[266.4,200]]);
+const r=L.analogIndex(idx,q,{maxDelta:200,frag:0.01,pol:1},pos=>specs[pos],null);
+console.log(JSON.stringify(r.map(x=>({pos:x.pos,mcos:x.mcos,delta:x.delta,shifted:x.shifted}))));""")
+    assert [r["pos"] for r in out] == [0] and out[0]["mcos"] > 0.99 and abs(out[0]["delta"] - 16.0) < 1e-6 and out[0]["shifted"] == 3

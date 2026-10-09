@@ -73,7 +73,7 @@ onmessage = async ev => {
   const { id, method, url, body, blob } = ev.data;
   await started;
   if (!handle) return postMessage({ id, status: 500, text: JSON.stringify({ error: "motore di calcolo non avviato" }) });
-  let status, text;
+  let status, text, ctype;
   const t0 = performance.now();
   try {
     if (blob) {                                                                       // a big upload: mount the Blob, do not copy it
@@ -84,13 +84,14 @@ onmessage = async ev => {
       if (status === 200 && blob.size <= KEEP) await safe(() => tx("files", "readwrite", s => s.put(blob, baseName(name))));
     } else {
       const r = handle(method, url, body);
-      [status, text] = r.toJs(); r.destroy();
+      const res = r.toJs(); r.destroy(); status = res[0]; text = res[1]; ctype = res[2];
     }
   } catch (e) {
     const m = String(e && e.message || e);
     status = 500; text = JSON.stringify({ error: /memory|alloc|RangeError/i.test(m) ? "Questo file è troppo grande per la memoria del browser. Riducilo con MSConvert: " + RECIPE : m });
   }
-  postMessage({ id, status, text, ms: performance.now() - t0 });
+  if (text instanceof Uint8Array) postMessage({ id, status, buf: text, ctype, ms: performance.now() - t0 }, [text.buffer]);       // a binary block (api/scanbin): moved, not copied
+  else postMessage({ id, status, text, ms: performance.now() - t0 });
   if (method !== "POST" || status !== 200) return;
   // keep the browser's storage in step with the program
   const u = new URL(url, "http://x/");

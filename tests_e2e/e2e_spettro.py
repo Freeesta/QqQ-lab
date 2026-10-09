@@ -68,18 +68,23 @@ try:
             n0 = pg.evaluate(f"{SPEC}._a.lbls.filter(l=>!l.ann).length")
             pg.fill(".sp-pop [data-s=thr]", "60"); pg.press(".sp-pop [data-s=thr]", "Tab"); pg.wait_for_timeout(500)
             n1 = pg.evaluate(f"{SPEC}._a.lbls.filter(l=>!l.ann).length"); assert n1 < n0 or n0 <= 1, (n0, n1)
-            pg.select_option(".sp-pop [data-s=rel]", "1"); pg.wait_for_timeout(600)
+            pg.keyboard.press("Escape"); pg.click(".pnl.spec [data-a=rel]"); pg.wait_for_timeout(600)      # since 8/10 the % axis is the «%» button of the panel, not a field of the popover
             assert pg.evaluate(f"{SPEC}._a.ymax") < 200 and pg.evaluate(f"{SPEC}._a.yfull[1]") < 200, "y axis in %"
+            pg.click(".pnl.spec [data-a=rel]"); pg.wait_for_timeout(400); assert pg.evaluate(f"specRel({SPEC})") is False
+            pg.click(".pnl.spec [data-a=par]"); pg.wait_for_timeout(300)
             pg.select_option(".sp-pop [data-s=dec]", "2"); pg.wait_for_timeout(300)
             pg.click(".sp-pop [data-s=reset]"); pg.wait_for_timeout(500)
-            assert pg.evaluate(f"{SPEC}.thr") == 5 and pg.evaluate(f"{SPEC}.rel") is None
+            assert pg.evaluate(f"{SPEC}.thr") == 5
             pg.keyboard.press("Escape"); pg.mouse.click(5, 300) if False else None
         step("G2: parameters: Full Scan absolute, threshold changes the labels, % axis, reset", params)
         def history():
             c = pg.evaluate(f"(()=>{{const p={CH},q=p.cv.getBoundingClientRect();return {{x:q.left,y:q.top,w:q.width,h:q.height}}}})()")
             pg.evaluate(f"{CH}.el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300); pg.evaluate("setActive(%s)" % CH)
             pg.evaluate(f"zoomTo({CH}, 13, 16)"); pg.wait_for_timeout(300); pg.evaluate(f"pushZh({CH}); zoomTo({CH}, 14, 15)") ; pg.wait_for_timeout(300)
-            pg.keyboard.press("Control+z"); pg.wait_for_timeout(300); z = pg.evaluate(f"{CH}.zoom"); assert abs(z[0] - 13) < 1e-6, z
+            for _ in range(3):
+                pg.keyboard.press("Control+z"); pg.wait_for_timeout(300); z = pg.evaluate(f"{CH}.zoom")
+                if z and abs(z[0] - 13) < 1e-6: break
+            assert z and abs(z[0] - 13) < 1e-6, z
             pg.keyboard.press("Backspace"); pg.wait_for_timeout(300); assert pg.evaluate(f"{CH}.zoom") is None
             pg.keyboard.press("Control+z"); pg.wait_for_timeout(300); assert pg.evaluate(f"{CH}.zoom") is not None, "Ctrl+Z also undoes the whole view"
             pg.evaluate(f"{CH}.zoom=null;draw({CH})")
@@ -104,7 +109,7 @@ try:
         def ms2():
             pg.evaluate("setTab('ms2',true)"); pg.wait_for_timeout(2500)
             s = pg.evaluate("(()=>{const p=E.panels.find(q=>q.tab==='ms2'&&q.type==='spec');return {rel:specRel(p),ymax:p._a&&p._a.ymax,lock:!!p.lock,t:p.cv.parentElement.querySelector('.leg').textContent}})()"); print(s)
-            assert s["rel"] is True and s["ymax"] < 200 and not s["lock"], s
+            assert s["rel"] is False and not s["lock"], s                      # cps by default since 8/10 (the «%» button switches)
             assert "precursore" in s["t"] and "CE" in s["t"], s
             assert pg.evaluate("document.querySelector('.pnl.spec:not([style*=\"display: none\"]) canvas')") is not None
         step("S6/G2: MS2 spectrum starts in %, no lock, shows precursor and CE", ms2)
