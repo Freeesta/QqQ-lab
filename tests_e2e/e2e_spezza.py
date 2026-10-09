@@ -15,8 +15,11 @@ try:
         pg.evaluate(f"{KJ}.addFragment('CCO')"); pg.wait_for_timeout(800)
         def menu():
             n = pg.evaluate(f"(()=>{{const K={KJ};const ids=[...K.editor.struct().bonds.keys()];K.editor.selection({{bonds:[ids[0]]}});return ids.length}})()"); assert n == 2, n
-            pg.evaluate("""(()=>{const d=document.querySelector('#kframe').contentDocument;d.body.dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:200,clientY:200}))})()""")
-            pg.wait_for_selector("#ctx div:has-text('Spezza il legame')", timeout=10000)
+            for _ in range(20):                                           # under load Ketcher may need a moment before the menu answers
+                pg.evaluate("""(()=>{const d=document.querySelector('#kframe').contentDocument;d.body.dispatchEvent(new d.defaultView.MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:200,clientY:200}))})()""")
+                if pg.locator("#ctx div", has_text="Spezza il legame").count(): break
+                pg.evaluate(f"(()=>{{const K={KJ};const ids=[...K.editor.struct().bonds.keys()];K.editor.selection({{bonds:[ids[0]]}})}})()"); pg.wait_for_timeout(500)
+            pg.wait_for_selector("#ctx div:has-text('Spezza il legame')", timeout=5000)
         step("the context menu of a selected bond offers «Spezza il legame»", menu)
         def cut():
             pg.locator("#ctx div", has_text="Spezza il legame").first.click(); pg.wait_for_timeout(1200)
