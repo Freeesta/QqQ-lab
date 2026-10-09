@@ -1,5 +1,5 @@
 {
- "_nota": "Elenco dei contaminanti noti. Le m/z NON sono scritte qui: si calcolano dalle formule con mzlab/chem/elements.py (mzlab/chem/contaminants.py). Fonte principale: Keller B.O., Sui J., Young A.B., Whittal R.M., Anal. Chim. Acta 627 (2008) 71-81, doi:10.1016/j.aca.2008.04.043. Le sostanze e gli ioni sono quelli noti dalla chimica; il confronto voce per voce con le tabelle dell'articolo non è stato fatto (articolo non accessibile).",
+ "_nota": "Elenco dei contaminanti noti. Le m/z NON sono scritte qui: si calcolano dalle formule con mzlab/chem/elements.py (mzlab/chem/contaminants.py). Fonte principale: Keller B.O., Sui J., Young A.B., Whittal R.M., Anal. Chim. Acta 627 (2008) 71-81, doi:10.1016/j.aca.2008.04.043. Le sostanze e gli ioni sono quelli noti dalla chimica. Confronto voce per voce con la tabella supplementare di Keller 2008 fatto il 2026-10-09 (tolleranza 0,002 Da, stesso tipo di ione): su 82 voci 35 coerenti, 5 corrette (nomi), 42 non presenti nella tabella (fonte indicata nel campo source; le voci con fonte Guo 2006 non sono state verificate sull'articolo).",
  "id": "keller",
  "name": "Contaminanti noti e fondo LC-MS (Keller 2008, Guo 2006)",
  "source": "Keller et al., Anal. Chim. Acta 627 (2008) 71-81; Guo et al., Rapid Commun. Mass Spectrom. 20 (2006) 3145-3150",
@@ -87,7 +87,7 @@
     "[M+Na]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008",
+   "source": "elenco generale dei fondi LC-MS (non Keller)",
    "series": {
     "unit": "C2H6OSi",
     "n": [
@@ -108,7 +108,7 @@
     "[M+Na]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008",
+   "source": "elenco generale dei fondi LC-MS (non Keller)",
    "series": {
     "unit": "C2H6OSi",
     "n": [
@@ -144,7 +144,7 @@
     "[M+K]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "dbp",
@@ -172,11 +172,11 @@
     "[M+K]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "dehp",
-   "name": "DEHP / di-n-ottilftalato (isomeri)",
+   "name": "DEHP / diisoottilftalato (isomeri)",
    "class": "ftalati",
    "formula": "C24H38O4",
    "ions": [
@@ -200,7 +200,7 @@
     "[M+K]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "didp",
@@ -214,7 +214,7 @@
     "[M+K]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "ftalato_149",
@@ -229,7 +229,7 @@
   },
   {
    "id": "dehp_adipato",
-   "name": "dietilesiladipato (DEHA)",
+   "name": "bis(2-etilesil) adipato (DEHA / DOA)",
    "class": "plastificanti",
    "formula": "C22H42O4",
    "ions": [
@@ -253,7 +253,7 @@
     "[M+K]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "oleamide",
@@ -305,7 +305,7 @@
     "[M+NH4]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "behenamide",
@@ -318,7 +318,7 @@
     "[M+NH4]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "laurico",
@@ -330,7 +330,7 @@
     "[M+Na]+"
    ],
    "polarity": "both",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "miristico",
@@ -342,7 +342,7 @@
     "[M+Na]+"
    ],
    "polarity": "both",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "palmitico",
@@ -411,7 +411,7 @@
     "[M-H]-"
    ],
    "polarity": "negative",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "sds_dimero",
@@ -422,7 +422,7 @@
     "[M-H]-"
    ],
    "polarity": "negative",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "las10",
@@ -477,7 +477,7 @@
     "[M]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "bak14",
@@ -488,7 +488,7 @@
     "[M]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "cetrimide",
@@ -499,7 +499,7 @@
     "[M]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "ddac",
@@ -510,7 +510,7 @@
     "[M]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "tba",
@@ -548,7 +548,7 @@
     "[M+K]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "irganox1330",
@@ -561,7 +561,7 @@
     "[M+Na]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "irgafos168",
@@ -573,7 +573,7 @@
     "[M+Na]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "irgafos168_ox",
@@ -585,7 +585,7 @@
     "[M+Na]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "bht",
@@ -609,7 +609,7 @@
     "[M+H]+"
    ],
    "polarity": "both",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "tea",
@@ -664,7 +664,7 @@
     "[M+H]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "dea",
@@ -675,7 +675,7 @@
     "[M+H]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "tea_ol",
@@ -686,7 +686,7 @@
     "[M+H]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008"
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
   },
   {
    "id": "bbsa",
@@ -745,7 +745,7 @@
     "[M+Na]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008, Guo 2006",
+   "source": "Guo 2006",
    "series": {
     "unit": "CHNaO2",
     "n": [
@@ -822,7 +822,7 @@
     "[M+NH4]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008, Guo 2006",
+   "source": "Guo 2006",
    "series": {
     "unit": "CH5NO2",
     "n": [
@@ -842,7 +842,7 @@
     "[M+NH4]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008, Guo 2006",
+   "source": "Guo 2006",
    "series": {
     "unit": "C2H7NO2",
     "n": [
@@ -1152,33 +1152,33 @@
   },
   {
    "id": "silox_mz_355.0699",
-   "name": "polisilossano (ione ricorrente)",
+   "name": "polisilossano ciclico D5, [M+H-CH4]+ (ione ricorrente)",
    "class": "polisilossani",
    "formula": null,
    "mz": 355.0699,
    "polarity": "positive",
    "ions": [],
-   "source": "m/z di letteratura (solo m/z, affidabilità minore)"
+   "source": "Keller 2008"
   },
   {
    "id": "silox_mz_429.0887",
-   "name": "polisilossano (ione ricorrente, +74)",
+   "name": "polisilossano ciclico D6, [M+H-CH4]+ (ione ricorrente)",
    "class": "polisilossani",
    "formula": null,
    "mz": 429.0887,
    "polarity": "positive",
    "ions": [],
-   "source": "m/z di letteratura (solo m/z, affidabilità minore)"
+   "source": "Keller 2008"
   },
   {
    "id": "silox_mz_503.1075",
-   "name": "polisilossano (ione ricorrente, +148)",
+   "name": "polisilossano ciclico D7, [M+H-CH4]+ (ione ricorrente)",
    "class": "polisilossani",
    "formula": null,
    "mz": 503.1075,
    "polarity": "positive",
    "ions": [],
-   "source": "m/z di letteratura (solo m/z, affidabilità minore)"
+   "source": "Keller 2008"
   }
  ]
 }
