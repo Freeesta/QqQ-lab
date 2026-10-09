@@ -262,7 +262,7 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); }   // a
  <div class="card" id="loaded" hidden></div>
  <div class="card req"><h3>1. Carica i file dei dati (.mzML)</h3>
   <div id="drop"><b>Trascina qui i file .mzML</b><br>oppure <u>clicca per sceglierli dal computer</u></div>
-  <div class="sm" id="demo" style="margin:10px 0 6px;text-align:center"><div class="muted" style="margin-bottom:8px;border-top:1px solid var(--line);padding-top:6px">oppure</div><button id="demobtn" class="sec" title="Apre 5 file Full Scan di esempio (0, 5, 10, 15 e 30 minuti di irraggiamento)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M6 1.5h4M6.8 1.5v4.6L3 13a1.2 1.2 0 0 0 1.1 1.7h7.8A1.2 1.2 0 0 0 13 13L9.2 6.1V1.5"/><path d="M4.6 10.5h6.8"/></svg>Prova con i file di esempio</button></div>
+  <div class="sm" id="demo" style="margin:10px 0 6px;text-align:center"><div class="muted" style="margin-bottom:8px;border-top:1px solid var(--line);padding-top:6px">oppure</div><button id="demobtn" class="sec" aria-expanded="false" aria-controls="demochoice" title="Scegli quali file di esempio aprire: si scarica solo ciò che scegli"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M6 1.5h4M6.8 1.5v4.6L3 13a1.2 1.2 0 0 0 1.1 1.7h7.8A1.2 1.2 0 0 0 13 13L9.2 6.1V1.5"/><path d="M4.6 10.5h6.8"/></svg>Prova con i file di esempio &#9662;</button><div id="demochoice" hidden style="margin-top:8px;display:none;gap:6px;justify-content:center;flex-wrap:wrap"><button type="button" class="sec" data-demo="full" title="5 file Full Scan: 0, 5, 10, 15 e 30 minuti di irraggiamento">Full Scan <span class="muted">5 file · 28 MB</span></button><button type="button" class="sec" data-demo="ms2" title="2 file MS2 (ioni prodotto): 15 e 60 minuti">MS2 <span class="muted">2 file · 10 MB</span></button><button type="button" class="sec" data-demo="mrm" title="4 standard MRM a concentrazione crescente (0,6; 2,4; 7,2 e 18 ppm)">MRM <span class="muted">4 file · 2 MB</span></button></div></div>
   <details id="wiffhelp" class="sm"><summary>Hai i file .wiff dello strumento? Convertili prima in .mzML</summary>
    <ol class="muted">
     <li>Scarica <b>ProteoWizard</b> (gratuito) da <a href="https://proteowizard.sourceforge.io/download.html" target="_blank" rel="noopener">proteowizard.sourceforge.io</a>: scegli la versione per <b>Windows a 64 bit</b>, l'unica che legge i file SCIEX (accetta la licenza dei produttori). Su Mac va usato in Windows (per esempio con Parallels).</li>
@@ -390,16 +390,19 @@ function checkGo(){$("#opbtn").disabled=!ST.files.some(usable);$("#gomsg").textC
 // sends a file and returns the JSON answer (progress callback: loaded, total); in the browser version there is no network: it goes to the worker
 const sendFile=(url,f,onp)=>window.QQQ_BROWSER?fetch(url,{method:"POST",body:f}).then(r=>{onp(1,1);return r.json()}):new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open("POST",url);
   x.upload.onprogress=e=>{if(e.lengthComputable)onp(e.loaded,e.total)};x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(_){}ok(j)};x.onerror=()=>ko(new Error("upload fallito"));x.send(f)});
-const DEMO_FILES=[0,5,10,15,30].map(t=>`Esempio_FullScan_t${t}.mzML`);
+const DEMO_SETS={full:[0,5,10,15,30].map(t=>`Esempio_FullScan_t${t}.mzML`),ms2:[15,60].map(t=>`Esempio_MS2_t${t}.mzML`),mrm:["0.6","2.4","7.2","18"].map(c=>`Esempio_MRM_std_${c}ppm.mzML`)};
 (()=>{const d=$("#demo");if(!d)return;
- // the 5 files (~28 MB) are downloaded only on this click; the button says how far the download has got
- $("#demobtn").onclick=async()=>{const b=$("#demobtn"),lab=b.innerHTML;b.disabled=true;let got=0;
-  const show=i=>{b.textContent=`Scarico i file di esempio: ${i} di ${DEMO_FILES.length} (${(got/1e6).toFixed(1).replace(".",",")} MB)…`};
-  try{const fs=[];for(const [i,n] of DEMO_FILES.entries()){show(i+1);const r=await fetch("static/esempi/"+n);if(!r.ok)throw new Error(n);const parts=[];
+ const ch=$("#demochoice"),b=$("#demobtn");
+ // the button only opens the choice; a set (Full Scan ~28 MB, MS2 ~10 MB, MRM ~2 MB) is downloaded only when it is chosen, and the button says how far it has got
+ const setOpen=on=>{ch.hidden=!on;ch.style.display=on?"flex":"none";b.setAttribute("aria-expanded",on?"true":"false")};
+ b.onclick=()=>setOpen(ch.hidden);
+ ch.querySelectorAll("[data-demo]").forEach(o=>o.onclick=async()=>{const files=DEMO_SETS[o.dataset.demo],lab=b.innerHTML;setOpen(false);b.disabled=true;let got=0;
+  const show=i=>{b.textContent=`Scarico i file di esempio: ${i} di ${files.length} (${(got/1e6).toFixed(1).replace(".",",")} MB)…`};
+  try{const fs=[];for(const [i,n] of files.entries()){show(i+1);const r=await fetch("static/esempi/"+n);if(!r.ok)throw new Error(n);const parts=[];
     if(r.body&&r.body.getReader){const rd=r.body.getReader();for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;show(i+1)}}
     else{const bl=await r.blob();parts.push(bl);got+=bl.size}
     fs.push(new File(parts,n))}
-   b.textContent="Apro i file di esempio…";await upload(fs,"data")}catch(e){fail(new Error("Non riesco a scaricare i file di esempio: "+e.message))}finally{b.disabled=false;b.innerHTML=lab}}})();
+   b.textContent="Apro i file di esempio…";await upload(fs,"data")}catch(e){fail(new Error("Non riesco a scaricare i file di esempio: "+e.message))}finally{b.disabled=false;b.innerHTML=lab}})})();
 async function upload(files,into){const box=$("#up");fail();
   for(const f of files){const isDam=/\.dam$/i.test(f.name);
     if(into&&isDam!==(into==="dam")){const n=document.createElement("div");n.className="note";n.textContent=`${f.name} è ${isDam?"un metodo: l'ho messo nel riquadro 2":"un file di dati: l'ho messo nel riquadro 1"}.`;box.appendChild(n);setTimeout(()=>n.remove(),6000)}
