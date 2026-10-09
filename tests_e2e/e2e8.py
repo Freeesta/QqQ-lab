@@ -13,7 +13,7 @@ r = Run(port=8818, wd="/tmp/wd8")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(1000)
+        stage(pg, [mz(f) for f in FILES])
         pg.click("text=Carica dati"); ready(pg)
         rt = pg.evaluate("()=>{const s=E.panels[0]._a.sr[0];let m=0;s.ys.forEach((v,i)=>{if(v>s.ys[m])m=i});return s.x[m]}")
         def arrows():

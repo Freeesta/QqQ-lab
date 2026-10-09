@@ -28,6 +28,12 @@ def _new_page(self, *a, **k):
 def _new_context(self, *a, **k):
     c = _nc(self, *a, **k); c.add_init_script(_TRACK); return c
 _Br.new_page, _Br.new_context = _new_page, _new_context
+def stage(pg, files, timeout=90000):
+    """Give the files to the start screen and wait until ALL of them are in the list: with a fixed pause, on a loaded machine «Carica dati» loaded only the ones staged so far."""
+    pg.set_input_files("#pick", [str(f) for f in files])
+    pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=timeout)
+
+
 def ready(pg, timeout=90000, settle=400):
     """Wait until the page is quiet: no loading screen, no request to the server in flight, nothing started or ended for `settle` ms."""
     import time as _t

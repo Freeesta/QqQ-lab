@@ -27,7 +27,7 @@ try:
             for rt in (13.0, 15.5, 18.0):
                 c = pt(CH, str(rt), "0"); pg.mouse.click(c["x"], c["y"] - 40); pg.wait_for_timeout(700)
                 b = pg.evaluate(f"(()=>{{const s={SPEC};return {{x0:s._a.x0,x1:s._a.x1}}}})()")
-                assert b["x0"] == a["x0"] and b["x1"] == a["x1"], (a, b)
+                assert abs(b["x0"] - a["x0"]) < 1 and abs(b["x1"] - a["x1"]) < 1, (a, b)      # the axis is the range of the FILE: another file of the series (synthetic ones differ by a few mDa) may differ slightly
         step("spectrum: x axis is the same for every scan (whole range of the file)", x_fixed)
         def lock_y_only():
             pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(500)
@@ -75,7 +75,8 @@ try:
         step("drag on the numbers under the x axis: line, only x", line_x)
         def spec_zoom():
             s0 = pg.evaluate(f"(()=>{{const s={SPEC};return {{ym:s._a.ymax,x0:s._a.x0,x1:s._a.x1}}}})()")
-            u = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.3", "p._a.ymax*0.6"); v = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.5", "p._a.ymax*0.05")
+            YM = "Math.min(p._a.ymax,p._a.yfull[1])"      # the intensity lock can keep a top higher than the automatic one: the box must be inside the automatic range to zoom y
+            u = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.3", YM + "*0.6"); v = pt(SPEC, "p._a.x0+(p._a.x1-p._a.x0)*0.5", YM + "*0.05")
             pg.mouse.move(u["x"], u["y"]); pg.mouse.down(); pg.mouse.move(v["x"], v["y"], steps=5); pg.mouse.up(); pg.wait_for_timeout(700)
             a = pg.evaluate(f"(()=>{{const s={SPEC};return {{z:s.zoom,zy:s.zoomY,x0:s._a.x0,x1:s._a.x1}}}})()")
             assert a["z"] and a["zy"] and a["x0"] > s0["x0"] and a["x1"] < s0["x1"], a

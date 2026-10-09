@@ -13,7 +13,7 @@ r = Run(port=8818, wd="/tmp/wd18")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(1000)
+        stage(pg, [mz(f) for f in FILES])
         pg.click("text=Carica dati"); ready(pg)
         dlg = lambda: pg.evaluate("document.querySelector('#xicdlg').open")
         def window_():
