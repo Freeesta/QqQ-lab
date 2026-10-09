@@ -30,7 +30,7 @@ LANG = WEB / "lang"
 ECCEZIONI = ROOT / "tools" / "i18n_eccezioni.txt"
 
 # JS files whose strings must already be free of Italian (grows as the parts of the work migrate files)
-MIGRATED = {"mzlab/web/i18n.js", "mzlab/web/draw.js", "mzlab/web/index.html", "mzlab/web/browser.js", "mzlab/web/browser-worker.js", "mzlab/web/settings.js"}
+MIGRATED = {"mzlab/web/barra.js", "mzlab/web/browser-worker.js", "mzlab/web/browser.js", "mzlab/web/calcola.js", "mzlab/web/draw.js", "mzlab/web/explore.js", "mzlab/web/i18n.js", "mzlab/web/icons-modi.js", "mzlab/web/index.html", "mzlab/web/modi.js", "mzlab/web/perdite.js", "mzlab/web/perf.js", "mzlab/web/scroll.js", "mzlab/web/settings.js", "mzlab/web/spettro.js", "mzlab/web/tabs.js", "mzlab/web/touch.js", "mzlab/web/xlsx.js"}
 # not checked for Italian words: third-party code, the Teoria (Italian only, by decision), TP Mine, the catalogs themselves
 SKIP_DIRS = ("mzlab/web/vendor/", "mzlab/web/teoria/", "mzlab/web/lang/", "mzlab/web/esempi/", "TP_Mine/")
 SKIP_FILES = {"mzlab/web/elements.js", "mzlab/web/tpmine.enc"}
@@ -291,7 +291,7 @@ def load_exceptions() -> set[tuple[str, str]]:
 
 
 def italian_in(text: str) -> list[str]:
-    words = re.findall(r"[A-Za-zÀ-ÿ]+", text)
+    words = re.findall(r"(?<![\w.\-#&])[A-Za-zÀ-ÿ]+(?!\w|-|\.\w)", text)      # not the pieces of identifiers: data-del, int.menu.del, #np-liste
     return [w for w in words if w.lower() in ITALIAN_WORDS]
 
 

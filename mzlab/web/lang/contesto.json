@@ -157,5 +157,11 @@
   "perf.env": "Riga del pannello ?perf (strumento per sviluppatori).",
   "perf.version": "Riga del pannello ?perf.",
   "perf.engine": "Riga del pannello ?perf.",
-  "perf.sinceOpen": "Riga del pannello ?perf."
+  "perf.sinceOpen": "Riga del pannello ?perf.",
+  "modi.full.q1": "Le tre righe q1-q3 di ogni modo devono cominciare con «Q1 », «Q2 », «Q3 » (la tabella toglie il prefisso).",
+  "iso.noPeak": "Frase che si aggiunge alla riga del profilo isotopico quando nello spettro non c'è nessun picco vicino al valore atteso; {mz} = m/z atteso.",
+  "iso.shift": "Parte di una frase sul profilo isotopico: spostamento in m/z del profilo; il segnaposto è il valore già formattato.",
+  "spec.scanLine.avg": "Riga sopra lo spettro quando si mostra la media di più scansioni; {n} = numero di scansioni.",
+  "spec.scanLine.prec": "Riga sopra lo spettro: precursore isolato; {prec} = m/z del precursore.",
+  "spec.scanLine.ce": "Riga sopra lo spettro: energia di collisione; {ce} = valore in eV."
 }
