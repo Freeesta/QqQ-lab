@@ -2329,10 +2329,14 @@ function ctxFor(p, e, x, px, py) {
     const has = m != null, lab = has ? m.toFixed(mzd(p, p.level)) : "…", mi = o => has ? o : { label: o.label, dim: true };
     items.push({ label: has ? `m/z ${lab}` : "nessun picco qui: clic destro su un picco", dim: true }, "-");
     items.push(mi({ label: `Estrai l'XIC di m/z ${lab}`, fn: () => xicDirect(m, p) }));
-    if (a.hrp && window.LISTE) {                              // known contaminants (high resolution): information, and the contaminants of the laboratory
-      const pol = a.data[0].f && a.data[0].f.polarity, kn = has && LISTE.isOn() && a.cont ? a.cont.match(m) : [];
-      if (kn.length) items.push({ label: `Contaminante noto: ${kn[0].name} (${kn[0].adduct || "solo m/z"}, ${kn[0].err >= 0 ? "+" : ""}${kn[0].err.toFixed(1)} ppm)${kn.length > 1 ? ` e altri ${kn.length - 1}` : ""}`, dim: true });
-      items.push(mi({ label: "Aggiungi ai contaminanti del laboratorio…", fn: () => LISTE.askAdd(m, pol) }));
+    if (window.LISTE) {
+      const pol = a.data[0].f && a.data[0].f.polarity;
+      items.push(mi({ label: "Cerca nelle liste dei contaminanti…", fn: () => LISTE.open({ mz: m, polarity: pol, hr: !!a.hrp }) }));
+      if (a.hrp) {                                              // known contaminants (high resolution): information, and the contaminants of the laboratory
+        const kn = has && LISTE.isOn() && a.cont ? a.cont.match(m) : [];
+        if (kn.length) items.push({ label: `Contaminante noto: ${kn[0].name} (${kn[0].adduct || "solo m/z"}, ${kn[0].err >= 0 ? "+" : ""}${kn[0].err.toFixed(1)} ppm)${kn.length > 1 ? ` e altri ${kn.length - 1}` : ""}`, dim: true });
+        items.push(mi({ label: "Aggiungi ai contaminanti del laboratorio…", fn: () => LISTE.askAdd(m, pol) }));
+      }
     }
     if (a.hrp && window.COMP) items.push(mi({ label: `Formule compatibili con m/z ${lab}…`, fn: () => COMP.open({ mz: m, spec: a.data[0].d, polarity: a.data[0].f && a.data[0].f.polarity }) }));
     const xs = tabPanels().filter(q => q.type === "xic"), TIPX = "Aggiunge questo ione nello stesso grafico: per vedere se due ioni escono allo stesso tempo";
