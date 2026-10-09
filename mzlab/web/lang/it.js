@@ -1,4 +1,5 @@
 I18N.add("it", {
+  "app.title": "{app} · Analisi MS",
   "nav.data": "Dati",
   "nav.draw": "Disegno",
   "nav.theory": "Teoria",

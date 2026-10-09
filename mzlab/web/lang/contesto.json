@@ -1,1 +1,3 @@
-{}
+{
+  "app.title": "Titolo della scheda del browser; {app} = nome del programma (da appname.js). Le anteprime dei link usano il titolo scritto da tools/build_site.py."
+}

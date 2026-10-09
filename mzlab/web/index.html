@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>{APP} • Analisi dati MS</title><script src="static/appname.js"></script>
 <script src="static/i18n.js"></script><script src="static/lang/it.js"></script><script src="static/lang/en.js"></script>
+<script>document.title=I18N.t("app.title",{app:window.APP_NAME||"mzLab"})</script>
 <script>(function(){try{var p=JSON.parse(localStorage.getItem("qqq.prefs")||"{}");var d=p.theme==="dark"||(p.theme!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.setAttribute("data-theme","dark");else if(p.theme==="light")document.documentElement.setAttribute("data-theme","light");}catch(e){}})()</script>
 <style>
 :root{color-scheme:light;--bg:#f7f8fa;--panel:#ffffff;--line:#e2e5ea;--ink:#25282c;--muted:#687080;--accent:#2b5c8a;--ok:#047857;--bad:#b42318;--warn:#92400e;--sel:#edf2f8}
