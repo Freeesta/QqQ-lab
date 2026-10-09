@@ -74,20 +74,25 @@ const TP = (() => {
     const top = document.createElement("header"); top.id = "top";
     // inside the program the main bar already has the logo and the tabs: no second header there (only the index button on narrow screens)
     if (embedded) document.body.classList.add("emb");
-    top.innerHTML = `<button id="menu" aria-label="Indice">&#9776;</button>` + (embedded ? "" : `<a href="index.html"><img src="../logo-64.png" alt="" width="28" height="28"></a>
+    top.innerHTML = `<button id="menu" type="button" aria-label="Indice" aria-expanded="false" aria-controls="side">&#9776;</button>` + (embedded ? "" : `<a href="index.html" aria-label="Teoria: introduzione"><img src="../logo-64.png" alt="" width="28" height="28"></a>
       <span class="t">${APP} <small>· Teoria</small></span><span class="sp"></span>`);
     document.body.prepend(top);
-    const side = $("#side");
+    const side = $("#side"); side.setAttribute("aria-label", "Indice dei capitoli e della pagina");
+    // «Salta al contenuto»: first thing reached with Tab, visible only on focus
+    const mn = $("main"); mn.id = mn.id || "contenuto"; mn.tabIndex = -1;
+    const sk = document.createElement("a"); sk.className = "skip"; sk.href = "#" + mn.id; sk.textContent = "Salta al contenuto";
+    sk.onclick = e => { e.preventDefault(); mn.focus(); mn.scrollIntoView(); };
+    document.body.prepend(sk);
     // chapters grouped by part: a small heading each time the part changes
     const list = CHAPTERS.map((c, i) => (c[3] && c[3] !== (CHAPTERS[i - 1] || [])[3] ? `<li class="part">${c[3]}</li>` : "") +
-      `<li><a href="${c[0]}" class="${i === idx ? "on" : ""}"><b>${c[1]}</b><span>${c[2]}</span></a></li>`).join("");
+      `<li><a href="${c[0]}" class="${i === idx ? "on" : ""}"${i === idx ? ' aria-current="page"' : ""}><b>${c[1]}</b><span>${c[2]}</span></a></li>`).join("");
     // on-page table of contents from h2/h3
     const hs = [...document.querySelectorAll("main h2, main h3")];
     hs.forEach(h => { if (!h.id) h.id = slug(h.textContent); });
     const toc = hs.map(h => `<a href="#${h.id}" class="${h.tagName === "H3" ? "l3" : ""}">${h.textContent}</a>`).join("");
-    side.innerHTML = `<h4>Capitoli</h4><ol>${list}</ol>${toc ? `<h4>In questa pagina</h4><div class="toc">${toc}</div>` : ""}`;
-    $("#menu").onclick = () => side.classList.toggle("open");
-    side.addEventListener("click", e => { if (e.target.closest("a")) side.classList.remove("open"); });   // narrow screens: the index is a full-screen panel
+    side.innerHTML = `<h4>Capitoli</h4><ol>${list}</ol>${toc ? `<h4>In questa pagina</h4><nav class="toc" aria-label="In questa pagina">${toc}</nav>` : ""}`;
+    $("#menu").onclick = () => $("#menu").setAttribute("aria-expanded", String(side.classList.toggle("open")));
+    side.addEventListener("click", e => { if (e.target.closest("a")) { side.classList.remove("open"); $("#menu").setAttribute("aria-expanded", "false"); } });   // narrow screens: the index is a full-screen panel
     if (PHONE) phone(top);
     // prev / next
     const pn = document.createElement("div"); pn.className = "pn";
@@ -104,7 +109,26 @@ const TP = (() => {
       hs.forEach(h => io.observe(h));
     }
     document.title = `${/^[0-9]+$/.test(CHAPTERS[idx][1]) && CHAPTERS[idx][1] !== "0" ? CHAPTERS[idx][1] + ". " : ""}${CHAPTERS[idx][2]} · ${/^pratica/.test(here) ? "Pratica" : "Teoria"} ${APP}`;
+    fixLevels();
+    // figures without a name take the caption that already stands just above them (no new text)
+    document.querySelectorAll("main svg:not([aria-label]):not([aria-labelledby]):not([aria-hidden])").forEach((s, i) => {
+      const c = s.previousElementSibling; if (!c || !c.textContent.trim() || c.tagName === "svg") return;
+      c.id = c.id || "fig-cap-" + i; s.setAttribute("role", "img"); s.setAttribute("aria-labelledby", c.id);
+    });
     renameApp();
+    liveFeedback();
+  }
+
+  // the answers of the games (.fb) appear after a click: a screen reader announces them (polite) without moving the focus
+  // a figure title (h4) right under an h2 would skip a level: its announced level is the one that keeps the order (also for cards added later by the games)
+  function fixLevels() {
+    let prev = 1; document.querySelectorAll("main h1,main h2,main h3,main h4").forEach(h => { let l = +h.tagName[1]; if (l > prev + 1) { l = prev + 1; h.setAttribute("aria-level", String(l)); } else h.removeAttribute("aria-level"); prev = l; });
+  }
+  function liveFeedback() {
+    const mark = n => { if (n.nodeType === 1) [n, ...n.querySelectorAll(".fb,.readout")].forEach(e => { if (e.classList && (e.classList.contains("fb") || e.classList.contains("readout")) && !e.hasAttribute("aria-live")) e.setAttribute("aria-live", "polite"); }); };
+    mark(document.body);
+    let t = 0;
+    new MutationObserver(ms => { ms.forEach(m => m.addedNodes.forEach(mark)); cancelAnimationFrame(t); t = requestAnimationFrame(fixLevels); }).observe(document.body, { childList: true, subtree: true });
   }
 
   // ---------------------------------------------------------------- smartphone
@@ -147,7 +171,7 @@ const TP = (() => {
         inp.oninput = () => { val[s.id] = inp.value; onchange(val, s.id); };
       } else {
         const f = s.fmt || (v => v);
-        lab.innerHTML = `<span>${s.label}<output></output></span><input type="range" min="${s.min}" max="${s.max}" step="${s.step}" value="${s.value}">`;
+        lab.innerHTML = `<span>${s.label}<output aria-live="polite"></output></span><input type="range" min="${s.min}" max="${s.max}" step="${s.step}" value="${s.value}">`;
         const r = lab.querySelector("input"), o = lab.querySelector("output");
         const upd = () => { val[s.id] = +r.value; o.textContent = f(+r.value) + (s.unit ? " " + s.unit : ""); };
         upd(); r.oninput = () => { upd(); onchange(val, s.id); };
@@ -159,11 +183,12 @@ const TP = (() => {
   }
 
   function buttons(el, items, cur, onclick) {
-    const b = document.createElement("div"); b.className = "btns"; el.appendChild(b);
+    const b = document.createElement("div"); b.className = "btns"; b.setAttribute("role", "group"); el.appendChild(b);
     items.forEach(([k, lab]) => {
       const x = document.createElement("button"); x.textContent = lab; x.dataset.k = k;
+      x.type = "button"; x.setAttribute("aria-pressed", String(k === cur));
       if (k === cur) x.classList.add("on");
-      x.onclick = () => { b.querySelectorAll("button").forEach(y => y.classList.toggle("on", y === x)); onclick(k); };
+      x.onclick = () => { b.querySelectorAll("button").forEach(y => { y.classList.toggle("on", y === x); y.setAttribute("aria-pressed", String(y === x)); }); onclick(k); };
       b.appendChild(x);
     });
     return b;
@@ -173,6 +198,10 @@ const TP = (() => {
   /** A canvas sized for the device pixel ratio. Returns {cv, ctx, W, H, resize()} */
   function canvas(el, h = 260) {
     const cv = document.createElement("canvas"); el.appendChild(cv);
+    // the drawing is an image for a screen reader: it says WHAT it shows (the simulation and its axes), never the result
+    const box = el.closest(".sim,.game,.gm,section,main"), hd = box && box.querySelector("h4,h3,h2");
+    cv.setAttribute("role", "img"); cv.dataset.title = hd ? hd.textContent.trim() : "";
+    cv.setAttribute("aria-label", "Grafico" + (cv.dataset.title ? ": " + cv.dataset.title : ""));
     const o = { cv, ctx: cv.getContext("2d"), W: 0, H: h, onresize: null };
     o.resize = () => {
       const w = Math.max(280, cv.clientWidth || el.clientWidth || 600), d = Math.min(4, (window.devicePixelRatio || 1) * ((window.visualViewport && visualViewport.scale) || 1));
@@ -201,6 +230,7 @@ const TP = (() => {
     const ly = v => opt.logy ? Math.log10(Math.max(v, 1e-12)) : v;
     const Y = v => H - m.b - (ly(v) - ly(opt.y0)) / (ly(opt.y1) - ly(opt.y0)) * (H - m.t - m.b);
     ctx.clearRect(0, 0, W, H);
+    if (c.cv) { const t = c.cv.dataset.title; c.cv.setAttribute("aria-label", "Grafico" + (t ? ": " + t : "") + (opt.xl ? ". Asse orizzontale: " + opt.xl : "") + (opt.yl ? ". Asse verticale: " + opt.yl : "") + (opt.logy ? " (scala logaritmica)" : "")); }
     ctx.font = "12px system-ui,sans-serif"; ctx.lineWidth = 1;
     ctx.strokeStyle = "#e9e7e1"; ctx.fillStyle = "#6b675c";
     const xf = opt.xfmt || (v => +v.toFixed(6)), yf = opt.yfmt || (v => +v.toFixed(6));
@@ -252,6 +282,8 @@ const TP = (() => {
     });
     ctx.restore();
   }
+  /** Dash patterns for the 2nd, 3rd... series of a chart: the series differ by more than the colour (WCAG 1.4.1) */
+  const DASH = [null, [7, 4], [2, 3], [8, 3, 2, 3]];
   const fmt = (v, d = 2) => (+v).toLocaleString("it-IT", { minimumFractionDigits: d, maximumFractionDigits: d });
   const sci = (v, d = 2) => { if (v === 0) return "0"; const e = Math.floor(Math.log10(Math.abs(v))); const mnt = v / Math.pow(10, e); return fmt(mnt, d) + "·10" + sup(e); };
 
@@ -313,5 +345,5 @@ const TP = (() => {
   // «Lettura facilitata»: tema.js has already put the choices on <html>; the panel and the reading tools come from a11y.js
   function loadA11y() { const s = document.createElement("script"); s.src = "a11y.js"; document.head.appendChild(s); }
   document.addEventListener("DOMContentLoaded", () => { layout(); glossary(); loadA11y(); });
-  return { reduced: () => document.documentElement.hasAttribute("data-a11y-reduce"), $, controls, buttons, canvas, axes, line, sticks, label, legend, nice, fmt, sci, sup };
+  return { reduced: () => document.documentElement.hasAttribute("data-a11y-reduce"), $, controls, buttons, canvas, axes, line, sticks, label, legend, nice, DASH, fmt, sci, sup };
 })();

@@ -99,8 +99,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const prog = 4 + 8 * st.f;
         const A = ts.filter(t => t <= prog);
         TP.line(ax, A, A.map(t => g(t, 9.3, 0.12, 100) + 0.6 * Math.random()), col(1), 1.8);
-        TP.line(ax, A, A.map(t => g(t, 7.1, 0.12, 38) + 0.6 * Math.random()), col(2), 1.8);
-        TP.legend(ax, [["250→208 (parent X)", col(1)], ["266→224 (TP +O)", col(2)]]);
+        TP.line(ax, A, A.map(t => g(t, 7.1, 0.12, 38) + 0.6 * Math.random()), col(2), 1.8, TP.DASH[1]);
+        TP.legend(ax, [["250→208 (parent X)", col(1)], ["266→224 (TP +O)", col(2), TP.DASH[1]]]);
         return;
       }
       const lo = 80, hi = 280, ax = TP.axes(c2, { x0: lo, x1: hi, y0: 0, y1: 115, xl: MODES[mode].x, yl: "intensità", yfmt: () => "" });
@@ -146,9 +146,9 @@ document.addEventListener("DOMContentLoaded", () => {
       for (let e = 0; e <= 60; e += 0.5) { xs.push(e); const b = breakdown(e * v.gas / (v.gas + v.mz)); Object.keys(Y).forEach(k => Y[k].push(100 * b[k])); }
       const ax = TP.axes(c1, { x0: 0, x1: 60, y0: 0, y1: 105, xl: "CE (eV, sistema del laboratorio)", yl: "% della corrente ionica" });
       const cs = { P: col(1), F1: col(2), F2: col(3), F3: col(4) };
-      Object.keys(Y).forEach(k => TP.line(ax, xs, Y[k], cs[k], 2));
+      Object.keys(Y).forEach((k, i) => TP.line(ax, xs, Y[k], cs[k], 2, TP.DASH[i]));
       TP.line(ax, [v.ce, v.ce], [0, 105], "#24231f", 1, [4, 4]);
-      TP.legend(ax, [["precursore", cs.P], ["F1", cs.F1], ["F2", cs.F2], ["F3", cs.F3]], ax.m.l + 150);
+      TP.legend(ax, [["precursore", cs.P], ["F1", cs.F1, TP.DASH[1]], ["F2", cs.F2, TP.DASH[2]], ["F3", cs.F3, TP.DASH[3]]], ax.m.l + 150);
       const b = breakdown(ecm), M = [[v.mz, b.P, cs.P], [v.mz - 42, b.F1, cs.F1], [v.mz - 70, b.F2, cs.F2], [v.mz - 98, b.F3, cs.F3]];
       const top = Math.max(...M.map(x => x[1]));
       const ax2 = TP.axes(c2, { x0: v.mz - 120, x1: v.mz + 15, y0: 0, y1: 115, xl: "m/z (spettro MS2 a questa CE)", yl: "intensità relativa (%)" });

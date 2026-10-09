@@ -22,10 +22,21 @@
   var MAP = { "#24231f": "#e4e7eb", "#fff": "#1d2127", "#ffffff": "#1d2127", "#f4f3ef": "#252a31", "#c9c5bb": "#3a424e", "#e9e7e1": "#2c323b", "#6b675c": "#98a2b0",
     "#57534e": "#b6bfcb", "#2b5c8a": "#7db4e6", "#c2410c": "#fb923c", "#b42318": "#f87171", "#0e7490": "#22d3ee", "#b45309": "#fbbf24", "#efe3dc": "#3a2f29", "#e4cfc3": "#5a463b",
     "rgba(255,255,255,.85)": "rgba(29,33,39,.85)", "rgba(36,35,31,.55)": "rgba(228,231,235,.55)" };
+  // «Alto contrasto»: axes, text and lines of the figures reach >= 7:1 against the page (the light-theme originals are the keys); grids and light fills stay faint
+  var HC = {
+    light: { "#24231f": "#000000", "#9b978c": "#595959", "#6b675c": "#1a1a1a", "#57534e": "#1a1a1a", "#c9c5bb": "#595959", "#999": "#595959", "#2b5c8a": "#0030a0", "#c2410c": "#7a2800",
+      "#b42318": "#8c0000", "#0e7490": "#004f5e", "#b45309": "#5c2a00", "rgba(36,35,31,.55)": "rgba(0,0,0,.75)" },
+    dark: { "#24231f": "#ffffff", "#9b978c": "#bdbdbd", "#6b675c": "#ececec", "#57534e": "#ececec", "#c9c5bb": "#bdbdbd", "#999": "#bdbdbd", "#2b5c8a": "#8fd0ff", "#c2410c": "#ffb36b",
+      "#b42318": "#ff9a9a", "#0e7490": "#67e8f9", "#b45309": "#ffd36b", "#fff": "#000000", "#ffffff": "#000000", "#f4f3ef": "#1a1a1a", "#e9e7e1": "#4d4d4d", "rgba(255,255,255,.85)": "rgba(0,0,0,.85)", "rgba(36,35,31,.55)": "rgba(255,255,255,.75)" }
+  };
   if (window.CanvasRenderingContext2D) ["fillStyle", "strokeStyle"].forEach(function (k) {
     var d = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, k); if (!d || !d.set) return;
     Object.defineProperty(CanvasRenderingContext2D.prototype, k, { configurable: true, enumerable: d.enumerable, get: d.get, set: function (v) {
-      if (typeof v === "string" && R.getAttribute("data-theme") === "dark") { var m = MAP[v.replace(/\s/g, "").toLowerCase()]; if (m) v = m; }
+      if (typeof v === "string") {
+        var k = v.replace(/\s/g, "").toLowerCase(), th = R.getAttribute("data-theme") === "dark" ? "dark" : "light", m = R.getAttribute("data-a11y-bg") === "hc" ? HC[th][k] : null;
+        if (!m && th === "dark") m = MAP[k];
+        if (m) v = m;
+      }
       d.set.call(this, v);
     } });
   });
