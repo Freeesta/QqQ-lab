@@ -1,12 +1,12 @@
 # TPMINE-PRIVATE
-"""Formulas, SMILES -> formula, transformations and candidate generation. Uses qqq_lab.chem.elements for masses (no duplicate table)."""
+"""Formulas, SMILES -> formula, transformations and candidate generation. Uses mzlab.chem.elements for masses (no duplicate table)."""
 from __future__ import annotations
 
 import itertools
 import re
 
-from qqq_lab.chem import elements as E
-from qqq_lab.chem.elements import ADDUCT_SHIFT, DEFAULT_ADDUCT, fmt, ion_mz, mass, parse_formula
+from mzlab.chem import elements as E
+from mzlab.chem.elements import ADDUCT_SHIFT, DEFAULT_ADDUCT, fmt, ion_mz, mass, parse_formula
 
 
 def add(a: dict, b: dict) -> dict:

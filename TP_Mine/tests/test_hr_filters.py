@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from qqq_lab.chem import elements as E
-from qqq_lab.reader.mzml import PeakTable
+from mzlab.chem import elements as E
+from mzlab.reader.mzml import PeakTable
 from tpmine.hr import features as FT
 from tpmine.hr import filters as FL
 

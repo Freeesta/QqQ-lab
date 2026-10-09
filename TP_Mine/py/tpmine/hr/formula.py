@@ -7,7 +7,7 @@ import re
 
 import numpy as np
 
-from qqq_lab.chem import elements as E
+from mzlab.chem import elements as E
 
 # valences used for the RDBE (C4 H1 N3 O2 S2; halogens 1; P3)
 VALENCE = {"C": 4, "H": 1, "N": 3, "O": 2, "S": 2, "P": 3, "F": 1, "Cl": 1, "Br": 1, "I": 1}

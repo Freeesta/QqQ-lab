@@ -1,11 +1,11 @@
 # TPMINE-PRIVATE
 """Tests of the ISF classifier (tpmine.isf). Run: PYTHONPATH=<repo>:TP_Mine/py QQQ_MZML=<Data/mzML> python3 -m pytest -q TP_Mine/tests
-Synthetic scenes with known truth (qqq_lab.demo.isf_series); the real-data test is skipped without QQQ_MZML."""
+Synthetic scenes with known truth (mzlab.demo.isf_series); the real-data test is skipped without QQQ_MZML."""
 import json, os
 from pathlib import Path
 import numpy as np
 import pytest
-from qqq_lab import demo, ionfamily as F
+from mzlab import demo, ionfamily as F
 from tpmine import isf
 
 OFF = demo.ISF_OFFSET
@@ -85,8 +85,8 @@ MZML = os.environ.get("QQQ_MZML")
 
 @pytest.mark.skipif(not MZML or not Path(MZML).exists(), reason="real mzML not available")
 def test_real_flufenacet_isf():
-    from qqq_lab.project import guess_sample
-    from qqq_lab.reader.mzml import Run
+    from mzlab.project import guess_sample
+    from mzlab.reader.mzml import Run
     samples = []
     for p in sorted(Path(MZML).glob("B_FullMass-t*.mzML")):
         _, t, _ = guess_sample(p.name)

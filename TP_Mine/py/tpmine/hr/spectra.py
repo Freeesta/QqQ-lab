@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from qqq_lab import ionfamily
+from mzlab import ionfamily
 
 
 def consensus_arrays(mzs, ints, ppm: float = 8.0, min_frac: float = 0.4, min_rel: float = 0.0, n_total: int | None = None):

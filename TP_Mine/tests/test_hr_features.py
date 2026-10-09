@@ -4,7 +4,7 @@ alignment across files and the cap on the width of a group."""
 import numpy as np
 import pytest
 
-from qqq_lab.reader.mzml import PeakTable
+from mzlab.reader.mzml import PeakTable
 from tpmine.hr import features as FT
 
 NS, DT_MIN = 1000, 0.01          # 1000 scans, 0.6 s apart: 10 minutes
@@ -79,7 +79,7 @@ def test_noise_is_not_a_feature(det):
 
 
 def test_features_are_sorted_and_table_is_dropped(tmp_path):
-    from qqq_lab.reader.mzml import Run
+    from mzlab.reader.mzml import Run
     import msn_synth as S
     p = S.write_msn(tmp_path / "x.mzML", S.caffeine_nodes())          # MS1 of 12 scans: too short to hold a feature, but the call must work and clear the cache
     r = Run(p)

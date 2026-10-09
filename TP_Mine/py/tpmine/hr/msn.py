@@ -12,7 +12,7 @@ from collections import defaultdict
 
 import numpy as np
 
-from qqq_lab.chem import elements as E
+from mzlab.chem import elements as E
 
 from . import formula as F
 from . import molgraph as MG
