@@ -46,6 +46,15 @@
 <p>Per alleggerire un file molto grande si possono tenere solo i minuti che servono e gli ioni più intensi:</p>
 <pre>msconvert file.raw --mzML --zlib --filter "peakPicking vendor msLevel=1-" --filter "scanTime [600,1500]" --filter "threshold count 300 most-intense"</pre>
 <p>(&laquo;scanTime&raquo; è in secondi.) Un file in profilo ad alta risoluzione pesa molto di più e il browser fatica a tenerlo in memoria: il programma lo segnala.</p>
+<h2>Dalla massa esatta alla formula (strumenti dell'alta risoluzione)</h2>
+<p>Con i file ad alta risoluzione il programma offre alcuni strumenti in più. Nessuno dà una risposta sicura: danno <b>candidati</b>, e sta a te giudicarli.</p>
+<ul>
+<li><b>Formule compatibili.</b> Clic destro su un picco di uno spettro: il programma elenca le formule che hanno quella massa esatta entro la tolleranza (ppm o mDa), con gli elementi che consenti. Per ognuna mostra l'errore, il numero di anelli e doppi legami (RDB), le &laquo;sette regole d'oro&raquo; e, se i picchi M+1 e M+2 ci sono, se gli isotopi sono compatibili. Più elementi consenti, più candidati compaiono: restringi l'elenco a quelli che puoi davvero avere.</li>
+<li><b>Profilo isotopico alla risoluzione dello strumento.</b> Il profilo teorico di una formula tiene conto del potere risolutivo della scansione: a <i>R</i> di qualche decina di migliaia i picchi di M+2 dovuti a <sup>34</sup>S, <sup>13</sup>C<sub>2</sub> e <sup>18</sup>O sono troppo vicini e si fondono in un picco solo; a risoluzione più alta si separano. Dal menu del profilo puoi cambiare <i>R</i>.</li>
+<li><b>Albero MSn.</b> Per un file di infusione con più stadi di frammentazione (MS3, MS4&hellip;), il menu del cromatogramma apre l'albero dei percorsi: per ogni nodo lo spettro, il precursore esatto e la formula, che deve essere una parte di quella del nodo padre. I nodi quasi vuoti e i picchi che non c'entrano (contaminazioni) sono segnalati.</li>
+<li><b>Cerca nelle librerie.</b> Per una MS2 il programma confronta lo spettro con le librerie che hai caricato e dà un giudizio prudente (corrispondenza forte, possibile, debole); la ricerca per <b>analoghi</b> trova composti simili anche con la massa diversa, spiegando la differenza (per esempio +O per un'ossidrilazione).</li>
+<li><b>Rilevamento dei picchi.</b> Dal menu dell'integrazione puoi cambiare i parametri dell'integrazione automatica (soglia di rumore, bordi, risoluzione tra due picchi vicini). I valori di partenza sono quelli di sempre.</li>
+</ul>
 </main></div>
 <script src="teoria.js"></script>
 </body></html>

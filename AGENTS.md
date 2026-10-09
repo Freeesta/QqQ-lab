@@ -81,6 +81,7 @@ Unico documento per gli agenti. Descrive lo STATO ATTUALE (la storia è in git: 
 - Subito: solo il motore (~10 MB compressi, serve alla vista Dati). Dopo, nei momenti liberi: le cose sotto 1 MB (Teoria, OpenChemLib). Ketcher (8,7 MB compressi) quando il mouse passa su «Disegno», o da libero solo con connessione veloce e senza risparmio dati. File di esempio solo col pulsante. L'avvio resta ~4-5 s anche alla seconda visita: è la compilazione di Python, non la rete.
 - Le frasi della schermata di caricamento (`PHRASES`, `ldNext`) sono in uno script in linea subito dopo `#loading` in `index.html`: compaiono al primo disegno della pagina, prima dei ~600 kB di script classici. Non spostarle in `explore.js`.
 
+- **Banco HR (stato 9/10/2026)**: fatte le funzioni H0-H2 e H4-H9 come finestre/menu (formule compatibili, albero MSn, isotopi con risoluzione, parametri dei picchi, identificazione e analoghi, `/api/scanbin`); **non fatto H3** (celle, barra degli strumenti e barra informazioni con `/api/scaninfo`; schede 1, 2, 3, 7 del master-prompt). La disposizione del banco resta da decidere con Federico; le funzioni sopra non dipendono da essa.
 ## 6. Fatti sui dati
 - Analyst 1.6.3; il programma legge solo mzML (conversione con ProteoWizard MSConvert su Windows, istruzioni nella schermata di carico; consigliato il profilo).
 - Negli mzML il PDA è solo il cromatogramma totale (TWC): niente spettri UV, niente singole lunghezze d'onda.
@@ -105,6 +106,7 @@ Unico documento per gli agenti. Descrive lo STATO ATTUALE (la storia è in git: 
 - Il service worker tiene in cache l'app: dopo un deploy le prove a mano vanno fatte con Cmd/Ctrl+Shift+R.
 - Le anteprime dei link (WhatsApp ecc.) restano in cache presso l'app di messaggistica: provare con `?v=2`.
 
+- **Trappole nuove (notte 8→9/10/2026)**: (1) due worktree/branch che aggiungono righe allo stesso punto di AGENTS.md danno conflitti banali: tenere entrambe; (2) un `verifica.py` lanciato mentre si modificano i file contamina il risultato: lanciare i giri su un worktree fermo, uno alla volta (in parallelo i tempi raddoppiano e i test a tempo diventano instabili); (3) `ask()` restituisce `null` anche per il testo vuoto: per «valore predefinito» usare una parola («auto»); (4) il sito vecchio e quello nuovo hanno la stessa origine (`freeesta.github.io`): il service worker di reindirizzamento non deve mai cancellare le cache; (5) `e2e13` richiede il sito costruito con Pyodide (con `--solo` senza sito fallisce): non è un errore del codice; (6) il proxy del cloud non cancella i rami remoti.
 ## 9. Lavori aperti
 - **CI**: verde su tutti i browser dall'8/10/2026 (Firefox e WebKit-macOS lo sono tornati dopo la PR #18). Se un giro di prova torna rosso, il job stampa la coda del log: leggerlo con `get_job_logs`.
 - **Interfaccia e Grafici (Approvate, da fare in una sessione breve)**:
@@ -120,6 +122,7 @@ Unico documento per gli agenti. Descrive lo STATO ATTUALE (la storia è in git: 
 - **Fase 3 della rinomina**: la parte sicura è fatta (tutto il codice, TP Mine compreso, usa `mzlab`; restano solo ponte `qqq_lab/__init__.py`, `tests/test_alias.py`, `qqq_lab.zip` nel sito, DB `"qqq_lab"`, chiavi `qqq.*`). **Fase 3b, dopo che Federico ha ricostruito `tpmine.enc` (`python3 tools/build_tpmine.py` + commit)**: togliere il ponte `qqq_lab/`, `tests/test_alias.py`, la copia `qqq_lab.zip` in `tools/build_site.py` e la voce `qqq_lab` in `pyproject.toml`.
 - **Prove a mano che restano a Federico**: Safari su iPad con Apple Pencil; file Exploris/Fusion interi sul sito; un telefono vero (iPhone e Android, verticale e orizzontale).
 
+- **Banco HR, lavori rimasti**: H3 (vedi §5); simulazione isotopica: profilo gaussiano, barre, «Nuova cella»; picchi: «Vincola la larghezza», regione di rumore manuale nel dialogo, tabella unica delle aree; esportazioni in Excel dei risultati di formule/albero/identificazione; «Mostra tutti gli esperimenti insieme» (LR, facoltativo, mai fatto); `tools/converti.py` (facoltativo); proposta D6 «Spezza il legame» nel Disegno.
 ## 10. In coda (NON fare senza il via libera di Federico)
 - Rinominare repository, pacchetto e indirizzo del sito con il nome nuovo (l'indirizzo del sito cambierebbe).
 - Riconvertire in profilo i file per gli studenti e i 5 esempi, poi aggiornare le istruzioni di conversione.
