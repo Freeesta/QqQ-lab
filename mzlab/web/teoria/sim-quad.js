@@ -120,10 +120,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const ax = TP.axes(c2, { x0: 0, x1: n, y0: -1.2, y1: 1.2, xl: "cicli RF", yl: "spostamento / r₀", yfmt: x => TP.fmt(x, 1), xfmt: x => TP.fmt(x, 0), yticks: [-1, -0.5, 0, 0.5, 1] });
       TP.line(ax, [0, n], [1, 1], "#b42318", 1, [4, 4]); TP.line(ax, [0, n], [-1, -1], "#b42318", 1, [4, 4]);
       ax.clip();
-      TP.line(ax, st.hist.map(h => h[0]), st.hist.map(h => h[1]), col(2), 1.6);
+      TP.line(ax, st.hist.map(h => h[0]), st.hist.map(h => h[1]), col(2), 1.6, TP.DASH[1]);
       TP.line(ax, st.hist.map(h => h[0]), st.hist.map(h => h[2]), col(1), 1.6);
       ax.ctx.restore();
-      TP.legend(ax, [["x (barre +)", col(2)], ["y (barre −)", col(1)]]);
+      TP.legend(ax, [["x (barre +)", col(2), TP.DASH[1]], ["y (barre −)", col(1)]]);
     }
     function loop() {
       raf = null; if (!run) { drawField(); drawHist(); return; }

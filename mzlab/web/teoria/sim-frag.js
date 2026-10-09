@@ -24,12 +24,12 @@ document.addEventListener("DOMContentLoaded", () => {
       ax.clip();
       ax.ctx.fillStyle = "rgba(4,120,87,.07)"; ax.ctx.fillRect(ax.m.l, ax.m.t, ax.W - ax.m.l - ax.m.r, ax.Y(KOBS) - ax.m.t);
       TP.line(ax, [0.5, 10], [KOBS, KOBS], col(3), 1.2, [5, 4]);
-      TP.line(ax, xs, xs.map(e => k(e, v.e1, NU1, v.s) || NaN), col(2), 2.4);
+      TP.line(ax, xs, xs.map(e => k(e, v.e1, NU1, v.s) || NaN), col(2), 2.4, TP.DASH[1]);
       TP.line(ax, xs, xs.map(e => k(e, v.e2, NU2, v.s) || NaN), col(1), 2.4);
       TP.line(ax, [v.e, v.e], [1e-2, 1e14], "#24231f", 1, [3, 3]);
       ax.ctx.restore();
       TP.label(ax, 9.9, KOBS, "osservabile nella cella (k ≳ 10⁴ s⁻¹)", col(3), "right", "bottom", -4);
-      TP.legend(ax, [["riarrangiamento (stato di transizione «stretto», ν = 10⁹ s⁻¹)", col(2)], ["scissione diretta («lasco», ν = 10¹⁴ s⁻¹)", col(1)]]);
+      TP.legend(ax, [["riarrangiamento (stato di transizione «stretto», ν = 10⁹ s⁻¹)", col(2), TP.DASH[1]], ["scissione diretta («lasco», ν = 10¹⁴ s⁻¹)", col(1)]]);
       const k1 = k(v.e, v.e1, NU1, v.s), k2 = k(v.e, v.e2, NU2, v.s), kt = k1 + k2;
       const obs = kt >= KOBS;
       out.innerHTML = `A E = ${TP.fmt(v.e, 2)} eV: k<sub>riarr.</sub> = <b>${k1 ? TP.sci(k1, 1) : "0"}</b> s⁻¹, k<sub>scissione</sub> = <b>${k2 ? TP.sci(k2, 1) : "0"}</b> s⁻¹. ` +

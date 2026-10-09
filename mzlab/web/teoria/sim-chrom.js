@@ -57,10 +57,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       const ax = TP.axes(c, { x0: 0, x1, y0: 0, y1, xl, yl });
       ax.clip();
-      curves.forEach(k => TP.line(ax, k.us, k.hs, k.color, 2.4));
+      curves.forEach((k, i) => TP.line(ax, k.us, k.hs, k.color, 2.4, TP.DASH[i]));
       curves.forEach(k => { const { ctx, X, Y } = ax; ctx.fillStyle = k.color; ctx.beginPath(); ctx.arc(X(k.uo), Y(k.ho), 4, 0, 7); ctx.fill(); });
       ax.ctx.restore();
-      TP.legend(ax, curves.map(k => [k.name, k.color]));
+      TP.legend(ax, curves.map((k, i) => [k.name, k.color, TP.DASH[i]]));
       out.innerHTML = info + " <i>Valori illustrativi.</i>";
     }
     draw();
