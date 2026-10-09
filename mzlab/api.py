@@ -57,7 +57,9 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
         if path == "/api/chrom":
             return _json(app.chrom(int(q["k"]), q.get("kind", "tic"), int(q.get("level", 1)),
                                    float(q["mz0"]) if q.get("mz0") else None, float(q["mz1"]) if q.get("mz1") else None,
-                                   float(q["prec"]) if q.get("prec") else None))
+                                   float(q["prec"]) if q.get("prec") else None, q.get("filt") or None))
+        if path == "/api/filters":       # the scan types of a file (scan filters) with their counts: what the filter menu of a cell lists
+            return _json(app.filters(int(q["k"])))
         if path == "/api/xic":
             return _json(app.xic([int(x) for x in q["k"].split(",") if x], float(q["mz"]),
                                  float(q.get("tol", 0.35)), int(q.get("level", 1))))
@@ -82,19 +84,19 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             if q.get("bgk") not in (None, ""):
                 bg = {"k": int(q["bgk"]), "rt0": float(q["bgrt0"]), "rt1": float(q["bgrt1"]), "factor": float(q.get("bgf", 1.0))}
             return _json(app.spectrum(int(q["k"]), float(q["rt0"]), float(q["rt1"]), int(q.get("level", 1)),
-                                      float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), bg, q.get("merge") == "1", q.get("hr") != "0"))
+                                      float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), bg, q.get("merge") == "1", q.get("hr") != "0", q.get("filt") or None))
         if path == "/api/spectra":       # single scans i0..i1 (at most 60), for scan-by-scan navigation
             pr = q.get("prec", q.get("precursor"))
             try:
                 return _json(app.spectra(int(q["k"]), int(q["i0"]), int(q["i1"]), int(q.get("level", 1)),
-                                         float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), q.get("merge") == "1", q.get("hr") != "0"))
+                                         float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), q.get("merge") == "1", q.get("hr") != "0", q.get("filt") or None))
             except (ValueError, KeyError) as e:
                 return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
         if path == "/api/scanbin":       # the same scans as /api/spectra, as a binary block (no JSON, no decimals): see App.scanbin
             pr = q.get("prec", q.get("precursor"))
             try:
                 body = app.scanbin(int(q["k"]), int(q["i0"]), int(q["i1"]), int(q.get("level", 1)), float(pr) if pr not in (None, "") else None,
-                                   q.get("filter") or None, q.get("hr") != "0", q.get("merge") == "1")
+                                   q.get("filt") or q.get("filter") or None, q.get("hr") != "0", q.get("merge") == "1")
                 return 200, "application/octet-stream", body, {}
             except (ValueError, KeyError) as e:
                 return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
