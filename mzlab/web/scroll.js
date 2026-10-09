@@ -22,12 +22,25 @@ function scFetch(k, lv, pr, i0, i1) {
   if (i0 > i1) return Promise.resolve();
   if (i1 - i0 > 59) i1 = i0 + 59;
   const fk = `${b}|${i0}|${i1}`; if (SC.fl.has(fk)) return SC.fl.get(fk);
-  const pm = J(`api/spectra?k=${k}&i0=${i0}&i1=${i1}&level=${lv}&prec=${pr ?? ""}` + MERGE()).then(j => {
+  const f = E.files[k], q = `k=${k}&i0=${i0}&i1=${i1}&level=${lv}&prec=${pr ?? ""}` + MERGE();
+  // high resolution: a binary block (m/z float64, intensity float32), not a JSON text of 1-3 MB; any other file keeps the JSON of always
+  const pm = (window.HR && f && HR.isHr(f, lv) ? scBin(`api/scanbin?${q}`) : J(`api/spectra?${q}`)).then(j => {
     SC.n.set(b, j.n);
     for (const s of j.scans) SC.m.set(b + "|" + s.i, s);
     while (SC.m.size > SC.max) SC.m.delete(SC.m.keys().next().value);
   }).finally(() => SC.fl.delete(fk));
   SC.fl.set(fk, pm); return pm;
+}
+// api/scanbin: 4 bytes = length of the JSON header, the header {n, scans:[{i, sid, rt, mode, n, np}]}, then for each scan peaks (float64 m/z, float32 y) and, for profile, the line (pmz, py)
+async function scBin(url) {
+  const r = await fetch(url);
+  if (!r.ok) { let m = "errore " + r.status; try { m = (await r.json()).error || m; } catch (e) { /* not JSON */ } throw new Error(m); }
+  const buf = await r.arrayBuffer(), hl = new DataView(buf).getUint32(0, true), head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hl)));
+  let off = 4 + hl;
+  const arr = (T, n) => { const a = Array.from(new T(buf.slice(off, off + n * T.BYTES_PER_ELEMENT))); off += n * T.BYTES_PER_ELEMENT; return a; };      // slice: an array view needs an aligned offset
+  const scans = head.scans.map(m => { const mz = arr(Float64Array, m.n), y = arr(Float32Array, m.n), o = { i: m.i, sid: m.sid, rt: m.rt, mode: m.mode, mz, y, no: m.no, filter: m.filter, nl: m.nl, tic: m.tic };
+    if (m.np) { o.pmz = arr(Float64Array, m.np); o.py = arr(Float32Array, m.np); } return o; });
+  return { n: head.n, scans };
 }
 // the spectrum of scan p.si: from the cache, else one block around it in the direction of the walk, else (any problem) the window request of before
 async function scData(p, k) {
