@@ -93,12 +93,19 @@ def make_handler(app: App):
     return H
 
 
+class Server(ThreadingHTTPServer):
+    # the default listen backlog of socketserver is 5: a browser opens many connections at once (page, scripts, iframes) and on Windows the ones beyond
+    # the backlog are dropped and time out (net::ERR_CONNECTION_TIMED_OUT in the CI job windows-chromium)
+    request_queue_size = 128
+    daemon_threads = True
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--workdir", required=True)
     ap.add_argument("--port", type=int, default=8790)
     a = ap.parse_args()
-    httpd = ThreadingHTTPServer(("127.0.0.1", a.port), make_handler(App(Path(a.workdir))))
+    httpd = Server(("127.0.0.1", a.port), make_handler(App(Path(a.workdir))))
     print(f"QqQ lab (test server)  http://127.0.0.1:{a.port}/  ready", flush=True)
     try:
         httpd.serve_forever()

@@ -38,6 +38,8 @@ try:
             assert "Voce di prova" in t and "Corrispondenza" in t, t
             assert "scansion" in pg.inner_text("#li-st") or "confrontate" in pg.inner_text("#li-st")
             assert pg.is_visible("#libid") and "livello 2a" in pg.inner_text("#libid")
+            with pg.expect_download() as dl: pg.click("#li-xlsx")
+            assert dl.value.suggested_filename.startswith("identificazione") and os.path.getsize(dl.value.path()) > 1500
             pg.evaluate("document.querySelector('#libid').close()")
         step("identify all the MS2 of the file: the library entry is found, with a verdict and the level", identify)
         def analogs():

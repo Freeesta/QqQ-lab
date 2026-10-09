@@ -1,0 +1,486 @@
+"use strict";
+// Banco HR (WP-H3a): the cells of the high-resolution bench, as the model of Xcalibur Qual Browser. Classic script, loaded after tabs.js.
+// A cell is one panel of the page. In the high-resolution world every chromatogram and spectrum cell gets
+//   - a SCAN FILTER (the type of scan it shows: «FTMS + p ESI Full ms», «FTMS + ms2 @hcd», for an infusion MSn file one filter for each path of
+//     fragmentation), listed by the server with the number of scans of each type (/api/filters); the filter goes to every request of the cell;
+//   - a PIN: a pinned spectrum does not follow the cursor of its chromatogram; a pinned chromatogram is not taken by the MS2 list.
+// The active cell (the last one clicked) has an outline. Nothing here exists in the low-resolution world: the functions return at once.
+const BANCO = (() => {
+  const st = document.createElement("style");
+  st.textContent = `.hrw .pnl.act{box-shadow:0 0 0 2px var(--accent)}
+.bfw{display:inline-flex;align-items:center;gap:4px;margin-left:6px}.bfw select{max-width:21em;min-width:9em}.bfw .pin{padding:2px 5px}.bfw .pin.on{background:var(--sel);color:var(--accent);border-color:var(--accent)}
+.hrw #g-add,.hrw #ovbtn{display:none}
+#hrbar{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:4px 0 8px;border-bottom:2px solid var(--line);margin-bottom:8px}
+#hrbar[hidden]{display:none}#hrbar .sepv{width:1px;align-self:stretch;background:var(--line);margin:0 4px}
+#hrbar button{min-width:32px;height:30px;padding:0 7px;display:inline-flex;align-items:center;justify-content:center;gap:4px}
+#hrbar button.on{background:var(--sel);color:var(--accent);border-color:var(--accent)}#hrbar button:disabled{opacity:.35;cursor:default}
+#hrbar select{height:30px}#hrbar .act{margin-left:auto;font-size:12px;color:var(--muted)}
+#hrinfo{margin-top:10px;display:flex;flex-direction:column;resize:vertical;overflow:hidden;height:340px;min-height:170px;max-height:80vh;padding:0}
+#hrinfo[hidden]{display:none}#hri-tabs{display:flex;flex-wrap:wrap;gap:2px;padding:4px;border-bottom:1px solid var(--line)}
+#hri-tabs button{width:30px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center}#hri-tabs button.on{background:var(--sel);color:var(--accent);border-color:var(--accent)}
+#hri-ttl{padding:4px 8px 0;font-weight:600;font-size:12px}#hri-body{overflow:auto;flex:1;padding:6px 8px;font-size:12px;user-select:text}
+#hri-body table{border-collapse:collapse;width:100%}#hri-body td,#hri-body th{padding:1px 6px 1px 0;text-align:left;vertical-align:top;white-space:nowrap}#hri-body td.num,#hri-body th.num{text-align:right}
+#hri-body td.v{white-space:normal;word-break:break-all}#hri-body h4{margin:8px 0 2px;font-size:12px}#hri-body .row{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}
+#hri-list{position:relative;overflow:auto;height:100%}#hri-list .hd{position:sticky;top:0;background:var(--panel);z-index:1;display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;font-weight:600;border-bottom:1px solid var(--line)}
+#hri-list .hd span{cursor:pointer;padding:2px 2px}#hri-list .r{display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;height:20px;line-height:20px;cursor:pointer;white-space:nowrap}
+#hri-list .r:hover{background:var(--sel)}#hri-list .r.cur{background:var(--sel);font-weight:600}
+.hrw #flst{max-height:34vh;overflow:auto}`;
+  document.head.appendChild(st);
+  const on = () => !!window.HR && E.files.some(f => f && !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2)));
+  const sync = () => { try { document.body.classList.toggle("hrw", on()); } catch (e) { /* page not ready */ } return on(); };
+  const groupsOf = k => memo(`flt|${k}`, () => J(`api/filters?k=${k}`).then(j => j.filters));
+  const nfmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  const IC_PIN = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 1.8l4.7 4.7-2 .6-2.4 2.6.1 3-1 1-2.6-3.1-3.6 3.6-.4-.4 3.6-3.6-3.1-2.6 1-1 3 .1 2.6-2.4z"/></svg>';
+  // which cells have a scan filter: not the product-ion spectrum of the DDA trio (its scan is the one the survey scan started) nor the MRM ones
+  const eligible = p => (p.type === "chrom" || p.type === "spec") && p.dda == null && p.dock == null && p.tab !== "mrm";
+  // the file whose scan types the menu of a cell lists: the one of the cell, or the first visible one of its tab
+  function fileOf(p) {
+    if (p.type === "spec" && E.files[p.k] && !E.files[p.k].gone) return E.files[p.k];
+    return tabFiles(p.tab || E.tab).filter(f => f.vis !== false && f.kind !== "mrm")[0] || null;
+  }
+  const baseOf = f => (f.file || "").split("#")[0];
+  // the menu lists every scan type of the file: choosing one of another experiment (survey / product ions) moves the cell to that experiment
+  const tabOf = g => (g.level > 1 ? "ms2" : "full");
+  // all the cells that show the scans of the same chromatogram take the filter together (the chromatogram, its spectra)
+  const group = p => { const ids = new Set([p.id]); E.panels.forEach(q => { if (q.type === "spec" && (q.link === p.id || q.src === p.id)) ids.add(q.id); if (p.type === "spec" && (p.link === q.id || p.src === q.id)) ids.add(q.id); }); return E.panels.filter(q => ids.has(q.id)); };
+  function setFilter(p, key, gs) {
+    const g = key ? gs.find(x => x.key === key) : null, nt = g ? tabOf(g) : null;
+    group(p).forEach(q => {
+      if (q.type === "chrom" && !eligible(q)) return;
+      if (nt && q.tab !== nt && q.tab !== "mrm") {                           // another experiment: the files of the cell are the ones of that experiment (same physical file)
+        const f0 = q.type === "spec" ? E.files[q.k] : null; q.tab = nt;
+        if (f0) { const sib = E.files.find(x => !x.gone && baseOf(x) === baseOf(f0) && x.kind === nt); if (sib) q.k = sib.k; }
+        q.title = q.type === "chrom" ? "Cromatogramma" : nt === "ms2" ? "Spettro degli ioni prodotto" : "Spettro di massa"; q.sel = null;
+      }
+      q.filt = key || null;
+      if (g && g.level > 1) { q.prec = null; if (q.type === "chrom") q.title = "Cromatogramma"; }       // the type of scan already says which precursor: not one chosen before
+      if (q.type === "chrom") q.flv = g ? g.level : null;
+      else { if (g) q.level = g.level; q.zoom = null; q.zoomY = null; q.lock = null; q.si = null; q.meas = null; }
+      ctl(q); draw(q);
+    });
+    uiSave();
+  }
+  function setPin(p, v) {
+    p.pin = !!v;
+    if (p.type === "spec") { if (v && p.link) freezeSpec(p); else if (!v && !p.link && p.src) { const s = E.panels.find(q => q.id === p.src); if (s) liveSpec(p, s); } }
+    ctl(p); uiSave();
+  }
+  // ---------------------------------------------------------------- stacked graphs of a chromatogram cell (the «Ranges» of Xcalibur)
+  // p.ranges = [{id, kind: "tic" | "bpc" | "xic", mz, ppm, filt, flv, prec, label}], at most 8. Every range is one row of the stacked chromatogram, with the
+  // files of the bench overlaid in it; every row says its NL (the highest intensity) and p.norm100 puts them all on the 0-100 scale.
+  const MAXR = 8;
+  const filesFor = lv => {
+    const seen = new Set(), out = [];
+    vis().forEach(f => { const b = baseOf(f); if (f.kind === "mrm" || seen.has(b)) return; seen.add(b); const sib = E.files.find(g => !g.gone && baseOf(g) === b && (lv > 1 ? g.kind === "ms2" : g.kind === "full")); if (sib) out.push({ f: sib, vis: f }); });
+    return out;
+  };
+  const rangeLabel = r => r.label || ((r.kind === "xic" ? `XIC ${r.mz}` : r.kind.toUpperCase()) + (r.filt ? " · " + r.filt : r.flv > 1 ? " · MS" + r.flv : ""));
+  async function rangeSeries(p) {
+    const out = [], jobs = [];
+    p.ranges.forEach((r, ri) => {
+      const lv = r.flv || 1;
+      filesFor(lv).forEach(({ f, vis: vf }) => {
+        const q = HR.prof(f, lv), w = r.kind === "xic" ? r.mz * (r.ppm ?? q.tol) * 1e-6 : null;
+        jobs.push(getChrom(f.k, r.kind === "xic" ? "tic" : r.kind, lv, w != null ? r.mz - w : null, w != null ? r.mz + w : null, r.prec ?? null, r.filt || null).then(d => {
+          if (d.rt.length) out.push({ x: d.rt, y: d.y, color: vf.color, dash: fdash(vf), name: `${rangeLabel(r)} · ${vf.label}`, k: f.k, key: `r|${r.id}|${f.k}`, ion: rangeLabel(r), time: vf.time, grp: ri, rlabel: rangeLabel(r) });
+        }));
+      });
+    });
+    await Promise.all(jobs);
+    return out.sort((a, b) => a.grp - b.grp || a.k - b.k);
+  }
+  async function addRange(p) {
+    if ((p.ranges || []).length >= MAXR) return info(`Al massimo ${MAXR} grafici impilati in una cella.`);
+    const f0 = fileOf(p) || vis()[0]; if (!f0) return;
+    const groups = await groupsOf(f0.k).catch(() => []);
+    const opt = g => `<option value="${EH(g.key)}" data-lv="${g.level}">${EH(g.key)} \u00d7${nfmt(g.n)}</option>`;
+    big("Aggiungi un grafico impilato", `<div class="muted sm" style="margin-bottom:6px">Ogni grafico ha la sua riga sullo stesso asse del tempo, con «NL» (l'intensità massima).</div>
+      <div class="cmp-grid"><label>Tipo <select id="br-kind"><option value="tic">TIC (somma)</option><option value="bpc">BPC (picco base)</option><option value="xic">XIC di uno ione</option></select></label>
+      <label id="br-ionw" hidden>m/z o formula <input id="br-ion" placeholder="317.1642 oppure C13H24N4O3S" style="width:200px"> <select id="br-ad"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M+K]+</option><option>[M-H]-</option></select> \u00b1 <input id="br-ppm" value="${HR.prof(f0, 1).tol}" style="width:46px"> ppm</label>
+      <label>Tipo di scansione <select id="br-filt"><option value="" data-lv="1">tutte le scansioni MS1</option>${groups.map(opt).join("")}</select></label></div>
+      <div style="margin-top:8px"><button id="br-ok" type="button" class="go">Aggiungi</button> <span id="br-err" class="fail"></span></div>`, () => {
+      const $ = x => Q(x), sync = () => { $("#br-ionw").hidden = $("#br-kind").value !== "xic"; };
+      $("#br-kind").onchange = sync; sync();
+      $("#br-ok").onclick = async () => {
+        const kind = $("#br-kind").value, fo = $("#br-filt").selectedOptions[0], filt = $("#br-filt").value || null, lv = +(fo.dataset.lv || 1), r = { id: E.seq++, kind, filt, flv: lv, prec: null };
+        if (kind === "xic") {
+          const t = $("#br-ion").value.trim().replace(",", "."); let mz = parseFloat(t);
+          if (!(mz > 0) || /[A-Za-z]/.test(t)) { try { const j = await getFormula(t.split(/\s+/)[0], $("#br-ad").value); mz = j.mz5 ?? j.mz; } catch (e) { $("#br-err").textContent = "Scrivi un m/z oppure una formula valida."; return; } }
+          r.mz = +(+mz).toFixed(5); r.ppm = parseFloat($("#br-ppm").value) || HR.prof(f0, 1).tol;
+          r.label = `XIC ${r.mz.toFixed(HR.prof(f0, 1).dec)} \u00b1${+r.ppm.toFixed(1)} ppm` + (filt ? " · " + filt : "");
+        }
+        p.ranges = [...(p.ranges || []), r]; if (p.ranges.length > 1) p.mode = "stk";
+        Q("#bigdlg").close(); ctl(p); draw(p); uiSave();
+      };
+    });
+  }
+  const dropRange = (p, id) => { p.ranges = (p.ranges || []).filter(r => r.id !== id); if (!p.ranges.length) p.ranges = null; ctl(p); draw(p); uiSave(); };
+  // short header of a spectrum cell (as in Xcalibur): the scan type and the NL (highest intensity) next to the retention time
+  function header(p) {
+    if (!sync()) return;
+    if (p.type === "chrom") follow(p);
+    const ac = act();
+    if (ac && (p === ac || (p.type === "spec" && p.link === ac.id)) && ist.tab === "hdr") { clearTimeout(ist.t); ist.t = setTimeout(renderInfo, 250); }      // the header of the scan follows the cursor (of the cell or of its chromatogram)
+    if (p.type !== "spec") return;
+    const rl = p.el.querySelector(".rtl"); if (!rl) return;
+    let h = p.el.querySelector(".bnl"); if (!h) { h = document.createElement("span"); h.className = "bnl muted sm"; h.style.marginLeft = "8px"; rl.after(h); }
+    const d = p._a && p._a.data && p._a.data[0] && p._a.data[0].d, nl = d && d.y && d.y.length ? Math.max(...d.y) : null;
+    h.textContent = nl == null ? "" : `${p.filt ? p.filt + " · " : p.level > 1 ? "MS" + p.level + " · " : ""}NL: ${nl.toExponential(2).replace("e+", "E")}`;
+  }
+  function decorate(p, c) {
+    if (!sync() || !c || !(eligible(p) || p.type === "xic")) return;
+    const wrap = document.createElement("span"); wrap.className = "bfw";
+    if (eligible(p)) {
+      const sel = document.createElement("select"); sel.dataset.bf = "filt"; sel.title = "Tipo di scansione di questa cella (filtro di scansione): ogni tipo ha il suo cromatogramma e i suoi spettri";
+      sel.innerHTML = `<option value="">tutte le scansioni…</option>`; wrap.appendChild(sel);
+      const f = fileOf(p);
+      if (f) groupsOf(f.k).then(gs => {
+        if (!sel.isConnected) return;
+        const opt = g => `<option value="${EH(g.key)}"${p.filt === g.key ? " selected" : ""}>${EH(g.key)} \u00d7${nfmt(g.n)}</option>`;
+        const lv = gs.filter(g => g.level === 1), l2 = gs.filter(g => g.level === 2), ln = gs.filter(g => g.level > 2);
+        sel.innerHTML = `<option value="">tutti i tipi</option>` + [["Scansione completa (MS1)", lv], ["Ioni prodotto (MS2)", l2], ["Frammentazioni successive (MSn)", ln]].filter(([, l]) => l.length).map(([t, l]) => `<optgroup label="${t}">${l.map(opt).join("")}</optgroup>`).join("");
+        sel.value = p.filt && gs.some(g => g.key === p.filt) ? p.filt : "";
+        sel.onchange = () => setFilter(p, sel.value || null, gs);
+      }).catch(() => { sel.disabled = true; });
+    }
+    if (p.type === "chrom") {
+      const add = document.createElement("button"); add.type = "button"; add.dataset.bf = "range"; add.textContent = "+ Grafico"; add.title = "Aggiungi un grafico impilato sullo stesso asse del tempo (TIC, BPC o XIC di un tipo di scansione)";
+      add.onclick = e => { e.stopPropagation(); addRange(p); }; wrap.appendChild(add);
+      if (p.ranges && p.ranges.length) {
+        const ks = c.querySelector('[data-o="kind"]'); if (ks) { const t = document.createElement("b"); t.className = "ttl"; t.textContent = "Grafici impilati"; t.title = "Il tipo di cromatogramma è scelto per ogni grafico (pulsante «× …» per toglierlo)"; ks.replaceWith(t); }
+        const n = document.createElement("label"); n.className = "muted"; n.title = "Porta ogni grafico impilato sulla scala 0-100 (l'intensità massima resta scritta come NL)";
+        n.innerHTML = `<input type="checkbox" data-bf="norm"${p.norm100 ? " checked" : ""}> 0-100`; n.querySelector("input").onchange = e => { p.norm100 = e.target.checked; draw(p); uiSave(); }; wrap.appendChild(n);
+        p.ranges.forEach(r => { const b = document.createElement("button"); b.type = "button"; b.className = "bt"; b.dataset.bf = "drop"; b.dataset.id = r.id; b.textContent = "\u00d7 " + (rangeLabel(r).length > 18 ? rangeLabel(r).slice(0, 17) + "…" : rangeLabel(r)); b.title = "Togli il grafico: " + rangeLabel(r); b.onclick = e => { e.stopPropagation(); dropRange(p, r.id); }; wrap.appendChild(b); });
+      }
+    }
+    const pin = document.createElement("button"); pin.type = "button"; pin.className = "bt pin" + (p.pin ? " on" : ""); pin.dataset.bf = "pin"; pin.innerHTML = IC_PIN;
+    pin.title = p.pin ? "Cella fissata (puntina): non segue il cursore. Clic per sganciarla" : "Fissa la cella (puntina): uno spettro fissato non segue più il cursore del cromatogramma";
+    pin.onclick = e => { e.stopPropagation(); setPin(p, !p.pin); };
+    wrap.appendChild(pin); c.appendChild(wrap);
+  }
+
+  // ---------------------------------------------------------------- the toolbar of the bench (WP-H3b, master-prompt §3.3): in the place of the tabs of the experiments
+  const svg = d => `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const ICON = {
+    prev: svg('<path d="M10 3L5 8l5 5"/>'), next: svg('<path d="M6 3l5 5-5 5"/>'),
+    zundo: svg('<path d="M3 7h6a3 3 0 010 6H6"/><path d="M5.5 4.5L3 7l2.5 2.5"/>'), zall: svg('<path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4"/>'),
+    norm: svg('<path d="M3 13V8M7 13V4M11 13V6"/><path d="M2 13.5h12"/>'), add: svg('<path d="M8 3v10M3 8h10"/>'), del: svg('<path d="M3 4.5h10M6 4.5V3h4v1.5M5 4.5l.5 8.5h5l.5-8.5"/>'),
+    type: svg('<path d="M3 5h8M3 11h8"/><path d="M9 3l2 2-2 2M7 9l-2 2 2 2"/>'), peaks: svg('<path d="M2 13c2 0 2-8 4-8s2 8 4 8 1.5-4 4-4"/>'), lib: svg('<circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/>'),
+    copy: svg('<rect x="5" y="5" width="8" height="8" rx="1"/><path d="M3 10V3h7"/>'), xls: svg('<path d="M3 2.5h6.5l3 3v8H3z"/><path d="M5.5 8l3 3.5M8.5 8l-3 3.5"/>'), tree: svg('<path d="M8 2v4M8 6H4v3M8 6h4v3M4 9v3M12 9v3"/>'),
+  };
+  const act = () => (E.active && E.panels.includes(E.active) ? E.active : E.panels[0] || null);
+  const tabOfAct = () => (act() && act().tab) || E.tab;
+  const decOf = () => Math.round(UIP.hrDec || 4);
+  function barBtn(id, tip, ic, fn, label) { return `<button type="button" data-hb="${id}" title="${EH(tip)}" aria-label="${EH(tip)}">${ic}${label ? `<span>${EH(label)}</span>` : ""}</button>`; }
+  async function copyPng(p) {
+    let cvs; p._exp = true; EXPORTING = true;
+    try { await draw(p); cvs = whiteCanvas(p.cv, p.type === "spec" ? specCaption(p) : ""); } finally { p._exp = false; EXPORTING = false; draw(p); }
+    const blob = await new Promise(r => cvs.toBlob(r));
+    try { await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]); nearMsg("Immagine copiata negli appunti."); }
+    catch (e) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = plotName(p) + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); info("Gli appunti non accettano immagini qui: l'ho scaricata."); }
+  }
+  async function copyText(p) {
+    const t = plotSheets(p); if (!t || !t[0]) return info("Nessun dato da copiare in questa cella.");
+    const sh = t[0], txt = [sh.head.join("\t"), ...sh.rows.map(r => r.map(v => (v == null ? "" : v)).join("\t"))].join("\n");
+    try { await navigator.clipboard.writeText(txt); nearMsg("Dati copiati negli appunti (testo con tabulazioni)."); } catch (e) { info("Gli appunti non sono disponibili in questa pagina."); }
+  }
+  function addCell(type) {
+    const tab = tabOfAct() === "mrm" ? "full" : tabOfAct(), f = tabFiles(tab)[0]; if (!f) return;
+    const q = E.panels.reduce((m, x) => Math.max(m, x.y + x.h + 10), 0), w = hostWidth();
+    const o = { tab, x: 0, y: q, w, h: type === "map" ? 420 : 300, full: true };
+    const n = type === "spec" ? addPanel("spec", { ...o, k: f.k, level: f.lv || 1, link: null }) : addPanel(type, o);
+    relayout(); fitHost(); setActive(n); n.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
+  }
+  function retype(type) {
+    const o = act(); if (!o || o.type === type) return;
+    if (!["chrom", "spec", "map"].includes(type) || !["chrom", "spec", "map", "xic"].includes(o.type)) return info("Questa cella non si può cambiare in quel tipo.");
+    const f = tabFiles(o.tab)[0]; if (!f) return;
+    const g = { tab: o.tab, x: o.x, y: o.y, w: o.w, h: o.h, full: o.full };
+    const n = type === "spec" ? addPanel("spec", { ...g, k: o.k ?? f.k, level: o.level ?? (f.lv || 1) }) : addPanel(type, g);
+    o.el.querySelector(".x").click(); setActive(n); relayout(); fitHost(); uiSave();
+  }
+  const FN = {
+    dec: v => { UIP.hrDec = Math.min(5, Math.max(3, +v || 4)); try { uipSave(); } catch (e) { /* no storage */ } redrawAll(); },
+    prev: () => { const a = walkTarget(false); if (a) stepScan(a, -1); else info("Metti il cursore sul cromatogramma (un clic) per scorrere le scansioni."); },
+    next: () => { const a = walkTarget(false); if (a) stepScan(a, 1); else info("Metti il cursore sul cromatogramma (un clic) per scorrere le scansioni."); },
+    zundo: () => { const a = act(); if (a) undoLast(a); },
+    zall: () => { E.panels.forEach(q => { pushZh(q); q.zoom = null; q.zoomY = null; if (q.type === "spec") q.lock = null; draw(q); }); uiSave(); },
+    norm: () => { const a = act(); if (!a) return; if (a.type === "spec") { a.rel = !specRel(a); draw(a); } else if (a.type === "chrom" || a.type === "xic") { a.norm100 = !a.norm100; draw(a); } uiSave(); sync2(); },
+    pin: () => { const a = act(); if (a && (eligible(a) || a.type === "xic")) setPin(a, !a.pin); sync2(); },
+    del: () => { const a = act(); if (a) a.el.querySelector(".x").click(); },
+    peaks: () => { const a = act(); const b = a && a.el.querySelector('[data-a="iauto"]'); if (b) b.click(); else info("Il rilevamento dei picchi serve nelle celle cromatogramma."); sync2(); },
+    lib: () => { let a = act(); if (a && a.type !== "spec") a = E.panels.find(q => q.type === "spec" && q.link === a.id); if (a && window.LIB && a.level === 2) LIB.searchFrom(a); else info("Scegli una cella con uno spettro MS2 (o il suo cromatogramma): lo cerco nelle librerie."); },
+    xls: () => { const a = act(), t = a && plotSheets(a); if (t) dlx(plotName(a) + ".xlsx", t); else info("Nessun dato da esportare in questa cella."); },
+    tree: () => { const f = tabFiles("ms2")[0]; if (f && window.COMP) COMP.tree(f.k); else info("L'albero MSn serve per un file di infusione con più stadi di frammentazione."); },
+  };
+  function sync2() {
+    const b = Q("#hrbar"); if (!b) return; const a = act();
+    const t = (id, on) => { const x = b.querySelector(`[data-hb="${id}"]`); if (x) x.classList.toggle("on", !!on); };
+    t("pin", a && a.pin); t("norm", a && (a.type === "spec" ? specRel(a) : a.norm100)); t("peaks", a && a.imode === "auto");
+    const d = b.querySelector('[data-hb="dec"]'); if (d) d.value = String(decOf());
+    renderInfo();
+    const l = b.querySelector(".act"); if (l) l.textContent = a ? `cella attiva: ${a.type === "chrom" ? "cromatogramma" : a.type === "spec" ? "spettro" : a.type === "map" ? "mappa" : a.type === "xic" ? "XIC" : a.type}${a.filt ? " · " + a.filt : ""}` : "nessuna cella";
+  }
+  // the starting layout of the bench: the survey on top (the trio for a DDA file); product ions that are not a DDA get their own chromatogram and spectrum under it
+  function afterLayout() {
+    if (!sync()) return;
+    const f2 = tabFiles("ms2").find(f => !f.dda && f.vis !== false);
+    if (!f2 || E.panels.some(q => q.tab === "ms2")) return;
+    const y = E.panels.reduce((m, q) => Math.max(m, q.y + q.h + 10), 0);
+    addMs2Pair({ prec: null, k: f2.k }, y); relayout(); fitHost();
+  }
+    // ---------------------------------------------------------------- the information bar (WP-H3c, master-prompt §3.4): tabs as icons, one at a time, acting on the active cell.
+  // 1 header of the scan · 2 list of scans · 3 file and instrument · 7 composite spectrum are here; 4 elemental composition, 5 isotope simulation, 6 peak detection,
+  // 8 identification and 9 MSn tree open the functions that already exist (composizione.js, libreria.js, explore.js), without a second copy of their code.
+  const I9 = [["hdr", "1 · Intestazione della scansione", svg('<rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M5 6h6M5 8.5h6M5 11h3"/>')],
+    ["lst", "2 · Elenco delle scansioni", svg('<path d="M3 4h10M3 8h10M3 12h10"/><circle cx="1.6" cy="4" r=".6"/><circle cx="1.6" cy="8" r=".6"/><circle cx="1.6" cy="12" r=".6"/>')],
+    ["fil", "3 · File e strumento", svg('<path d="M3.5 2.5h6l3 3v8h-9z"/><path d="M9.5 2.5v3h3"/>')],
+    ["cmp", "4 · Composizione elementare (formule compatibili)", svg('<path d="M2 12l3-8 3 8M3.2 9h3.6"/><path d="M10 5h4M10 8h4M10 11h4"/>')],
+    ["iso", "5 · Simulazione isotopica", svg('<path d="M3 13V8M6 13V4M9 13V7M12 13V10"/>')],
+    ["pks", "6 · Rilevamento dei picchi", ICON.peaks],
+    ["com", "7 · Spettro composito", svg('<path d="M2 13h12"/><path d="M4 13V9M7 13V5M10 13V8"/><path d="M2 6c2-2 3-2 5 0s3 2 5 0"/>')],
+    ["idn", "8 · Identificazione con le librerie", ICON.lib],
+    ["tre", "9 · Albero MSn", ICON.tree]];
+  const IK = "qqq.banco.info";
+  const ist = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem(IK) || "{}"); } catch (e) { /* none */ } return { tab: I9.some(x => x[0] === o.tab) ? o.tab : "hdr", h: o.h || 340 }; })();
+  const isave = () => { try { localStorage.setItem(IK, JSON.stringify(ist)); } catch (e) { /* none */ } };
+  const num = (v, d = 4) => (v == null || !Number.isFinite(+v) ? "" : String(+(+v).toFixed(d)));
+  const esc = EH;
+  // the file, the level and the time of the active cell
+  const cFile = p => (p.type === "spec" ? E.files[p.k] : (p._a && p._a.sr && p._a.sr[0] ? E.files[p._a.sr[0].k] : fileOf(p))) || null;
+  const cLevel = p => (p.type === "spec" ? p.level || 1 : p.flv ?? (cFile(p) || {}).lv ?? 1);
+  const cRt = p => (p.type === "spec" ? (p.r0 != null ? (p.r0 + p.r1) / 2 : null) : p.cur);
+  async function cScan(p) {
+    const f = cFile(p), rt = cRt(p); if (!f || rt == null) return null;
+    return J(`api/nearest_scan?k=${f.k}&rt=${rt}&level=${cLevel(p)}${p.filt ? "&filter=" + encodeURIComponent(p.filt) : ""}`).catch(() => null);
+  }
+  const kv = rows => `<table>${rows.map(([a, b]) => `<tr><td class="muted">${esc(a)}</td><td class="v">${esc(b)}</td></tr>`).join("")}</table>`;
+  async function tHdr(b, p, tok) {
+    const n = await cScan(p);
+    if (tok !== ist.tok) return;
+    if (!n) return void (b.innerHTML = `<div class="muted">Clic sul cromatogramma (o scegli uno spettro) per vedere i parametri di una scansione.</div>`);
+    const h = await J(`api/scaninfo?k=${cFile(p).k}&sid=${n.sid}`).catch(e => ({ error: e.message }));
+    if (tok !== ist.tok) return;
+    if (h.error) return void (b.innerHTML = `<span class="fail">${esc(h.error)}</span>`);
+    const top = [["Scansione", h.no], ["RT (min)", num(h.rt)], ["Livello", "MS" + h.level], ["Polarità", h.polarity], ["Filtro", h.filter], ["Tipo", h.key], ["Precursore (m/z)", num(h.prec, 5)],
+      ["Finestra di isolamento", h.iso ? `${num(h.iso[0])} – ${num(h.iso[1])}` : ""], ["Attivazione", [h.act, h.ce != null ? "energia " + h.ce : ""].filter(Boolean).join(" ")], ["Potere risolutivo", h.res ? Math.round(h.res) : ""],
+      ["Analizzatore", h.analyzer || ""], ["Spettro", h.profile ? "profilo" : "centroidi"], ["TIC", h.tic != null ? (+h.tic).toExponential(3) : ""]].filter(x => x[1] !== "" && x[1] != null);
+    b.innerHTML = `<div class="row"><button type="button" data-ic="copy">Copia</button><span class="muted">${h.pairs.length} parametri letti dal file</span></div>` + kv(top) + `<h4>Tutti i parametri dell'intestazione</h4>` + kv(h.pairs.map(x => [x.name, x.value + (x.unit ? " " + x.unit : "")]));
+    b.querySelector('[data-ic="copy"]').onclick = async () => { try { await navigator.clipboard.writeText([...top, ...h.pairs.map(x => [x.name, x.value])].map(r => r.join("\t")).join("\n")); nearMsg("Parametri copiati."); } catch (e) { nearMsg("Gli appunti non sono disponibili."); } };
+  }
+  function goScan(p, sid, rt, k) {
+    const c = p.type === "spec" ? E.panels.find(q => q.id === p.link) : p;
+    if (c && c.type !== "spec") { c.cur = rt; if (c.zoom && (rt < c.zoom[0] || rt > c.zoom[1])) { const w = c.zoom[1] - c.zoom[0]; c.zoom = clampView(rt - w / 2, rt + w / 2, c._a.full[0], c._a.full[1]); draw(c); } else cursorLine(c); pushLinked(c, rt - NEAR, rt + NEAR, k, true, {}); }
+    else if (p.type === "spec") { p.r0 = rt - NEAR; p.r1 = rt + NEAR; p.si = null; draw(p); }
+    uiSave();
+  }
+  async function tLst(b, p, tok) {
+    const f = cFile(p); if (!f) return void (b.innerHTML = `<div class="muted">Scegli una cella.</div>`);
+    const t = await J(`api/scanlist?k=${f.k}&level=${cLevel(p)}${p.filt ? "&filt=" + encodeURIComponent(p.filt) : ""}`).catch(e => ({ error: e.message }));
+    if (tok !== ist.tok) return;
+    if (t.error) return void (b.innerHTML = `<span class="fail">${esc(t.error)}</span>`);
+    const cols = [["no", "N"], ["rt", "RT"], ["prec", "Prec."], ["tic", "TIC"], ["bpmz", "Picco base"], ["bpint", "Int."]], H = 20;
+    let idx = t.sid.map((_, i) => i), sk = null, sd = 1;
+    b.innerHTML = `<div class="muted" style="margin-bottom:3px">${t.n} scansioni${p.filt ? " · " + esc(p.filt) : ` · MS${cLevel(p)}`}. Clic su una riga: la cella va a quella scansione.</div><div id="hri-list"><div class="hd">${cols.map(c => `<span data-c="${c[0]}">${c[1]}</span>`).join("")}</div><div class="rows" style="height:${t.n * H}px;position:relative"></div></div>`;
+    const L = b.querySelector("#hri-list"), R = L.querySelector(".rows"), cur = cRt(p);
+    const fx = { no: v => v, rt: v => num(v, 3), prec: v => (v == null ? "" : num(v, 3)), tic: v => (+v).toExponential(2), bpmz: v => num(v, 4), bpint: v => (+v).toExponential(2) };
+    const paint = () => {
+      const a = Math.max(0, Math.floor((L.scrollTop - H) / H)), z = Math.min(idx.length, a + Math.ceil(L.clientHeight / H) + 3);
+      R.innerHTML = idx.slice(a, z).map((i, j) => `<div class="r${cur != null && Math.abs(t.rt[i] - cur) < 1e-4 ? " cur" : ""}" data-i="${i}" style="position:absolute;top:${(a + j) * H}px;left:0;right:0">${cols.map(c => `<span>${esc(fx[c[0]](t[c[0]][i]))}</span>`).join("")}</div>`).join("");
+      R.querySelectorAll(".r").forEach(r => { r.onclick = () => { const i = +r.dataset.i; goScan(p, t.sid[i], t.rt[i], f.k); R.querySelectorAll(".r").forEach(x => x.classList.toggle("cur", x === r)); }; });
+    };
+    L.onscroll = paint;
+    L.querySelectorAll(".hd span").forEach(h => { h.onclick = () => { const c = h.dataset.c; sd = sk === c ? -sd : 1; sk = c; idx.sort((x, y) => sd * ((t[c][x] ?? -Infinity) - (t[c][y] ?? -Infinity)) || x - y); L.scrollTop = 0; paint(); }; });
+    paint();
+    if (cur != null) { const i0 = t.rt.findIndex(v => v >= cur - 1e-4); if (i0 >= 0) { L.scrollTop = Math.max(0, i0 * H - 40); paint(); } }
+  }
+  async function tFil(b, p, tok) {
+    const f = cFile(p); if (!f) return void (b.innerHTML = `<div class="muted">Scegli una cella.</div>`);
+    const j = await J(`api/fileinfo?k=${f.k}`).catch(e => ({ error: e.message }));
+    if (tok !== ist.tok) return;
+    if (j.error) return void (b.innerHTML = `<span class="fail">${esc(j.error)}</span>`);
+    const rg = Object.entries(j.mz_range || {}).map(([l, v]) => `MS${l}: ${num(v[0], 2)} – ${num(v[1], 2)}`).join(" · ");
+    b.innerHTML = `<h4 style="margin-top:0">File</h4>` + kv([["Nome", j.file], ["Data di acquisizione", j.start || "non indicata nel file"], ["Intervallo di RT (min)", `${num(j.rt[0], 2)} – ${num(j.rt[1], 2)}`], ["Intervallo di m/z", rg], ["Scansioni", `${j.scans} (${Object.entries(j.levels).map(([l, n]) => `MS${l}: ${n}`).join(", ")})`]])
+      + `<h4>Strumento</h4>` + kv([["Modello", j.instrument], ["Numero di serie", j.serial], ["Analizzatori", (j.analyzers || []).join(", ")], ["Componenti", (j.components || []).join(", ")]])
+      + `<h4>Software e conversione</h4>` + kv([["Software", (j.software || []).join(", ")], ["File di origine", (j.source_files || []).join(", ")], ["Conversione", (j.conversion || []).join(", ")]])
+      + `<h4>Scansioni per tipo</h4>` + kv(j.filters.map(g => [g.key, `${g.n} · RT ${num(g.rt0, 2)}–${num(g.rt1, 2)}`])) + `<div class="muted" style="margin-top:6px">Lo «Status log» e il metodo di Xcalibur non sono negli mzML: qui non c'è nulla di inventato.</div>`;
+  }
+  // the spectra already drawn by the cell: m/z of its highest peak, for the launchers
+  const topMz = p => { const d = p && p._a && p._a.data && p._a.data[0] && p._a.data[0].d; if (!d || !d.y || !d.y.length) return null; let j = 0; d.y.forEach((v, i) => { if (v > d.y[j]) j = i; }); return d.mz[j]; };
+  const specOf = p => (p.type === "spec" ? p : E.panels.find(q => q.type === "spec" && q.link === p.id));
+  function tCmp(b, p) {
+    const sp = specOf(p), mz = topMz(sp);
+    b.innerHTML = `<div class="muted">Formule che hanno la massa esatta scelta (candidati, mai identificazioni).</div><div class="row"><label>m/z <input id="hri-mz" value="${mz != null ? mz.toFixed(5) : ""}" style="width:96px" inputmode="decimal"></label><button type="button" id="hri-go" class="go">Formule compatibili…</button></div><div class="muted sm">Preso dal picco più alto dello spettro della cella; puoi scrivere un altro valore. Un clic destro su un picco apre la stessa finestra.</div>`;
+    b.querySelector("#hri-go").onclick = () => { const v = parseFloat(b.querySelector("#hri-mz").value.replace(",", ".")); if (!(v > 0)) return nearMsg("Scrivi un m/z."); COMP.open({ mz: v, spec: sp && sp._a && sp._a.data[0] && sp._a.data[0].d, polarity: (cFile(p) || {}).polarity }); };
+  }
+  function tIso(b, p) {
+    const sp = specOf(p), iso = (sp && sp.iso) || {}, fw = iso.fw || {};
+    const sel = (id, opts, cur) => `<select id="${id}">${opts.map(([v, l]) => `<option value="${v}"${String(cur) === String(v) ? " selected" : ""}>${l}</option>`).join("")}</select>`;
+    b.innerHTML = `<div class="muted">Profilo isotopico teorico sullo spettro della cella, alla risoluzione della scansione.</div>
+      <div class="row"><label>Formula neutra <input id="hri-f" placeholder="C13H24N4O3S" value="${iso.formula ? esc(iso.formula) : ""}" style="width:120px"></label><label>Addotto ${sel("hri-ad", ["[M+H]+", "[M+Na]+", "[M+NH4]+", "[M+K]+", "[M]+", "[M-H]-", "[M]-"].map(x => [x, x]), iso.ad || "[M+H]+")}</label></div>
+      <div class="row"><label>Uscita ${sel("hri-st", [["centroidi", "Centroidi"], ["barre", "Barre"], ["profilo", "Profilo (gaussiano)"]], iso.style || "centroidi")}</label><label title="Punti per ogni larghezza a metà altezza">punti/picco <input id="hri-pts" value="${iso.pts || 10}" style="width:36px"></label></div>
+      <div class="row"><label>Risoluzione ${sel("hri-rm", [["R", "potere risolutivo a m/z 200"], ["da", "larghezza in Da"], ["ppm", "larghezza in ppm"]], fw.mode || "R")} <input id="hri-r" placeholder="auto" value="${fw.v != null ? fw.v : iso.R != null ? iso.R : ""}" style="width:72px"></label>
+        <label title="Come è definita la larghezza scritta">definita come ${sel("hri-df", [["fwhm", "metà altezza (FWHM)"], ["10", "valle al 10%"], ["5", "valle al 5%"]], iso.def || "fwhm")}</label></div>
+      <div class="row"><button type="button" id="hri-go" class="go" title="Disegna il profilo sopra lo spettro della cella">Sovrapponi</button><button type="button" id="hri-new" title="Il profilo in una cella nuova, sotto questa">Nuova cella</button><button type="button" id="hri-rep" title="Al posto dello spettro osservato resta solo la simulazione">Sostituisci</button><button type="button" id="hri-off">Togli</button></div>
+      <div class="muted sm">Risoluzione vuota = quella della scansione; 0 = tutta la struttura fine. Potere risolutivo: come lo scrive Thermo, scende con la radice di m/z.</div>`;
+    const read = async () => {
+      const f = b.querySelector("#hri-f").value.trim(); if (!f) { nearMsg("Scrivi la formula."); return null; }
+      let r; try { r = await getFormula(f, ""); } catch (e) { nearMsg("Non riesco a calcolare il profilo: " + e.message); return null; }
+      const o = { formula: r.formula, ad: b.querySelector("#hri-ad").value, style: b.querySelector("#hri-st").value, def: b.querySelector("#hri-df").value, pts: Math.max(3, parseInt(b.querySelector("#hri-pts").value) || 10) };
+      const mode = b.querySelector("#hri-rm").value, rv = b.querySelector("#hri-r").value.trim().replace(",", "."), x = parseFloat(rv);
+      if (rv !== "" && x >= 0) { if (mode === "R") o.R = x; else if (x > 0) o.fw = { mode, v: x }; }
+      return o;
+    };
+    const apply = (s2, o, only) => { s2.iso = { ...o, only: !!only }; const ion = QQQRef.ionCounts(o.formula, o.ad), pat = QQQRef.isoPattern(ion.n, ion.z); s2.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; s2._isoKey = JSON.stringify(s2.zoom); draw(s2); };
+    b.querySelector("#hri-go").onclick = async () => { if (!sp) return nearMsg("Serve una cella con uno spettro."); const o = await read(); if (o) apply(sp, o, false); };
+    b.querySelector("#hri-rep").onclick = async () => { if (!sp) return nearMsg("Serve una cella con uno spettro."); const o = await read(); if (o) apply(sp, o, true); };
+    b.querySelector("#hri-new").onclick = async () => {
+      if (!sp) return nearMsg("Serve una cella con uno spettro."); const o = await read(); if (!o) return;
+      const n = addPanel("spec", { tab: sp.tab, k: sp.k, level: sp.level, r0: sp.r0, r1: sp.r1, filt: sp.filt || null, title: "Simulazione isotopica", link: null, x: 0, y: E.panels.reduce((m, q) => Math.max(m, q.y + q.h + 10), 0), w: hostWidth(), h: 300, full: true });
+      relayout(); fitHost(); apply(n, o, false); setActive(n); n.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
+    };
+    b.querySelector("#hri-off").onclick = () => { if (sp) { sp.iso = null; draw(sp); } };
+  }
+  function tPks(b, p) {
+    b.innerHTML = `<div class="muted">Integrazione automatica dei cromatogrammi della cella attiva.</div><div class="row"><button type="button" id="hri-on">${p.imode === "auto" ? "Spegni" : "Accendi"} il rilevamento nella cella</button><button type="button" id="hri-par">Parametri…</button></div><div class="row"><button type="button" id="hri-all" title="Integra, nello stesso tempo del picco della cella attiva, tutti i cromatogrammi delle altre celle">Integra in tutte le celle</button><button type="button" id="hri-tab">Tabella delle aree</button></div><div class="muted sm">Acceso: un clic su un picco lo integra; i bordi si trascinano. I parametri (finestra della linea di base, rumore, bordi, S/N minimo) valgono per tutte le celle.</div>`;
+    b.querySelector("#hri-on").onclick = () => { const x = p.el.querySelector('[data-a="iauto"]'); if (x) x.click(); else nearMsg("Serve una cella cromatogramma."); renderInfo(); };
+    b.querySelector("#hri-par").onclick = () => peakParams();
+    b.querySelector("#hri-all").onclick = () => {
+      const last = p.ints && p.ints[p.ints.length - 1], x = last ? (iLo(last) + iHi(last)) / 2 : p.sel ? (p.sel[0] + p.sel[1]) / 2 : null;
+      if (x == null) return nearMsg("Integra prima un picco nella cella attiva (o scegli un intervallo): lo stesso tempo vale per le altre celle.");
+      let n = 0; E.panels.filter(q => q.type === "chrom" && q._a && q._a.sr && !q.ints.some(i => iLo(i) < x && x < iHi(i))).forEach(q => { if (!guardInt(q)) return; intTargets(q, x, null).forEach(s => { autoInt(q, s, x); n++; }); });
+      nearMsg(n ? `Integrato il picco a ${num(x, 2)} min in ${n} tracce.` : "Nessuna cella da integrare.");
+    };
+    b.querySelector("#hri-tab").onclick = () => showInts();
+  }
+  function tCom(b, p) {
+    const c = p.type === "spec" ? E.panels.find(q => q.id === p.link) || p : p, sel = c.sel || (c.zoom ? c.zoom : null);
+    b.innerHTML = `<div class="muted">Spettro medio di un intervallo di tempo (come la scheda MSⁿ di Xcalibur).</div>
+      <div class="row"><label>RT da <input id="hri-t0" value="${sel ? num(sel[0], 3) : ""}" style="width:64px"> a <input id="hri-t1" value="${sel ? num(sel[1], 3) : ""}" style="width:64px"> min</label></div>
+      <div class="row"><label title="Si aggiorna da solo quando cambi la selezione sul cromatogramma"><input type="checkbox" id="hri-fol" ${ist.follow ? "checked" : ""}> Segui la selezione</label><label><input type="checkbox" id="hri-nrm" ${ist.norm ? "checked" : ""}> Normalizza lo spettro (0-100)</label></div>
+      <div class="row"><label>m/z da <input id="hri-m0" style="width:64px"> a <input id="hri-m1" style="width:64px"></label></div>
+      <div class="row"><button type="button" id="hri-go" class="go">Crea lo spettro composito</button></div><div class="muted sm">Le righe degli stessi picchi di scansioni diverse si fondono entro 3 ppm. «Segui» aggiorna lo spettro composito ogni volta che selezioni un tratto.</div>`;
+    const run = () => {
+      const t0 = parseFloat(b.querySelector("#hri-t0").value.replace(",", ".")), t1 = parseFloat(b.querySelector("#hri-t1").value.replace(",", ".")); if (!(t1 > t0)) return nearMsg("Scegli un intervallo di tempo (trascina sul cromatogramma o scrivi i due estremi).");
+      const f = cFile(c); if (!f) return;
+      let s = E.panels.find(q => q.id === ist.compId && q.type === "spec");
+      if (!s) { s = addPanel("spec", { tab: c.tab, k: f.k, level: cLevel(c), r0: t0, r1: t1, filt: c.filt || null, title: "Spettro composito", x: 0, y: E.panels.reduce((m, q) => Math.max(m, q.y + q.h + 10), 0), w: hostWidth(), h: 300, full: true, link: null }); ist.compId = s.id; relayout(); fitHost(); }
+      s.r0 = t0; s.r1 = t1; s.k = f.k; s.filt = c.filt || null; s.level = cLevel(c); s.si = null; s.rel = !!b.querySelector("#hri-nrm").checked;
+      const m0 = parseFloat(b.querySelector("#hri-m0").value.replace(",", ".")), m1 = parseFloat(b.querySelector("#hri-m1").value.replace(",", ".")); s.zoom = m1 > m0 ? [m0, m1] : null;
+      s.title = `Spettro composito · RT ${num(t0, 2)}–${num(t1, 2)} min`; ctl(s); draw(s); setActive(s); uiSave();
+    };
+    b.querySelector("#hri-go").onclick = run;
+    b.querySelector("#hri-fol").onchange = e => { ist.follow = e.target.checked; ist.followP = c.id; };
+    b.querySelector("#hri-nrm").onchange = e => { ist.norm = e.target.checked; };
+  }
+  function tIdn(b, p) {
+    const sp = specOf(p), f = cFile(p);
+    b.innerHTML = `<div class="muted">Confronto con le librerie caricate: candidati e giudizio prudente, mai una certezza.</div><div class="row"><button type="button" id="hri-s">Cerca lo spettro della cella</button><button type="button" id="hri-a">Identifica tutte le MS2 del file…</button></div><div class="muted sm">Lo spettro deve essere una MS2. Le librerie si caricano dalla finestra «Cerca nelle librerie».</div>`;
+    b.querySelector("#hri-s").onclick = () => { if (sp && sp.level === 2 && window.LIB) LIB.searchFrom(sp); else nearMsg("Scegli una cella con uno spettro MS2."); };
+    b.querySelector("#hri-a").onclick = () => { const f2 = f && (f.kind === "ms2" ? f : E.files.find(x => !x.gone && baseOf(x) === baseOf(f) && x.kind === "ms2")); if (f2 && window.LIB) LIB.identifyAll(f2.k); else nearMsg("Il file non ha scansioni MS2."); };
+  }
+  function tTre(b, p) {
+    const f = E.files.find(x => !x.gone && x.kind === "ms2" && (x.max_level || 2) >= 3) || E.files.find(x => !x.gone && x.kind === "ms2");
+    b.innerHTML = `<div class="muted">Percorsi di frammentazione di un file di infusione MSn, con precursori esatti e formule (sottoformule del padre).</div><div class="row"><label>Formula dello ione al primo stadio <input id="hri-f" placeholder="facoltativa" style="width:150px"></label><button type="button" id="hri-go" class="go">Albero MSn…</button></div>${f && (f.max_level || 2) >= 3 ? "" : '<div class="muted sm">Nessun file con più stadi di frammentazione tra quelli aperti.</div>'}`;
+    b.querySelector("#hri-go").onclick = () => { if (f && window.COMP) COMP.tree(f.k, b.querySelector("#hri-f").value.trim()); };
+  }
+  const BODY = { hdr: tHdr, lst: tLst, fil: tFil, cmp: tCmp, iso: tIso, pks: tPks, com: tCom, idn: tIdn, tre: tTre };
+  let infoRaf = 0;
+  function renderInfo() {
+    const card = Q("#hrinfo"); if (!card || card.hidden) return;
+    cancelAnimationFrame(infoRaf);
+    infoRaf = requestAnimationFrame(() => {
+      const p = act(), b = Q("#hri-body"); if (!b) return;
+      card.querySelectorAll("#hri-tabs button").forEach(x => x.classList.toggle("on", x.dataset.t === ist.tab));
+      Q("#hri-ttl").textContent = (I9.find(x => x[0] === ist.tab) || [])[1] + (p ? "" : "");
+      if (!p) return void (b.innerHTML = `<div class="muted">Nessuna cella.</div>`);
+      const tok = ist.tok = (ist.tok || 0) + 1; b.innerHTML = `<div class="muted">…</div>`;
+      Promise.resolve(BODY[ist.tab](b, p, tok)).catch(e => { if (tok === ist.tok) b.innerHTML = `<span class="fail">${esc(e.message)}</span>`; });
+    });
+  }
+  function setInfoTab(t) {
+    if (I9.some(x => x[0] === t)) {
+      ist.tab = t;
+      isave();
+    }
+  }
+  function infoBar() {
+    const aside = Q("#dfiles"); if (!aside) return;
+    let c = Q("#hrinfo");
+    if (!sync()) {
+      if (c) c.hidden = true;
+      const sep = Q("#sb-hr-sep"); if (sep) sep.hidden = true;
+      const hrt = Q("#hri-tabs"); if (hrt) hrt.hidden = true;
+      return;
+    }
+    const sep = Q("#sb-hr-sep"); if (sep) sep.hidden = false;
+    const hrt = Q("#hri-tabs");
+    if (hrt) {
+      hrt.hidden = false;
+      if (!hrt.children.length) {
+        hrt.innerHTML = I9.map(x => `<button type="button" role="tab" data-t="${x[0]}" title="${esc(x[1])}" aria-label="${esc(x[1])}">${x[2]}<span>${x[0].toUpperCase()}</span></button>`).join("");
+        hrt.querySelectorAll("button").forEach(x => {
+          x.onclick = () => {
+            ist.tab = x.dataset.t; isave();
+            if (window.BARRA) BARRA.setTab(x.dataset.t);
+            else renderInfo();
+          };
+        });
+      }
+    }
+    if (!c) {
+      c = document.createElement("div"); c.id = "hrinfo"; c.className = "card"; c.setAttribute("aria-label", "Barra informazioni del banco");
+      c.innerHTML = `<div id="hri-ttl"></div><div id="hri-body"></div>`;
+      const pnlContainer = Q("#sb-panels") || aside;
+      pnlContainer.appendChild(c);
+      c.style.height = ist.h + "px";
+      new ResizeObserver(() => { if (c.offsetHeight > 120) { ist.h = c.offsetHeight; isave(); } }).observe(c);
+    }
+    if (window.BARRA) {
+      if (["hdr", "lst", "fil", "cmp", "iso", "pks", "com", "idn", "tre"].includes(BARRA.curTab)) {
+        c.hidden = false;
+      }
+    } else {
+      c.hidden = false;
+    }
+    renderInfo();
+  }
+  // the composite spectrum follows the selection of the chromatogram when «Segui» is on
+  function follow(p) {
+    if (!ist.follow || !sync() || p.id !== ist.followP || !p.sel || !(p.sel[1] > p.sel[0])) return;
+    const s = E.panels.find(q => q.id === ist.compId && q.type === "spec"), f = cFile(p); if (!s || !f) return;
+    s.r0 = p.sel[0]; s.r1 = p.sel[1]; s.k = f.k; s.si = null; s.title = `Spettro composito · RT ${num(s.r0, 2)}–${num(s.r1, 2)} min`; ctl(s); draw(s);
+  }
+  function bar() {
+    const host = Q("#dtabs"); if (!host) return;
+    let b = Q("#hrbar");
+    if (!sync()) { if (b) b.hidden = true; host.hidden = false; const ic = Q("#hrinfo"); if (ic) ic.hidden = true; return; }
+    host.hidden = true;
+    if (!b) {
+      b = document.createElement("div"); b.id = "hrbar"; b.setAttribute("role", "toolbar"); b.setAttribute("aria-label", "Barra degli strumenti del banco");
+      host.insertAdjacentElement("afterend", b);
+      b.innerHTML = `<select data-hb="dec" title="Decimali delle m/z (da 3 a 5, come il menu a tendina di Xcalibur)" aria-label="Decimali delle m/z">${[3, 4, 5].map(n => `<option value="${n}">${n} decimali</option>`).join("")}</select><span class="sepv"></span>` +
+        barBtn("prev", "Scansione precedente (freccia sinistra)", ICON.prev) + barBtn("next", "Scansione successiva (freccia destra)", ICON.next) + `<span class="sepv"></span>` +
+        barBtn("zundo", "Annulla l'ultimo zoom della cella attiva (Ctrl/Cmd+Z)", ICON.zundo) + barBtn("zall", "Zoom automatico: tutte le celle alla vista intera", ICON.zall) +
+        barBtn("norm", "Normalizza 0-100 ↔ intensità assoluta (cella attiva)", ICON.norm) + barBtn("pin", "Fissa la cella attiva (puntina)", IC_PIN) + `<span class="sepv"></span>` +
+        barBtn("add", "Aggiungi una cella", ICON.add, null, "Cella") + barBtn("type", "Cambia il tipo della cella attiva", ICON.type) + barBtn("del", "Elimina la cella attiva", ICON.del) + `<span class="sepv"></span>` +
+        barBtn("peaks", "Rilevamento dei picchi nella cella attiva (clic su un picco: lo integra). Parametri: clic destro sul grafico", ICON.peaks) +
+        barBtn("lib", "Cerca nelle librerie lo spettro della cella attiva", ICON.lib) + barBtn("tree", "Albero MSn del file (infusione con più stadi di frammentazione)", ICON.tree) + `<span class="sepv"></span>` +
+        barBtn("copy", "Copia la cella: immagine (PNG) o dati in testo con tabulazioni", ICON.copy) + barBtn("xls", "Esporta i dati della cella in Excel", ICON.xls) + `<span class="act"></span>`;
+      b.querySelector('[data-hb="dec"]').onchange = e => { FN.dec(e.target.value); sync2(); };
+      b.querySelectorAll("button[data-hb]").forEach(x => {
+        const id = x.dataset.hb;
+        x.onclick = e => {
+          e.stopPropagation();
+          if (id === "add") return menu(e, [["chrom", "Cromatogramma"], ["spec", "Spettro di massa"], ["map", "Mappa RT-m/z"], ["xic", "Ione estratto (XIC)…"]].map(([t, l]) => ({ label: l, fn: () => (t === "xic" ? openXic() : addCell(t)) })));
+          if (id === "type") return menu(e, [["chrom", "Cromatogramma"], ["spec", "Spettro di massa"], ["map", "Mappa RT-m/z"]].map(([t, l]) => ({ label: l, fn: () => retype(t) })));
+          if (id === "copy") { const a = act(); if (!a) return; return menu(e, [{ label: "Immagine (PNG)", fn: () => copyPng(a) }, { label: "Dati (testo con tabulazioni)", fn: () => copyText(a) }]); }
+          if (FN[id]) FN[id]();
+        };
+      });
+    }
+    b.hidden = false; sync2(); infoBar();
+  }
+  return { follow, infoBar, renderInfo, setInfoTab, afterLayout, bar, sync2, on, sync, header, decorate, groupsOf, setFilter, setPin, eligible, rangeSeries, addRange, dropRange, filesFor };
+})();
+window.BANCO = BANCO;

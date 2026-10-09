@@ -57,7 +57,10 @@ jobs:
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash
-        run: for f in .verifica/log/e2e*.log; do echo "===== $f"; tail -n 80 "$f"; done
+        run: |
+          cat .verifica/ultimo.md | cut -c1-600
+          # only the logs of the tests that failed (the others are in the artifact)
+          for n in $(grep -o '^- FAIL [A-Za-z0-9_]*' .verifica/ultimo.md | awk '{print $3}'); do echo "===== $n"; tail -n 60 ".verifica/log/$n.log"; done
       - name: Logs of the failed tests
         if: failure()
         uses: actions/upload-artifact@v4
@@ -77,7 +80,7 @@ jobs:
       - name: Syntax check
         run: |
           # every script of the page; module-style files are checked as .mjs (new files are picked up by themselves)
-          for f in qqq_lab/web/*.js; do
+          for f in mzlab/web/*.js; do
             b=$(basename "$f" .js)
             case "$b" in
               browser-worker|draw|sw) cp "$f" "/tmp/$b.mjs"; node --check "/tmp/$b.mjs" ;;
@@ -86,9 +89,9 @@ jobs:
           done
           python3 - <<'PY'
           import re, pathlib
-          html = pathlib.Path("qqq_lab/web/index.html").read_text(encoding="utf-8")
+          html = pathlib.Path("mzlab/web/index.html").read_text(encoding="utf-8")
           inline = re.findall(r"<script>(.*?)</script>", html, re.S)
           pathlib.Path("/tmp/inline.js").write_text("\n".join(inline), encoding="utf-8")
           PY
           # classic scripts share globals: check explore.js + inline together (no duplicate const)
-          cat qqq_lab/web/explore.js /tmp/inline.js > /tmp/page.js && node --check /tmp/page.js
+          cat mzlab/web/explore.js /tmp/inline.js > /tmp/page.js && node --check /tmp/page.js

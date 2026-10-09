@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from qqq_lab.reader.mzml import Run
+from mzlab.reader.mzml import Run
 from tpmine.hr import msn
 
 DATI = Path(os.environ["QQQ_DATI"]) if os.environ.get("QQQ_DATI") else None
@@ -158,7 +158,7 @@ def test_filters_funnel_recall_and_isf(series_features):
     import glob
     import re
     import numpy as np
-    from qqq_lab.chem import elements as E
+    from mzlab.chem import elements as E
     from tpmine.hr import features as FT
     from tpmine.hr import filters as FL
     feats, times, al, _, _, _ = series_features
@@ -256,7 +256,7 @@ def test_ms2_of_a_feature_and_coeluting_isomers():
     T = runs[best].table(1, 1)
     y = T.xic(iso["mz"], iso["mz"] * 5e-6)
     w = (T.rt > iso["window"][0] - 0.1) & (T.rt < iso["window"][1] + 0.1)
-    from qqq_lab.chem import elements as E
+    from mzlab.chem import elements as E
     els = F.element_order(E.parse_formula(iso["formula"]))
     top = F.vec(iso["formula"], els)
     space = F.FormulaSpace(top, els)
@@ -327,7 +327,7 @@ def test_localisation_of_the_modification(msn_tree):
     import glob
     import re
     import numpy as np
-    from qqq_lab.chem import elements as E
+    from mzlab.chem import elements as E
     from tpmine.hr import formula as F
     from tpmine.hr import iimn
     from tpmine.hr import localize as LZ
@@ -409,7 +409,7 @@ def test_kinetics_generation_saturation_and_sessions(series_features):
 @need
 def test_every_reference_product_derives_from_the_parent_and_the_parent_isotopes_fit(series_features):
     import numpy as np
-    from qqq_lab.chem import elements as E
+    from mzlab.chem import elements as E
     from tpmine.hr import features as FT
     from tpmine.hr import formula as F
     from tpmine.hr import network as NW

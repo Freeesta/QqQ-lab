@@ -44,7 +44,7 @@ with sync_playwright() as p:
         assert pg.evaluate("E.panels[0]._a.sr.length") >= 3
     step("live resize keeps panels fitted", live)
     def fold():
-        pg.set_viewport_size({"width": 700, "height": 900}); pg.click("#ffold"); pg.wait_for_timeout(600)
+        pg.set_viewport_size({"width": 700, "height": 900}); pg.evaluate("setFold(true)"); pg.wait_for_timeout(600)      # below 900 px the sidebar is unpinned: #ffold only closes its overlay, the fold is the setting
         assert pg.evaluate("E.panels.every(p=>!p.full || Math.abs(p.w - Q('#dpanels').clientWidth) <= 2)"); pg.click("#funfold"); pg.wait_for_timeout(400)
     step("file list fold at narrow width", fold)
     def tabs():

@@ -28,7 +28,7 @@ function start() {
       }, 400);
     }
     fr.src = "static/vendor/ketcher/index.html";
-    setTimeout(() => reject(new Error("Ketcher non si e' avviato")), 60000);
+    setTimeout(() => reject(new Error(I18N.t("draw.error.ketcherNotStarted"))), 60000);
   });
   starting.finally(() => { clearInterval(kldTimer); Q("#kload").hidden = true; }).catch(() => {});
   starting = starting.then(async k => { await window.nbEnsure(); await restore(); k.editor.subscribe("change", () => { clearTimeout(timer); timer = setTimeout(changed, 500); requestAnimationFrame(drawLabels); });
@@ -48,9 +48,9 @@ function start() {
           try {
             const before = await k.getKet();
             await k.addFragment(txt);
-            if (await k.getKet() === before) dnote("Formato non supportato o non valido.");
-            else { fitZoom(k, fr); if (window.toast) toast("Struttura importata"); dnote(""); }
-          } catch (err) { dnote("Impossibile importare: " + err.message); }
+            if (await k.getKet() === before) dnote(I18N.t("draw.import.unsupported"));
+            else { fitZoom(k, fr); if (window.toast) toast(I18N.t("draw.import.done")); dnote(""); }
+          } catch (err) { dnote(I18N.t("draw.import.failed", { message: err.message })); }
         }
       });
     }
@@ -108,7 +108,7 @@ function hideMacro(fr) {
     if (fullBtn && !d.querySelector('[data-testid="center-struct-button"]')) {
       const btn = d.createElement("button");
       btn.setAttribute("data-testid", "center-struct-button");
-      btn.setAttribute("title", "Centra il disegno nella tela");
+      btn.setAttribute("title", I18N.t("draw.center.title"));
       btn.className = fullBtn.className;
       btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>';
       btn.onclick = () => {
@@ -140,19 +140,25 @@ function hideMacro(fr) {
       m.innerHTML = "";
       const cpItem = document.createElement("div");
       const shortSmi = smi.length > 24 ? smi.slice(0, 21) + "…" : smi;
-      cpItem.textContent = "Copia SMILES" + (smi ? ` (${shortSmi})` : "");
+      cpItem.textContent = smi ? I18N.t("draw.ctx.copySmilesOf", { smiles: shortSmi }) : I18N.t("draw.ctx.copySmiles");
       cpItem.onclick = () => {
         if (smi) navigator.clipboard.writeText(smi).catch(() => {});
         m.hidden = true;
       };
       m.appendChild(cpItem);
       const ctrItem = document.createElement("div");
-      ctrItem.textContent = "Centra disegno";
+      ctrItem.textContent = I18N.t("draw.ctx.center");
       ctrItem.onclick = () => {
         if (typeof K.editor.centerStruct === "function") { K.editor.centerStruct(); drawLabels(); }
         m.hidden = true;
       };
       m.appendChild(ctrItem);
+      if ((sel.bonds || []).length) {                                   // «Spezza il legame»: the selected bond(s) are deleted (the atoms stay), the two pieces and their formulas are worked out again
+        const brk = document.createElement("div"), nb = sel.bonds.length;
+        brk.textContent = I18N.t("draw.ctx.breakBonds", { n: nb }); brk.title = I18N.t("draw.ctx.breakBonds.title");
+        const bids = [...sel.bonds]; brk.onclick = () => { m.hidden = true; setTimeout(() => breakBonds(bids), 60); };
+        m.appendChild(brk);
+      }
       m.hidden = false;
       m.style.left = Math.min(mx, innerWidth - 240) + "px";
       m.style.top = Math.max(4, Math.min(my, innerHeight - m.offsetHeight - 8)) + "px";
@@ -179,27 +185,27 @@ function hideMacro(fr) {
 // the rest (stereochemistry, S/R groups, biology, mapping ...) is one click away in the «Strumenti dell'editor» card.
 // Note: Hand, Selection, Eraser, Text are in the top toolbar (always on). Shapes and images are always on.
 const TOOLS = [
-  ["rings", "Anelli rapidi (benzene, cicloesano...)", true, ["bottom-toolbar"]],
-  ["react", "Frecce e «+» delle reazioni", true, ["reaction-plus", "arrows-drop-down-button"]],
-  ["chain", "Catene", true, ["chain"]],
-  ["tidy", "Riordina il disegno (Layout, Clean Up)", true, ["Layout button", "Clean Up button"]],
-  ["file", "Apri e salva file di Ketcher", true, ["open-file-button", "save-file-button"]],
-  ["arom", "Aromaticità e idrogeni espliciti", false, ["Aromatize button", "Dearomatize button", "Add/Remove explicit hydrogens button"]],
-  ["stereo", "Stereochimica avanzata e CIP", false, ["enhanced-stereo", "Calculate CIP button"]],
-  ["groups", "Gruppi S e R", false, ["sgroup", "rgroup-drop-down-button"]],
-  ["calc", "Verifica, valori calcolati e 3D", false, ["Check Structure button", "Calculated Values button", "3D Viewer button"]],
-  ["map", "Mappatura degli atomi nelle reazioni", false, ["reaction-mapping-tools-drop-down-button"]],
-  ["atoms", "Atomi generici e tavola estesa", false, ["any-atom", "extended-table"]],
-  ["bio", "Biologia: monomeri e modalità macromolecole (peptidi, DNA, RNA)", false, ["create-monomer", "polymer-toggler"]],
+  ["rings", true, ["bottom-toolbar"]],
+  ["react", true, ["reaction-plus", "arrows-drop-down-button"]],
+  ["chain", true, ["chain"]],
+  ["tidy", true, ["Layout button", "Clean Up button"]],
+  ["file", true, ["open-file-button", "save-file-button"]],
+  ["arom", false, ["Aromatize button", "Dearomatize button", "Add/Remove explicit hydrogens button"]],
+  ["stereo", false, ["enhanced-stereo", "Calculate CIP button"]],
+  ["groups", false, ["sgroup", "rgroup-drop-down-button"]],
+  ["calc", false, ["Check Structure button", "Calculated Values button", "3D Viewer button"]],
+  ["map", false, ["reaction-mapping-tools-drop-down-button"]],
+  ["atoms", false, ["any-atom", "extended-table"]],
+  ["bio", false, ["create-monomer", "polymer-toggler"]],
 ];
 const TKEY = "qqq.disegno.strumenti"; // kept from the old name: renaming it would lose the users' data
 function toolChoice() {
   let saved = {}; try { saved = JSON.parse(localStorage.getItem(TKEY) || "{}") || {}; } catch (_) { /* default choice */ }
-  return Object.fromEntries(TOOLS.map(([k, , on]) => [k, k in saved ? !!saved[k] : on]));
+  return Object.fromEntries(TOOLS.map(([k, on]) => [k, k in saved ? !!saved[k] : on]));
 }
 function applyTools() {
   const ch = toolChoice();
-  const off = TOOLS.filter(([k]) => !ch[k]).flatMap(t => t[3]).map(id => `[data-testid="${id}"]`);
+  const off = TOOLS.filter(([k]) => !ch[k]).flatMap(t => t[2]).map(id => `[data-testid="${id}"]`);
   try {
     const d = Q("#kframe").contentDocument; if (!d || !d.head) return;
     let st = d.getElementById("tp-tools"); if (!st) { st = d.createElement("style"); st.id = "tp-tools"; d.head.appendChild(st); }
@@ -217,8 +223,8 @@ function applyTools() {
 function toolCard() {
   const box = Q("#tools-body"); if (!box) return;
   const ch = toolChoice();
-  box.innerHTML = TOOLS.map(([k, name]) => `<div style="margin:2px 0"><label><input type="checkbox" data-t="${k}" ${ch[k] ? "checked" : ""}> ${name}</label></div>`).join("") +
-    '<div class="bar" style="margin-top:6px"><button type="button" id="tools-all">Mostra tutti</button><button type="button" id="tools-def">Solo gli essenziali</button></div>';
+  box.innerHTML = TOOLS.map(([k]) => `<div style="margin:2px 0"><label><input type="checkbox" data-t="${k}" ${ch[k] ? "checked" : ""}> ${I18N.t(`draw.tools.${k}`)}</label></div>`).join("") +
+    '<div class="bar" style="margin-top:6px"><button type="button" id="tools-all">' + I18N.t("draw.tools.showAll") + '</button><button type="button" id="tools-def">' + I18N.t("draw.tools.essentialOnly") + '</button></div>';
   const save = o => { try { localStorage.setItem(TKEY, JSON.stringify(o)); } catch (_) { /* this tab only */ } applyTools(); toolCard(); };
   box.querySelectorAll("input[data-t]").forEach(i => i.onchange = () => save({ ...toolChoice(), [i.dataset.t]: i.checked }));
   Q("#tools-all").onclick = () => save(Object.fromEntries(TOOLS.map(([k]) => [k, true])));
@@ -294,9 +300,25 @@ function neutralPlan(ids, q) {
   const ok = ids.filter(i => { const a = st.atoms.get(i); return a.charge && Math.sign(a.charge) === Math.sign(q) && Math.abs(a.charge) === 1 && VMAX[a.label] && bs.get(i) <= VMAX[a.label] + 0.01; });
   return ok.length >= Math.abs(q) ? new Set(ok.slice(0, Math.abs(q))) : null;
 }
+// «Spezza il legame»: the Delete key of Ketcher on a selection made only of bonds removes the bonds and keeps the atoms (the same as the eraser on a bond)
+function breakBonds(ids) {
+  try {
+    const d = Q("#kframe").contentDocument, bonds = ids || (K.editor.selection() || {}).bonds || []; if (!bonds.length) return false;
+    K.editor.selection({ bonds: [...bonds] });                       // only the bonds: Delete would also remove the selected atoms
+    try { d.defaultView.focus(); } catch (_) { /* focus is only a help */ }
+    const ta = d.querySelector("textarea");                              // Ketcher listens on its hidden text area when it has the focus, otherwise on the document
+    [...new Set([ta, d.activeElement, d.body].filter(Boolean))].forEach(tg => {
+      if (K.editor.selection() == null) return;                           // already done by the first one: Delete would find nothing
+      ["keydown", "keyup"].forEach(t => tg.dispatchEvent(new d.defaultView.KeyboardEvent(t, { key: "Delete", code: "Delete", keyCode: 46, which: 46, bubbles: true })));
+    });
+    setTimeout(() => { try { drawLabels(); showInfo(); } catch (_) { /* labels are redrawn at the next change */ } }, 300);
+    return true;
+  } catch (_) { return false; }
+}
+window.breakBonds = breakBonds;
 // cut bonds of a piece selection: bonds between a selected and an unselected atom
 function cutBonds(set) { let n = 0; K.editor.struct().bonds.forEach(b => { if (set.has(b.begin) !== set.has(b.end)) n++; }); return n; }
-const copyBtn = (text, label) => `<button class="sm" data-cp="${EH(text)}" title="Copia negli appunti">${label || "Copia"}</button>`;
+const copyBtn = (text, label) => `<button class="sm" data-cp="${EH(text)}" title="${EH(I18N.t("draw.copy.title"))}">${label || EH(I18N.t("draw.copy.button"))}</button>`;
 let infoRun = 0;
 // One run at a time: Ketcher's structure service (Indigo) can hang when several conversions overlap, so a change that arrives while a run is going
 // only marks "again" and the run repeats once with the final selection.
@@ -306,8 +328,8 @@ async function showInfo() {
   infoBusy = true;
   try { do { infoAgain = false; await showInfo1(); } while (infoAgain); }
   catch (e) {                                                                  // never leave an empty or stale box: say what went wrong
-    console.error("QqQ Disegno: proprietà non calcolate", e);
-    const pc = Q("#prop-card"); if (pc) { pc.hidden = false; Q("#prop-body").innerHTML = '<div class="muted sm">Calcolo non riuscito (' + EH(e && e.message ? e.message : e) + '). Ricarica la pagina (Cmd+Maiusc+R); se resta, segnalalo.</div>'; }
+    console.error("QqQ Draw: properties not computed", e);
+    const pc = Q("#prop-card"); if (pc) { pc.hidden = false; Q("#prop-body").innerHTML = '<div class="muted sm">' + EH(I18N.t("draw.props.failed", { message: e && e.message ? e.message : e })) + '</div>'; }
   } finally { infoBusy = false; }
 }
 async function showInfo1() {
@@ -334,8 +356,8 @@ async function showInfo1() {
     const cuts = cutBonds(set);
     Q("#sel-body").innerHTML = all.map(p => {
       const smi = p.smi || "";                                                  // written by Ketcher (Indigo): the same SMILES as for the whole canvas
-      return smi ? `<div style="display:flex;gap:6px;align-items:center;margin:3px 0"><code style="word-break:break-all;flex:1;user-select:all">${EH(smi)}</code>${copyBtn(smi)}</div>` : '<div class="muted sm">Atomo senza formula (gruppo R, abbreviazione...): niente SMILES.</div>';
-    }).join("") + (cuts ? `<div class="muted sm">${cuts} legam${cuts > 1 ? "i tagliati" : "e tagliato"}: i posti liberi sono chiusi con H.</div>` : "");
+      return smi ? `<div style="display:flex;gap:6px;align-items:center;margin:3px 0"><code style="word-break:break-all;flex:1;user-select:all">${EH(smi)}</code>${copyBtn(smi)}</div>` : '<div class="muted sm">' + EH(I18N.t("draw.selection.noFormula")) + '</div>';
+    }).join("") + (cuts ? `<div class="muted sm">${EH(I18N.t("draw.selection.cuts", { n: cuts }))}</div>` : "");
   }
   // 2) property estimates: the selected pieces, or every structure of the drawing
   const charged = all.some(p => p.c && p.c.q !== 0);
@@ -352,15 +374,15 @@ async function showInfo1() {
     rows.push(`<tr><td>${fmtF(fo)}${sign}</td><td class="num"><b>${v(m && pr.logP, 2)}</b></td><td class="num">${v(m && pr.logS, 2)}</td><td class="num">${v(m && pr.polarSurfaceArea, 0)}</td><td class="num">${m ? pr.donorCount + "/" + pr.acceptorCount : "&ndash;"}</td></tr>`);
   }
   pc.hidden = !rows.length && !charged;
-  if (!pc.hidden) Q("#prop-body").innerHTML = (rows.length ? `<table class="sm"><tr><th>${set.size ? "Selezione" : "Struttura"}</th><th class="num">logP</th><th class="num">logS</th><th class="num">TPSA</th><th class="num" title="donatori / accettori di legame H">D/A</th></tr>${rows.join("")}</table>` : "")
-    + (charged ? `<label class="sm" style="display:block;margin-top:4px" title="Con la spunta le proprietà sono calcolate sulla forma neutra (COO- diventa COOH, NH3+ diventa NH2); controioni come Cl- o Na+ sono scartati."><input type="checkbox" id="prop-neut"${neutOn ? " checked" : ""}> Escludi la carica</label>` : "")
-    + (usedNeutral ? '<div class="muted sm">calcolato sulla forma neutra</div>' : "")
-    + (perm ? '<div class="muted sm">carica permanente: non neutralizzabile</div>' : "");
+  if (!pc.hidden) Q("#prop-body").innerHTML = (rows.length ? `<table class="sm"><tr><th>${EH(I18N.t(set.size ? "draw.props.selection" : "draw.props.structure"))}</th><th class="num">logP</th><th class="num">logS</th><th class="num">TPSA</th><th class="num" title="${EH(I18N.t("draw.props.da.title"))}">D/A</th></tr>${rows.join("")}</table>` : "")
+    + (charged ? `<label class="sm" style="display:block;margin-top:4px" title="${EH(I18N.t("draw.props.neutral.title"))}"><input type="checkbox" id="prop-neut"${neutOn ? " checked" : ""}> ${EH(I18N.t("draw.props.neutral.label"))}</label>` : "")
+    + (usedNeutral ? '<div class="muted sm">' + EH(I18N.t("draw.props.usedNeutral")) + '</div>' : "")
+    + (perm ? '<div class="muted sm">' + EH(I18N.t("draw.props.permanent")) + '</div>' : "");
 }
 let neutOn = true;                                                             // "Escludi la carica": on by default
 document.addEventListener("change", e => { if (e.target && e.target.id === "prop-neut") { neutOn = e.target.checked; showInfo(); } });
 const fmtF = f => EH(f).replace(/(\d+)/g, "<sub>$1</sub>");
-document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-cp]"); if (b) { try { navigator.clipboard.writeText(b.dataset.cp); if (window.toast) toast("SMILES copiato"); b.textContent = "Copiato"; setTimeout(() => { b.textContent = "Copia"; }, 1200); } catch (_) { /* clipboard blocked */ } } });
+document.addEventListener("click", e => { const b = e.target.closest && e.target.closest("[data-cp]"); if (b) { try { navigator.clipboard.writeText(b.dataset.cp); if (window.toast) toast(I18N.t("draw.copy.smilesToast")); b.textContent = I18N.t("draw.copy.done"); setTimeout(() => { b.textContent = I18N.t("draw.copy.button"); }, 1200); } catch (_) { /* clipboard blocked */ } } });
 
 // ------------------------------------------------------------------ formula and mass written under each structure
 // Optional (checkboxes "#lb-f" formula, "#lb-m" mass + "#lb-dec" decimals). Drawn in an overlay group of Ketcher's own SVG, so the label follows zoom and scroll
@@ -421,7 +443,7 @@ function arrowDeltas() {
     const parts = [];
     const push = (sign, f) => { parts.push([sign, ""]); for (const m of f.matchAll(/([A-Z][a-z]?)(\d*)/g)) { parts.push([m[1], ""]); if (m[2]) parts.push([m[2], "sub"]); } parts.push([" ", ""]); };
     if (g) push("+", g); if (l) push("\u2212", l);
-    if (!g && !l) parts.push(["stessa formula (isomero) ", ""]);
+    if (!g && !l) parts.push([I18N.t("draw.labels.sameFormula") + " ", ""]);
     parts.push([`\u0394m ${dm >= 0 ? "+" : "\u2212"}${Math.round(Math.abs(dm))}`, ""]);   // unit resolution: the integer is enough
     out.push({ x: (p0.x + p1.x) / 2, y: ym, parts });
   });
@@ -489,11 +511,9 @@ document.addEventListener("nbloaded", () => {      // older notebooks only have 
 Q("#ex-link").onclick = e => {
   e.preventDefault();
   const fig = (src, alt, cap) => `<figure style="margin:0 0 14px"><img src="static/${src}" alt="${alt}" style="max-width:100%;height:auto"><figcaption class="muted sm">${cap}</figcaption></figure>`;
-  window.big("Esempi di disegno",
-    fig("esempio-trasformazione.png", "Schema di trasformazione: una molecola madre e tre prodotti collegati da frecce, con il nome o TP e l'm/z sopra ogni struttura",
-      "<b>Schema di trasformazione.</b> Molecola madre e prodotti (TP) sono molecole: sopra ognuna il nome, o &laquo;TP&raquo; con l'm/z dell'ione che si osserva; sopra le frecce la differenza di formula.") +
-    fig("esempio-frammentazione.png", "Schema di frammentazione: lo ione precursore e i suoi frammenti, tutti con la carica, con le perdite neutre sulle frecce",
-      "<b>Schema di frammentazione.</b> Qui sono tutti ioni in fase gas, con la carica; sulle frecce la perdita neutra, sotto ogni ione la formula e l'<i>m/z</i>."));
+  window.big(I18N.t("draw.examples.title"),
+    fig("esempio-trasformazione.png", EH(I18N.t("draw.examples.transform.alt")), I18N.t("draw.examples.transform.caption")) +
+    fig("esempio-frammentazione.png", EH(I18N.t("draw.examples.fragment.alt")), I18N.t("draw.examples.fragment.caption")));
 };
 
 // Labels of the exported image as real SVG text (subscripts and superscripts shifted with dy, like the old caption did).
@@ -606,7 +626,7 @@ async function image(format) {
   svgText = padSvg(svgText, 16);
   const clear = Q("#ex-nobg").checked && format !== "jpg";       // transparent background: PNG and SVG only (JPEG has no transparency)
   if (clear) svgText = noBackground(svgText);
-  svgText = svgText.replace(/<svg\b([^>]*)>/, (m, at) => `<svg${at}><title>Disegno ${APP_NAME}, ${stamp().slice(8, 18)}, sfondo ${clear ? "trasparente" : "bianco"}</title>`);
+  svgText = svgText.replace(/<svg\b([^>]*)>/, (m, at) => `<svg${at}><title>${EH(I18N.t(clear ? "draw.export.svgTitle.clear" : "draw.export.svgTitle.white", { app: APP_NAME, stamp: stamp().slice(-15, -5) }))}</title>`);
   const svg = new Blob([svgText], { type: "image/svg+xml" });
   if (format === "svg") return svg;
   // PNG / JPEG: rasterise the vector at high resolution (Ketcher's own PNG is small): at least 3x, about 3600 px wide, never more than 12000 px on a side
@@ -619,19 +639,19 @@ async function image(format) {
   URL.revokeObjectURL(url);
   const out = await new Promise(r => c.toBlob(r, format === "jpg" ? "image/jpeg" : "image/png", 0.95));
   if (format === "png" && window.pngWithMeta) {                    // tEXt chunks, like the plots of the Dati tab (no personal data)
-    try { return await window.pngWithMeta(out, [["Title", "Disegno"], ["Description", `scala ${sc.toFixed(1)}x; sfondo ${clear ? "trasparente" : "bianco"}`], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]]); } catch (_) { /* saved without metadata */ }
+    try { return await window.pngWithMeta(out, [["Title", I18N.t("draw.export.metaTitle")], ["Description", I18N.t(clear ? "draw.export.metaDesc.clear" : "draw.export.metaDesc.white", { scale: sc.toFixed(1) })], ["Software", APP_NAME], ["Creation Time", new Date().toISOString()]]); } catch (_) { /* saved without metadata */ }
   }
   return out;
 }
 // ---- export file names: disegno_AAAA-MM-GG_HHMM.<ext>; one base name for PNG, JPEG, SVG and .ket of the same minute, "_trasparente" for a transparent
 // PNG/SVG, "-2", "-3" for a repeated name; ASCII lower case only (works on Mac, Windows and the web). The student can change the base name.
-const AUTO = /^disegno_\d{4}-\d\d-\d\d_\d{4}$/, usedNames = new Map();
-const stamp = () => { const d = new Date(), z = n => String(n).padStart(2, "0"); return `disegno_${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`; };
+const AUTO = /^(disegno|drawing)_\d{4}-\d\d-\d\d_\d{4}$/, usedNames = new Map();
+const stamp = () => { const d = new Date(), z = n => String(n).padStart(2, "0"); return `${I18N.t("draw.export.filePrefix")}_${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`; };
 const cleanName = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9_-]+/g, "_").replace(/_{2,}/g, "_").replace(/^[_-]+|[_-]+$/g, "").slice(0, 60);
 function freshName() { const f = Q("#ex-name"); if (!f.value.trim() || AUTO.test(f.value.trim())) f.value = stamp(); }
 function exportName(ext, clear) {
   freshName();
-  const base = (cleanName(Q("#ex-name").value) || stamp()) + (clear ? "_trasparente" : ""), key = base + "." + ext, n = (usedNames.get(key) || 0) + 1;
+  const base = (cleanName(Q("#ex-name").value) || stamp()) + (clear ? "_" + I18N.t("draw.export.transparentSuffix") : ""), key = base + "." + ext, n = (usedNames.get(key) || 0) + 1;
   usedNames.set(key, n);
   return base + (n > 1 ? "-" + n : "") + "." + ext;
 }
@@ -642,13 +662,13 @@ async function doExport(kind) {
   exwarn("");
   try {
     await start();
-    if (kind === "ket") { download(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); if (window.toast) toast("File salvato"); return; }
+    if (kind === "ket") { download(new Blob([await K.getKet()], { type: "application/json" }), exportName("ket")); if (window.toast) toast(I18N.t("draw.export.saved")); return; }
     if (kind === "jpg" && Q("#ex-nobg").checked) return;
     const clear = Q("#ex-nobg").checked && kind !== "jpg", blob = await image(kind);
-    if (!blob || !blob.size) throw new Error("immagine vuota");
+    if (!blob || !blob.size) throw new Error(I18N.t("draw.export.emptyImage"));
     download(blob, exportName(kind, clear));
-    if (window.toast) toast("File salvato");
-  } catch (e) { exwarn("Esportazione non riuscita: " + (e && e.message ? e.message : e) + ". Ricarica la pagina (Cmd+Maiusc+R) e riprova; se resta, scrivi a chi tiene il corso."); }
+    if (window.toast) toast(I18N.t("draw.export.saved"));
+  } catch (e) { exwarn(I18N.t("draw.export.failed", { message: e && e.message ? e.message : e })); }
 }
 Q("#ex-png").onclick = () => doExport("png");
 Q("#ex-jpg").onclick = () => doExport("jpg");
@@ -656,13 +676,13 @@ Q("#ex-svg").onclick = () => doExport("svg");
 Q("#ex-ket").onclick = () => doExport("ket");
 function syncBg() {                                    // JPEG cannot be transparent: its button is off (grey) while "Sfondo trasparente" is on
   const on = Q("#ex-nobg").checked, j = Q("#ex-jpg");
-  j.disabled = on; j.title = on ? "Il JPEG non supporta la trasparenza: togli la spunta «Sfondo trasparente» oppure usa PNG o SVG" : "";
+  j.disabled = on; j.title = on ? I18N.t("draw.export.jpegNoAlpha") : "";
 }
 Q("#ex-nobg").addEventListener("change", syncBg); syncBg();
 freshName();
 Q("#ex-load").onclick = async () => { const v = Q("#ex-smi").value.trim(); if (!v) return; await start(); dnote("");
-  try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote("SMILES non valido: non è stata aggiunta nessuna struttura."); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
-  catch (e) { dnote("SMILES non valido: " + e.message); } };
+  try { const before = await K.getKet(); await K.addFragment(v); if (await K.getKet() === before) dnote(I18N.t("draw.quick.invalidNone")); else { Q("#ex-smi").value = ""; fitZoom(K, Q("#kframe")); /* Ketcher brings the zoom back to 100 % after a paste */ } }   // ADDS next to what is drawn (never setMolecule: it would erase the student's work); Ketcher ignores some invalid SMILES without an error
+  catch (e) { dnote(I18N.t("draw.quick.invalid", { message: e.message })); } };
 
 window.TPDraw = { image, info: showInfo, smiles: async () => { await start(); return K.getSmiles(); }, ready: () => !!K };
 document.addEventListener("tpview", e => { if (e.detail.view === "draw") start(); });
@@ -700,9 +720,9 @@ function labelMenu(ev, d, fr) {
   const m = Q("#ctx"); if (!m) return;
   const fr0 = fr.getBoundingClientRect(), mx = fr0.left + ev.clientX, my = fr0.top + ev.clientY;
   m.innerHTML = "";
-  const item = (label, text) => { const e = document.createElement("div"); e.textContent = label; e.onclick = () => { navigator.clipboard.writeText(text).catch(() => {}); m.hidden = true; if (window.toast) toast("Copiato"); }; m.appendChild(e); };
-  item(`Copia la formula (${formulaText(d)})`, formulaText(d));
-  item(`Copia la massa (${d.q ? "m/z " : ""}${massText(d)})`, massText(d));
+  const item = (label, text) => { const e = document.createElement("div"); e.textContent = label; e.onclick = () => { navigator.clipboard.writeText(text).catch(() => {}); m.hidden = true; if (window.toast) toast(I18N.t("draw.copy.done")); }; m.appendChild(e); };
+  item(I18N.t("draw.ctx.copyFormula", { formula: formulaText(d) }), formulaText(d));
+  item(I18N.t(d.q ? "draw.ctx.copyMassMz" : "draw.ctx.copyMass", { mass: massText(d) }), massText(d));
   m.hidden = false;
   m.style.left = Math.min(mx, innerWidth - 270) + "px"; m.style.top = Math.max(4, Math.min(my, innerHeight - m.offsetHeight - 8)) + "px";
 }
@@ -710,12 +730,12 @@ function labelMenu(ev, d, fr) {
 const SKEY = "qqq.disegno.riquadri";
 function sideApply(hidden) {
   Q("#v-draw").classList.toggle("noside", hidden);
-  const b = Q("#side-toggle"); b.innerHTML = hidden ? "&#9666; Mostra i riquadri" : "Nascondi i riquadri &#9656;";
+  const b = Q("#side-toggle"); b.textContent = I18N.t(hidden ? "draw.side.show" : "draw.side.hide");
   try { localStorage.setItem(SKEY, hidden ? "0" : "1"); } catch (_) { /* storage not available */ }
   setTimeout(() => { if (kFit) kFit(); if (K) { try { fitZoom(K, Q("#kframe")); } catch (_) { /* not critical */ } } }, 60);
 }
 Q("#side-toggle").onclick = () => sideApply(!Q("#v-draw").classList.contains("noside"));
-try { if (localStorage.getItem(SKEY) === "0") { Q("#v-draw").classList.add("noside"); Q("#side-toggle").innerHTML = "&#9666; Mostra i riquadri"; } } catch (_) { /* default: visible */ }
+try { if (localStorage.getItem(SKEY) === "0") { Q("#v-draw").classList.add("noside"); Q("#side-toggle").textContent = I18N.t("draw.side.show"); } } catch (_) { /* default: visible */ }
 // ------------------------------------------------------------------ trackpad: a two-finger swipe sideways moves the drawing; it must not go back in the page history
 function frameExtras(fr) {
   const d = fr.contentDocument; if (!d) return;
@@ -725,10 +745,11 @@ function frameExtras(fr) {
 // ------------------------------------------------------------------ shortcuts card: depends on the device (macOS / Windows and Linux / tablet)
 (() => {
   const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent), coarse = matchMedia("(pointer:coarse)").matches, mod = mac ? "\u2318" : "Ctrl";
-  const rows = [[`${mod} C / V / X`, "Copia, incolla, taglia la selezione"], [`${mod} Z`, "Annulla"], [mac ? "\u21e7 \u2318 Z" : "Ctrl Y", "Ripeti"], [`${mod} A`, "Seleziona tutto"],
-    [mac ? "\u232b" : "Canc", "Elimina la selezione"], ["Maiusc + clic", "Aggiunge alla selezione"], ["Trascina la selezione", "Sposta atomi o molecole"], ["Esc", "Torna allo strumento di selezione"],
-    ["Tasto destro", "Menu: copia SMILES, centra il disegno; sull'etichetta sotto una molecola: copia formula e massa"]];
-  if (coarse) rows.push(["Due dita", "Sposta la tela; pizzico per lo zoom"], ["Penna", "Disegna e seleziona come il mouse"], ["Tocco lungo", "Apre il menu (come il tasto destro)"]);
-  else rows.push(["Due dita (trackpad)", "Sposta il disegno; pizzico per lo zoom"]);
+  const t = I18N.t;
+  const rows = [[`${mod} C / V / X`, t("draw.keys.copyPasteCut")], [`${mod} Z`, t("draw.keys.undo")], [mac ? "\u21e7 \u2318 Z" : "Ctrl Y", t("draw.keys.redo")], [`${mod} A`, t("draw.keys.selectAll")],
+    [mac ? "\u232b" : t("draw.keys.delete.key"), t("draw.keys.delete")], [t("draw.keys.shiftClick.key"), t("draw.keys.shiftClick")], [t("draw.keys.drag.key"), t("draw.keys.drag")], ["Esc", t("draw.keys.escape")],
+    [t("draw.keys.rightClick.key"), t("draw.keys.rightClick")]];
+  if (coarse) rows.push([t("draw.keys.twoFingers.key"), t("draw.keys.twoFingers")], [t("draw.keys.pen.key"), t("draw.keys.pen")], [t("draw.keys.longPress.key"), t("draw.keys.longPress")]);
+  else rows.push([t("draw.keys.trackpad.key"), t("draw.keys.trackpad")]);
   Q("#keys-body").innerHTML = `<table>${rows.map(r => `<tr><td>${EH(r[0])}</td><td>${EH(r[1])}</td></tr>`).join("")}</table>`;
 })();

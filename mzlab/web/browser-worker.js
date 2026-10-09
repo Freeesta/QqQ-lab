@@ -7,8 +7,13 @@ const WORK = "/work/sessione";
 // ---- the browser's own storage (IndexedDB): files and notebook survive a reload, like the work folder of the local program
 const DB = "qqq_lab"; // kept from the old name: renaming it would lose the users' data
 const idb = () => new Promise((res, rej) => {
-  const r = indexedDB.open(DB, 1);
-  r.onupgradeneeded = () => { r.result.createObjectStore("files"); r.result.createObjectStore("kv"); };
+  const r = indexedDB.open(DB, 2);
+  r.onupgradeneeded = () => {
+    const db = r.result;
+    if (!db.objectStoreNames.contains("files")) db.createObjectStore("files");
+    if (!db.objectStoreNames.contains("kv")) db.createObjectStore("kv");
+    if (!db.objectStoreNames.contains("liste_utente")) db.createObjectStore("liste_utente", { keyPath: "id" });
+  };
   r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
 });
 const tx = async (store, mode, fn) => {

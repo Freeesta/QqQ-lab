@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from qqq_lab.chem import elements as E  # noqa: E402
+from mzlab.chem import elements as E  # noqa: E402
 from tpmine.hr import formula as F  # noqa: E402
 from tpmine.hr import iimn  # noqa: E402
 from tpmine.hr import localize as LZ  # noqa: E402

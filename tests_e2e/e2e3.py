@@ -14,7 +14,7 @@ r = Run()
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz(f) for f in FILES])
+        stage(pg, [mz(f) for f in FILES])
         pg.wait_for_timeout(1000)
         pg.click("text=Carica dati"); ready(pg)
         pg.screenshot(path=SH + "10_opened.png")

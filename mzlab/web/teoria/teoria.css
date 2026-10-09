@@ -169,3 +169,63 @@ body.noex main>:not(.kicker):not(h1):not(.phex):not(.pn){display:none!important}
 :root[data-theme=dark] .box.gym{background:#12272b;border-left-color:#22d3ee}:root[data-theme=dark] .box.gym>b:first-child{color:#67e8f9}
 :root[data-theme=dark] .box.oral{background:#2a2216;border-left-color:#fbbf24}:root[data-theme=dark] .box.oral>b:first-child{color:#fcd34d}
 :root[data-theme=dark] details.poe{background:#12272b;border-color:#22d3ee}
+
+/* ---- Lettura facilitata (a11y.js; the choices live in localStorage «qqq.a11y», tema.js puts them on <html> as data-a11y-*) ---- */
+@font-face{font-family:"Atkinson Hyperlegible Next";src:url(fonts/AtkinsonHyperlegibleNext-Regular.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Atkinson Hyperlegible Next";src:url(fonts/AtkinsonHyperlegibleNext-Bold.woff2) format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"OpenDyslexic";src:url(fonts/OpenDyslexic-Regular.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"OpenDyslexic";src:url(fonts/OpenDyslexic-Bold.woff2) format("woff2");font-weight:700;font-style:normal;font-display:swap}
+:root[data-a11y-font=atkinson] body{font-family:"Atkinson Hyperlegible Next",system-ui,sans-serif}
+:root[data-a11y-font=dyslexic] body{font-family:"OpenDyslexic","Comic Sans MS",system-ui,sans-serif}
+:root[data-a11y-font] :is(code,kbd,.eq){font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+/* WCAG 1.4.12 spacing: line 1.7, letters .12em, words .16em, 2em after paragraphs, left aligned, lines of at most 65 characters */
+:root[data-a11y-space] main{line-height:1.7;letter-spacing:.12em;word-spacing:.16em;text-align:left}
+:root[data-a11y-space] main :is(p,li,dd,dt,td,th,.lead,blockquote){max-width:65ch;line-height:1.7;letter-spacing:.12em;word-spacing:.16em;text-align:left}
+:root[data-a11y-space] main :is(td,th){max-width:none}
+:root[data-a11y-space] main p{margin-bottom:2em}
+:root[data-a11y-space] main :is(svg text,.eq,code,kbd,canvas,.ctl){letter-spacing:normal;word-spacing:normal}
+/* backgrounds: light and dark version of each (contrast >= 4.5:1; high contrast >= 7:1) */
+:root[data-a11y-bg=cream][data-theme=light]{--bg:#faf3e0;--panel:#fffbf0;--ink:#2b2620;--muted:#5c5445;--line:#d8cdb0;--sel:#f1e6c8;--code:#efe6cf}
+:root[data-a11y-bg=cream][data-theme=dark]{--bg:#1e1b16;--panel:#26221b;--ink:#ede6d6;--muted:#b9b09b;--line:#413a2d;--sel:#332d22;--code:#2d281f}
+:root[data-a11y-bg=blue][data-theme=light]{--bg:#e8f1f8;--panel:#f4f9fd;--ink:#1c2733;--muted:#475a6c;--line:#bfd2e2;--sel:#d6e6f3;--code:#dde9f3}
+:root[data-a11y-bg=blue][data-theme=dark]{--bg:#14212b;--panel:#1a2b38;--ink:#e2eef7;--muted:#a9bdcd;--line:#33495b;--sel:#213747;--code:#1f3342}
+:root[data-a11y-bg=hc][data-theme=light]{--bg:#fff;--panel:#fff;--ink:#000;--muted:#1a1a1a;--line:#000;--sel:#e6e6e6;--code:#ededed;--accent:#0030a0;--accent2:#7a2800;--ok:#00522f;--bad:#8c0000;--warn:#5c2a00;--c1:#0030a0;--c2:#7a2800;--c3:#00522f;--c4:#4b1fa0;--c5:#5c2a00;--c6:#004f5e}
+:root[data-a11y-bg=hc][data-theme=dark]{--bg:#000;--panel:#000;--ink:#fff;--muted:#ececec;--line:#fff;--sel:#262626;--code:#1a1a1a;--accent:#8fd0ff;--accent2:#ffb36b;--ok:#6ee7a8;--bad:#ff9a9a;--warn:#ffd36b;--c1:#8fd0ff;--c2:#ffb36b;--c3:#6ee7a8;--c4:#c4b0ff;--c5:#ffd36b;--c6:#67e8f9}
+:root[data-a11y-bg=hc] :is(a,.g){text-decoration:underline}
+/* numbers */
+:root[data-a11y-nums] body{font-variant-numeric:lining-nums tabular-nums}
+:root[data-a11y-nums] .eq{word-spacing:.18em;letter-spacing:.04em}
+:root[data-a11y-nums] .eq :is(i,sub,sup){margin:0 .04em}
+/* reduced motion: always, or (automatic) when the system asks for it; tema.js sets data-a11y-reduce */
+:root[data-a11y-reduce]{scroll-behavior:auto}
+:root[data-a11y-reduce] *,:root[data-a11y-reduce] *::before,:root[data-a11y-reduce] *::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+/* concentration mode: no index and no menu, a progress bar */
+:root[data-a11y-focus] :is(#side,#menu,#top .sp,.pn){display:none}
+:root[data-a11y-focus] .wrap{grid-template-columns:minmax(0,1fr);max-width:860px}
+#a11y-prog{position:fixed;left:0;top:0;height:4px;width:0;background:var(--accent);z-index:60;display:none}
+:root[data-a11y-focus] #a11y-prog{display:block}
+/* reading ruler: a band follows the pointer/focus, the rest is dimmed (the overlay never takes clicks) */
+#a11y-ruler{position:fixed;inset:0;z-index:50;pointer-events:none;display:none;
+  background:linear-gradient(to bottom,rgba(0,0,0,.55) 0,rgba(0,0,0,.55) var(--ry,40%),transparent var(--ry,40%),transparent calc(var(--ry,40%) + var(--rh,4.2em)),rgba(0,0,0,.55) calc(var(--ry,40%) + var(--rh,4.2em)),rgba(0,0,0,.55) 100%)}
+:root[data-a11y-ruler] #a11y-ruler{display:block}
+/* speech: the sentence being read; ▶ next to the headings */
+.a11y-say{border:0;background:none;color:var(--accent);cursor:pointer;font:inherit;font-size:.7em;padding:0 .3em;vertical-align:middle;opacity:.8}
+.a11y-say:hover,.a11y-say:focus-visible{opacity:1;outline:2px solid var(--accent);border-radius:4px}
+mark.a11y-hl{background:var(--sel);color:inherit;outline:2px solid var(--accent2);border-radius:3px}
+/* the panel */
+#a11y-btn{font:inherit;font-size:14px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:3px 10px;color:var(--ink);cursor:pointer;font-weight:700}
+#a11y-btn:hover,#a11y-btn:focus-visible{border-color:var(--accent);outline:2px solid var(--accent)}
+#a11y-btn.float{position:fixed;top:10px;right:14px;z-index:40;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+#a11y-panel{position:fixed;top:0;right:0;bottom:0;width:min(360px,100vw);z-index:70;background:var(--panel);color:var(--ink);border-left:1px solid var(--line);box-shadow:-4px 0 18px rgba(0,0,0,.25);overflow:auto;padding:14px 16px 24px;font-size:15px;line-height:1.5;letter-spacing:normal;word-spacing:normal}
+#a11y-panel[hidden]{display:none}
+#a11y-panel h2{font-size:18px;margin:0 0 6px}#a11y-panel h3{font-size:14px;margin:14px 0 4px;color:var(--muted);text-transform:none}
+#a11y-panel fieldset{border:0;margin:0;padding:0}#a11y-panel legend{font-weight:700;padding:0;margin:12px 0 4px}
+#a11y-panel label{display:flex;gap:8px;align-items:flex-start;padding:3px 0;cursor:pointer}
+#a11y-panel input{margin-top:.25em}
+#a11y-panel .hint{color:var(--muted);font-size:13.5px;margin:2px 0 6px}
+#a11y-panel .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+#a11y-panel button{font:inherit;font-size:14px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 10px;color:var(--ink);cursor:pointer}
+#a11y-panel button:hover,#a11y-panel button:focus-visible{border-color:var(--accent);outline:2px solid var(--accent)}
+#a11y-panel .x{position:absolute;top:8px;right:10px}
+::highlight(a11y-sentence){background:var(--sel);color:inherit;text-decoration:underline;text-decoration-color:var(--accent2)}
+.a11y-hlblock{background:var(--sel);outline:2px solid var(--accent2);border-radius:3px}

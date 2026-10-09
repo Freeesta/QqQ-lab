@@ -87,6 +87,38 @@
   const fmtAd = n => H(n).replace(/([A-Z][a-z]?|\))(\d+)/g, "$1<sub>$2</sub>").replace(/(\d?[+-])$/, "<sup>$1</sup>");
   const sgn = x => (x >= 0 ? "+" : "&minus;");
   const AD_MORE = { 1: false, "-1": false };                // the less common adducts stay folded until the student opens them
+
+  // Differences between adducts: to recognise pairs of peaks belonging to the same compound (Huang et al. 1999)
+  function calcAdductDiffs() {
+    const shift = n => { const a = ADD.find(x => x.n === n); return a ? a.shift : 0; };
+    return [
+      { p: 1, pair: "[M+Na]+ &minus; [M+H]+", d: shift("[M+Na]+") - shift("[M+H]+"), nom: 22, note: "coppia frequentissima: conferma quasi certa della massa neutra M", src: "Huang 1999" },
+      { p: 1, pair: "[M+NH4]+ &minus; [M+H]+", d: shift("[M+NH4]+") - shift("[M+H]+"), nom: 17, note: "con sali d'ammonio (formiato/acetato)", src: "Huang 1999" },
+      { p: 1, pair: "[M+K]+ &minus; [M+H]+", d: shift("[M+K]+") - shift("[M+H]+"), nom: 38, note: "addotto potassio (spesso presente con sodio)", src: "Huang 1999" },
+      { p: 1, pair: "[M+K]+ &minus; [M+Na]+", d: shift("[M+K]+") - shift("[M+Na]+"), nom: 16, note: "distanza caratteristica tra addotti alcalini K e Na", src: "Huang 1999" },
+      { p: 1, pair: "[M+H+ACN]+ &minus; [M+H]+", d: shift("[M+H+ACN]+") - shift("[M+H]+"), nom: 41, note: "addotto con acetonitrile della fase mobile", src: "Huang 1999" },
+      { p: 1, pair: "[M+CH3OH+H]+ &minus; [M+H]+", d: shift("[M+CH3OH+H]+") - shift("[M+H]+"), nom: 32, note: "addotto con metanolo della fase mobile", src: "Huang 1999" },
+      { p: 1, pair: "[2M+H]+ &minus; [M+H]+", d: null, nom: "M", note: "dimero: la differenza &Delta; corrisponde esattamente alla massa neutra M", src: "Huang 1999" },
+      { p: 1, pair: "[M+H]+ &minus; [M+H-H2O]+", d: shift("[M+H]+") - shift("[M+H-H2O]+"), nom: 18, note: "perdita d'acqua in sorgente (alcoli, acidi)", src: "Huang 1999" },
+
+      { p: -1, pair: "[M+HCOO]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+HCOO]-") - shift("[M-H]-"), nom: 46, note: "con acido formico / formiato in fase mobile", src: "Huang 1999" },
+      { p: -1, pair: "[M+CH3COO]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+CH3COO]-") - shift("[M-H]-"), nom: 60, note: "con acido acetico / acetato in fase mobile", src: "Huang 1999" },
+      { p: -1, pair: "[M+Cl]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+Cl]-") - shift("[M-H]-"), nom: 36, note: "addotto cloruro (doppietto isotopico 35/37 a 3:1)", src: "Huang 1999" },
+      { p: -1, pair: "[M+Na-2H]&minus; &minus; [M&minus;H]&minus;", d: shift("[M+Na-2H]-") - shift("[M-H]-"), nom: 22, note: "sale sodico in ESI&minus;", src: "Huang 1999" },
+      { p: -1, pair: "[2M&minus;H]&minus; &minus; [M&minus;H]&minus;", d: null, nom: "M", note: "dimero: la differenza &Delta; corrisponde alla massa neutra M", src: "Huang 1999" },
+      { p: -1, pair: "[M&minus;H]&minus; &minus; [M&minus;H-H2O]&minus;", d: shift("[M-H]-") - shift("[M-H-H2O]-"), nom: 18, note: "perdita d'acqua in sorgente in ESI&minus;", src: "Huang 1999" },
+    ];
+  }
+  window.QADD_DIFFS = calcAdductDiffs();
+
+  function diffsHtml() {
+    const l = calcAdductDiffs();
+    const rows = l.map(d => `<tr><td><b>${d.pair}</b></td><td class="num">${d.d != null ? (d.d >= 0 ? "+" : "") + d.d.toFixed(4) : "+M"}</td><td class="num">${d.nom != null ? (typeof d.nom === "number" ? (d.nom >= 0 ? "+" : "") + d.nom : "+" + d.nom) : ""}</td><td class="sm">${d.p > 0 ? "ESI+" : "ESI&minus;"}</td><td class="muted sm">${d.note}</td></tr>`).join("");
+    return `<div style="margin-top:16px"><h4 style="margin:10px 0 4px">Differenze caratteristiche tra addotti (riconoscere coppie nello spettro)</h4>
+      <div class="muted sm" style="margin-bottom:6px">In spettrometria ESI lo stesso composto genera spesso più addotti contemporaneamente. Le distanze costanti fra i picchi dello stesso tempo di ritenzione (es. <b>+22 Da</b> tra [M+H]<sup>+</sup> e [M+Na]<sup>+</sup>, o <b>+17 Da</b> tra [M+H]<sup>+</sup> e [M+NH<sub>4</sub>]<sup>+</sup>) permettono di individuare le coppie nello spettro e confermare la massa neutra <i>M</i>. Fonte: Huang N. et al., <i>J. Am. Soc. Mass Spectrom.</i> 10 (1999) 1166&ndash;1173.</div>
+      <table><tr><th>Coppia di addotti</th><th class="num">&Delta; <i>m/z</i> esatto</th><th class="num">&Delta; nominale</th><th>Modo</th><th>Nota e significato didattico</th></tr>${rows}</table></div>`;
+  }
+
   function adducts(M) {
     const ref = { 1: ADD[0], "-1": ADD.find(a => a.n === "[M-H]-") };
     const row = (a, pol) => {
@@ -99,7 +131,7 @@
     const head = pol => `<tr><th>addotto</th><th>m/z =</th><th class="num">m/z esatto</th><th class="num"><i>m/z</i> nominale</th><th class="num">&Delta; da ${pol > 0 ? "[M+H]<sup>+</sup>" : "[M&minus;H]<sup>&minus;</sup>"}</th><th>quando si vede</th></tr>`;
     const blk = pol => `<h4>${pol > 0 ? "ESI positivo" : "ESI negativo"}</h4><table>${head(pol)}${rows(pol)}</table>`;
     const neg = typeof E !== "undefined" && E.files.some(f => f.polarity === "negative") && !E.files.some(f => f.polarity === "positive");      // the polarity of the loaded files first
-    return neg ? blk(-1) + blk(1) : blk(1) + blk(-1);
+    return (neg ? blk(-1) + blk(1) : blk(1) + blk(-1)) + diffsHtml();
   }
   function adductTab() {
     return `<div class="bar"><label>M (massa neutra) o formula <input id="ad-in" placeholder="es. 363.0665 oppure C14H13F4N3O2S" style="width:260px"></label><span id="ad-msg" class="muted sm"></span></div>
@@ -250,8 +282,50 @@
     show(which); if (!d.open) d.showModal();
     if (which === "ls" && opt.q != null) setTimeout(() => { const i = body.querySelector("#nl-q"); if (i) { i.focus(); i.select(); } }, 50);
   }
+  function mountLosses(container, opt = {}) {
+    lossPolStart();
+    if (opt.q != null) NL.q = String(opt.q);
+    container.innerHTML = lossTab();
+    bindLoss(container, id => {
+      if (id === "pt" || id === "ad") {
+        if (window.BARRA && BARRA.isDataView()) {
+          BARRA.setTab(id === "pt" ? "ptable" : "adducts");
+        } else {
+          open(id);
+        }
+      }
+    });
+    if (opt.q != null) {
+      setTimeout(() => { const i = container.querySelector("#nl-q"); if (i) { i.focus(); i.select(); } }, 50);
+    }
+  }
+
+  function mountAdducts(container) {
+    container.innerHTML = adductTab();
+    bindAdducts(container);
+  }
+
+  function setLossQuery(q) {
+    NL.q = String(q || "");
+    const qInp = document.querySelector("#nl-q");
+    if (qInp) {
+      qInp.value = NL.q;
+      qInp.dispatchEvent(new Event("input", { bubbles: true }));
+      setTimeout(() => { qInp.focus(); qInp.select(); }, 50);
+    }
+  }
+
   Qs("#np-pt").onclick = () => open("pt");
-  Qs("#np-ad").onclick = () => open("ad");
-  Qs("#np-nl").onclick = () => open("ls");
-  window.QQQRef = { open, massOf, mono, isoPattern, ionCounts, ADD };
+  Qs("#np-ad").onclick = () => {
+    if (window.BARRA && BARRA.isDataView()) BARRA.setTab("adducts");
+    else open("ad");
+  };
+  Qs("#np-nl").onclick = () => {
+    if (window.BARRA && BARRA.isDataView()) BARRA.setTab("losses");
+    else open("ls");
+  };
+  window.QQQRef = {
+    open, massOf, mono, isoPattern, ionCounts, ADD, adductDiffs: calcAdductDiffs,
+    mountLosses, mountAdducts, setLossQuery, periodic, bindPeriodic, adductTab, bindAdducts, lossTab, bindLoss
+  };
 })();

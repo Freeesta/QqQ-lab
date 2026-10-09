@@ -1,0 +1,19 @@
+{
+  "draw.ctx.breakBonds": "Voce del menu del tasto destro su uno o più legami selezionati nel Disegno. {n} = numero di legami selezionati.",
+  "draw.ctx.copyFormula": "Voce del menu del tasto destro sull'etichetta sotto una molecola; {formula} = formula con carica (es. C10H14N+).",
+  "draw.ctx.copyMass": "Come sopra, per la massa di una molecola neutra; {mass} = valore già formattato.",
+  "draw.ctx.copyMassMz": "Come sopra, per uno ione: la massa è un m/z.",
+  "draw.ctx.copySmilesOf": "Voce del menu del tasto destro sulla tela; {smiles} = SMILES abbreviato.",
+  "draw.export.failed": "Messaggio sotto i pulsanti di esportazione quando l'esportazione fallisce; {message} = testo tecnico dell'errore.",
+  "draw.export.metaDesc.clear": "Campo Description dei metadati del PNG esportato (sfondo trasparente); {scale} = fattore di scala.",
+  "draw.export.metaDesc.white": "Come sopra, con sfondo bianco.",
+  "draw.export.svgTitle.clear": "Elemento <title> dell'SVG esportato (sfondo trasparente); {app} = nome del programma, {stamp} = data AAAA-MM-GG.",
+  "draw.export.svgTitle.white": "Come sopra, con sfondo bianco.",
+  "draw.import.failed": "Avviso sotto il campo SMILES quando l'incolla di una struttura fallisce; {message} = testo di Ketcher (inglese).",
+  "draw.props.failed": "Riquadro delle proprietà previste quando il calcolo fallisce; {message} = testo tecnico.",
+  "draw.quick.invalid": "Avviso sotto «Disegna veloce» per uno SMILES rifiutato da Ketcher; {message} = testo di Ketcher (inglese).",
+  "draw.selection.cuts": "Nota sotto gli SMILES della selezione: numero di legami tagliati dalla selezione ({n}).",
+  "draw.export.filePrefix": "Prefisso del nome dei file scaricati (disegno_AAAA-MM-GG_HHMM.png): solo lettere minuscole senza accento.",
+  "draw.export.transparentSuffix": "Suffisso del nome dei file con sfondo trasparente: solo lettere minuscole senza accento.",
+  "app.title": "Titolo della scheda del browser; {app} = nome del programma (da appname.js). Le anteprime dei link usano il titolo scritto da tools/build_site.py."
+}

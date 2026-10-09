@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from qqq_lab import ionfamily
+from mzlab import ionfamily
 
 K = 32                      # peaks kept per spectrum
 TOL_HR = 0.005              # Da, high resolution (0.5 at unit resolution)

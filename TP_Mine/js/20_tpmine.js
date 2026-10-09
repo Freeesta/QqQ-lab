@@ -56,7 +56,7 @@
     if (ready) return ready;
     ready = (async () => {
       const c = ctx(), base = c.base;
-      const [qq, tpz] = [await fetch(base + "qqq_lab.zip").then(r => { if (!r.ok) throw new Error("il motore di calcolo nel browser non c'è (usa il sito, non il programma locale)"); return r.arrayBuffer(); }), c.pyZip];
+      const [qq, tpz] = [await fetch(base + "mzlab.zip").then(r => { if (!r.ok) throw new Error("il motore di calcolo nel browser non c'è (usa il sito, non il programma locale)"); return r.arrayBuffer(); }), c.pyZip];
       const url = URL.createObjectURL(new Blob([c.files["tpmine-worker.js"]], { type: "text/javascript" }));
       worker = new Worker(url, { type: "module" });
       worker.onmessage = ev => {
@@ -85,6 +85,7 @@
   // ---------------------------------------------------------------- page files (the browser's own storage of the main program)
   async function idbFiles() {
     try {
+      // "qqq_lab" is the name of the browser database (kept from the old name: renaming it would lose the users' data)
       if (!indexedDB.databases || !(await indexedDB.databases()).some(d => d.name === "qqq_lab")) return [];
       return await new Promise(res => {
         const r = indexedDB.open("qqq_lab");

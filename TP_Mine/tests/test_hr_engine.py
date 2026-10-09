@@ -29,7 +29,7 @@ def exp(series):
 
 
 def test_classify(series):
-    from qqq_lab.reader.mzml import Run
+    from mzlab.reader.mzml import Run
     d, files, msn = series
     assert EN.classify(Run(files[1]["path"])) == "hr" and EN.classify(Run(msn)) == "msn"
 

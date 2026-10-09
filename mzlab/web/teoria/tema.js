@@ -6,6 +6,18 @@
   function eff(x) { return x === "dark" || (x !== "light" && mq && mq.matches) ? "dark" : "light"; }
   function apply(x) { pref = x; R.setAttribute("data-theme", eff(x)); R.style.colorScheme = eff(x); }
   apply(parentPref());
+  // «Lettura facilitata»: the choices (localStorage «qqq.a11y», JSON of codes) become data-a11y-* attributes of <html> before the page is drawn; the rules are in teoria.css, the panel in a11y.js
+  var A11Y_KEYS = { font: ["atkinson", "dyslexic"], bg: ["cream", "blue", "hc"], motion: ["auto", "always"] };
+  function a11yRead() { var o = {}; try { o = JSON.parse(localStorage.getItem("qqq.a11y") || "{}") || {}; } catch (e) { /* no storage: defaults */ } return o; }
+  function a11yApply(o) {
+    function set(n, v) { if (v) R.setAttribute("data-a11y-" + n, v === true ? "" : v); else R.removeAttribute("data-a11y-" + n); }
+    set("font", A11Y_KEYS.font.indexOf(o.font) >= 0 ? o.font : ""); set("bg", A11Y_KEYS.bg.indexOf(o.bg) >= 0 ? o.bg : "");
+    set("space", !!o.space); set("nums", !!o.nums); set("ruler", !!o.ruler); set("focus", !!o.focus);
+    var rm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    set("reduce", o.motion === "always" || (rm && o.motion !== "never"));
+  }
+  window.QA11Y = { read: a11yRead, apply: a11yApply, write: function (o) { try { localStorage.setItem("qqq.a11y", JSON.stringify(o)); } catch (e) { /* not stored */ } a11yApply(o); } };
+  a11yApply(a11yRead());
   // the drawings on canvas use fixed colours of the light theme: in the dark one they are swapped for their dark equivalents (the SVG ones are in teoria.css)
   var MAP = { "#24231f": "#e4e7eb", "#fff": "#1d2127", "#ffffff": "#1d2127", "#f4f3ef": "#252a31", "#c9c5bb": "#3a424e", "#e9e7e1": "#2c323b", "#6b675c": "#98a2b0",
     "#57534e": "#b6bfcb", "#2b5c8a": "#7db4e6", "#c2410c": "#fb923c", "#b42318": "#f87171", "#0e7490": "#22d3ee", "#b45309": "#fbbf24", "#efe3dc": "#3a2f29", "#e4cfc3": "#5a463b",

@@ -24,10 +24,18 @@ _TRACK = ("(()=>{if(window.__qqF!==undefined)return;window.__qqF=0;window.__qqT=
 from playwright.sync_api import Browser as _Br, BrowserContext as _Ctx
 _np, _nc = _Br.new_page, _Br.new_context
 def _new_page(self, *a, **k):
+    k.setdefault("locale", "it-IT")        # Playwright starts in en-US, which would now give English to every test written in Italian (e2e_inglese uses en-US on purpose)
     pg = _np(self, *a, **k); pg.add_init_script(_TRACK); return pg
 def _new_context(self, *a, **k):
+    k.setdefault("locale", "it-IT")
     c = _nc(self, *a, **k); c.add_init_script(_TRACK); return c
 _Br.new_page, _Br.new_context = _new_page, _new_context
+def stage(pg, files, timeout=90000):
+    """Give the files to the start screen and wait until ALL of them are in the list: with a fixed pause, on a loaded machine «Carica dati» loaded only the ones staged so far."""
+    pg.set_input_files("#pick", [str(f) for f in files])
+    pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={len(files)}", timeout=timeout)
+
+
 def ready(pg, timeout=90000, settle=400):
     """Wait until the page is quiet: no loading screen, no request to the server in flight, nothing started or ended for `settle` ms."""
     import time as _t
@@ -37,6 +45,9 @@ def ready(pg, timeout=90000, settle=400):
         if q >= settle: return
         if _t.time() - t0 > timeout / 1000: raise TimeoutError("ready: the page is still loading")
         pg.wait_for_timeout(50)
+def shut(pg, sel):
+    """Close a floating window by its × button. In the Dati view the calculator and the reference tables are tabs of the sidebar (no × there): then there is nothing to close."""
+    if pg.is_visible(sel): pg.click(sel)
 def get_env(suffix: str, default=None):
     """Read MZLAB_<suffix> or legacy QQQ_<suffix> (MZLAB_* takes precedence)."""
     return os.environ.get(f"MZLAB_{suffix}", os.environ.get(f"QQQ_{suffix}", default))
@@ -99,6 +110,7 @@ class Run:
         except Exception: pass
         s.srv.terminate()
         s.log = s.srv.stdout.read()
+        shutil.rmtree(s.wd, ignore_errors=True)       # the uploaded files (80 MB each for the high-resolution ones) are not kept: the disk of a session is limited
     def report(s):
         print("--- SERVER LOG (tail)\n", s.log[-1500:])
         print("--- BROWSER ERRORS", len(s.errs))

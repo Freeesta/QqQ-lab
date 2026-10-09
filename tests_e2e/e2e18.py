@@ -13,7 +13,7 @@ r = Run(port=8818, wd="/tmp/wd18")
 try:
     with sync_playwright() as p:
         pg = r.page(p)
-        pg.set_input_files("#pick", [mz(f) for f in FILES]); pg.wait_for_timeout(1000)
+        stage(pg, [mz(f) for f in FILES])
         pg.click("text=Carica dati"); ready(pg)
         dlg = lambda: pg.evaluate("document.querySelector('#xicdlg').open")
         def window_():
@@ -62,7 +62,7 @@ try:
             assert t[2].startswith("m/z ") and abs(t[1] - 0.5) < 1e-9, t          # default unit window [n-0.2, n+0.8]
         step("right click on a peak of the spectrum extracts the XIC at once, no window", spec_menu)
         def groups():
-            for sel, expect in [(".pnl.chrom", ["izoom", "fit", "tlink", "iauto", "iman", "xic", "up", "down", "dl", "max"]), (".pnl.xic", ["izoom", "fit", "tlink", "iauto", "iman", "up", "down", "dl", "max"]), (".pnl.spec", ["fit", "rul", "par", "rel", "up", "down", "dl", "max"])]:
+            for sel, expect in [(".pnl.chrom", ["izoom", "fit", "tlink", "iauto", "iman", "idel", "xic", "d2", "up", "down", "dl", "max"]), (".pnl.xic", ["izoom", "fit", "tlink", "iauto", "iman", "idel", "d2", "up", "down", "dl", "max"]), (".pnl.spec", ["fit", "rul", "par", "rel", "up", "down", "dl", "max"])]:
                 got = pg.evaluate(f"[...document.querySelector('{sel}').querySelectorAll('.tbs [data-a]')].filter(b=>b.tagName==='BUTTON'&&!b.hidden).map(b=>b.dataset.a)"); assert got == expect, (sel, got)
             # hidden until needed
             assert pg.evaluate("[...document.querySelectorAll('.pnl.xic [data-a=intf], .pnl.xic [data-a=iclr], .pnl.xic [data-a=itab]')].every(b=>b.hidden)")
