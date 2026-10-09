@@ -155,7 +155,7 @@
   <details><summary>Elenco delle trasformazioni (nome;variazione)</summary><textarea id="tp-tr" spellcheck="false"></textarea></details></div>
  <div class="card" id="tp-minecard"><div class="mine"><span class="pick">⛏</span><span class="rock r1">◆</span><span class="rock r2">◇</span><span class="rock r3">◆</span></div><button id="tp-go" class="imp" style="width:100%">⛏ Scava</button><div class="bar"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" style="margin-top:4px"></div></div>
 </div>
-<div id="tp-right"><div class="card mut" id="tp-empty">Carica i file, scrivi il progenitore e premi <b>Scava</b>: TP Mine calibra l'm/z sul progenitore, genera i candidati, estrae gli XIC, cerca i picchi che crescono nel tempo e mancano nel bianco, controlla gli isotopi, confronta gli ioni prodotto con quelli del progenitore e assegna un livello di confidenza (Schymanski, per quanto permette la risoluzione unitaria).</div></div></div>`;
+<div id="tp-right"><div class="card mut" id="tp-empty">Carica i file, scrivi il progenitore e premi <b>Scava</b>: mzFinder calibra l'm/z sul progenitore, genera i candidati, estrae gli XIC, cerca i picchi che crescono nel tempo e mancano nel bianco, controlla gli isotopi, confronta gli ioni prodotto con quelli del progenitore e assegna un livello di confidenza (Schymanski, per quanto permette la risoluzione unitaria).</div></div></div>`;
     const $ = s => sec.querySelector(s);
     const st = { files: [], summary: null, sel: null, view: "gems", took: 0, filter: { forte: true, possibile: true, unexp: true, debole: false } };
     const msg = (t, err) => { $("#tp-msg").textContent = t || ""; $("#tp-msg").className = "mut" + (err ? " err" : ""); };
@@ -488,6 +488,6 @@
     const dl = (n, text, type) => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = n; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
   }
 
-  QTOOLS.register({ id: "tpmine", nav: true, name: "TP Mine", desc: "Ricerca automatica dei prodotti di trasformazione (solo per il docente)", open,
+  QTOOLS.register({ id: "tpmine", nav: true, name: "mzFinder", desc: "Ricerca automatica dei prodotti di trasformazione (solo per il docente)", open,
     icon: (typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 16) : "⛏" });
 })();

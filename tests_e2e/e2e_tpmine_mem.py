@@ -1,7 +1,7 @@
 """TP Mine HR: memory of the real worker (Pyodide) with the 13 real HR files of the series (80 MB each, mounted as Blobs) + the MSn file.
 The WebAssembly memory only grows, so its size at the end is the peak. Target: < 1 GB. Needs QQQ_DATI (private data), PYODIDE_DIR optional.
-Throw-away random password. Run from the repo root: python3 tests_e2e/e2e_tpmine_mem.py   (minutes)"""
-import atexit, glob, json, os, re, secrets, shutil, subprocess, sys, tempfile, time
+Run from the repo root: python3 tests_e2e/e2e_tpmine_mem.py   (minutes)"""
+import glob, json, os, re, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 HERE = Path(__file__).resolve().parent; ROOT = HERE.parent
@@ -17,10 +17,7 @@ series = sorted(glob.glob(str(DATI / "HRMS" / "*" / "*TiO2*.mzML")))
 if truth is None or msn is None or len(series) < 13:
     print("SKIP: truth files or the 13 series files not available"); sys.exit(0)
 PORT = 8844
-pw = secrets.token_urlsafe(12); tmp = Path(tempfile.mkdtemp()); enc = ROOT / "mzlab" / "web" / "tpmine.enc"
-_orig_enc = enc.read_bytes() if enc.exists() else None
-atexit.register(lambda: enc.write_bytes(_orig_enc) if _orig_enc is not None else enc.unlink(missing_ok=True))
-subprocess.run([sys.executable, str(ROOT / "tools" / "build_tpmine.py"), "--src", str(SRC), "--out", str(enc), "--iterations", "310000"], check=True, env=dict(os.environ, TPMINE_PASSWORD=pw))
+tmp = Path(tempfile.mkdtemp())
 cmd = [sys.executable, str(ROOT / "tools" / "build_site.py"), "--out", str(tmp / "site")]
 if os.environ.get("PYODIDE_DIR"): cmd += ["--pyodide-dir", os.environ["PYODIDE_DIR"]]
 subprocess.run(cmd, check=True)
@@ -33,8 +30,9 @@ try:
         b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1500, "height": 1400}).new_page()
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
-        for _ in range(5): pg.click('button.hq[data-help="header"]')
-        pg.wait_for_selector("#qt-dlg[open]"); pg.fill("#qt-pw", pw); pg.click("#qt-go"); pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
+        pg.wait_for_timeout(3200)
+        for _ in range(5): pg.click("header img.logo")          # mzFinder on (it stays on after a reload)
+        pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
         pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
         files = sorted(series, key=lambda f: float(re.search(r"t(\d+)min", f).group(1)) if "min" in f else -1) + [str(DATI / msn["file"])]
         t0 = time.time()
