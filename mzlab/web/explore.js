@@ -1995,10 +1995,12 @@ async function drawSpec(p) {
     let sw = 0, sm = 0; for (let j = 0; j < mz.length; j++) if (Math.abs(mz[j] - mz[jb]) <= 0.5 && y[j] > 0) { sw += y[j]; sm += mz[j] * y[j]; }
     return { m: sw > 0 ? sm / sw : mz[jb], y: y[jb], y0: (best.x.d.y0 || y)[jb], f: best.x.f, multi: best.x.multi, prec: best.x.prec };
   };
+  const cont = hrp && window.LISTE ? LISTE.forSpec(data[0].d.mz, data[0].d.y, files[0] && files[0].polarity, UIP.hrPpm) : null;       // known contaminants: only in the box that opens on a peak (high resolution only)
+  p._a.cont = cont;
   p._a.hov = px => {                                       // peak nearest to the mouse
     const b = p._a.snap(px); if (!b) return null;
     const rf = p.meas && p.meas.ref != null ? `<div>Δ<i>m/z</i> <b>${Math.abs(b.m - p.meas.ref).toFixed(hrp ? DECP : 1)}</b> <span class="sm">da ${p.meas.ref.toFixed(hrp ? DECP : 1)}</span>${hrp ? ` <span class="sm">(${((b.m - p.meas.ref) * 1000).toFixed(1)} mDa)</span>` : ""}</div>` : "";
-    return { px: X(b.m), html: `<b>m/z ${b.m.toFixed(hrp ? DECP : 2)}</b><div>intensità <b>${rel ? b.y.toFixed(1) + " %" : fmt(b.y)}</b>${rel ? ` <span class="sm">(${fmt(b.y0)} cps)</span>` : ""}</div>${data.length > 1 ? `<div class="sm">${EH(b.f.label)}${b.multi ? ` (prec. ${b.prec})` : ""}</div>` : ""}${rf}` };
+    return { px: X(b.m), html: `<b>m/z ${b.m.toFixed(hrp ? DECP : 2)}</b><div>intensità <b>${rel ? b.y.toFixed(1) + " %" : fmt(b.y)}</b>${rel ? ` <span class="sm">(${fmt(b.y0)} cps)</span>` : ""}</div>${data.length > 1 ? `<div class="sm">${EH(b.f.label)}${b.multi ? ` (prec. ${b.prec})` : ""}</div>` : ""}${rf}${cont ? cont.tip(b.m) : ""}` };
   };
   g.save(); g.beginPath(); g.rect(M.l, M.t - 1, W - M.l - M.r, H - M.t - M.b + 1); g.clip();     // bars taller than the (magnified) graph end at the top edge
   data.forEach(x => {
@@ -2028,7 +2030,7 @@ async function drawSpec(p) {
   pk.sort((a, b) => b[1] - a[1]); const used = [];
   g.fillStyle = css("--ink"); g.textAlign = "center"; g.font = fpx(12);
   const lbls = []; p._a.lbls = lbls;                      // clickable labels: hover draws a small box, right click opens the menu
-  for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= NL) continue; used.push(px); const t = m.toFixed(DEC), w = g.measureText(t).width; g.fillText(t, px, Y(y) - 4); lbls.push({ m, x: px - w / 2 - 3, y: Y(y) - 4 - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: `<b>m/z ${m.toFixed(DEC)}</b><div class="sm">Tasto destro: azioni</div>` }); }
+  for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= NL) continue; used.push(px); const t = m.toFixed(DEC), w = g.measureText(t).width; g.fillText(t, px, Y(y) - 4); lbls.push({ m, x: px - w / 2 - 3, y: Y(y) - 4 - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: `<b>m/z ${m.toFixed(DEC)}</b><div class="sm">Tasto destro: azioni</div>${cont ? cont.tip(m) : ""}` }); }
   g.font = fpx(12);
   drawMeas(p, g, X, Y, W);                                 // ruler: reference and measured differences (before the annotations: a label hides the dashed line under it)
   for (const a of p.anns) {                                        // the point is the top of the nearest observed peak
@@ -2327,6 +2329,11 @@ function ctxFor(p, e, x, px, py) {
     const has = m != null, lab = has ? m.toFixed(mzd(p, p.level)) : "…", mi = o => has ? o : { label: o.label, dim: true };
     items.push({ label: has ? `m/z ${lab}` : "nessun picco qui: clic destro su un picco", dim: true }, "-");
     items.push(mi({ label: `Estrai l'XIC di m/z ${lab}`, fn: () => xicDirect(m, p) }));
+    if (a.hrp && window.LISTE) {                              // known contaminants (high resolution): information, and the contaminants of the laboratory
+      const pol = a.data[0].f && a.data[0].f.polarity, kn = has && LISTE.isOn() && a.cont ? a.cont.match(m) : [];
+      if (kn.length) items.push({ label: `Contaminante noto: ${kn[0].name} (${kn[0].adduct || "solo m/z"}, ${kn[0].err >= 0 ? "+" : ""}${kn[0].err.toFixed(1)} ppm)${kn.length > 1 ? ` e altri ${kn.length - 1}` : ""}`, dim: true });
+      items.push(mi({ label: "Aggiungi ai contaminanti del laboratorio…", fn: () => LISTE.askAdd(m, pol) }));
+    }
     if (a.hrp && window.COMP) items.push(mi({ label: `Formule compatibili con m/z ${lab}…`, fn: () => COMP.open({ mz: m, spec: a.data[0].d, polarity: a.data[0].f && a.data[0].f.polarity }) }));
     const xs = tabPanels().filter(q => q.type === "xic"), TIPX = "Aggiunge questo ione nello stesso grafico: per vedere se due ioni escono allo stesso tempo";
     const ov = q => ({ label: `Sovrapponi all'XIC di ${xicName(q)} (pannello ${q.num || "?"})`, tip: TIPX, fn: () => xicDirect(m, p, q) });

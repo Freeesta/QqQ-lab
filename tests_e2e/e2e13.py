@@ -28,7 +28,7 @@ try:
         step("engine loads and the start screen appears", boot)
         def load():
             pg.set_input_files("#pick", [mz("B_FullMass-t0"), mz("B_FullMass-t15"), mz("B_FullMass-t60"), mz("B_MS2-t15"), mz("B_MRM-t0")])
-            pg.wait_for_function("document.querySelectorAll('#flist tr').length >= 6", timeout=120000)
+            pg.wait_for_function("document.querySelectorAll('#flist input[data-k=use]').length >= 5", timeout=120000); pg.wait_for_timeout(300)
             t = pg.inner_text("#flist"); assert "MRM" in t and "MS2" in t, t
         step("upload five mzML files and read the experiment type", load)
         def openit():

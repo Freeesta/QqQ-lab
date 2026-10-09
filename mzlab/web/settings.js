@@ -46,6 +46,8 @@ function uipOpen(btn) {
     <div class="row">Librerie di spettri <button id="uip-lib" title="Carica le librerie (MSP, MGF) con cui confrontare le MS2: clic destro su uno spettro MS2, «Cerca nelle librerie»">Librerie…</button></div>` : ""}
     ${(typeof E !== "undefined" && E.files && E.files.some(f => window.HR && HR.isHr(f))) ? `
     <div class="row hr-only" title="Finestra di un XIC e confronto fra m/z nei file ad alta risoluzione (predefinito 5 ppm, come in Thermo FreeStyle)">Tolleranza in alta risoluzione &plusmn; <input type="number" id="uip-ppm" min="1" max="50" step="1" value="${UIP.hrPpm}" style="width:56px"> ppm</div>
+    <label class="row hr-only" style="align-items:flex-start;gap:6px" title="Al passaggio del mouse proprio sopra un picco, il riquadro dice se la m/z è compatibile con un contaminante noto (Keller 2008 e i tuoi). Nessun segno sullo spettro."><input type="checkbox" id="uip-cont" ${window.LISTE && LISTE.isOn() ? "checked" : ""}> <span>Contaminanti noti al passaggio del mouse</span></label>
+    <div class="row hr-only">Contaminanti del laboratorio <button id="uip-lab" type="button">Apri…</button></div>
     <div class="row hr-only" title="Decimali delle m/z nei file ad alta risoluzione">Decimali in alta risoluzione <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
     ` : ""}
     `;
@@ -56,6 +58,8 @@ function uipOpen(btn) {
     UIP.merge = e.target.checked; uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof redrawAll === "function") redrawAll();
   };
+  const uipCont = d.querySelector("#uip-cont"); if (uipCont) uipCont.onchange = e => { if (window.LISTE) LISTE.setOn(e.target.checked); };
+  const uipLab = d.querySelector("#uip-lab"); if (uipLab) uipLab.onclick = () => { d.remove(); if (window.LISTE) LISTE.openLab(); };
   const uipTog = d.querySelector("#uip-tog"); if (uipTog) uipTog.onchange = e => { if (typeof setTogether === "function") setTogether(e.target.checked); };
   const uipLib = d.querySelector("#uip-lib"); if (uipLib) uipLib.onclick = () => { d.remove(); if (window.LIB) LIB.open(); };
   const hrChanged = () => {

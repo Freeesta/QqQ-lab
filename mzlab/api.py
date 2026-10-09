@@ -141,6 +141,9 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                                      iso_tol=float(q.get("isotol", 0.2))))
             except (ValueError, KeyError, IndexError) as e:
                 return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante o non valido: {e}"}, 400)
+        if path == "/api/contaminants":   # built-in list of known contaminants, expanded into ions (mzlab.chem.contaminants); matching is done in the browser (web/liste.js)
+            from .chem.contaminants import builtin
+            return _json({"lists": [builtin()]})
         if path == "/api/msntree":      # tree of the fragmentation paths of an MSn file (consensus spectra and formulas): candidates, not identifications
             try:
                 return _json(app.msn_tree(int(q["k"]), q.get("formula") or None, float(q.get("ppm", 5))))

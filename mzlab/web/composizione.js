@@ -40,7 +40,7 @@ const COMP = (() => {
       <div class="cmp-grid" style="margin-top:6px"><label>Sottoformula del precursore <input id="cmp-par" value="${EH(o.parent || "")}" placeholder="es. C13H25N4O3S" style="width:150px"></label>
         <label>Isotopi osservati M+1/M <input id="cmp-m1" value="${f4(ob.m1)}" style="width:62px"> M+2/M <input id="cmp-m2" value="${f4(ob.m2)}" style="width:62px"></label>
         <button id="cmp-go" type="button" class="go">Calcola</button></div>
-      <div id="cmp-out" style="margin-top:8px"></div>`, () => {
+      <div id="cmp-known" class="sm" style="margin-top:6px"></div><div id="cmp-out" style="margin-top:8px"></div>`, () => {
       const $ = s => Q(s);
       $("#cmp-load").onclick = () => { $("#cmp-els").value = presets[$("#cmp-pre").value] || $("#cmp-els").value; };
       $("#cmp-save").onclick = async () => { const n = await ask("Nome della preimpostazione", ""); if (!n) return; const s = rd(); s.presets = { ...(s.presets || {}), [n]: $("#cmp-els").value }; wr(s); toast("Salvata"); };
@@ -49,6 +49,8 @@ const COMP = (() => {
         const q = { mz: num($("#cmp-mz").value), ion: $("#cmp-ion").value, tol: num($("#cmp-tol").value) ?? 5, unit: $("#cmp-unit").value, max: parseInt($("#cmp-max").value) || 10,
           n: $("#cmp-n").value, rdb: `${num($("#cmp-r0").value) ?? -1},${num($("#cmp-r1").value) ?? 100}`, elements: $("#cmp-els").value.replace(/\s+/g, ""), rules: rules.join(","), parent: $("#cmp-par").value.trim(), m1: num($("#cmp-m1").value), m2: num($("#cmp-m2").value) };
         if (q.mz == null) { $("#cmp-out").innerHTML = `<span class="fail">Scrivi l'm/z.</span>`; return; }
+        if (window.LISTE) await LISTE.ready();
+        { const kn = window.LISTE && o.polarity ? LISTE.textFor(q.mz, o.polarity, UIP.hrPpm) : ""; $("#cmp-known").innerHTML = kn ? `<b>Coincide con un contaminante noto:</b> ${EH(kn)} <span class="muted">(compatibilità di massa, non un'identificazione)</span>` : ""; }
         wr({ ...rd(), tol: q.tol, unit: q.unit, max: q.max, n: q.n, r0: num($("#cmp-r0").value), r1: num($("#cmp-r1").value), els: $("#cmp-els").value, rules });
         $("#cmp-out").textContent = "Calcolo…";
         try {
