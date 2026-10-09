@@ -9,10 +9,11 @@ import re
 
 from .reader.mzml import Run, _cv, _float
 
-RECIPE = ('msconvert file.raw --mzML --zlib --filter "peakPicking vendor msLevel=1-"  '
-          '(per alleggerire: --filter "scanTime [600,1500]" in secondi, --filter "threshold count 300 most-intense")')
 
-TOO_BIG = ("Questo file è troppo grande per la memoria del browser. Riducilo con MSConvert: " + RECIPE)
+
+def too_big() -> dict:
+    """The answer when a file does not fit in the memory of the browser: the page writes it from the key ``err.memory.tooBig`` (it holds the recipe)."""
+    return {"error": "this file is too big for the memory of the browser: reduce it with MSConvert", "error_key": "err.memory.tooBig", "params": {}}
 
 _HR_MODEL = re.compile(r"orbitrap|exploris|exactive|astral|tof|ft-icr|ltq ft", re.I)
 

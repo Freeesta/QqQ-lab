@@ -37,19 +37,19 @@ if (typeof window !== "undefined" && window.matchMedia) {
 function uipOpen(btn) {
   const old = Q("#uipset"); if (old) { old.remove(); return; }
   const d = document.createElement("div"); d.id = "uipset";
-  d.innerHTML = `<div class="sm" style="font-weight:600;margin-bottom:6px">Impostazioni</div>
+  d.innerHTML = `<div class="sm" style="font-weight:600;margin-bottom:6px">${I18N.t("settings.title")}</div>
     <div class="row"><span>${I18N.t("settings.language.label")}</span> <select id="uip-lang" title="${I18N.t("settings.language.title")}" aria-label="${I18N.t("settings.language.label")}"><option value="it">Italiano</option><option value="en">English</option></select></div>
-    <div class="row">Tema <select id="uip-th"><option value="auto">Come il sistema</option><option value="light">Chiaro</option><option value="dark">Scuro</option></select></div>
-    <div class="row">Colori dei grafici <select id="uip-pal" title="Per tempo: i file Full Scan con un tempo vanno dal viola scuro al verde in ordine di tempo. Accessibili: colori distinguibili anche con le forme comuni di daltonismo, più linee tratteggiate. Alto contrasto aggiunge anche lo stile della linea. Arcobaleno: tinte ben separate.">${Object.entries(PALS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join("")}</select></div>
-    <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>Unisci i centroidi della stessa massa nominale</span></label>
-    ${typeof E !== "undefined" && E.files && E.files.length && !(window.BANCO && BANCO.on()) ? `<label class="row" style="align-items:flex-start;gap:6px" title="Full Scan, MS2 e MRM nella stessa pagina, un blocco per tipo di esperimento. Un grafico mostra sempre un solo tipo."><input type="checkbox" id="uip-tog" ${UIP.tog ? "checked" : ""}> <span>Mostra tutti gli esperimenti insieme</span></label>` : ""}
+    <div class="row">${I18N.t("settings.theme")} <select id="uip-th"><option value="auto">${I18N.t("settings.theme.auto")}</option><option value="light">${I18N.t("settings.theme.light")}</option><option value="dark">${I18N.t("settings.theme.dark")}</option></select></div>
+    <div class="row">${I18N.t("settings.pal.label")} <select id="uip-pal" title="${I18N.t("settings.pal.title")}">${Object.keys(PALS).map(k => `<option value="${k}">${I18N.t(`settings.pal.${k}`)}</option>`).join("")}</select></div>
+    <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>${I18N.t("settings.merge")}</span></label>
+    ${typeof E !== "undefined" && E.files && E.files.length && !(window.BANCO && BANCO.on()) ? `<label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.together.title")}"><input type="checkbox" id="uip-tog" ${UIP.tog ? "checked" : ""}> <span>${I18N.t("settings.together")}</span></label>` : ""}
     ${(typeof E !== "undefined" && E.files && E.files.some(f => window.HR && HR.isHr(f))) ? `
-    <div class="row">Librerie di spettri <button id="uip-lib" title="Carica le librerie (MSP, MGF) con cui confrontare le MS2: clic destro su uno spettro MS2, «Cerca nelle librerie»">Librerie…</button></div>` : ""}
+    <div class="row">${I18N.t("settings.libs.label")} <button id="uip-lib" title="${I18N.t("settings.libs.title")}">${I18N.t("settings.libs.button")}</button></div>` : ""}
     ${(typeof E !== "undefined" && E.files && E.files.some(f => window.HR && HR.isHr(f))) ? `
-    <div class="row hr-only" title="Finestra di un XIC e confronto fra m/z nei file ad alta risoluzione (predefinito 5 ppm, come in Thermo FreeStyle)">Tolleranza in alta risoluzione &plusmn; <input type="number" id="uip-ppm" min="1" max="50" step="1" value="${UIP.hrPpm}" style="width:56px"> ppm</div>
-    <label class="row hr-only" style="align-items:flex-start;gap:6px" title="Al passaggio del mouse proprio sopra un picco, il riquadro dice se la m/z è compatibile con un contaminante noto (Keller 2008 e i tuoi). Nessun segno sullo spettro."><input type="checkbox" id="uip-cont" ${window.LISTE && LISTE.isOn() ? "checked" : ""}> <span>Contaminanti noti al passaggio del mouse</span></label>
-    <div class="row hr-only">Contaminanti del laboratorio <button id="uip-lab" type="button">Apri…</button></div>
-    <div class="row hr-only" title="Decimali delle m/z nei file ad alta risoluzione">Decimali in alta risoluzione <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
+    <div class="row hr-only" title="${I18N.t("settings.hrPpm.title")}">${I18N.t("settings.hrPpm", { input: `<input type="number" id="uip-ppm" min="1" max="50" step="1" value="${UIP.hrPpm}" style="width:56px">` })}</div>
+    <label class="row hr-only" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.cont.title")}"><input type="checkbox" id="uip-cont" ${window.LISTE && LISTE.isOn() ? "checked" : ""}> <span>${I18N.t("settings.cont")}</span></label>
+    <div class="row hr-only">${I18N.t("settings.lab.label")} <button id="uip-lab" type="button">${I18N.t("settings.lab.button")}</button></div>
+    <div class="row hr-only" title="${I18N.t("settings.hrDec.title")}">${I18N.t("settings.hrDec")} <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
     ` : ""}
     `;
   document.body.appendChild(d);
@@ -83,7 +83,7 @@ function uipOpen(btn) {
 
 uipLoad();
 (() => {
-  const nav = Q("#nav"), b = document.createElement("button"); b.id = "np-set"; b.className = "ib gear"; b.title = "Impostazioni: testo, tema, colori dei grafici"; b.setAttribute("aria-label", "Impostazioni");
+  const nav = Q("#nav"), b = document.createElement("button"); b.id = "np-set"; b.className = "ib gear"; b.title = I18N.t("settings.gear.title"); b.setAttribute("aria-label", I18N.t("settings.title"));
   b.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
   nav.insertAdjacentElement("afterend", b); b.onclick = e => { e.stopPropagation(); uipOpen(b); };
   uipApply();

@@ -8,6 +8,8 @@ import mmap
 import struct
 from pathlib import Path
 
+from ..i18n import UserError
+
 _END, _FREE = 0xFFFFFFFE, 0xFFFFFFFF
 
 
@@ -18,7 +20,7 @@ class Ole:
             self._mm = mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ)
         d = self._mm
         if d[:8] != bytes.fromhex("D0CF11E0A1B11AE1"):
-            raise ValueError(f"{self.path.name} is not an OLE2 file")
+            raise UserError("err.file.notDam", {"name": self.path.name}, f"{self.path.name} is not an OLE2 file")
         self.ss = 1 << struct.unpack_from("<H", d, 0x1E)[0]
         self.mss = 1 << struct.unpack_from("<H", d, 0x20)[0]
         n_fat, dir0, self.cutoff, mfat0, n_mfat, dif0, n_dif = struct.unpack_from("<IIxxxxIIIII", d, 0x2C)

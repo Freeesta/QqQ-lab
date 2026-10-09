@@ -77,14 +77,24 @@
     return params === undefined && m.indexOf("{") < 0 ? m : format(m, params, lang);
   }
   function add(lg, dict) { Object.assign(cat[lg] || (cat[lg] = {}), dict); }
+  // fixed decimals in the language of the sentence (file sizes inside prose: "1,5 MB" / "1.5 MB"); data values use num()
+  const fix = (x, dec) => new Intl.NumberFormat(lang === "it" ? "it-IT" : "en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(+x);
   const num = (x, dec) => (x === null || x === undefined || Number.isNaN(+x)) ? "" : (dec === undefined ? String(+x) : (+x).toFixed(dec));
+
+  // an answer {"error", "error_key", "params"} of the server -> Error with the message in the language of the page (e.key = the key)
+  function err(j) {
+    if (!j || !j.error_key) return new Error(j && j.error ? j.error : String(j));
+    const e = new Error(t(j.error_key, j.params || {})); e.key = j.error_key; return e;
+  }
 
   // static HTML: the Italian text stays in the page (works before JS); tools/controlla_i18n.py checks that it matches it.js
   const ATTRS = [["data-i18n-title", "title"], ["data-i18n-placeholder", "placeholder"], ["data-i18n-aria-label", "aria-label"]];
   function apply(rootEl) {
     const r = rootEl || (typeof document !== "undefined" ? document : null); if (!r) return;
-    r.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n")); });
-    ATTRS.forEach(([a, target]) => r.querySelectorAll("[" + a + "]").forEach(el => el.setAttribute(target, t(el.getAttribute(a)))));
+    const P = { app: (typeof window !== "undefined" && window.APP_NAME) || "mzLab" };      // {app} = the visible name of the program (appname.js)
+    r.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.getAttribute("data-i18n"), P); });
+    r.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n-html"), P); });   // catalog text with b/i/u/code/sub/sup/a/br (trusted)
+    ATTRS.forEach(([a, target]) => r.querySelectorAll("[" + a + "]").forEach(el => el.setAttribute(target, t(el.getAttribute(a), P))));
   }
   function setLangAttr() { if (typeof document !== "undefined") document.documentElement.setAttribute("lang", lang); }
 
@@ -106,7 +116,7 @@
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", go); else go();
   }
 
-  const I18N = { add, t, apply, set, num, detect, format, get lang() { return lang; }, LANGS, KEY, missing };
+  const I18N = { add, t, apply, set, num, fix, err, detect, format, get lang() { return lang; }, LANGS, KEY, missing };
   root.I18N = I18N;
   if (typeof module !== "undefined" && module.exports) module.exports = I18N;
 })(typeof window !== "undefined" ? window : globalThis);

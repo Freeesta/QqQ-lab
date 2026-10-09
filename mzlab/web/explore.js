@@ -49,7 +49,6 @@ const OKABE_DARK = ["#56B4E9", "#F0E442", "#34d399", "#fb923c", "#f472b6", "#38b
 const PALS = {
   // viridis cut at 72% (the yellow end is almost invisible on white); in dark mode uses luminous tones
   time: {
-    name: "Per tempo (predefinito)",
     seq: VIRIDIS, seqDark: VIRIDIS_DARK, a: 0, b: 0.72, aDark: 0, bDark: 1.0,
     cat: ["#1f77b4", "#e6550d", "#2ca02c", "#9467bd", "#d62728", "#17becf", "#bcbd22", "#e377c2", "#8c564b", "#0b6e4f", "#f2a900", "#5b5fc7"],
     catDark: ["#60a5fa", "#fb923c", "#4ade80", "#c084fc", "#f87171", "#38bdf8", "#facc15", "#f472b6", "#2dd4bf", "#a3e635", "#fbbf24", "#818cf8"],
@@ -57,14 +56,12 @@ const PALS = {
   },
   // CVD-safe: cividis + Okabe-Ito (bright in dark mode)
   cb: {
-    name: "Accessibili",
     seq: CIVIDIS, seqDark: CIVIDIS_DARK, a: 0, b: 0.75, aDark: 0, bDark: 1.0,
     cat: OKABE, catDark: OKABE_DARK,
     dash: true, blank: "#8a8a8a", blankDark: "#9ca3af", std: "#4d4d4d", stdDark: "#cbd5e1"
   },
   // every colour >= 4.5:1 on white (dark half on white, bright and vibrant on dark)
   hc: {
-    name: "Alto contrasto",
     seq: CIVIDIS, seqDark: CIVIDIS_DARK, a: 0, b: 0.45, aDark: 0.2, bDark: 1.0,
     cat: ["#003f9e", "#b30000", "#006b2e", "#6a1b9a", "#8a4b00", "#00727f", "#a1006b", "#000000"],
     catDark: ["#60a5fa", "#f87171", "#4ade80", "#c084fc", "#fb923c", "#38bdf8", "#f472b6", "#ffffff"],
@@ -72,7 +69,6 @@ const PALS = {
   },
   // well separated hues; on time series the hue order still follows the time
   rainbow: {
-    name: "Arcobaleno",
     hue: u => isDark() ? `hsl(${Math.round(265 - 250 * u)} 85% 65%)` : `hsl(${Math.round(265 - 250 * u)} 80% 40%)`,
     cat: ["#d62728", "#1f77b4", "#2ca02c", "#9467bd", "#ff7f0e", "#17becf", "#e377c2", "#bcbd22", "#8c564b", "#0b6e4f", "#f2a900", "#5b5fc7"],
     catDark: ["#f87171", "#60a5fa", "#4ade80", "#c084fc", "#fb923c", "#38bdf8", "#f472b6", "#facc15", "#2dd4bf", "#a3e635", "#fbbf24", "#818cf8"],
@@ -80,7 +76,6 @@ const PALS = {
   },
   // Monochrome black & white with dashes for distinct traces
   bw: {
-    name: "Bianco e nero",
     seq: ["#000000", "#333333", "#666666", "#999999"],
     seqDark: ["#ffffff", "#cccccc", "#999999", "#666666"],
     a: 0, b: 1.0, aDark: 0, bDark: 1.0,
@@ -154,7 +149,7 @@ function loading(on, msg) {
   const L = Q("#loading");
   if (on) {
     ldSince = Date.now(); Q("#ldsub").textContent = msg || "";
-    clearTimeout(ldSlow); ldSlow = setTimeout(() => { if (!window.qqFailed && !Q("#loading").hidden && !Q("#ldsub").textContent) Q("#ldsub").textContent = "La prima apertura scarica circa 15 MB: può volerci un minuto."; }, 20000);
+    clearTimeout(ldSlow); ldSlow = setTimeout(() => { if (!window.qqFailed && !Q("#loading").hidden && !Q("#ldsub").textContent) Q("#ldsub").textContent = I18N.t("load.slow"); }, 20000);
     if (!ldTimer) { ldNext(); ldTimer = setInterval(ldNext, 5000); } L.hidden = false;   // a phrase already turning (first start) is kept
   } else {
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
@@ -215,7 +210,7 @@ const fpx = (n, st = "") => `${st}${+(n * fz()).toFixed(1)}px system-ui`;
 // ------------------------------------------------------------------ dati (con cache)
 const CACHE = new Map();
 const memo = (key, fn) => { if (!CACHE.has(key)) CACHE.set(key, fn().catch(e => { CACHE.delete(key); throw e; })); return CACHE.get(key); };
-const J = u => fetch(u).then(async r => { const j = await r.json(); if (j.error) throw new Error(j.error); return j; });
+const J = u => fetch(u).then(async r => { const j = await r.json(); if (j.error) throw I18N.err(j); return j; });
 // precursor + scan filter (high-resolution bench: the type of scan chosen in a cell) travel together in the "precursor" slot of the caches and the requests
 const prk = (pr, ft) => ft ? `${pr ?? ""}~${ft}` : pr;
 const prSplit = pr => { const t = String(pr ?? ""), i = t.indexOf("~"); return i < 0 ? [pr ?? "", ""] : [t.slice(0, i), t.slice(i + 1)]; };
@@ -2606,7 +2601,7 @@ async function showMethod(sel) {
   if (lab) {
     const pr = a => a.map(s => `<tr><td class="muted">${EH(s.label)}</td><td>${s.id === "ihe" ? (s.value ? "acceso" : "spento") : s.value + " " + s.unit}</td></tr>`).join("");
     const pick = labs.length > 1 ? `<div class="sm" style="margin:2px 0 6px">Metodo: <select id="m-sel">${labs.map((x, i) => `<option value="${i}" ${i === li ? "selected" : ""}>${EH(x.name)}</option>`).join("")}</select> <button id="m-load">Carica un altro .dam</button></div>` : `<div class="muted sm" style="margin:2px 0 6px">Dal file <b>${EH(lab.name)}</b>. <button id="m-load">Carica un altro .dam</button></div>`;
-    h += sec("Sorgente e composto (.dam)", pick + (lab.error ? `<div class="fail">${EH(lab.error)}</div>` : lab.source.length || lab.compound.length ? `<table>${pr(lab.source)}${pr(lab.compound)}</table>` : `<div class="muted sm">In questo file non ho trovato parametri della sorgente.</div>`));
+    h += sec("Sorgente e composto (.dam)", pick + (lab.error ? `<div class="fail">${EH(lab.error_key ? I18N.t(lab.error_key, lab.params) : lab.error)}</div>` : lab.source.length || lab.compound.length ? `<table>${pr(lab.source)}${pr(lab.compound)}</table>` : `<div class="muted sm">In questo file non ho trovato parametri della sorgente.</div>`));
   }
   h += "</div>";
   if (lab) {
@@ -2640,7 +2635,7 @@ Q("#np-method").onclick = () => showMethod();
 function openBT() {
   window.open("https://biotransformer.ca/new", "_blank", "noopener");
   Q("#bt").hidden = false;
-  try { if (window.TPDraw) window.TPDraw.smiles().then(s => { if (s) { navigator.clipboard.writeText(s); Q("#btcopy").textContent = "Copiato: " + (s.length > 40 ? s.slice(0, 40) + "…" : s); } }).catch(() => {}); } catch (_) { /* appunti non disponibili */ }
+  try { if (window.TPDraw) window.TPDraw.smiles().then(s => { if (s) { navigator.clipboard.writeText(s); Q("#btcopy").textContent = I18N.t("bt.copied", { smiles: s.length > 40 ? s.slice(0, 40) + "…" : s }); } }).catch(() => {}); } catch (_) { /* appunti non disponibili */ }
 }
 Q("#np-bt").onclick = openBT; Q("#bt-open").onclick = openBT; Q("#btx").onclick = () => { Q("#bt").hidden = true; };
 

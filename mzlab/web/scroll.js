@@ -34,7 +34,7 @@ function scFetch(k, lv, pr, i0, i1) {
 // api/scanbin: 4 bytes = length of the JSON header, the header {n, scans:[{i, sid, rt, mode, n, np}]}, then for each scan peaks (float64 m/z, float32 y) and, for profile, the line (pmz, py)
 async function scBin(url) {
   const r = await fetch(url);
-  if (!r.ok) { let m = "errore " + r.status; try { m = (await r.json()).error || m; } catch (e) { /* not JSON */ } throw new Error(m); }
+  if (!r.ok) { let m = new Error(I18N.t("err.http", { status: r.status })); try { const j = await r.json(); if (j && j.error) m = I18N.err(j); } catch (e) { /* not JSON */ } throw m; }
   const buf = await r.arrayBuffer(), hl = new DataView(buf).getUint32(0, true), head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hl)));
   let off = 4 + hl;
   const arr = (T, n) => { const a = Array.from(new T(buf.slice(off, off + n * T.BYTES_PER_ELEMENT))); off += n * T.BYTES_PER_ELEMENT; return a; };      // slice: an array view needs an aligned offset

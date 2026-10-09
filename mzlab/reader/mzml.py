@@ -18,6 +18,7 @@ from pathlib import Path
 
 import numpy as np
 
+from ..i18n import UserError
 from .profile import analyzer_from_components, mass_profile
 
 _CV = {}
@@ -218,7 +219,7 @@ class Run:
                 self._mm = mmap.mmap(fh.fileno(), 0, access=mmap.ACCESS_READ)
         head = self._mm[:4096]
         if b"mzML" not in head:
-            raise ValueError(f"{self.path.name} does not look like an mzML file")
+            raise UserError("err.file.notMzml", {"name": self.path.name}, f"{self.path.name} does not look like an mzML file")
         self.scans: list[Scan] = []
         self._read_header()
         self.timing: dict = {}                       # seconds spent reading the file ("indice", "tabella MS1"...), shown by the ?perf meter
@@ -363,7 +364,7 @@ class Run:
             k = t.find(b"<binary>")
             head = t[:k].decode("utf-8", "replace")
             if any(x in head for x in ("MS:1002312", "MS:1002313", "MS:1002314")):
-                raise ValueError("Numpress compression is not supported: convert with zlib or none")
+                raise UserError("err.file.numpress", text="Numpress compression is not supported: convert with zlib or none")
             data = t[k + 8:t.find(b"</binary>")]
             raw = base64.b64decode(data) if data else b""
             if raw and 'accession="MS:1000574"' in head:   # empty arrays (scans without peaks) carry the flag but no data

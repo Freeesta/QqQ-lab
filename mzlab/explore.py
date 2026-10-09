@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 
 from .bigfiles import hr_profile
+from .i18n import UserError
 from .project import guess_sample
 from .reader.mzml import Run
 from .reader.profile import LOW, mass_profile
@@ -203,7 +204,7 @@ class Item:
         """Every name / value pair of the header of one scan as the mzML has it (the cvParam and userParam up to the arrays), plus the known fields."""
         r = self.run
         if not 0 <= sid < len(r.scans):
-            raise ValueError("scansione fuori dal file")
+            raise UserError("err.scan.outside", text="scan outside the file")
         sc = r.scans[sid]
         head = bytes(r._mm[sc.start:sc.end]).decode("utf-8", "replace").split("<binaryDataArrayList", 1)[0]
         pairs = []
@@ -571,7 +572,7 @@ class Item:
         """One scan exactly as the file has it: its own centroids, no merging (what the DDA panels show)."""
         r = self.run
         if not 0 <= sid < len(r.scans):
-            raise ValueError("scansione fuori dal file")
+            raise UserError("err.scan.outside", text="scan outside the file")
         s = r.scans[sid]
         mz, y = r.read(sid)
         d = self.profile(s.level, hr)["dec"] + 1
@@ -586,7 +587,7 @@ class Item:
         r = self.run
         sids = [i for i in sids if 0 <= i < len(r.scans)]
         if not sids:
-            raise ValueError("nessuna scansione valida")
+            raise UserError("err.scan.noneValid", text="no valid scan")
         level = r.scans[sids[0]].level
         prof = self.profile(level, hr)
         parts = [r.read(i) for i in sids]
@@ -703,20 +704,14 @@ def file_parts(run) -> list[dict]:
     return parts if len(parts) > 1 else []
 
 
-def mixed_text(run) -> str:
-    """One line for the loading table: what a mixed file holds ('' for a file with a single experiment)."""
+def mixed_text(run) -> list[dict]:
+    """The parts of a mixed file for the loading table ([] for a file with a single experiment): [{"name", "pol", "nprec"}]; the page writes them."""
     parts = file_parts(run)
     if not parts:
-        return ""
+        return []
     n_prec = len({round(s.precursor) for s in run.scans if s.level >= 2 and s.precursor})
     names = {"ms1": "Full Scan", "ms2": "MS2", "mrm": "MRM"}
-    out = []
-    for p in parts:
-        t = names[p["mode"]] + ((" pos" if p["pol"] == 1 else " neg") if p["pol"] else "")
-        if p["mode"] == "ms2" and n_prec:
-            t += f" ({n_prec} precursor{'i' if n_prec != 1 else 'e'})"
-        out.append(t)
-    return " + ".join(out)
+    return [{"name": names[p["mode"]], "pol": p["pol"], "nprec": n_prec if p["mode"] == "ms2" and n_prec else None} for p in parts]
 
 
 class Session:
@@ -746,7 +741,7 @@ class Session:
                 has_lr = True
         
         if has_hr and has_lr:
-            raise ValueError("HR_MIX")
+            raise UserError("err.hr.mix", text="low- and high-resolution files cannot be mixed")
 
     def info(self) -> list[dict]:
         return [it.info() for it in self.items]

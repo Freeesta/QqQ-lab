@@ -18,25 +18,26 @@
 
   // while the engine loads the page shows the same loading screen as everywhere else (#loading, funny phrases);
   // the step text goes under the phrase (#ldsub). window.qqStep is also read by loading() in explore.js.
-  window.qqStep = "Preparo il motore di calcolo...";
-  // technical steps go to the console only (the screen shows just the funny phrases); an ERROR replaces the phrase, clearly, in Italian
+  window.qqStep = "Preparing the calculation engine...";
+  // technical steps go to the console only (the screen shows just the funny phrases); an ERROR replaces the phrase, clearly, in the language of the page
   // for the ?perf meter (perf.js loads later: what happens before it is kept here and picked up by it)
   const perfMark = t => { if (window.PERF) PERF.mark(t); else if (/[?&]perf\b/.test(location.search)) (window.PERF_EARLY = window.PERF_EARLY || []).push([performance.now(), t]); };
   const step = t => { window.qqStep = t; console.debug("[mzLab]", t); perfMark(t); };
-  const fail = t => { window.qqFailed = t; const show = () => { const m = document.getElementById("ldmsg"), s = document.getElementById("ldsub"); if (m) m.textContent = t; if (s) s.textContent = ""; }; show(); document.addEventListener("DOMContentLoaded", show); };
+  // i18n.js loads after this script: the message is a catalog key, written when the page (and I18N) is there
+  const fail = (key, params) => { window.qqFailed = key; const show = () => { const m = document.getElementById("ldmsg"), s = document.getElementById("ldsub"); if (m) m.textContent = window.I18N ? I18N.t(key, params) : key; if (s) s.textContent = ""; }; show(); document.addEventListener("DOMContentLoaded", show); };
   document.addEventListener("DOMContentLoaded", () => step(window.qqStep));
 
   const ready = new Promise((res, rej) => {
-    if (!worker && window.QQQ_PHONE) return rej(new Error("telefono: motore non avviato"));
-    if (!worker) { const t = "questo browser è troppo vecchio: usa una versione recente di Chrome, Edge, Firefox o Safari."; failed = t; fail(t); return rej(new Error(t)); }
+    if (!worker && window.QQQ_PHONE) return rej(new Error("phone: engine not started"));
+    if (!worker) { const t = "this browser is too old"; failed = t; fail("load.err.oldBrowser"); return rej(new Error(t)); }
     worker.onmessage = ev => {
       const m = ev.data;
       if (m.type === "step") return step(m.text);
       if (m.type === "ready") { isReady = true; window.qqStep = ""; perfMark("motore pronto"); return res(); }
-      if (m.type === "fatal") { failed = m.text; fail("Non riesco ad avviare il motore di calcolo: " + m.text); return rej(new Error(m.text)); }
+      if (m.type === "fatal") { failed = m.text; fail("load.err.engineStart", { text: m.text }); return rej(new Error(m.text)); }
       const p = pending.get(m.id); if (!p) return; pending.delete(m.id); p(m);
     };
-    worker.onerror = e => { failed = e.message || "errore del worker"; fail("Errore: " + failed); rej(new Error(failed)); };
+    worker.onerror = e => { failed = e.message || "worker error"; fail("load.err.worker", { text: failed }); rej(new Error(failed)); };
   });
   ready.catch(() => {});
 
