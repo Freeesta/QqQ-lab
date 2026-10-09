@@ -90,6 +90,14 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
                                          float(pr) if pr not in (None, "") else None, float(q.get("bin", 0.1)), q.get("merge") == "1", q.get("hr") != "0"))
             except (ValueError, KeyError) as e:
                 return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
+        if path == "/api/scanbin":       # the same scans as /api/spectra, as a binary block (no JSON, no decimals): see App.scanbin
+            pr = q.get("prec", q.get("precursor"))
+            try:
+                body = app.scanbin(int(q["k"]), int(q["i0"]), int(q["i1"]), int(q.get("level", 1)), float(pr) if pr not in (None, "") else None,
+                                   q.get("filter") or None, q.get("hr") != "0", q.get("merge") == "1")
+                return 200, "application/octet-stream", body, {}
+            except (ValueError, KeyError) as e:
+                return _json({"error": str(e) if isinstance(e, ValueError) else f"parametro mancante: {e}"}, 400)
         if path in ("/api/dda", "/api/scan", "/api/scanavg"):       # DDA and single scans as stored in the file (high resolution, B2)
             try:
                 if path == "/api/dda":

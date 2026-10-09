@@ -46,7 +46,7 @@ def make_handler(app: App):
 
         def _send(self, code, body: bytes, ctype="application/json", extra=None):
             self.send_response(code)
-            self.send_header("Content-Type", ctype + "; charset=utf-8")
+            self.send_header("Content-Type", ctype if ctype.startswith("application/octet-stream") else ctype + "; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
             for k, v in (extra or {}).items():
