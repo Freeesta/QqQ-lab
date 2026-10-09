@@ -236,6 +236,20 @@ try:
             assert q.evaluate("TP.DASH.length") == 4 and q.evaluate("TP.DASH[0]") is None
             q.close()
         step("series of the figures are told apart by dashes too", dashes)
+        def figure_texts():
+            for name in ("02-fotocatalisi.html", "03-cromatografia.html", "04-lc.html", "05-gc.html", "06-esi.html", "07-ei-ci.html", "09-quadrupolo.html", "10-qqq.html",
+                         "14-frammentazione-esi.html", "15-ei-metodo.html", "18-strategia.html", "index.html", "20-disegno.html"):
+                q = fresh(name)
+                v = q.evaluate("""[...document.querySelectorAll('main svg[role=img],main img')].map(e=>{const a=(e.getAttribute('aria-label')||e.getAttribute('alt')||'');
+                  const d=e.getAttribute('aria-describedby')&&document.getElementById(e.getAttribute('aria-describedby'));
+                  return {alt:a.length,d:d?d.tagName+':'+d.querySelector('summary').textContent+':'+d.innerText.replace(d.querySelector('summary').textContent,'').trim().split(/\\s+/).length:null}})""")
+                assert v, name
+                for x in v:
+                    assert 0 < x["alt"] <= 125, (name, x)
+                    if x["d"]: t, sm, n = x["d"].split(":"); assert t == "DETAILS" and sm == "Descrizione della figura" and int(n) <= 85, (name, x)
+                if name != "20-disegno.html": assert any(x["d"] for x in v), (name, "scheme without long description")
+                q.close()
+        step("figures: short alt (<= 125 characters) and long description in <details> (<= 85 words) linked by aria-describedby", figure_texts)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
