@@ -1,6 +1,6 @@
 # Licenze del materiale di terzi
 
-mzLab (codice del programma) è sotto licenza MIT (`LICENSE`). Il sito e il repository contengono o scaricano anche il materiale seguente, ciascuno con la propria licenza.
+mzLab (codice del programma, logo e icone) è sotto licenza MIT (`LICENSE`). Il sito e il repository contengono o scaricano anche il materiale seguente, ciascuno con la propria licenza.
 
 | Componente | Versione | Licenza | Dove si trova |
 |---|---|---|---|
