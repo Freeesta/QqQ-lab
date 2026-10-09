@@ -2304,6 +2304,7 @@ function ctxFor(p, e, x, px, py) {
     if (p.type === "chrom") items.push({ label: "Estrai uno ione (XIC)…", fn: () => openXic(null, { after: p }) });
     if (p.type === "chrom" && window.DDA) { const q = DDA.menuShow(p); if (q) items.push(q); }
     if (p.type === "chrom" && window.LIB && window.HR && HR.isHr(E.files[k], 2) && E.files.some(x => x.file.split("#")[0] === E.files[k].file.split("#")[0] && x.kind === "ms2")) items.push({ label: "Identifica tutte le MS2 del file…", fn: () => LIB.identifyAll(k) });
+    if (p.type === "chrom" && window.COMP && window.HR && HR.isHr(E.files[k], 2) && E.files[k].kind === "ms2") items.push({ label: "Albero MSn del file…", fn: () => COMP.tree(k) });
     if (p.type === "xic") {
       items.push({ label: "Aggiungi un altro ione…", fn: () => openXic(p) });
     }
