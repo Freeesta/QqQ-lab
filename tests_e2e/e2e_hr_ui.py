@@ -44,7 +44,7 @@ try:
             rows = pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.ghost)')].map(r=>[r.querySelector('.nm').textContent,[...r.querySelectorAll('.hrb')].map(x=>x.textContent)])"); print(rows)
             d = dict((a, b) for a, b in rows)
             assert d, rows
-            full = [a for a in d if "Exploris" in a]; assert full and d[full[0]] == ["HR", "DDA"], d
+            full = [a for a in d if "Exploris" in a]; assert full and d[full[0]][:2] == ["HR", "DDA"] and "centroidi" in d[full[0]], d      # the bench adds the mode (profile / centroids) and the polarity
             title = pg.evaluate("document.querySelector('#flst .hrb').title"); assert "Orbitrap Exploris 120" in title and "R 45" in title, title
         step("pills «HR» and «DDA» on the Orbitrap file", pills)
         def calc_hr():

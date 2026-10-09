@@ -19,6 +19,7 @@ function modeSchema(t) {
 }
 function renderTabs() {
   const el = Q("#dtabs"); if (!el) return;
+  if (window.BANCO) { BANCO.bar(); if (BANCO.on()) return; }       // high-resolution bench: the toolbar of the bench takes the place of the tabs
   el.innerHTML = TABS.map(([t, n]) => {
     const c = tabFiles(t).length;
     return `<span class="tw"><button data-t="${t}" data-tiph="${EH(modeSchema(t))}" class="${t === E.tab ? "on" : ""}${c ? "" : " off"}">${EH(n)}<i>${c}</i></button></span>`;
@@ -45,7 +46,7 @@ function setTab(t, quiet) {
   E.curBy[E.tab] = E.cur;
   E.activeBy = E.activeBy || {};      // coming back to a tab: same active graph as when the student left it (no automatic scroll)
   E.activeBy[E.tab] = E.active; E.tab = t;
-  E.panels.forEach(p => { if (p.el) p.el.style.display = p.tab === t ? "" : "none"; });
+  E.panels.forEach(p => { if (p.el) p.el.style.display = p.tab === t || (window.BANCO && BANCO.on()) ? "" : "none"; });
   const back = E.curBy[t]; E.cur = E.files[back]?.kind === t ? back : (tabFiles()[0] || { k: E.cur }).k;
   setActive(E.activeBy[t] && E.panels.includes(E.activeBy[t]) ? E.activeBy[t] : null); playStop();
   E.panels.forEach(q => { if (q.type === "spec") q.lock = null; });      // changing tab: the axes of the spectra are free again
@@ -60,7 +61,7 @@ function setTab(t, quiet) {
 
 // first time a tab is shown (or after all its panels were closed and the page reloaded): its starting layout
 function ensureLayout() {
-  if (!tabFiles().length || tabPanels().length) return;
+  if (!tabFiles().length || E.panels.some(p => p.tab === E.tab)) return;
   defaultLayoutTab(E.tab);
 }
 
@@ -119,6 +120,7 @@ function defaultLayoutTab(t) {
       c.h = Math.max(190, Math.round((av - 10) * 0.5)); sp.h = Math.max(190, Math.round(av - 10 - c.h)); sp.y = c.y + c.h + gapAfter(c, sp); apply(c); apply(sp); relayout(); fitHost(); draw(c); draw(sp);
     };
     requestAnimationFrame(fix);
+    if (window.BANCO) BANCO.afterLayout();       // high-resolution bench: product ions that are not a DDA (infusion MSn, PRM) get their own cells under the survey
   } else if (t === "ms2") {
     const exps = ms2Exps(), f0 = tabFiles("ms2")[0]; let y = 0;
     const list = exps.length ? exps.slice(0, 1) : [{ prec: null, k: f0.k }];       // ONE pair (chromatogram + spectrum) for the first precursor; the list on the left switches it

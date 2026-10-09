@@ -164,10 +164,39 @@ class Item:
                 md = r.__dict__["_md"] = r.metadata()
             return {"prof1": mass_profile(sc1), "prof2": mass_profile(sc2), "instrument": md.get("instrument", ""),
                     "res1": med([s.res for s in sc1 if s.res]), "res2": med([s.res for s in sc2 if s.res]), "nce": bool(r.nce),
-                    "dda": bool(sc1 and sc2 and all(s.parent is not None for s in sc2))}
+                    "dda": bool(sc1 and sc2 and all(s.parent is not None for s in sc2)), "max_level": max((s.level for s in r.scans), default=1),
+                    "acq": self._acq(sc1, sc2), "mode1": "profile" if any(s.profile for s in sc1[:50]) else "centroid" if sc1 else None,
+                    "mode2": "profile" if any(s.profile for s in sc2[:50]) else "centroid" if sc2 else None}
         except Exception as e:  # noqa: BLE001 -- the fallback is the behaviour of today
             return {"prof1": dict(LOW), "prof2": dict(LOW), "instrument": "", "res1": None, "res2": None, "nce": False, "dda": False,
                     "hr_err": f"{type(e).__name__}: {e}"[:160]}
+
+    @staticmethod
+    def _acq(sc1, sc2) -> list[str]:
+        """What the file is, from its scans: MS1, SIM, DDA / DIA / AIF / PRM (product ions), MSn (more than one stage of fragmentation)."""
+        out = ["MS1"] if sc1 else []
+        if any("sim" in (s.filter or "").lower().split() for s in sc1):
+            out.append("SIM")
+        if not sc2:
+            return out
+        wins = [s.iso for s in sc2 if s.iso]
+        if max(s.level for s in sc2) >= 3:
+            out.append("MSn")                                           # infusion with several stages of fragmentation: not a DIA or PRM scheme
+            return out
+        if not wins:
+            out.append("AIF")                                           # product ions without an isolation window: all ions fragmented together
+        else:
+            width = float(np.median([hi - lo for lo, hi in wins])); centres = [round((lo + hi) / 2, 1) for lo, hi in wins]
+            n, d = len(centres), len(set(centres))
+            if width >= 5 and n / max(d, 1) >= 3:
+                out.append("DIA")                                       # wide windows that come back cycle after cycle
+            elif sc1 and all(s.parent is not None for s in sc2):
+                out.append("DDA")
+            elif n / max(d, 1) >= 5 and max(s.level for s in sc2) == 2:
+                out.append("PRM")                                       # the same few targets again and again
+            else:
+                out.append("MS2")
+        return out
 
     def scan_params(self) -> dict | None:
         """What the scans say about how they were acquired (the method itself is not in the mzML): for the window «Metodo» of a high-resolution / DDA

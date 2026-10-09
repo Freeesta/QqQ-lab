@@ -27,11 +27,12 @@ try:
         step("the menu lists the scan types of the file with their counts", listing)
         def ms2filter():
             pg.evaluate("setTab('ms2')"); pg.wait_for_timeout(2500); pg.evaluate("ms2Switch(null)"); pg.wait_for_timeout(1500)
-            pg.wait_for_function("(()=>{const s=document.querySelector('.pnl.chrom:not([style*=none]) .bfw select[data-bf=filt]');return s&&s.options.length>1})()", timeout=20000)
-            opts = pg.evaluate("[...document.querySelector('.pnl.chrom:not([style*=none]) .bfw select[data-bf=filt]').options].map(o=>[o.value,o.textContent])")
+            pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2').el.setAttribute('data-tt','ms2c')")
+            pg.wait_for_function("(()=>{const s=document.querySelector('[data-tt=ms2c] .bfw select[data-bf=filt]');return s&&s.options.length>1})()", timeout=20000)
+            opts = pg.evaluate("[...document.querySelector('[data-tt=ms2c] .bfw select[data-bf=filt]').options].map(o=>[o.value,o.textContent])")
             key = [o[0] for o in opts if "ms2" in o[0]][0]
             n = int(opts[[o[0] for o in opts].index(key)][1].split("×")[1].replace(" ", ""))
-            pg.select_option(".pnl.chrom:not([style*=none]) .bfw select[data-bf=filt]", key); pg.wait_for_timeout(1500)
+            pg.select_option("[data-tt=ms2c] .bfw select[data-bf=filt]", key); pg.wait_for_timeout(1500)
             got = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2');return {filt:c.filt,flv:c.flv,n:c._a&&c._a.sr?c._a.sr.reduce((a,s)=>a+s.x.length,0):-1}})()")
             assert got["filt"] == key and got["flv"] == 2 and got["n"] == n, (got, key, n)
         step("choosing an MS2 type: the chromatogram has exactly the scans of that type", ms2filter)
@@ -105,12 +106,13 @@ if F:
             load(pg, [F], 8000, 2)
             def paths():
                 pg.evaluate("setTab('ms2')"); pg.wait_for_timeout(3000)
-                pg.wait_for_function("(()=>{const s=document.querySelector('.pnl.chrom:not([style*=none]) .bfw select[data-bf=filt]');return s&&s.options.length>10})()", timeout=30000)
-                opts = pg.evaluate("[...document.querySelector('.pnl.chrom:not([style*=none]) .bfw select[data-bf=filt]').options].map(o=>[o.value,o.textContent])")
+                pg.evaluate("E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2').el.setAttribute('data-tt','ms2c')")
+                pg.wait_for_function("(()=>{const s=document.querySelector('[data-tt=ms2c] .bfw select[data-bf=filt]');return s&&s.options.length>10})()", timeout=30000)
+                opts = pg.evaluate("[...document.querySelector('[data-tt=ms2c] .bfw select[data-bf=filt]').options].map(o=>[o.value,o.textContent])")
                 assert len(opts) >= 18, len(opts)
                 key = [o[0] for o in opts if o[0].endswith("317 > 261 > 244 @cid35")][0]
                 n = int(opts[[o[0] for o in opts].index(key)][1].split("×")[1].replace(" ", ""))
-                pg.select_option(".pnl.chrom:not([style*=none]) .bfw select[data-bf=filt]", key); pg.wait_for_timeout(2500)
+                pg.select_option("[data-tt=ms2c] .bfw select[data-bf=filt]", key); pg.wait_for_timeout(2500)
                 got = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='ms2');return {flv:c.flv,n:c._a&&c._a.sr?c._a.sr.reduce((a,s)=>a+s.x.length,0):-1}})()")
                 assert got["flv"] == 4 and got["n"] == n, (got, n)
             step("MSn infusion: one filter per path of fragmentation; ms4 317 > 261 > 244 shows its own scans", paths)
