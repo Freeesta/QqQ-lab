@@ -65,6 +65,41 @@ const COMP = (() => {
       if (o.mz != null) go();
     });
   }
-  return { open, observed };
+  // ---------------------------------------------------------------- «Albero MSn» (WP-H4): the fragmentation paths of an MSn file (server: mzlab/chem/msntree.py, /api/msntree)
+  async function tree(k, formula) {
+    const f = E.files[k];
+    big("Albero MSn", `<div class="muted sm" style="margin-bottom:6px">Ogni riga è un percorso di frammentazione (m/z@attivazione ed energia). Il precursore esatto è letto dal picco più intenso del nodo padre
+      (±0,5 Da: nel file c'è il valore nominale); la formula di un nodo è una sottoformula di quella del padre: candidati, non identificazioni.</div>
+      <div class="cmp-grid"><label>Formula dello ione al primo stadio <input id="mt-f" value="${EH(formula || "")}" placeholder="es. C13H25N4O3S (facoltativa)" style="width:200px"></label>
+        <button id="mt-go" type="button" class="go">Calcola</button></div><div id="mt-out" style="margin-top:8px"></div>`, () => {
+      const go = async () => {
+        const fm = Q("#mt-f").value.replace(/\s+/g, "");
+        Q("#mt-out").textContent = "Calcolo…";
+        try {
+          const j = await J(`api/msntree?k=${k}${fm ? "&formula=" + encodeURIComponent(fm) : ""}`);
+          const nd = j.nodes, depth = n => (n.parent == null ? 0 : 1 + depth(nd[n.parent]));
+          Q("#mt-out").innerHTML = `${j.formula_given ? "" : `<div class="muted sm">Senza la formula il primo stadio è solo un candidato${j.root_candidates.length ? `: ${j.root_candidates.slice(0, 6).map(x => `<a href="#" data-rf="${EH(x)}">${fmtFormula(x)}</a>`).join(", ")}` : ""} (clic per fissarla).</div>`}
+            <div style="display:flex;gap:10px;flex-wrap:wrap"><div style="flex:1 1 380px;max-height:360px;overflow:auto"><table class="lct" id="mt-tbl"><tr><th>Percorso</th><th>MS</th><th class="num">Scansioni</th><th class="num">Precursore</th><th>Formula</th><th class="num">ppm</th><th></th></tr>
+            ${nd.map(n => `<tr data-n="${n.id}" style="cursor:pointer"><td style="padding-left:${6 + 14 * depth(n)}px">${EH(n.path[n.path.length - 1].join("@").replace(/@([A-Za-z]+)@/, "@$1"))}</td><td>${n.level}</td><td class="num">${n.scans}</td>
+              <td class="num">${n.prec == null ? "" : n.prec.toFixed(4)}</td><td>${n.formula ? fmtFormula(n.formula) : "–"}</td><td class="num">${n.ppm == null ? "" : n.ppm.toFixed(1)}</td><td class="muted sm">${n.empty ? "quasi vuoto" : ""}</td></tr>`).join("")}</table></div>
+            <div id="mt-pk" style="flex:1 1 300px;max-height:360px;overflow:auto"><span class="muted sm">Clic su un nodo: i suoi picchi.</span></div></div>`;
+          Q("#mt-out").querySelectorAll("[data-rf]").forEach(a => { a.onclick = ev => { ev.preventDefault(); Q("#mt-f").value = a.dataset.rf; go(); }; });
+          Q("#mt-tbl").querySelectorAll("tr[data-n]").forEach(tr => {
+            tr.onclick = () => {
+              const n = nd[+tr.dataset.n];
+              Q("#mt-tbl").querySelectorAll("tr").forEach(x => { x.style.background = ""; }); tr.style.background = "var(--sel, rgba(120,160,255,.2))";
+              Q("#mt-pk").innerHTML = `<div><b>${EH(n.label)}</b></div><div class="muted sm">${n.scans} scansioni, ${n.n_peaks} picchi in almeno metà di esse. Clic su un picco: formule compatibili.</div>
+                <table class="lct"><tr><th class="num">m/z</th><th class="num">%</th><th>Formula</th><th class="num">ppm</th><th></th></tr>
+                ${n.peaks.slice().sort((a, b) => b.rel - a.rel).map(p => `<tr data-mz="${p.mz}" style="cursor:pointer"><td class="num">${p.mz.toFixed(4)}</td><td class="num">${p.rel}</td><td>${p.formula ? fmtFormula(p.formula) : "–"}</td><td class="num">${p.ppm == null ? "" : p.ppm.toFixed(1)}</td><td class="muted sm">${p.contam ? "contaminazione?" : ""}</td></tr>`).join("")}</table>`;
+              Q("#mt-pk").querySelectorAll("tr[data-mz]").forEach(r => { r.onclick = () => open({ mz: +r.dataset.mz, parent: n.formula || "", polarity: f && f.polarity, ion: j.ion }); });
+            };
+          });
+        } catch (e) { Q("#mt-out").innerHTML = `<span class="fail">${EH(e.message)}</span>`; }
+      };
+      Q("#mt-go").onclick = go;
+      go();
+    });
+  }
+  return { open, observed, tree };
 })();
 window.COMP = COMP;
