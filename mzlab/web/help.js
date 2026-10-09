@@ -17,6 +17,7 @@ const HELP = {
   "pnl-map": [I18N.t("help.pnlMap.title"), I18N.t("help.pnlMap.body")],
   "origine": [I18N.t("help.origine.title"), I18N.t("help.origine.body")],
   "liste": [I18N.t("help.liste.title"), I18N.t("help.liste.body")],
+  "language": [I18N.t("help.language.title"), I18N.t("help.language.body")],
   "header": ["", I18N.t("help.header.body", { app: APP_NAME })],
 };
 
@@ -52,5 +53,5 @@ function guideHtml() {
   let modes = "";
   try { modes = `<details><summary><b>${I18N.t("help.guide.modes")}</b></summary>${["full", "ms2", "mrm"].map(t => QMODI.html(QMODI.tab2key[t])).join("")}</details>`; } catch (e) { /* the modes text is optional */ }
   const credits = `<details><summary><b>${I18N.t("help.guide.credits.title")}</b></summary><div class="hp-s">${I18N.t("help.guide.credits.body")}</div></details>`;
-  return sec(I18N.t("help.guide.open"), ["start", "filegrandi", "files"]) + sec(I18N.t("help.guide.charts"), ["toolbar", "nav", "scorrimento", "pnl-chrom", "pnl-spec", "pnl-xic", "pnl-mrm", "pnl-map"]) + sec(I18N.t("help.guide.method"), ["tools", "prop"]) + modes + credits;
+  return sec(I18N.t("help.guide.open"), ["start", "filegrandi", "files"]) + sec(I18N.t("help.guide.charts"), ["toolbar", "nav", "scorrimento", "pnl-chrom", "pnl-spec", "pnl-xic", "pnl-mrm", "pnl-map"]) + sec(I18N.t("help.guide.method"), ["tools", "prop", "language"]) + modes + credits;
 }

@@ -1898,5 +1898,9 @@ I18N.add("it", {
   "err.tree.formula": "Formula non valida: {formula}",
   "err.tree.noPath": "Il file non ha scansioni MSn con il percorso di frammentazione nel filtro (serve un file MS3 o superiore).",
   "err.tree.needStages": "L'albero serve per file MSn con almeno due stadi di frammentazione (MS3 o superiore).",
-  "err.tree.tooMany": "{n} percorsi di frammentazione: sono troppi per un albero (è pensato per l'infusione MSn)."
+  "err.tree.tooMany": "{n} percorsi di frammentazione: sono troppi per un albero (è pensato per l'infusione MSn).",
+  "bn.h.pol.positive": "positivo",
+  "bn.h.pol.negative": "negativo",
+  "help.language.title": "Lingua dell'interfaccia",
+  "help.language.body": "L'interfaccia è in <b>italiano</b> o in <b>inglese</b>. Si parte dalla lingua del browser (italiano se il browser è in italiano, altrimenti inglese) e si cambia dall'<b>ingranaggio</b> in alto, voce «Lingua / Language»: la scelta resta ricordata e i file aperti non si perdono. Teoria e Pratica sono solo in italiano."
 });

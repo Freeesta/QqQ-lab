@@ -1898,5 +1898,9 @@ I18N.add("en", {
   "err.tree.formula": "Invalid formula: {formula}",
   "err.tree.noPath": "The file has no MSn scans with the fragmentation path in the filter (an MS3 or higher file is needed).",
   "err.tree.needStages": "The tree is for MSn files with at least two stages of fragmentation (MS3 or higher).",
-  "err.tree.tooMany": "{n} fragmentation paths: too many for a tree (it is meant for MSn infusion)."
+  "err.tree.tooMany": "{n} fragmentation paths: too many for a tree (it is meant for MSn infusion).",
+  "bn.h.pol.positive": "positive",
+  "bn.h.pol.negative": "negative",
+  "help.language.title": "Language of the interface",
+  "help.language.body": "The interface is in <b>Italian</b> or in <b>English</b>. It starts from the language of the browser (Italian if the browser is in Italian, otherwise English) and is changed from the <b>gear</b> at the top, item «Lingua / Language»: the choice is remembered and the open files are not lost. Theory and Practice are in Italian only."
 });
