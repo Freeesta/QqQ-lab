@@ -1,5 +1,4 @@
 """tools/converti.py: .raw -> ThermoRawFileParser (command and skipping what is converted), .wiff / .d -> the MSConvert command in Docker."""
-import stat
 import sys
 from pathlib import Path
 
@@ -18,13 +17,13 @@ def test_prova_stampa_i_comandi(tmp_path):
     assert not (tmp_path / "mzML").exists()                      # --prova writes nothing
 
 
-def test_converte_con_un_programma_finto(tmp_path):
-    prog = tmp_path / "TRFP"                                      # a fake ThermoRawFileParser: writes the mzML named after the input
-    prog.write_text("#!/bin/sh\nwhile [ $# -gt 0 ]; do case $1 in -i) i=$2;; -o) o=$2;; esac; shift; done\nb=$(basename \"$i\" .raw)\necho '<mzML/>' > \"$o/$b.mzML\"\n")
-    prog.chmod(prog.stat().st_mode | stat.S_IEXEC)
+def test_converte_con_un_programma_finto(tmp_path, monkeypatch):
+    prog = tmp_path / "trfp_finto.py"                              # a fake ThermoRawFileParser (Python, so it also runs on Windows): writes the mzML named after the input
+    prog.write_text("import sys, pathlib\na = sys.argv\ni = pathlib.Path(a[a.index('-i') + 1]); o = pathlib.Path(a[a.index('-o') + 1])\n(o / (i.stem + '.mzML')).write_text('<mzML/>')\n")
+    monkeypatch.setattr(converti, "trova_trfp", lambda percorso=None: [sys.executable, str(prog)])
     (tmp_path / "a.raw").write_bytes(b"x"); (tmp_path / "b.raw").write_bytes(b"x"); (tmp_path / "mzML").mkdir(); (tmp_path / "mzML" / "b.mzML").write_text("old")
     righe = []
-    r = converti.converti(tmp_path, tmp_path / "mzML", str(prog), False, righe.append)
+    r = converti.converti(tmp_path, tmp_path / "mzML", None, False, righe.append)
     assert r["fatti"] == ["a.raw"] and r["saltati"] == ["b.raw"] and not r["errori"]
     assert (tmp_path / "mzML" / "a.mzML").read_text().startswith("<mzML") and (tmp_path / "mzML" / "b.mzML").read_text() == "old"
 
