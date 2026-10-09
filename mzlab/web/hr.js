@@ -82,10 +82,23 @@ const HR = (() => {
     const top = Math.max(...dist.map(d => d[1]));
     return dist.map(([m, p]) => ({ mz: (m - z * ELECTRON) / Math.abs(z), rel: 100 * p / top })).filter(r => r.rel >= minRel).sort((a, b) => a.mz - b.mz);
   }
+  // Peaks closer than their width are not resolved: at resolving power R the fine structure of the pattern fuses into one peak. R200 = resolving power at
+  // m/z 200 as Thermo writes it (Orbitrap: R falls with 1/sqrt(m/z)); two neighbours merge when their distance is below the FWHM = m/R(m).
+  const resAt = (R200, mz) => R200 * Math.sqrt(200 / mz);
+  function mergeRes(pat, R200) {
+    if (!(R200 > 0)) return pat;
+    const out = []; let cur = null;
+    for (const r of pat) {
+      if (cur && r.mz - cur.last <= r.mz / resAt(R200, r.mz)) { cur.s += r.mz * r.rel; cur.rel += r.rel; cur.last = r.mz; } else { cur = { s: r.mz * r.rel, rel: r.rel, last: r.mz }; out.push(cur); }
+    }
+    const top = Math.max(...out.map(c => c.rel));
+    return out.map(c => ({ mz: c.s / c.rel, rel: 100 * c.rel / top }));
+  }
   // the theoretical pattern on a spectrum (red circles): each circle sits on the observed centroid within the tolerance of the profile (and says the
   // error in ppm), otherwise on the calculated m/z with "non trovato". Returns the note for the legend.
   function drawIso(p, g, X, Y, d0, ymax, W, f) {
-    const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), pat = isoFine(ion.n, ion.z), tol = prof(f, p.level).tol;
+    const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), tol = prof(f, p.level).tol;
+    const R = p.iso.R === 0 ? 0 : (p.iso.R || (p.level === 2 ? f.res2 : f.res1) || 0), pat = mergeRes(isoFine(ion.n, ion.z), R);          // R = 0: whole fine structure
     const top = pat.reduce((a, b) => (b.rel > a.rel ? b : a));
     const find = mz => { let best = null; d0.mz.forEach((m, j) => { if (d0.y[j] <= 0) return; const e = ppm(m, mz); if (Math.abs(e) <= tol && (!best || d0.y[j] > best.y)) best = { m, y: d0.y[j], e }; }); return best; };
     const obsTop = find(top.mz), h = obsTop ? obsTop.y : ymax / 1.12 * 0.9, m0 = pat[0].mz;
@@ -100,7 +113,7 @@ const HR = (() => {
       }
     }
     g.restore(); g.font = fpx(11);
-    return `<span><i style="background:#d62728"></i>profilo teorico ${fmtFormula(p.iso.formula)} ${fmtAdduct(p.iso.ad)}${obsTop ? ` (M: ${obsTop.e >= 0 ? "+" : "−"}${Math.abs(obsTop.e).toFixed(1)} ppm)` : ` (nessun picco osservato entro ${+tol.toFixed(1)} ppm da m/z ${top.mz.toFixed(HR.prof(f, p.level).dec)})`}</span>`;
+    return `<span><i style="background:#d62728"></i>profilo teorico ${fmtFormula(p.iso.formula)} ${fmtAdduct(p.iso.ad)}${R ? ` (R ${Math.round(R)} a m/z 200)` : ""}${obsTop ? ` (M: ${obsTop.e >= 0 ? "+" : "−"}${Math.abs(obsTop.e).toFixed(1)} ppm)` : ` (nessun picco osservato entro ${+tol.toFixed(1)} ppm da m/z ${top.mz.toFixed(HR.prof(f, p.level).dec)})`}</span>`;
   }
   // ---------------------------------------------------------------- XIC of an ion
   // A trace {mz, ion: true} is an ion: its exact m/z. Each file reads it with ITS tolerance: ppm of the profile for a high-resolution file,
@@ -127,6 +140,6 @@ const HR = (() => {
     if (!t.ion || !q) return null;
     const d = q.dec, w = t.mz * q.tol * 1e-6; return [+(t.mz - w).toFixed(d + 1), +(t.mz + w).toFixed(d + 1)];
   }
-  return { LOW, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, badge, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
+  return { mergeRes, resAt, LOW, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, badge, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
 })();
 window.HR = HR;

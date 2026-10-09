@@ -1707,6 +1707,10 @@ function sgFilter(y, m, deriv) {                         // half window m (windo
   for (let i = 0; i < n; i++) { let v = 0; for (let j = -m; j <= m; j++) v += w[j + m] * y[Math.min(n - 1, Math.max(0, i + j))]; out[i] = v; }
   return out;
 }
+// Parameters of the automatic integration (dialog «Rilevamento dei picchi»; the defaults are the behaviour that always was). Saved in this browser.
+const PK_DEF = { win: 1.2, areaNoise: 3, edgeFrac: 3, snMin: 0, noise: "mad", minHalf: 2, multi: 50, tail: 1.5 };
+const PK = (() => { let o = {}; try { o = JSON.parse(localStorage.getItem("qqq.picchi") || "{}"); } catch (e) { /* no storage */ } return { ...PK_DEF, ...o }; })();
+function pkSave() { try { localStorage.setItem("qqq.picchi", JSON.stringify(PK)); } catch (e) { /* no storage */ } }
 function autoEdges(s, x) {
   const xs = s.x, n = xs.length, ic = nearIdx(xs, x);
   if (n < 9) return [xs[ic], xs[ic]];
@@ -1717,15 +1721,16 @@ function autoEdges(s, x) {
   let m0 = lo; for (let j = lo; j <= hi; j++) if (co[j] > co[m0]) m0 = j;
   const cmin = Math.min(...co), half = cmin + (co[m0] - cmin) / 2;
   let hl = m0, hr = m0; while (hl > 0 && co[hl] > half) hl--; while (hr < N - 1 && co[hr] > half) hr++;
-  const m = Math.max(2, Math.min(60, Math.round((hr - hl) * 0.3)));                         // half window = 30% of FWHM -> window about 60% of FWHM
+  const m = Math.max(PK.minHalf, Math.min(60, Math.round((hr - hl) * 0.3)));                         // half window = 30% of FWHM -> window about 60% of FWHM
   const sm = sgFilter(y, m, false), d = sgFilter(y, m, true);
   let k = Math.max(0, m0 - m); const k1 = Math.min(N - 1, m0 + m); for (let j = k; j <= k1; j++) if (sm[j] > sm[k]) k = j;   // apex of the smoothed trace
-  const w0 = Math.max(0, k - Math.round(1.2 / dt)), w1 = Math.min(N - 1, k + Math.round(1.2 / dt));
+  const w0 = Math.max(0, k - Math.round(PK.win / dt)), w1 = Math.min(N - 1, k + Math.round(PK.win / dt));          // baseline window (min)
   const res = []; for (let j = w0; j <= w1; j++) res.push(Math.abs(y[j] - sm[j])); res.sort((p, q) => p - q);
-  const noise = Math.max(1.4826 * res[res.length >> 1], 1e-12);                             // MAD of the residual = noise sigma
+  const noise = Math.max(PK.noise === "rms" ? Math.sqrt(res.reduce((a, v) => a + v * v, 0) / (res.length || 1)) : 1.4826 * res[res.length >> 1], 1e-12);      // MAD of the residual = noise sigma (or its RMS)
   const low = []; for (let j = w0; j <= w1; j++) low.push(sm[j]); low.sort((p, q) => p - q);
-  const base = low[Math.floor(low.length * 0.1)], H = Math.max(sm[k] - base, 0), lim = base + Math.max(0.03 * H, 3 * noise);
-  const need = Math.max(2, Math.round(m / 2)), dth = noise / Math.max(m, 1) * 0.3, maxw = Math.round(1.5 / dt);
+  const base = low[Math.floor(low.length * 0.1)], H = Math.max(sm[k] - base, 0), lim = base + Math.max(PK.edgeFrac / 100 * H, PK.areaNoise * noise);
+  if (PK.snMin > 0 && H < PK.snMin * noise) return null;                                  // signal/noise below the threshold: not a peak
+  const need = Math.max(2, Math.round(m * PK.multi / 100)), dth = noise / Math.max(m, 1) * 0.3, maxw = Math.round(PK.tail / dt);
   const walk = dir => {
     let j = k, bad = 0;
     while (j + dir >= 0 && j + dir < N && Math.abs(j - k) < maxw) {
@@ -1800,7 +1805,8 @@ function addInt(p, s, a, b, mirror = true) {
 }
 // automatic integration at time x: refused on an integrated peak; next to one it stops at its border (the two peaks touch)
 function autoInt(p, s, x) {
-  let [l, r] = autoEdges(s, x);
+  const ed = autoEdges(s, x); if (!ed) { nearMsg("Sotto la soglia segnale/rumore dei parametri di rilevamento: nessun picco"); return; }
+  let [l, r] = ed;
   if (p.type !== "mrm") {
     const c = p.ints.filter(i => i.key === s.key);
     if (c.some(i => iLo(i) + INT_EPS < x && x < iHi(i) - INT_EPS)) { nearMsg("Qui c'è già un picco integrato: toglilo prima (clic destro → Elimina)"); return; }
@@ -1819,12 +1825,34 @@ function intAt(p, px, py) {
   }
   return null;
 }
+// dialog of the automatic-integration parameters (applies to every panel; the defaults reproduce the behaviour that always was)
+function peakParams() {
+  const f = (k, l, h) => `<label style="display:block;margin:3px 0">${l} <input data-pk="${k}" value="${PK[k]}" style="width:70px"> <span class="muted sm">${h}</span></label>`;
+  big("Rilevamento dei picchi", `<div class="muted sm" style="margin-bottom:6px">Governano l'integrazione automatica («Integra il picco qui», doppio clic). I valori di partenza sono quelli di sempre.</div>
+    ${f("win", "Finestra della linea di base (min)", "intorno al picco, per rumore e fondo")}
+    ${f("areaNoise", "Fattore di rumore per l'area", "il bordo non scende sotto fondo + questo × rumore")}
+    ${f("edgeFrac", "Bordo al … % dell'altezza", "fondo + questa quota dell'altezza")}
+    ${f("snMin", "Segnale/rumore minimo del picco", "0 = nessuna soglia")}
+    <label style="display:block;margin:3px 0">Metodo del rumore <select data-pk="noise"><option value="mad"${PK.noise === "mad" ? " selected" : ""}>automatico (MAD dei residui)</option><option value="rms"${PK.noise === "rms" ? " selected" : ""}>RMS dei residui</option></select></label>
+    ${f("minHalf", "Larghezza minima del picco (semifinestra, punti)", "più grande = più liscio")}
+    ${f("multi", "Risoluzione dei multipletti (% )", "quanto deve risalire il segnale prima di separare due picchi")}
+    ${f("tail", "Estensione massima della coda (min)", "")}
+    <div style="margin-top:8px"><button id="pk-def" type="button">Valori di partenza</button> <button id="pk-ok" type="button" class="go">Applica</button></div>`, () => {
+    const rdv = () => document.querySelectorAll("#bigbody [data-pk]").forEach(i => { i.value = PK[i.dataset.pk]; });
+    Q("#pk-def").onclick = () => { Object.assign(PK, PK_DEF); pkSave(); rdv(); };
+    Q("#pk-ok").onclick = () => {
+      document.querySelectorAll("#bigbody [data-pk]").forEach(i => { const k = i.dataset.pk; if (k === "noise") PK[k] = i.value; else { const v = parseFloat(String(i.value).replace(",", ".")); if (v >= 0) PK[k] = v; } });
+      PK.minHalf = Math.max(1, Math.round(PK.minHalf)); pkSave(); Q("#bigdlg").close();
+    };
+  });
+}
 function intMenuItems(p, x, near, py) {
   const items = [], a = p._a;
   const nearInt = p.ints.find(it => x >= iLo(it) && x <= iHi(it));
   if (nearInt) items.push({ label: "Elimina questa integrazione", fn: () => delInts(p, [nearInt]) });
   if (p.ints.length) items.push({ label: "Elimina tutte le integrazioni di questo pannello", fn: async () => { if (await yesno(`Eliminare le ${p.ints.length} integrazioni di questo pannello?`)) delInts(p, [...p.ints]); } });
   if (nearInt || p.ints.length) items.push("-");
+  items.push({ label: "Parametri di rilevamento dei picchi…", fn: peakParams });
   items.push({ label: "Integra il picco qui", fn: () => { if (!guardInt(p)) return; intTargets(p, x, py).forEach(s => autoInt(p, s, x)); } });
   if (p.sel) items.push({ label: "Integra l'intervallo selezionato", fn: () => { if (guardInt(p)) a.sr.forEach(s => addInt(p, s, p.sel[0], p.sel[1])); } });
   if (p.sel && p.sel[1] > p.sel[0]) items.push({ label: "Ingrandisci l'intervallo selezionato", fn: () => { const [s0, s1] = p.sel; const w = (s1 - s0) * 0.1; zoomTo(p, s0 - w, s1 + w); } });
@@ -2286,6 +2314,12 @@ function ctxFor(p, e, x, px, py) {
         const ion = QQQRef.ionCounts(p.iso.formula, p.iso.ad), pat = QQQRef.isoPattern(ion.n, ion.z);
         p.zoom = [pat[0].mz - 4, pat[pat.length - 1].mz + 4]; p._isoKey = JSON.stringify(p.zoom); draw(p); }   // zoom on the pattern (double click: whole spectrum); a later change of zoom switches the simulation off
       catch (e) { info("Non riesco a calcolare il profilo: " + EH(e.message)); }
+    } });
+    if (p.iso && window.HR && a.hrp) items.push({ label: "Risoluzione del profilo isotopico…", fn: async () => {
+      const v = await ask("Potere risolutivo a m/z 200 per la simulazione (come lo scrive Thermo: nei file Orbitrap scende con la radice di m/z). «auto» = quello della scansione; 0 = tutta la struttura fine, senza fondere i picchi vicini.", p.iso.R != null ? String(p.iso.R) : "auto");
+      if (v == null) return; const t = String(v).trim().replace(",", ".");
+      if (t === "auto") delete p.iso.R; else { const r = parseFloat(t); if (!(r >= 0)) { info("Scrivi un numero (0 = struttura fine)."); return; } p.iso.R = r; }
+      draw(p);
     } });
     if (p.iso) items.push({ label: "Togli il profilo isotopico", fn: () => { p.iso = null; draw(p); } });
     if (window.LIB && p.level === 2) items.push("-", { label: "Cerca nelle librerie…", fn: () => LIB.searchFrom(p) });
