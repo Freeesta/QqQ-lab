@@ -99,6 +99,7 @@ class Run:
         except Exception: pass
         s.srv.terminate()
         s.log = s.srv.stdout.read()
+        shutil.rmtree(s.wd, ignore_errors=True)       # the uploaded files (80 MB each for the high-resolution ones) are not kept: the disk of a session is limited
     def report(s):
         print("--- SERVER LOG (tail)\n", s.log[-1500:])
         print("--- BROWSER ERRORS", len(s.errs))
