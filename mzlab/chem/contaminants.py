@@ -13,10 +13,16 @@ from .elements import ADDUCT_SHIFT, ELECTRON, MASS, mass, parse_formula
 
 # adducts that elements.py does not have: ions of this list only. shift = mass added to the neutral, z = charge; mz = (M + shift) / z
 _NH4 = ADDUCT_SHIFT["[M+NH4]+"]
+_CH3COO = mass(parse_formula("C2H3O2")) + ELECTRON
+_NA2H = mass(parse_formula("Na")) - 2 * mass(parse_formula("H")) + ELECTRON
+_CF3COO = mass(parse_formula("C2F3O2")) + ELECTRON
 EXTRA = {
     "[M]+": (-ELECTRON, 1), "[M]-": (ELECTRON, 1),
     "[M+2H]2+": (2 * ADDUCT_SHIFT["[M+H]+"], 2), "[M+2NH4]2+": (2 * _NH4, 2), "[M+2Na]2+": (2 * ADDUCT_SHIFT["[M+Na]+"], 2),
     "[M+H+NH4]2+": (ADDUCT_SHIFT["[M+H]+"] + _NH4, 2),
+    "[M+CH3COO]-": (_CH3COO, 1),
+    "[M+Na-2H]-": (_NA2H, 1),
+    "[M+CF3COO]-": (_CF3COO, 1),
 }
 PATH = Path(__file__).with_name("contaminants.json")
 

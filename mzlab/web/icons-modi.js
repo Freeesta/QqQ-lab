@@ -25,8 +25,13 @@ const QICON = (() => {
     nl: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Perdite neutre"><circle cx="7" cy="12" r="4.5" fill="currentColor" fill-opacity=".18"/><path d="M12.5 12h5M15.5 9l3 3-3 3"/><circle cx="21" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg>`,
     adduct: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Addotti"><circle cx="8" cy="14" r="5" fill="currentColor" fill-opacity=".18"/><path d="M8 11.5v5M5.5 14h5" stroke-width="1.5"/><circle cx="18" cy="6.5" r="2.5" fill="currentColor" stroke="none"/><path d="M12.2 10.2l3.6-2.2" stroke-dasharray="1.6 2.2"/></svg>`,
     calc: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Calcolatrice m/z"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><rect x="8" y="5.5" width="8" height="4" rx="1" fill="currentColor" fill-opacity=".2"/><path d="M8.5 13.5h.01M12 13.5h.01M15.5 13.5h.01M8.5 17h.01M12 17h.01M15.5 17h.01" stroke-width="2.2"/></svg>`,
+    liste: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Liste"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>`,
     newrun: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Nuova sessione"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" fill="currentColor" fill-opacity=".1"/><path d="M14 3v5h5"/><path d="M12 11.5v6M9 14.5h6"/></svg>`,
-    get(k, px = 20) { const w = ["mine", "pt", "adduct", "newrun", "iso", "nl", "calc"].includes(k) ? px : Math.round(px * 48 / 20); return this[k].replace("<svg ", `<svg width="${w}" height="${px}" `); },
+    get(k, px = 20) {
+      const w = ["mine", "pt", "adduct", "newrun", "iso", "nl", "calc", "liste"].includes(k) ? px : Math.round(px * 48 / 20);
+      const svg = this[k] || "";
+      return svg ? svg.replace("<svg ", `<svg width="${w}" height="${px}" `) : "";
+    },
   };
 })();
 if (typeof module !== "undefined") module.exports = QICON;

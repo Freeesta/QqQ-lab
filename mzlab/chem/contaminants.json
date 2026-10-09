@@ -1,8 +1,8 @@
 {
  "_nota": "Elenco dei contaminanti noti. Le m/z NON sono scritte qui: si calcolano dalle formule con mzlab/chem/elements.py (mzlab/chem/contaminants.py). Fonte principale: Keller B.O., Sui J., Young A.B., Whittal R.M., Anal. Chim. Acta 627 (2008) 71-81, doi:10.1016/j.aca.2008.04.043. Le sostanze e gli ioni sono quelli noti dalla chimica; il confronto voce per voce con le tabelle dell'articolo non è stato fatto (articolo non accessibile).",
  "id": "keller",
- "name": "Contaminanti noti (Keller 2008)",
- "source": "Keller et al., Anal. Chim. Acta 627 (2008) 71-81",
+ "name": "Contaminanti noti e fondo LC-MS (Keller 2008, Guo 2006)",
+ "source": "Keller et al., Anal. Chim. Acta 627 (2008) 71-81; Guo et al., Rapid Commun. Mass Spectrom. 20 (2006) 3145-3150",
  "license": "dati chimici (formule): nessuna restrizione; elenco compilato per questo programma",
  "entries": [
   {
@@ -745,11 +745,11 @@
     "[M+Na]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008",
+   "source": "Keller 2008, Guo 2006",
    "series": {
     "unit": "CHNaO2",
     "n": [
-     2,
+     1,
      14
     ],
     "end": ""
@@ -764,7 +764,7 @@
     "[M+HCOO]-"
    ],
    "polarity": "negative",
-   "source": "Keller 2008",
+   "source": "Keller 2008, Guo 2006",
    "series": {
     "unit": "CHNaO2",
     "n": [
@@ -783,12 +783,31 @@
     "[M+Na]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008",
+   "source": "Keller 2008, Guo 2006",
    "series": {
     "unit": "C2H3NaO2",
     "n": [
-     2,
+     1,
      14
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "acetato_na_neg",
+   "name": "acetato di sodio (cluster, negativo)",
+   "class": "cluster dei sali degli eluenti",
+   "formula": "C2H3NaO2",
+   "ions": [
+    "[M+CH3COO]-"
+   ],
+   "polarity": "negative",
+   "source": "Guo 2006",
+   "series": {
+    "unit": "C2H3NaO2",
+    "n": [
+     1,
+     10
     ],
     "end": ""
    }
@@ -803,11 +822,11 @@
     "[M+NH4]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008",
+   "source": "Keller 2008, Guo 2006",
    "series": {
     "unit": "CH5NO2",
     "n": [
-     2,
+     1,
      10
     ],
     "end": ""
@@ -823,11 +842,11 @@
     "[M+NH4]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008",
+   "source": "Keller 2008, Guo 2006",
    "series": {
     "unit": "C2H7NO2",
     "n": [
-     2,
+     1,
      10
     ],
     "end": ""
@@ -843,11 +862,11 @@
     "[M-H]-"
    ],
    "polarity": "both",
-   "source": "Keller 2008",
+   "source": "Keller 2008, Guo 2006",
    "series": {
     "unit": "CH2O2",
     "n": [
-     2,
+     1,
      10
     ],
     "end": ""
@@ -863,11 +882,11 @@
     "[M-H]-"
    ],
    "polarity": "both",
-   "source": "Keller 2008",
+   "source": "Keller 2008, Guo 2006",
    "series": {
     "unit": "C2H4O2",
     "n": [
-     2,
+     1,
      10
     ],
     "end": ""
@@ -883,7 +902,7 @@
     "[M+Na]+"
    ],
    "polarity": "positive",
-   "source": "Keller 2008",
+   "source": "Keller 2008, Guo 2006",
    "series": {
     "unit": "C2H3N",
     "n": [
@@ -891,6 +910,84 @@
      8
     ],
     "end": ""
+   }
+  },
+  {
+   "id": "acqua",
+   "name": "acqua (cluster)",
+   "class": "solventi",
+   "formula": "H2O",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Guo 2006",
+   "series": {
+    "unit": "H2O",
+    "n": [
+     2,
+     8
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "acqua_na",
+   "name": "acqua (cluster con sodio)",
+   "class": "solventi",
+   "formula": "H2O",
+   "ions": [
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Guo 2006",
+   "series": {
+    "unit": "H2O",
+    "n": [
+     1,
+     6
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "metanolo",
+   "name": "metanolo (cluster)",
+   "class": "solventi",
+   "formula": "CH4O",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Guo 2006",
+   "series": {
+    "unit": "CH4O",
+    "n": [
+     1,
+     8
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "acetonitrile_acqua",
+   "name": "acetonitrile - acqua (cluster)",
+   "class": "solventi",
+   "formula": "C2H5NO",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Guo 2006",
+   "series": {
+    "unit": "C2H3N",
+    "n": [
+     1,
+     5
+    ],
+    "end": "H2O"
    }
   },
   {
@@ -954,7 +1051,47 @@
     "[M-H]-"
    ],
    "polarity": "negative",
-   "source": "Keller 2008"
+   "source": "Keller 2008, Guo 2006"
+  },
+  {
+   "id": "tfa_cluster_neg",
+   "name": "acido trifluoroacetico (cluster, negativo)",
+   "class": "modificatori degli eluenti",
+   "formula": "C2HF3O2",
+   "ions": [
+    "[M-H]-",
+    "[M+Na-2H]-"
+   ],
+   "polarity": "negative",
+   "source": "Guo 2006",
+   "series": {
+    "unit": "C2HF3O2",
+    "n": [
+     2,
+     4
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "tfa_cluster_pos",
+   "name": "acido trifluoroacetico (cluster, positivo)",
+   "class": "modificatori degli eluenti",
+   "formula": "C2HF3O2",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Guo 2006",
+   "series": {
+    "unit": "C2HF3O2",
+    "n": [
+     1,
+     3
+    ],
+    "end": ""
+   }
   },
   {
    "id": "tris",
