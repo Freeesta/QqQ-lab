@@ -15,9 +15,16 @@ try:
         pg.click("text=Carica dati"); ready(pg)
         def open_below():
             pg.click("#np-calc2"); pg.wait_for_timeout(300)
+            assert pg.evaluate("window.BARRA.curTab === 'calc' && !document.querySelector('#sb-panel-calc').hidden")
+            # In Disegno view, np-calc2 opens floating dropdown right under its button, not modal, >= 520px wide
+            pg.click("#nav [data-v=draw]"); pg.wait_for_timeout(400)
+            pg.click("#np-calc2"); pg.wait_for_timeout(300)
             b = pg.evaluate("(()=>{const a=document.querySelector('#np-calc2').getBoundingClientRect(),c=document.querySelector('#calcdlg');const r=c.getBoundingClientRect();return {ab:a.bottom,ct:r.top,w:r.width,vis:!c.hidden,modal:c.matches(':modal')}})()")
             assert b["vis"] and not b["modal"] and 0 < b["ct"] - b["ab"] < 20 and b["w"] >= 520, b
-        step("opens right under its button, not modal, at least 520 px wide", open_below)
+            pg.click("#calcx"); pg.wait_for_timeout(200)
+            pg.click("#nav [data-v=data]"); pg.wait_for_timeout(400)
+            pg.click("#np-calc2"); pg.wait_for_timeout(300)
+        step("in Dati opens sidebar tab, in Disegno opens right under its button >= 520 px wide", open_below)
         def usable():
             c = pg.evaluate("(()=>{const p=E.panels.find(q=>q.type==='chrom'&&q.tab==='full'),r=p.cv.getBoundingClientRect();return {x:r.left+p._a.X(14.3),y:r.bottom-60}})()")
             pg.evaluate("window.scrollTo(0,0)")
@@ -40,10 +47,10 @@ try:
             pg.fill("#calcin", "364,4 \u2212 194,2"); pg.wait_for_timeout(200); assert pg.inner_text("#calcres").strip() == "170.2", pg.inner_text("#calcres")
             pg.fill("#calcin", "(229.1-171.2)*2"); pg.wait_for_timeout(200); assert pg.inner_text("#calcres").strip() == "115.8"
             pg.click("#calc-nl"); pg.wait_for_timeout(400)
-            assert pg.evaluate("document.querySelector('#calcdlg').hidden") and pg.evaluate("document.querySelector('#refdlg').open")
+            assert pg.evaluate("window.BARRA.curTab === 'losses' && !document.querySelector('#sb-panel-losses').hidden")
             assert pg.input_value("#nl-q") == "115.8"
-            pg.click("#refx"); pg.click("#np-calc2"); pg.wait_for_timeout(200)
-        step("a calculation: 364.4-194.2 = 170.2 (also with comma and the minus sign), calc-nl button opens refdlg", arithmetic)
+            pg.click("#np-calc2"); pg.wait_for_timeout(200)
+        step("a calculation: 364.4-194.2 = 170.2 (also with comma and the minus sign), calc-nl button opens losses tab", arithmetic)
         def keypad():
             pg.fill("#calcin", ""); pg.wait_for_timeout(100)
             for k in ("1", "+", "2"): pg.click(f"#calcpad [data-k='{k}']")
@@ -66,7 +73,12 @@ try:
             pg.fill("#calcin", ""); pg.wait_for_timeout(200); assert not pg.evaluate("document.querySelector('#calcpad').hidden")
         step("a formula: adduct table as before, no keypad", formula_hides_pad)
         def closes():
-            pg.fill("#calcin", ""); pg.keyboard.press("Escape"); pg.wait_for_timeout(200); assert pg.evaluate("document.querySelector('#calcdlg').hidden")
+            pg.click("#nav [data-v=draw]"); pg.wait_for_timeout(300)
+            pg.click("#np-calc2"); pg.wait_for_timeout(300)
+            assert not pg.evaluate("document.querySelector('#calcdlg').hidden")
+            pg.fill("#calcin", ""); pg.keyboard.press("Escape"); pg.wait_for_timeout(200)
+            assert pg.evaluate("document.querySelector('#calcdlg').hidden")
+            pg.click("#nav [data-v=data]"); pg.wait_for_timeout(300)
             assert pg.locator("#np-iso").count() == 0, "the Isotopi button is gone from the header"
         step("Esc closes the calculator; no Isotopi button in the header", closes)
         def xic_dlg():

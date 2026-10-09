@@ -19,7 +19,7 @@ try:
             pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)
             t = pg.inner_text("#calcdlg"); assert "364.0737" in t and not pg.locator("#calcobsw").count(), t       # QqQ: 4 decimals as before, no field for the observed value
             assert "errore (ppm)" not in t
-            pg.click("#calcx"); pg.wait_for_timeout(200)
+            shut(pg, "#calcx"); pg.wait_for_timeout(200)
         step("calculator with a QqQ file only: as before", calc_qqq)
         def pills_qqq():
             rows = pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.ghost)')].map(r=>[r.querySelector('.nm').textContent,[...r.querySelectorAll('.hrb')].map(x=>x.textContent)])"); print(rows)
@@ -57,7 +57,7 @@ try:
             assert "errore (ppm)" in t, t
             e = pg.evaluate("[...document.querySelectorAll('#calcout tr')].map(r=>[...r.children].map(c=>c.textContent))[1]"); print(e)
             assert abs(float(e[2]) - 0.8) < 0.15, e                                         # (364.0740 - 364.07374) / 364.07374 = 0.7 ppm
-            pg.click("#calcx"); pg.wait_for_timeout(200)
+            shut(pg, "#calcx"); pg.wait_for_timeout(200)
         step("calculator with an Orbitrap file: 4 decimals and the error in ppm of the observed m/z", calc_hr)
         def method():
             pg.evaluate("(()=>{const f=E.files.find(f=>f.file.includes('Exploris')&&f.kind==='full');E.cur=f.k;showMethod()})()"); pg.wait_for_timeout(2500)

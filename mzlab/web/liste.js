@@ -712,9 +712,13 @@ const LISTE = (() => {
   // Opens the reference list panel: switches tab in sidebar if available, or opens modal dialog #listedlg
   function open(opt = {}) {
     ensure();
-    // 1. Check if sidebar tab for lists exists in DOM (e.g. from Binario A)
-    const asideTabBtn = document.querySelector("#tab-btn-liste, [data-tab='liste']");
-    const asidePanel = document.querySelector("#aside-panel-liste, [data-panel='liste']");
+    if (window.BARRA && BARRA.isDataView()) {
+      BARRA.setTab("lists", opt);
+      return;
+    }
+    // 1. Check if sidebar tab for lists exists in DOM (e.g. from Binario A or sidebar)
+    const asideTabBtn = document.querySelector("#tab-btn-liste, [data-tab='liste'], #sb-tab-lists");
+    const asidePanel = document.querySelector("#aside-panel-liste, [data-panel='liste'], #sb-panel-lists");
     if (asideTabBtn && asidePanel) {
       if (typeof asideTabBtn.click === "function") asideTabBtn.click();
       mount(asidePanel, opt);
@@ -773,7 +777,10 @@ const LISTE = (() => {
 if (typeof document !== "undefined") {
   const bindListeBtn = () => {
     const b = document.querySelector("#np-liste");
-    if (b) b.onclick = () => LISTE.open();
+    if (b) b.onclick = () => {
+      if (window.BARRA && BARRA.isDataView()) BARRA.setTab("lists");
+      else LISTE.open();
+    };
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bindListeBtn);
   else bindListeBtn();

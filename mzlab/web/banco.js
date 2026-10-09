@@ -398,18 +398,52 @@ const BANCO = (() => {
       Promise.resolve(BODY[ist.tab](b, p, tok)).catch(e => { if (tok === ist.tok) b.innerHTML = `<span class="fail">${esc(e.message)}</span>`; });
     });
   }
+  function setInfoTab(t) {
+    if (I9.some(x => x[0] === t)) {
+      ist.tab = t;
+      isave();
+    }
+  }
   function infoBar() {
     const aside = Q("#dfiles"); if (!aside) return;
     let c = Q("#hrinfo");
-    if (!sync()) { if (c) c.hidden = true; return; }
+    if (!sync()) {
+      if (c) c.hidden = true;
+      const sep = Q("#sb-hr-sep"); if (sep) sep.hidden = true;
+      const hrt = Q("#hri-tabs"); if (hrt) hrt.hidden = true;
+      return;
+    }
+    const sep = Q("#sb-hr-sep"); if (sep) sep.hidden = false;
+    const hrt = Q("#hri-tabs");
+    if (hrt) {
+      hrt.hidden = false;
+      if (!hrt.children.length) {
+        hrt.innerHTML = I9.map(x => `<button type="button" role="tab" data-t="${x[0]}" title="${esc(x[1])}" aria-label="${esc(x[1])}">${x[2]}<span>${x[0].toUpperCase()}</span></button>`).join("");
+        hrt.querySelectorAll("button").forEach(x => {
+          x.onclick = () => {
+            ist.tab = x.dataset.t; isave();
+            if (window.BARRA) BARRA.setTab(x.dataset.t);
+            else renderInfo();
+          };
+        });
+      }
+    }
     if (!c) {
       c = document.createElement("div"); c.id = "hrinfo"; c.className = "card"; c.setAttribute("aria-label", "Barra informazioni del banco");
-      c.innerHTML = `<div id="hri-tabs" role="tablist">${I9.map(x => `<button type="button" role="tab" data-t="${x[0]}" title="${esc(x[1])}" aria-label="${esc(x[1])}">${x[2]}</button>`).join("")}</div><div id="hri-ttl"></div><div id="hri-body"></div>`;
-      aside.appendChild(c); c.style.height = ist.h + "px";
-      c.querySelectorAll("#hri-tabs button").forEach(x => { x.onclick = () => { ist.tab = x.dataset.t; isave(); renderInfo(); }; });
+      c.innerHTML = `<div id="hri-ttl"></div><div id="hri-body"></div>`;
+      const pnlContainer = Q("#sb-panels") || aside;
+      pnlContainer.appendChild(c);
+      c.style.height = ist.h + "px";
       new ResizeObserver(() => { if (c.offsetHeight > 120) { ist.h = c.offsetHeight; isave(); } }).observe(c);
     }
-    c.hidden = false; renderInfo();
+    if (window.BARRA) {
+      if (["hdr", "lst", "fil", "cmp", "iso", "pks", "com", "idn", "tre"].includes(BARRA.curTab)) {
+        c.hidden = false;
+      }
+    } else {
+      c.hidden = false;
+    }
+    renderInfo();
   }
   // the composite spectrum follows the selection of the chromatogram when «Segui» is on
   function follow(p) {
@@ -447,6 +481,6 @@ const BANCO = (() => {
     }
     b.hidden = false; sync2(); infoBar();
   }
-  return { follow, infoBar, renderInfo, afterLayout, bar, sync2, on, sync, header, decorate, groupsOf, setFilter, setPin, eligible, rangeSeries, addRange, dropRange, filesFor };
+  return { follow, infoBar, renderInfo, setInfoTab, afterLayout, bar, sync2, on, sync, header, decorate, groupsOf, setFilter, setPin, eligible, rangeSeries, addRange, dropRange, filesFor };
 })();
 window.BANCO = BANCO;

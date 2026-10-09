@@ -45,6 +45,9 @@ def ready(pg, timeout=90000, settle=400):
         if q >= settle: return
         if _t.time() - t0 > timeout / 1000: raise TimeoutError("ready: the page is still loading")
         pg.wait_for_timeout(50)
+def shut(pg, sel):
+    """Close a floating window by its × button. In the Dati view the calculator and the reference tables are tabs of the sidebar (no × there): then there is nothing to close."""
+    if pg.is_visible(sel): pg.click(sel)
 def get_env(suffix: str, default=None):
     """Read MZLAB_<suffix> or legacy QQQ_<suffix> (MZLAB_* takes precedence)."""
     return os.environ.get(f"MZLAB_{suffix}", os.environ.get(f"QQQ_{suffix}", default))

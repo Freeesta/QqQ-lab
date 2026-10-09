@@ -573,8 +573,9 @@ function menu(ev, items) {
     m.appendChild(d);
   });
   m.hidden = false;
-  m.style.left = Math.min(ev.clientX, innerWidth - 270) + "px";
-  m.style.top = Math.max(4, Math.min(ev.clientY, innerHeight - m.offsetHeight - 8)) + "px";
+  const off = document.documentElement.classList.contains("touch") ? 16 : 0;      // with a finger the menu opens beside it: lifting the finger must not click an item
+  m.style.left = Math.min(ev.clientX + off, innerWidth - 270) + "px";
+  m.style.top = Math.max(4, Math.min(ev.clientY + off, innerHeight - m.offsetHeight - 8)) + "px";
 }
 document.addEventListener("click", () => { Q("#ctx").hidden = true; });
 document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });      // the Correzione menu closes when the click is elsewhere
@@ -2657,17 +2658,50 @@ document.addEventListener("tpview", e => { if (e.detail.view === "data") setTime
 // ------------------------------------------------------------------ calcolatrice formula -> m/z (come «mass from formula» di Xcalibur)
 // the calculator is a drop-down under its button (no dark backdrop): the graphs stay visible and usable; it closes with the button, Esc or the ×
 const calcBox = Q("#calcdlg");
-Object.defineProperty(calcBox, "open", { get: () => !calcBox.hidden });
-calcBox.close = () => { calcBox.hidden = true; };
+Object.defineProperty(calcBox, "open", {
+  get: () => {
+    if (window.BARRA && BARRA.isDataView()) {
+      return BARRA.curTab === "calc" && (!document.querySelector("#v-data")?.classList.contains("sb-unpinned") || document.querySelector("#v-data")?.classList.contains("sb-overlay-open"));
+    }
+    return !calcBox.hidden;
+  }
+});
+calcBox.close = () => {
+  if (window.BARRA && BARRA.isDataView()) {
+    if (!BARRA.pinned) BARRA.closeOverlay();
+  } else {
+    calcBox.hidden = true;
+  }
+};
 function calcPlace() {
   const r = Q("#np-calc2").getBoundingClientRect(), w = Math.min(560, innerWidth - 16);
   calcBox.style.top = Math.round(r.bottom + 6) + "px"; calcBox.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + "px";
 }
-Q("#np-calc2").onclick = () => { if (!calcBox.hidden) return calcBox.close(); calcBox.hidden = false; calcPlace(); Q("#calcin").focus(); calcRun(); };
+Q("#np-calc2").onclick = () => {
+  if (window.BARRA && BARRA.isDataView()) {
+    BARRA.setTab("calc");
+    return;
+  }
+  if (!calcBox.hidden) return calcBox.close();
+  calcBox.hidden = false;
+  calcPlace();
+  Q("#calcin").focus();
+  calcRun();
+};
 Q("#calcx").onclick = () => calcBox.close();
-addEventListener("resize", () => { if (!calcBox.hidden) calcPlace(); });
+addEventListener("resize", () => { if (!calcBox.hidden && !calcBox.classList.contains("sb-docked")) calcPlace(); });
 document.addEventListener("keydown", e => {
-  if (e.key !== "Escape" || calcBox.hidden) return;
+  if (e.key !== "Escape") return;
+  if (window.BARRA && BARRA.isDataView()) {
+    const i = Q("#calcin");
+    if (document.activeElement === i && i.value) {
+      i.value = ""; CALC.fresh = false; calcRun();
+    } else if (!BARRA.pinned && BARRA.overlayOpen) {
+      BARRA.closeOverlay();
+    }
+    return;
+  }
+  if (calcBox.hidden) return;
   const i = Q("#calcin"); if (i.value) { i.value = ""; CALC.fresh = false; calcRun(); } else calcBox.close();      // Esc: first clear the field, then close
 });
 const CALC = { ans: 0, tape: [], fresh: false };       // fresh: the field holds a result; a digit typed now starts a new calculation
@@ -2717,7 +2751,14 @@ async function calcRun() {
       nlBtn.hidden = false;
       const vabs = calcFmt(Math.abs(r.v));
       nlBtn.title = `Cerca \u0394m = ${vabs} nel pannello Perdite neutre`;
-      nlBtn.onclick = () => { calcBox.close(); if (window.QQQRef) QQQRef.open("ls", { q: vabs }); };
+      nlBtn.onclick = () => {
+        if (window.BARRA && BARRA.isDataView()) {
+          BARRA.setTab("losses", { q: vabs });
+        } else {
+          calcBox.close();
+          if (window.QQQRef) QQQRef.open("ls", { q: vabs });
+        }
+      };
     }
     sum.innerHTML = r.err ? EH(r.err) : ""; return;
   }
