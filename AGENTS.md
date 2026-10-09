@@ -26,7 +26,14 @@ Unico documento per gli agenti: descrive lo STATO ATTUALE (la storia è in git e
 - **Se qualcosa resta rosso** o serve una decisione di Federico: PR aperta con la spiegazione, niente merge. Un test rosso anche su `main` va segnalato nella PR (con il log).
 - **Commit**: titolo breve in italiano + 1-3 righe; in coda le righe di attribuzione richieste dall'ambiente. Mai nomi di modelli nei messaggi o nel codice.
 - **Risparmio di token**: raggruppa le modifiche, prova UNA volta alla fine con `--cambiati`, poi la verifica completa UNA volta prima del merge; leggi solo i log dei FAIL.
-- **Subagenti leggeri** (`.claude/agents/`, modello leggero): per eseguire la verifica e leggere i log usa il subagente `verificatore`; per lo stato di PR, CI e pages `controllo-github`; per spostamenti di file da un elenco `archivista`.
+- **Subagenti leggeri** (`.claude/agents/`, modello Haiku: veloci e con pochi token). Sono le mani, non la testa: solo lavori meccanici con un ingresso esatto e un risultato che la chat può controllare.
+  - `verificatore`: esegue `tools/verifica.py` e riporta solo i FAIL con la causa (mai leggere i log nella chat principale).
+  - `controllo-github`: stato di PR, CI, pages e rami; per un job rosso solo la riga decisiva del log.
+  - `cercatore`: dove sta una funzione, una chiave, un selettore, un testo (risponde `file:riga`); al posto di leggere file grandi.
+  - `inventario-testi`: tabella dei testi visibili di un file o di una scheda (per traduzioni, testi brevi della barra, tabelle prima/dopo).
+  - `sostituzioni`: un elenco esatto vecchio → nuovo con il numero di occorrenze atteso (rinomine di chiavi, selettori nei test, percorsi).
+  - `archivista`: spostamenti di file da un elenco, con `git mv`.
+  - **Regole**: affidare a un subagente un compito descritto in modo che non debba scegliere; lanciare insieme, in un solo messaggio, i subagenti indipendenti; controllare sempre il risultato (`git diff --stat`, una riga del file, un nuovo giro del `verificatore`); se sbaglia due volte, il lavoro lo fa la chat. Mai a un subagente: decisioni, codice nuovo, testi di Teoria e Pratica, modifica delle asserzioni dei test, commit, push, merge, messaggi ad altre chat.
 - **Consumo**: una sessione per pacchetto di lavoro, poi se ne apre una nuova (mai «continua anche con…» in una chat lunga). `grep -n` e lettura a intervalli di righe; mai leggere per intero i file sopra le 500 righe (`explore.js` e simili). Niente screenshot letti nel contesto, salvo per un giudizio visivo; quelli per la PR si allegano senza leggerli. I file dell'elenco «Non leggere» sono bloccati anche da `.claude/settings.json` (grep resta permesso). Messaggio finale in al massimo 5 righe (PR, CI, pages, cosa resta).
 - **Niente `pkill -f` con parole presenti nel comando** (uccide la propria shell): ferma i server con il PID.
 - Un front end non provato nel browser è rotto: niente «funziona» senza prove.

@@ -4,4 +4,4 @@ description: Esegue tools/verifica.py (con --cambiati, --solo NOMI o completa) e
 tools: Bash, Read, Grep
 model: haiku
 ---
-Lancia il comando di verifica richiesto dalla cartella del repository (dati in ../QqQ-lab-dati, variabile QQQ_DATI se serve). Non modificare nessun file. Per ogni FAIL leggi solo .verifica/log/<nome>.log, e solo le ultime 40 righe utili. Rispondi con: conteggio OK/FAIL/SKIP; per ogni FAIL una riga con nome, causa probabile e riga del log decisiva; se il FAIL compare anche su origin/main scrivi «preesistente». Massimo 25 righe.
+Lancia il comando di verifica richiesto dalla cartella del repository (dati trovati da soli in ../mzlab-dati; altrimenti MZLAB_DATI=<percorso>). Non modificare nessun file. Per ogni FAIL leggi solo .verifica/log/<nome>.log, e solo le ultime 40 righe utili. Rispondi con: conteggio OK/FAIL/SKIP; per ogni FAIL una riga con nome, causa probabile e riga del log decisiva; se il FAIL compare anche su origin/main scrivi «preesistente». Massimo 25 righe.
