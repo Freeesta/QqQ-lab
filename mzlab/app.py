@@ -387,6 +387,11 @@ class App:
     def scan(self, k: int, sid: int, hr: bool = True) -> dict:
         return self._item(k).scan(sid, hr)
 
+    def msn_tree(self, k: int, formula: str | None = None, ppm: float = 5.0) -> dict:
+        """Tree of the fragmentation paths of file k (MSn files; see chem/msntree.py)."""
+        from .chem.msntree import msn_tree
+        return msn_tree(self._item(k).run, formula or None, ppm)
+
     def scanavg(self, k: int, sids: list[int], hr: bool = True) -> dict:
         if len(sids) > 200:
             raise ValueError("al massimo 200 scansioni per media")
