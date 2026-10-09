@@ -2267,6 +2267,7 @@ function ctxFor(p, e, x, px, py) {
     const has = m != null, lab = has ? m.toFixed(mzd(p, p.level)) : "…", mi = o => has ? o : { label: o.label, dim: true };
     items.push({ label: has ? `m/z ${lab}` : "nessun picco qui: clic destro su un picco", dim: true }, "-");
     items.push(mi({ label: `Estrai l'XIC di m/z ${lab}`, fn: () => xicDirect(m, p) }));
+    if (a.hrp && window.COMP) items.push(mi({ label: `Formule compatibili con m/z ${lab}…`, fn: () => COMP.open({ mz: m, spec: a.data[0].d, polarity: a.data[0].f && a.data[0].f.polarity }) }));
     const xs = tabPanels().filter(q => q.type === "xic"), TIPX = "Aggiunge questo ione nello stesso grafico: per vedere se due ioni escono allo stesso tempo";
     const ov = q => ({ label: `Sovrapponi all'XIC di ${xicName(q)} (pannello ${q.num || "?"})`, tip: TIPX, fn: () => xicDirect(m, p, q) });
     if (xs.length > 3) items.push(mi({ label: "Sovrapponi a un XIC…", tip: TIPX, fn: () => menu({ preventDefault() {}, clientX: e.clientX, clientY: e.clientY }, xs.map(ov)) }));
