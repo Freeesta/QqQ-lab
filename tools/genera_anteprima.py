@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "mzlab" / "web"
 NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (WEB / "appname.js").read_text(encoding="utf-8")).group(1)
 W, H, S = 1200, 630, 2                                    # drawn at double size, then reduced (smooth edges)
-BOLD, REG = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+BOLD = next((p for p in ["/System/Library/Fonts/Supplemental/Arial Bold.ttf", "/System/Library/Fonts/Helvetica.ttc", "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"] if Path(p).exists()), "Arial")
 font = lambda p, n: ImageFont.truetype(p, int(n * S))
 
 

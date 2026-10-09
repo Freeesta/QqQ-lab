@@ -1,8 +1,8 @@
-"""Make the logo and every icon from the picture of the quadrupole field (tools/logo_sorgente.jpg).
+"""Make the logo and every icon from the picture of the m/z logo (tools/logo_sorgente.jpg).
 
 Writes into mzlab/web/: logo.png (transparent), logo.svg / favicon.svg / app-icon.svg (the PNG embedded, so they work as
-<img> and as icons), favicon-32.png, favicon.ico, apple-touch-icon.png, app-icon-192/512.png (site and PWA icons). Only needs Pillow and numpy. From the project root:  python3 tools/genera_icone.py
-The picture is the field of a quadrupole (equipotential contours of the four rods: blue negative, red positive)."""
+<img> and as icons), favicon-32.png, favicon.ico, apple-touch-icon.png, app-icon-192/512.png, app-icon-maskable-512.png (site and PWA icons). Only needs Pillow, scipy and numpy. From the project root:  python3 tools/genera_icone.py
+"""
 import base64, io
 from pathlib import Path
 
@@ -71,6 +71,7 @@ def main():
         big[s] = png(app_icon(core, s))
         if s in (192, 512):
             (WEB / f"app-icon-{s}.png").write_bytes(big[s])
+    (WEB / "app-icon-maskable-512.png").write_bytes(png(app_icon(core, 512, rounded=False).convert("RGB")))
     print("icone scritte in", WEB)
 
 

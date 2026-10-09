@@ -11,14 +11,7 @@ mzLab (codice del programma) è sotto licenza MIT (`LICENSE`). Il sito e il repo
 | Masse isotopiche degli elementi | - | BSD-3-Clause (da OpenChemLib) | `mzlab/web/elements.js` (generato da `tools/genera_elementi.py`) |
 | Pesi atomici medi | - | Apache-2.0 (da Ketcher) | stesso file |
 | Abbondanze isotopiche naturali | - | dati IUPAC (fatti pubblici, senza copyright) | scritte in `tools/genera_elementi.py` |
-| Logo (figura del campo di un quadrupolo) | - | **CC BY-SA 4.0** | `mzlab/web/logo*.png/svg`, icone e favicon (vedi sotto) |
 | Caratteri | - | nessuno incluso | la pagina usa i caratteri di sistema (`system-ui`) |
-
-## Logo
-
-Il logo deriva da `QuadrupoleContour.svg` di **Geek3** (Wikimedia Commons, https://commons.wikimedia.org/wiki/File:QuadrupoleContour.svg),
-pubblicato con licenza **Creative Commons Attribution-ShareAlike 4.0** (https://creativecommons.org/licenses/by-sa/4.0/), poi rielaborato con un generatore di immagini
-(sorgente `tools/logo_sorgente.jpg`, script `tools/genera_icone.py`). Per la licenza ShareAlike, il logo e le icone che ne derivano si distribuiscono con la stessa licenza (CC BY-SA 4.0), con attribuzione a Geek3. Il resto del programma resta MIT.
 
 ## Figure della Teoria
 
