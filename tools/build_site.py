@@ -130,19 +130,13 @@ def main() -> None:
     (out / "index.html").write_text(html, encoding="utf-8")
     (static / "index.html").unlink()
     (out / ".nojekyll").write_text("", encoding="utf-8")
-    # the Python code (mzlab package + qqq_lab transitional bridge package)
+    # the Python code (mzlab package)
     with zipfile.ZipFile(static / "mzlab.zip", "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted([*(ROOT / "mzlab").rglob("*.py"), *(ROOT / "mzlab" / "chem").glob("*.json")]):       # the list of known contaminants is data of the package
             rel = f.relative_to(ROOT)
             if "web" in rel.parts or "__pycache__" in rel.parts:
                 continue
             z.write(f, rel.as_posix())
-        bridge = ROOT / "qqq_lab" / "__init__.py"
-        if bridge.exists():
-            z.write(bridge, bridge.relative_to(ROOT).as_posix())
-    # identical copy kept because the published tpmine.enc still contains the old 20_tpmine.js that fetches qqq_lab.zip
-    # (remove in phase 3b, after tpmine.enc is rebuilt with `python3 tools/build_tpmine.py`)
-    shutil.copy2(static / "mzlab.zip", static / "qqq_lab.zip")
     pack_mzfinder(static)
     # Pyodide: core + numpy
     py = static / "pyodide"

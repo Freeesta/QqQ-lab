@@ -269,7 +269,7 @@ def changed_tests(files: set[str] | None = None) -> tuple[set[str] | None, str]:
             tests |= t
     if not tests:
         return {"-"}, "solo documenti o file senza e2e: nessun e2e"
-    return tests | ({"e2e3"} if any(f.startswith("mzlab/") or f.startswith("qqq_lab/") for f in files) else set()), "e2e: " + ", ".join(sorted(tests))
+    return tests | ({"e2e3"} if any(f.startswith("mzlab/") for f in files) else set()), "e2e: " + ", ".join(sorted(tests))
 
 
 def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
