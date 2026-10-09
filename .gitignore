@@ -17,7 +17,7 @@ dist/
 tests_e2e/shots/
 .verifica/
 
-# Lab data never go into the repository (raw data stay in ../QqQ and ../esempio_conversione)
+# Lab data never go into the repository (they live in the private repository ../QqQ-lab-dati)
 *.mzML
 *.mzml
 *.wiff
