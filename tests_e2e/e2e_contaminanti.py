@@ -89,7 +89,8 @@ try:
         step("low resolution: nothing", lr)
     r2.close()
 except Exception as e:
-    steps.append(("run", "FAIL " + str(e)[:300]))
+    import traceback; traceback.print_exc(); steps.append(("run", "FAIL " + str(e)[:300]))
     try: r.close()
     except Exception: pass
+print(len(steps), "steps"); import traceback
 for n, s in steps: print(s.split(" ")[0].upper(), n, s if s != "ok" else "")
