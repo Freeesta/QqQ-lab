@@ -3,12 +3,11 @@
 # The rest (Mac, Windows, Firefox, WebKit and all the e2e) runs once a day on main: notte.yml.
 name: test
 
+# No paths-ignore: these 4 jobs are the required checks of the "main protetto" ruleset, so they must run on every pull request.
 on:
   push:
     branches: [main]
-    paths-ignore: ["**.md", "docs/**", "scratchpad/**"]
   pull_request:
-    paths-ignore: ["**.md", "docs/**", "scratchpad/**"]
 
 permissions:
   contents: read
@@ -20,6 +19,7 @@ concurrency:
 
 jobs:
   pytest:
+    name: pytest (ubuntu-latest, ${{ matrix.python }})   # same names as before: required checks of the ruleset
     strategy:
       fail-fast: false
       matrix:
