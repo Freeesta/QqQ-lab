@@ -1,0 +1,1047 @@
+{
+ "_nota": "Elenco dei contaminanti noti. Le m/z NON sono scritte qui: si calcolano dalle formule con mzlab/chem/elements.py (mzlab/chem/contaminants.py). Fonte principale: Keller B.O., Sui J., Young A.B., Whittal R.M., Anal. Chim. Acta 627 (2008) 71-81, doi:10.1016/j.aca.2008.04.043. Le sostanze e gli ioni sono quelli noti dalla chimica; il confronto voce per voce con le tabelle dell'articolo non è stato fatto (articolo non accessibile).",
+ "id": "keller",
+ "name": "Contaminanti noti (Keller 2008)",
+ "source": "Keller et al., Anal. Chim. Acta 627 (2008) 71-81",
+ "license": "dati chimici (formule): nessuna restrizione; elenco compilato per questo programma",
+ "entries": [
+  {
+   "id": "peg",
+   "name": "PEG (polietilenglicole)",
+   "class": "polietilenglicoli",
+   "formula": "C2H4O",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+",
+    "[M+K]+",
+    "[M+2H]2+",
+    "[M+2NH4]2+",
+    "[M+2Na]2+",
+    "[M+H+NH4]2+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H4O",
+    "n": [
+     3,
+     40
+    ],
+    "end": "H2O"
+   }
+  },
+  {
+   "id": "ppg",
+   "name": "PPG (polipropilenglicole)",
+   "class": "polipropilenglicoli",
+   "formula": "C3H6O",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+",
+    "[M+K]+",
+    "[M+2H]2+",
+    "[M+2NH4]2+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C3H6O",
+    "n": [
+     3,
+     30
+    ],
+    "end": "H2O"
+   }
+  },
+  {
+   "id": "siloxano_ciclico",
+   "name": "polisilossano ciclico (D)",
+   "class": "polisilossani",
+   "formula": "C2H6OSi",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H6OSi",
+    "n": [
+     3,
+     14
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "siloxano_lineare",
+   "name": "polisilossano lineare (terminali metilici)",
+   "class": "polisilossani",
+   "formula": "C2H6OSi",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H6OSi",
+    "n": [
+     2,
+     14
+    ],
+    "end": "C6H18OSi2"
+   }
+  },
+  {
+   "id": "siloxano_oh",
+   "name": "polisilossano lineare (terminali OH)",
+   "class": "polisilossani",
+   "formula": "C2H6OSi",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H6OSi",
+    "n": [
+     2,
+     14
+    ],
+    "end": "H2O"
+   }
+  },
+  {
+   "id": "dmp",
+   "name": "dimetilftalato (DMP)",
+   "class": "ftalati",
+   "formula": "C10H10O4",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+",
+    "[M+K]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "dep",
+   "name": "dietilftalato (DEP)",
+   "class": "ftalati",
+   "formula": "C12H14O4",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+",
+    "[M+K]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "dbp",
+   "name": "dibutilftalato (DBP)",
+   "class": "ftalati",
+   "formula": "C16H22O4",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+",
+    "[M+K]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "bbp",
+   "name": "benzilbutilftalato (BBP)",
+   "class": "ftalati",
+   "formula": "C19H20O4",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+",
+    "[M+K]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "dehp",
+   "name": "DEHP / di-n-ottilftalato (isomeri)",
+   "class": "ftalati",
+   "formula": "C24H38O4",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+",
+    "[M+K]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "dinp",
+   "name": "diisononilftalato (DiNP)",
+   "class": "ftalati",
+   "formula": "C26H42O4",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+",
+    "[M+K]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "didp",
+   "name": "diisodecilftalato (DiDP)",
+   "class": "ftalati",
+   "formula": "C28H46O4",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+",
+    "[M+K]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "ftalato_149",
+   "name": "anidride ftalica (frammento comune degli ftalati)",
+   "class": "ftalati",
+   "formula": "C8H4O3",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "dehp_adipato",
+   "name": "dietilesiladipato (DEHA)",
+   "class": "plastificanti",
+   "formula": "C22H42O4",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+",
+    "[M+K]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "atbc",
+   "name": "acetil tributil citrato (ATBC)",
+   "class": "plastificanti",
+   "formula": "C20H34O8",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+",
+    "[M+K]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "oleamide",
+   "name": "oleamide",
+   "class": "ammidi degli acidi grassi",
+   "formula": "C18H35NO",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+",
+    "[M+NH4]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "erucamide",
+   "name": "erucamide",
+   "class": "ammidi degli acidi grassi",
+   "formula": "C22H43NO",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+",
+    "[M+NH4]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "stearamide",
+   "name": "stearamide",
+   "class": "ammidi degli acidi grassi",
+   "formula": "C18H37NO",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+",
+    "[M+NH4]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "palmitamide",
+   "name": "palmitamide",
+   "class": "ammidi degli acidi grassi",
+   "formula": "C16H33NO",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+",
+    "[M+NH4]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "behenamide",
+   "name": "behenamide",
+   "class": "ammidi degli acidi grassi",
+   "formula": "C22H45NO",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+",
+    "[M+NH4]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "laurico",
+   "name": "acido laurico",
+   "class": "acidi grassi",
+   "formula": "C12H24O2",
+   "ions": [
+    "[M-H]-",
+    "[M+Na]+"
+   ],
+   "polarity": "both",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "miristico",
+   "name": "acido miristico",
+   "class": "acidi grassi",
+   "formula": "C14H28O2",
+   "ions": [
+    "[M-H]-",
+    "[M+Na]+"
+   ],
+   "polarity": "both",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "palmitico",
+   "name": "acido palmitico",
+   "class": "acidi grassi",
+   "formula": "C16H32O2",
+   "ions": [
+    "[M-H]-",
+    "[M+Na]+"
+   ],
+   "polarity": "both",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "stearico",
+   "name": "acido stearico",
+   "class": "acidi grassi",
+   "formula": "C18H36O2",
+   "ions": [
+    "[M-H]-",
+    "[M+Na]+"
+   ],
+   "polarity": "both",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "oleico",
+   "name": "acido oleico",
+   "class": "acidi grassi",
+   "formula": "C18H34O2",
+   "ions": [
+    "[M-H]-",
+    "[M+Na]+"
+   ],
+   "polarity": "both",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "triton",
+   "name": "Triton X-100 (ottilfenolo etossilato)",
+   "class": "tensioattivi",
+   "formula": "C2H4O",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+",
+    "[M+K]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H4O",
+    "n": [
+     3,
+     25
+    ],
+    "end": "C14H22O"
+   }
+  },
+  {
+   "id": "sds",
+   "name": "dodecilsolfato (SDS)",
+   "class": "tensioattivi",
+   "formula": "C12H26O4S",
+   "ions": [
+    "[M-H]-"
+   ],
+   "polarity": "negative",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "sds_dimero",
+   "name": "dodecilsolfato, dimero (2M-H)",
+   "class": "tensioattivi",
+   "formula": "C24H52O8S2",
+   "ions": [
+    "[M-H]-"
+   ],
+   "polarity": "negative",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "las10",
+   "name": "alchilbenzensolfonato C10 (LAS)",
+   "class": "tensioattivi",
+   "formula": "C16H26O3S",
+   "ions": [
+    "[M-H]-"
+   ],
+   "polarity": "negative",
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
+  },
+  {
+   "id": "las11",
+   "name": "alchilbenzensolfonato C11 (LAS)",
+   "class": "tensioattivi",
+   "formula": "C17H28O3S",
+   "ions": [
+    "[M-H]-"
+   ],
+   "polarity": "negative",
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
+  },
+  {
+   "id": "las12",
+   "name": "alchilbenzensolfonato C12 (LAS)",
+   "class": "tensioattivi",
+   "formula": "C18H30O3S",
+   "ions": [
+    "[M-H]-"
+   ],
+   "polarity": "negative",
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
+  },
+  {
+   "id": "las13",
+   "name": "alchilbenzensolfonato C13 (LAS)",
+   "class": "tensioattivi",
+   "formula": "C19H32O3S",
+   "ions": [
+    "[M-H]-"
+   ],
+   "polarity": "negative",
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
+  },
+  {
+   "id": "bak12",
+   "name": "benzalconio C12",
+   "class": "ammoni quaternari",
+   "formula": "C21H38N",
+   "ions": [
+    "[M]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "bak14",
+   "name": "benzalconio C14",
+   "class": "ammoni quaternari",
+   "formula": "C23H42N",
+   "ions": [
+    "[M]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "cetrimide",
+   "name": "cetiltrimetilammonio",
+   "class": "ammoni quaternari",
+   "formula": "C19H42N",
+   "ions": [
+    "[M]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "ddac",
+   "name": "didecildimetilammonio",
+   "class": "ammoni quaternari",
+   "formula": "C22H48N",
+   "ions": [
+    "[M]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "tba",
+   "name": "tetrabutilammonio",
+   "class": "ammoni quaternari",
+   "formula": "C16H36N",
+   "ions": [
+    "[M]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "irganox1076",
+   "name": "Irganox 1076",
+   "class": "antiossidanti dei polimeri",
+   "formula": "C35H62O3",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+",
+    "[M-H]-"
+   ],
+   "polarity": "both",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "irganox1010",
+   "name": "Irganox 1010",
+   "class": "antiossidanti dei polimeri",
+   "formula": "C73H108O12",
+   "ions": [
+    "[M+NH4]+",
+    "[M+Na]+",
+    "[M+K]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "irganox1330",
+   "name": "Irganox 1330",
+   "class": "antiossidanti dei polimeri",
+   "formula": "C54H78O3",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "irgafos168",
+   "name": "Irgafos 168",
+   "class": "antiossidanti dei polimeri",
+   "formula": "C42H63O3P",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "irgafos168_ox",
+   "name": "Irgafos 168 ossidato",
+   "class": "antiossidanti dei polimeri",
+   "formula": "C42H63O4P",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "bht",
+   "name": "butilidrossitoluene (BHT)",
+   "class": "antiossidanti dei polimeri",
+   "formula": "C15H24O",
+   "ions": [
+    "[M-H]-",
+    "[M+H]+"
+   ],
+   "polarity": "both",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "dtbp",
+   "name": "2,4-di-terz-butilfenolo",
+   "class": "antiossidanti dei polimeri",
+   "formula": "C14H22O",
+   "ions": [
+    "[M-H]-",
+    "[M+H]+"
+   ],
+   "polarity": "both",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "tea",
+   "name": "trietilammina",
+   "class": "ammine degli eluenti",
+   "formula": "C6H15N",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "tpa",
+   "name": "tripropilammina",
+   "class": "ammine degli eluenti",
+   "formula": "C9H21N",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "tba3",
+   "name": "tributilammina",
+   "class": "ammine degli eluenti",
+   "formula": "C12H27N",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "dipea",
+   "name": "diisopropiletilammina / dibutilammina (isomeri)",
+   "class": "ammine degli eluenti",
+   "formula": "C8H19N",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "tmea",
+   "name": "trimetilammina",
+   "class": "ammine degli eluenti",
+   "formula": "C3H9N",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "dea",
+   "name": "dietanolammina",
+   "class": "ammine degli eluenti",
+   "formula": "C4H11NO2",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "tea_ol",
+   "name": "trietanolammina",
+   "class": "ammine degli eluenti",
+   "formula": "C6H15NO3",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "bbsa",
+   "name": "N-butilbenzensolfonammide",
+   "class": "plastificanti",
+   "formula": "C10H15NO2S",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "tbp",
+   "name": "tributilfosfato",
+   "class": "fosfati",
+   "formula": "C12H27O4P",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "tphp",
+   "name": "trifenilfosfato",
+   "class": "fosfati",
+   "formula": "C18H15O4P",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "tppo",
+   "name": "trifenilfosfinossido",
+   "class": "fosfati",
+   "formula": "C18H15OP",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "formiato_na",
+   "name": "formiato di sodio (cluster)",
+   "class": "cluster dei sali degli eluenti",
+   "formula": "CHNaO2",
+   "ions": [
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "CHNaO2",
+    "n": [
+     2,
+     14
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "formiato_na_neg",
+   "name": "formiato di sodio (cluster, negativo)",
+   "class": "cluster dei sali degli eluenti",
+   "formula": "CHNaO2",
+   "ions": [
+    "[M+HCOO]-"
+   ],
+   "polarity": "negative",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "CHNaO2",
+    "n": [
+     1,
+     14
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "acetato_na",
+   "name": "acetato di sodio (cluster)",
+   "class": "cluster dei sali degli eluenti",
+   "formula": "C2H3NaO2",
+   "ions": [
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H3NaO2",
+    "n": [
+     2,
+     14
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "formiato_nh4",
+   "name": "formiato di ammonio (cluster)",
+   "class": "cluster dei sali degli eluenti",
+   "formula": "CH5NO2",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "CH5NO2",
+    "n": [
+     2,
+     10
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "acetato_nh4",
+   "name": "acetato di ammonio (cluster)",
+   "class": "cluster dei sali degli eluenti",
+   "formula": "C2H7NO2",
+   "ions": [
+    "[M+H]+",
+    "[M+NH4]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H7NO2",
+    "n": [
+     2,
+     10
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "acido_formico",
+   "name": "acido formico (cluster)",
+   "class": "cluster dei sali degli eluenti",
+   "formula": "CH2O2",
+   "ions": [
+    "[M+H]+",
+    "[M-H]-"
+   ],
+   "polarity": "both",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "CH2O2",
+    "n": [
+     2,
+     10
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "acido_acetico",
+   "name": "acido acetico (cluster)",
+   "class": "cluster dei sali degli eluenti",
+   "formula": "C2H4O2",
+   "ions": [
+    "[M+H]+",
+    "[M-H]-"
+   ],
+   "polarity": "both",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H4O2",
+    "n": [
+     2,
+     10
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "acetonitrile",
+   "name": "acetonitrile (cluster)",
+   "class": "solventi",
+   "formula": "C2H3N",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H3N",
+    "n": [
+     1,
+     8
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "dmso",
+   "name": "dimetilsolfossido (DMSO)",
+   "class": "solventi",
+   "formula": "C2H6OS",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C2H6OS",
+    "n": [
+     1,
+     4
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "dmf",
+   "name": "dimetilformammide (DMF)",
+   "class": "solventi",
+   "formula": "C3H7NO",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008",
+   "series": {
+    "unit": "C3H7NO",
+    "n": [
+     1,
+     3
+    ],
+    "end": ""
+   }
+  },
+  {
+   "id": "nmp",
+   "name": "N-metilpirrolidone (NMP)",
+   "class": "solventi",
+   "formula": "C5H9NO",
+   "ions": [
+    "[M+H]+",
+    "[M+Na]+"
+   ],
+   "polarity": "positive",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "tfa",
+   "name": "acido trifluoroacetico (TFA)",
+   "class": "modificatori degli eluenti",
+   "formula": "C2HF3O2",
+   "ions": [
+    "[M-H]-"
+   ],
+   "polarity": "negative",
+   "source": "Keller 2008"
+  },
+  {
+   "id": "tris",
+   "name": "Tris",
+   "class": "tamponi",
+   "formula": "C4H11NO3",
+   "ions": [
+    "[M+H]+"
+   ],
+   "polarity": "positive",
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
+  },
+  {
+   "id": "hepes",
+   "name": "HEPES",
+   "class": "tamponi",
+   "formula": "C8H18N2O4S",
+   "ions": [
+    "[M+H]+",
+    "[M-H]-"
+   ],
+   "polarity": "both",
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
+  },
+  {
+   "id": "mes",
+   "name": "MES",
+   "class": "tamponi",
+   "formula": "C6H13NO4S",
+   "ions": [
+    "[M+H]+",
+    "[M-H]-"
+   ],
+   "polarity": "both",
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
+  },
+  {
+   "id": "pfoa",
+   "name": "acido perfluoroottanoico (PFOA)",
+   "class": "fluorurati del sistema LC",
+   "formula": "C8HF15O2",
+   "ions": [
+    "[M-H]-"
+   ],
+   "polarity": "negative",
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
+  },
+  {
+   "id": "pfos",
+   "name": "perfluoroottansolfonato (PFOS)",
+   "class": "fluorurati del sistema LC",
+   "formula": "C8HF17O3S",
+   "ions": [
+    "[M-H]-"
+   ],
+   "polarity": "negative",
+   "source": "elenco generale dei fondi LC-MS (non Keller)"
+  },
+  {
+   "id": "silox_mz_355.0699",
+   "name": "polisilossano (ione ricorrente)",
+   "class": "polisilossani",
+   "formula": null,
+   "mz": 355.0699,
+   "polarity": "positive",
+   "ions": [],
+   "source": "m/z di letteratura (solo m/z, affidabilità minore)"
+  },
+  {
+   "id": "silox_mz_429.0887",
+   "name": "polisilossano (ione ricorrente, +74)",
+   "class": "polisilossani",
+   "formula": null,
+   "mz": 429.0887,
+   "polarity": "positive",
+   "ions": [],
+   "source": "m/z di letteratura (solo m/z, affidabilità minore)"
+  },
+  {
+   "id": "silox_mz_503.1075",
+   "name": "polisilossano (ione ricorrente, +148)",
+   "class": "polisilossani",
+   "formula": null,
+   "mz": 503.1075,
+   "polarity": "positive",
+   "ions": [],
+   "source": "m/z di letteratura (solo m/z, affidabilità minore)"
+  }
+ ]
+}
