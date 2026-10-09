@@ -29,7 +29,7 @@ LANG = WEB / "lang"
 ECCEZIONI = ROOT / "tools" / "i18n_eccezioni.txt"
 
 # JS files whose strings must already be free of Italian (grows as the parts of the work migrate files)
-MIGRATED = {"mzlab/web/i18n.js"}
+MIGRATED = {"mzlab/web/i18n.js", "mzlab/web/draw.js"}
 # not checked for Italian words: third-party code, the Teoria (Italian only, by decision), TP Mine, the catalogs themselves
 SKIP_DIRS = ("mzlab/web/vendor/", "mzlab/web/teoria/", "mzlab/web/lang/", "mzlab/web/esempi/", "TP_Mine/")
 SKIP_FILES = {"mzlab/web/elements.js", "mzlab/web/tpmine.enc"}
@@ -114,7 +114,10 @@ DATA_ATTR = re.compile(r"""data-i18n(?:-[a-z-]+)?=["']([A-Za-z][\w]*(?:\.[\w]+)+
 PY_KEY = re.compile(r"""(?:UserError\(\s*|["']error_key["']\s*:\s*|["']key["']\s*:\s*|message\(\s*)["']([a-z][\w]*(?:\.[\w]+)+)["']""")
 
 
-def used_keys() -> tuple[dict[str, set[str]], set[str]]:
+KEY_LITERAL = re.compile(r"""["'`]([a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+)+)["'`]""")
+
+
+def used_keys(catalog_keys: set[str] = frozenset()) -> tuple[dict[str, set[str]], set[str]]:
     keys: dict[str, set[str]] = {}
     prefixes: set[str] = set()
     for p in source_files((".js", ".html", ".py")):
@@ -127,6 +130,7 @@ def used_keys() -> tuple[dict[str, set[str]], set[str]]:
             found |= set(PY_KEY.findall(text))
         else:
             found |= {m.group(2) for m in T_CALL.finditer(text)} | set(DATA_ATTR.findall(text))
+            found |= {k for k in KEY_LITERAL.findall(text) if k in catalog_keys}          # t(cond ? "a.b" : "c.d"), keys in tables
             prefixes |= set(T_DYN.findall(text))
         for k in found:
             keys.setdefault(k, set()).add(rel)
@@ -254,7 +258,7 @@ def check_italian(errs: list, listing: bool) -> None:
 # ---------------------------------------------------------------- glossary
 def has_form(text: str, forms: list[str]) -> bool:
     for f in forms:
-        if re.search(r"(?<![\wÀ-ÿ])" + re.escape(f) + r"(?![\wÀ-ÿ])", text, re.I):
+        if re.search(r"(?<![\wÀ-ÿ])" + re.escape(f) + r"(?:s|es)?(?![\wÀ-ÿ])", text, re.I):          # plural of the English forms too
             return True
     return False
 
@@ -294,7 +298,7 @@ def run(listing: bool = False) -> list[str]:
             continue
         if si[0] != se[0]:
             errs.append(f"{k}: different placeholders (it {si[0]} / en {se[0]})")
-    used, prefixes = used_keys()
+    used, prefixes = used_keys(set(it) | set(en))
     for k, files in sorted(used.items()):
         if k not in it or k not in en:
             errs.append(f"key used but not in the catalogs: {k}  ({', '.join(sorted(files))})")
