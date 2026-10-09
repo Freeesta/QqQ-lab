@@ -63,7 +63,7 @@ try:
             assert "PEG" in o2 and "serie" not in o2, o2                         # two members are not a series
         step("PEG: three consecutive members = «serie PEG (n = 7-11)»; two are not", series)
         def lab():
-            pg.evaluate("LISTE.askAdd(250.1234, 'positive')"); pg.wait_for_selector("#askok", timeout=5000); pg.fill("#askin", "mio fondo"); pg.click("#askok"); pg.wait_for_timeout(800)
+            pg.evaluate("setTimeout(()=>LISTE.askAdd(250.1234, 'positive'),0)"); pg.wait_for_selector("#askok", timeout=5000); pg.fill("#askin", "mio fondo"); pg.click("#askok"); pg.wait_for_timeout(800)
             pg.evaluate(f"(()=>{{const p={SP};p.zoom=[240,260];draw(p)}})()"); pg.wait_for_timeout(1500)
             h = hov(pg, 250.1234); assert h and "mio fondo" in h and "Contaminanti del laboratorio" in h, h
             assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.contaminanti')).length") == 1
