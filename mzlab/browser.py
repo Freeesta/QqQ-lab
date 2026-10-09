@@ -39,7 +39,7 @@ def link_big(name: str, target: str):
 
 
 def handle(method: str, url: str, body=None):
-    """(status, JSON text) for one request coming from the page. body: bytes (JS Uint8Array) or None."""
+    """(status, JSON text) for one request coming from the page, or (status, bytes, content type) for a binary block. body: bytes (JS Uint8Array) or None."""
     u = urlparse(url)
     path = "/" + u.path.lstrip("./")
     q = {k: v[0] for k, v in parse_qs(u.query).items()}
@@ -47,4 +47,6 @@ def handle(method: str, url: str, body=None):
     code, _ctype, out, _hdr = dispatch(app, method, path, q, BytesIO(data), len(data))
     if path == "/api/remove":                     # nothing to recover in a page: free the memory the removed file used
         shutil.rmtree(app.workdir / "_cestino", ignore_errors=True)
+    if _ctype.startswith("application/octet-stream"):          # a binary block (api/scanbin): bytes, not text (they become a Uint8Array in the worker)
+        return code, out, _ctype
     return code, out.decode("utf-8")
