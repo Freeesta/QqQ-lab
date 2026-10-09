@@ -22,7 +22,7 @@ function scFetch(k, lv, pr, i0, i1) {
   if (i0 > i1) return Promise.resolve();
   if (i1 - i0 > 59) i1 = i0 + 59;
   const fk = `${b}|${i0}|${i1}`; if (SC.fl.has(fk)) return SC.fl.get(fk);
-  const f = E.files[k], q = `k=${k}&i0=${i0}&i1=${i1}&level=${lv}&prec=${pr ?? ""}` + MERGE();
+  const f = E.files[k], q = `k=${k}&i0=${i0}&i1=${i1}&level=${lv}&prec=${prSplit(pr)[0]}${FT(prSplit(pr)[1])}` + MERGE();
   // high resolution: a binary block (m/z float64, intensity float32), not a JSON text of 1-3 MB; any other file keeps the JSON of always
   const pm = (window.HR && f && HR.isHr(f, lv) ? scBin(`api/scanbin?${q}`) : J(`api/spectra?${q}`)).then(j => {
     SC.n.set(b, j.n);
@@ -44,21 +44,22 @@ async function scBin(url) {
 }
 // the spectrum of scan p.si: from the cache, else one block around it in the direction of the walk, else (any problem) the window request of before
 async function scData(p, k) {
-  let s = scGet(k, p.level, p.prec, p.si);
+  let s = scGet(k, p.level, prk(p.prec, p.filt), p.si);
   if (!s) {
     const back = p._dir < 0;
-    await scFetch(k, p.level, p.prec, p.si - (back ? 40 : 2), p.si + (back ? 2 : 40)).catch(() => {});
-    s = scGet(k, p.level, p.prec, p.si);
+    await scFetch(k, p.level, prk(p.prec, p.filt), p.si - (back ? 40 : 2), p.si + (back ? 2 : 40)).catch(() => {});
+    s = scGet(k, p.level, prk(p.prec, p.filt), p.si);
   }
-  if (s && s.mz.length && s.rt >= p.r0 - 1e-6 && s.rt <= p.r1 + 1e-6) return { mz: s.mz, y: s.y, mode: s.mode, pmz: s.pmz, py: s.py, scans: 1, i0: s.i, n: SC.n.get(scBase(k, p.level, p.prec)) };
-  return getSpec(k, p.r0, p.r1, p.level, p.prec, null);
+  if (s && s.mz.length && s.rt >= p.r0 - 1e-6 && s.rt <= p.r1 + 1e-6) return { mz: s.mz, y: s.y, mode: s.mode, pmz: s.pmz, py: s.py, scans: 1, i0: s.i, n: SC.n.get(scBase(k, p.level, prk(p.prec, p.filt))) };
+  return getSpec(k, p.r0, p.r1, p.level, prk(p.prec, p.filt), null);
 }
 // keep the next scans in the cache before they are needed (nothing is waited for)
 function scAhead(s) {
   if (s.si == null || (s.bg !== "" && s.bg != null)) return;
   const dir = s._dir || 1;
-  if (SC.m.has(scBase(s.k, s.level, s.prec) + "|" + (s.si + dir * 12))) return;
-  (dir > 0 ? scFetch(s.k, s.level, s.prec, s.si + 1, s.si + 40) : scFetch(s.k, s.level, s.prec, s.si - 40, s.si - 1)).catch(() => {});
+  const pk = prk(s.prec, s.filt);
+  if (SC.m.has(scBase(s.k, s.level, pk) + "|" + (s.si + dir * 12))) return;
+  (dir > 0 ? scFetch(s.k, s.level, pk, s.si + 1, s.si + 40) : scFetch(s.k, s.level, pk, s.si - 40, s.si - 1)).catch(() => {});
 }
 
 // ---- frozen intensity axis while walking (the m/z axis is always fixed, see drawSpec). s.lock = {ymax, z (zoom when locked), k (file), fresh}; {pending:true} = to be measured at the next draw
@@ -69,7 +70,7 @@ function lockSync(p, k, x0a, x1a, ymaxA, inRange, one) {
   const zk = p.zoom ? p.zoom.join() : "";
   const nb = (lo, hi) => {
     let m = 0;
-    if (one) for (let j = p.si - SC_AHEAD; j <= p.si + SC_AHEAD; j++) { const c = SC.m.get(scBase(k, p.level, p.prec) + "|" + j); if (c) c.y.forEach((v, i) => { if (v > m && c.mz[i] >= lo && c.mz[i] <= hi) m = v; }); }
+    if (one) for (let j = p.si - SC_AHEAD; j <= p.si + SC_AHEAD; j++) { const c = SC.m.get(scBase(k, p.level, prk(p.prec, p.filt)) + "|" + j); if (c) c.y.forEach((v, i) => { if (v > m && c.mz[i] >= lo && c.mz[i] <= hi) m = v; }); }
     return m * 1.12;
   };
   if (lk.ymax == null) { Object.assign(lk, { z: zk, k, pending: false, ymax: Math.max(ymaxA, nb(x0a, x1a)) }); return lk; }

@@ -216,8 +216,8 @@ class App:
             raise ValueError("no such file in the session")
         return self.session.items[k]
 
-    def chrom(self, k: int, kind: str, level: int, mz0: float | None = None, mz1: float | None = None, prec: float | None = None) -> dict:
-        rt, y = self._item(k).total(kind, level, mz0, mz1, prec)
+    def chrom(self, k: int, kind: str, level: int, mz0: float | None = None, mz1: float | None = None, prec: float | None = None, filt: str | None = None) -> dict:
+        rt, y = self._item(k).total(kind, level, mz0, mz1, prec, filt)
         return {"rt": [round(float(v), 4) for v in rt], "y": [round(float(v), 1) for v in y]}
 
     def xic(self, ks: list[int], mz: float, tol: float, level: int) -> dict:
@@ -314,17 +314,21 @@ class App:
             raise ValueError("Nessuna scansione in questo file.")
         return ans
 
-    def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None, merge: bool = False, hr: bool = True) -> dict:
+    def filters(self, k: int) -> dict:
+        """The scan types of the physical file of item k (what the filter menu of a cell lists), with their counts: see Item.filter_groups."""
+        return {"filters": self._item(k).filter_groups()}
+
+    def spectrum(self, k: int, rt0: float, rt1: float, level: int, precursor, bin_da: float, bg=None, merge: bool = False, hr: bool = True, filt: str | None = None) -> dict:
         if bg is not None:
             bg = {**bg, "item": self._item(bg["k"])}
         item = self._item(k)
         pt = item.ptol(level, precursor, hr)
-        mz, y, n = item.spectrum(rt0, rt1, level, precursor, prec_tol=pt, bin_da=bin_da, bg=bg, hr=hr)
-        return {**self._spec_json(item, level, mz, y, merge, hr), "scans": n, **item.window_scans(rt0, rt1, level, precursor, pt)}
+        mz, y, n = item.spectrum(rt0, rt1, level, precursor, prec_tol=pt, bin_da=bin_da, bg=bg, hr=hr, filt=filt)
+        return {**self._spec_json(item, level, mz, y, merge, hr), "scans": n, **item.window_scans(rt0, rt1, level, precursor, pt, filt)}
 
     MAX_SPECTRA = 60       # scans per /api/spectra request
 
-    def spectra(self, k: int, i0: int, i1: int, level: int, precursor, bin_da: float, merge: bool = False, hr: bool = True) -> dict:
+    def spectra(self, k: int, i0: int, i1: int, level: int, precursor, bin_da: float, merge: bool = False, hr: bool = True, filt: str | None = None) -> dict:
         """Single scans i0..i1 of file k (for scan-by-scan navigation); each one equals /api/spectrum on a window holding only that scan."""
         item = self._item(k)
         if item.kind() == "mrm":
@@ -334,11 +338,11 @@ class App:
         if i1 - i0 + 1 > self.MAX_SPECTRA:
             raise ValueError(f"al massimo {self.MAX_SPECTRA} scansioni per richiesta")
         pt = item.ptol(level, precursor, hr)
-        n = item.scan_count(level, precursor, pt)
+        n = item.scan_count(level, precursor, pt, filt)
         if i0 < 0 or i0 >= n:
             raise ValueError(f"scansione fuori dal file (il file ne ha {n})")
         return {"n": n, "scans": [{"i": s["i"], "sid": s["sid"], "rt": round(s["rt"], 4), **self._spec_json(item, level, s["mz"], s["y"], merge, hr)}
-                                  for s in item.scans(i0, i1, level, precursor, prec_tol=pt, bin_da=bin_da, hr=hr)]}
+                                  for s in item.scans(i0, i1, level, precursor, prec_tol=pt, bin_da=bin_da, hr=hr, filt=filt)]}
 
     def scanbin(self, k: int, i0: int, i1: int, level: int = 1, precursor=None, filt: str | None = None, hr: bool = True, merge: bool = False) -> bytes:
         """Single scans i0..i1 (at most 60) as one binary block, for navigation: 4 bytes (little endian) = length of the JSON header, the JSON header
@@ -352,10 +356,7 @@ class App:
         if i1 - i0 + 1 > self.MAX_SPECTRA:
             raise ValueError(f"al massimo {self.MAX_SPECTRA} scansioni per richiesta")
         pt = item.ptol(level, precursor, hr)
-        ids, rts = item._scan_ids(level, precursor, pt)
-        if filt:                                                    # one scan filter = one scan type (a path of fragmentation, MS1, ...)
-            keep = [j for j in range(len(ids)) if item.run.scans[int(ids[j])].filter == filt]
-            ids, rts = ids[keep], rts[keep]
+        ids, rts = item._scan_ids(level, precursor, pt, filt)       # one scan filter = one scan type (a path of fragmentation, MS1, ...)
         n = len(ids)
         if i0 < 0 or i0 >= n:
             raise ValueError(f"scansione fuori dal file (il file ne ha {n})")
