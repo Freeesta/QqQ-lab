@@ -51,6 +51,9 @@ function uipOpen(btn) {
     <div class="row hr-only">${I18N.t("settings.lab.label")} <button id="uip-lab" type="button">${I18N.t("settings.lab.button")}</button></div>
     <div class="row hr-only" title="${I18N.t("settings.hrDec.title")}">${I18N.t("settings.hrDec")} <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
     ` : ""}
+    ${!(window.BANCO && BANCO.on()) ? `
+    <div class="uip-tour-sec" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0;margin-top:8px;border-top:1px solid var(--line);padding-top:8px"><span>${I18N.t("tour.impost.titolo")}</span> <button id="uip-tour" type="button">${I18N.t(typeof E !== "undefined" && E.files && E.files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>
+    ` : ""}
     `;
   document.body.appendChild(d);
   const uipLang = d.querySelector("#uip-lang"); uipLang.value = I18N.lang;   // the label is always bilingual: whoever cannot read the current language finds it
@@ -60,6 +63,14 @@ function uipOpen(btn) {
   d.querySelector("#uip-merge").onchange = e => {            // spectra are asked again to the server with / without the merge
     UIP.merge = e.target.checked; uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof redrawAll === "function") redrawAll();
+  };
+  const uipTour = d.querySelector("#uip-tour");
+  if (uipTour) uipTour.onclick = () => {
+    d.remove();
+    if (window.TOUR) {
+      if (typeof E !== "undefined" && E.files && E.files.length) TOUR.inizia(1, 0);
+      else TOUR.caricaEsempio();
+    }
   };
   const uipCont = d.querySelector("#uip-cont"); if (uipCont) uipCont.onchange = e => { if (window.LISTE) LISTE.setOn(e.target.checked); };
   const uipLab = d.querySelector("#uip-lab"); if (uipLab) uipLab.onclick = () => { d.remove(); if (window.LISTE) LISTE.openLab(); };

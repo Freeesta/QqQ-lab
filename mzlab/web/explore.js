@@ -249,7 +249,7 @@ async function methodWarn() {
     el.hidden = false; Q("#methwarn-x").onclick = () => { el.hidden = true; };
   } catch (_) { /* no session or no method: nothing to say */ }
 }
-async function bootSession() { await bootSession0(); methodWarn(); }
+async function bootSession() { await bootSession0(); methodWarn(); window.TOUR && TOUR.offri(); }
 async function bootSession0() {
   const j = await J("api/session");
   S.sess = j.session;

@@ -240,6 +240,7 @@ AREE = [
     ("mzlab/web/tpmine-loader.js", {"e2e_tpmine1", "e2e_tpmine2"}), ("TP_Mine/", {"e2e_tpmine1", "e2e_tpmine2", "e2e_tpmine_mem"}),
     ("mzlab/web/browser", {"e2e13", "e2e_rust"}), ("mzlab/web/rust-", {"e2e_rust"}), ("crates/", {"e2e_rust"}), ("mzlab/web/sw.js", {"e2e13"}), ("mzlab/browser.py", {"e2e13"}), ("tools/build_site.py", {"e2e13"}),
     ("tools/genera_", set()), ("tools/prova_hr.py", set()), ("tools/validate_ionfamily.py", set()), ("tests/", set()),
+    ("mzlab/web/tour.js", {"e2e_tour"}),
 ]
 DOCS = (".md", ".txt", "LICENSE", ".github/", ".gitignore", ".gitattributes", "pyproject.toml")
 
