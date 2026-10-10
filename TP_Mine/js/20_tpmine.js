@@ -80,6 +80,7 @@
   const send = (msg, transfer) => new Promise((res, rej) => { const id = ++seq; pending.set(id, { res, rej }); worker.postMessage({ ...msg, id }, transfer || []); });
   const call = async (fn, ...args) => { await startWorker(); return JSON.parse(await send({ type: "call", fn, args: args.map(a => typeof a === "string" ? a : JSON.stringify(a)) })); };
   const callRaw = async (fn, ...args) => { await startWorker(); return send({ type: "call", fn, args }); };
+  QTOOLS.call = call;                       // the expert tools of the map (22_tpmine_esperti.js) use the same Python worker
   window.TPMINE_MEM = async () => { await startWorker(); return send({ type: "mem" }); };      // size of the worker's WebAssembly memory (tests)
 
   // ---------------------------------------------------------------- page files (the browser's own storage of the main program)
