@@ -30,7 +30,7 @@ LANG = WEB / "lang"
 ECCEZIONI = ROOT / "tools" / "i18n_eccezioni.txt"
 
 # JS files whose strings must already be free of Italian (grows as the parts of the work migrate files)
-MIGRATED = {"mzlab/web/barra.js", "mzlab/web/browser-worker.js", "mzlab/web/browser.js", "mzlab/web/calcola.js", "mzlab/web/draw.js", "mzlab/web/explore.js", "mzlab/web/i18n.js", "mzlab/web/icons-modi.js", "mzlab/web/index.html", "mzlab/web/modi.js", "mzlab/web/perdite.js", "mzlab/web/perf.js", "mzlab/web/scroll.js", "mzlab/web/settings.js", "mzlab/web/spettro.js", "mzlab/web/tables.js", "mzlab/web/help.js", "mzlab/web/liste.js", "mzlab/web/tabs.js", "mzlab/web/touch.js", "mzlab/web/xlsx.js"}
+MIGRATED = {"mzlab/web/barra.js", "mzlab/web/browser-worker.js", "mzlab/web/browser.js", "mzlab/web/calcola.js", "mzlab/web/draw.js", "mzlab/web/explore.js", "mzlab/web/i18n.js", "mzlab/web/icons-modi.js", "mzlab/web/index.html", "mzlab/web/modi.js", "mzlab/web/perdite.js", "mzlab/web/perf.js", "mzlab/web/scroll.js", "mzlab/web/settings.js", "mzlab/web/spettro.js", "mzlab/web/tables.js", "mzlab/web/help.js", "mzlab/web/liste.js", "mzlab/web/libreria.js", "mzlab/web/dda.js", "mzlab/web/composizione.js", "mzlab/web/origine.js", "mzlab/web/banco.js", "mzlab/web/libreria-worker.js", "mzlab/web/hr.js", "mzlab/web/tabs.js", "mzlab/web/touch.js", "mzlab/web/xlsx.js"}
 # not checked for Italian words: third-party code, the Teoria (Italian only, by decision), TP Mine, the catalogs themselves
 SKIP_DIRS = ("mzlab/web/vendor/", "mzlab/web/teoria/", "mzlab/web/lang/", "mzlab/web/esempi/", "TP_Mine/")
 SKIP_FILES = {"mzlab/web/elements.js"}
@@ -127,7 +127,7 @@ def source_files(exts: tuple[str, ...]) -> list[Path]:
 T_CALL = re.compile(r"""(?<![\w$.])(?:I18N\.)?t\(\s*(["'`])([A-Za-z][\w]*(?:\.[\w]+)+)\1""")
 T_DYN = re.compile(r"""(?<![\w$.])(?:I18N\.)?t\(\s*`([A-Za-z][\w]*(?:\.[\w]+)*\.)\$\{""")     # t(`prefix.${x}`): keeps every key with that prefix
 DATA_ATTR = re.compile(r"""data-i18n(?:-[a-z-]+)?=["']([A-Za-z][\w]*(?:\.[\w]+)+)["']""")
-PY_KEY = re.compile(r"""(?:UserError\(\s*|["']error_key["']\s*:\s*|["']key["']\s*:\s*|message\(\s*)["']([a-z][\w]*(?:\.[\w]+)+)["']""")
+PY_KEY = re.compile(r"""(?:UserError\(\s*|["'](?:error_key|label_key)["']\s*:\s*|["']key["']\s*:\s*|message\(\s*)["']([a-z][\w]*(?:\.[\w]+)+)["']""")
 
 
 KEY_LITERAL = re.compile(r"""["'`]([a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+)+)["'`]""")
@@ -347,6 +347,8 @@ def check_glossary(it: dict, en: dict, errs: list) -> None:
         if v.get("fonte") not in fonti:
             errs.append(f"glossary: entry «{v['id']}» without a known source")
         for k, itxt in it.items():
+            for ex in v.get("escludi_it", []):               # Italian phrases where the word has another meaning ("in fondo" = at the bottom)
+                itxt = itxt.replace(ex, "")
             if k not in en or not has_form(itxt, v["it"]):
                 continue
             etxt = en[k]

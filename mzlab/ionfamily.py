@@ -36,6 +36,8 @@ from collections import OrderedDict
 
 import numpy as np
 
+from .i18n import message
+
 _trapz = getattr(np, "trapezoid", None) or np.trapz     # numpy 1.x / 2.x
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -629,12 +631,12 @@ def profile_similarity(rt, x, p, p_apex_rt: float | None = None, n_boot: int = 2
       apex_diff_s (+- apex_diff_sigma_s), lag_best (scans) and xcorr_best (cross-correlation at lags -2..2), xcorr_lags,
       fwhm_ratio (X/P), p_shift (how special is the alignment: fraction of time-shifted copies of X that correlate at least as well
       with P, so autocorrelation of the smooth peaks is accounted for), corr_ci (block bootstrap 95% interval of Pearson),
-      n_scans, reliable, x_has_peak, warnings (list of Italian strings for the student tool)."""
+      n_scans, reliable, x_has_peak, warnings (list of messages {key, params} for the student tool)."""
     rt, x, p = np.asarray(rt, float), np.asarray(x, float), np.asarray(p, float)
     n = len(rt)
     res = {"n_scans": 0, "reliable": False, "x_has_peak": False, "warnings": []}
     if n < 7:
-        res["warnings"].append("Finestra troppo corta: servono almeno 7 scansioni.")
+        res["warnings"].append(message("of.warn.shortWindow"))
         return res
     pc, ps, pnoise = _prep(rt, p)
     xc, xs, xnoise = _prep(rt, x)
@@ -642,7 +644,7 @@ def profile_similarity(rt, x, p, p_apex_rt: float | None = None, n_boot: int = 2
     near = int(np.argmin(np.abs(rt - p_apex_rt))) if p_apex_rt is not None else None
     pk = _pick_peak(detp, near)
     if pk is None:
-        res["warnings"].append("Il candidato progenitore non ha un picco riconoscibile in questa finestra.")
+        res["warnings"].append(message("of.warn.noParentPeak"))
         return res
     xk = _pick_peak(detx, pk["apex_i"], max(3, int(pk["fwhm_scans"] * 2)))
     res["x_has_peak"] = xk is not None
@@ -653,9 +655,9 @@ def profile_similarity(rt, x, p, p_apex_rt: float | None = None, n_boot: int = 2
     nw = hi - lo + 1
     res["n_scans"], res["window"] = nw, [float(rt[lo]), float(rt[hi])]
     if nw < MIN_SCANS_RELIABLE:
-        res["warnings"].append("Picco con poche scansioni (%d): le metriche di forma sono poco affidabili." % nw)
+        res["warnings"].append(message("of.warn.fewScans", n=nw))
     if xk is None:
-        res["warnings"].append("Lo ione non mostra un picco proprio: segnale debole o rumore.")
+        res["warnings"].append(message("of.warn.ionNoPeak"))
     xw, pw = xc[sl], pc[sl]
     xsw, psw = xs[sl], ps[sl]
     wts = 0.5 * (xsw / max(xsw.max(), 1e-12) + psw / max(psw.max(), 1e-12)) + 1e-3
@@ -923,10 +925,10 @@ def kinetics(times, parent_area, ion_area, labels=None) -> dict:
     n = len(t)
     out = {"n": int(n), "warnings": []}
     if n < 3:
-        out["warnings"].append("Meno di 3 campioni: nessuna cinetica può essere stimata.")
+        out["warnings"].append(message("of.warn.fewSamples3"))
         return out
     if n < 5:
-        out["warnings"].append("Solo %d campioni: gli intervalli di confidenza sono poco affidabili." % n)
+        out["warnings"].append(message("of.warn.fewSamplesCi", n=n))
     pn, xn = P / max(P.max(), 1e-12), X / max(X.max(), 1e-12)
     out["times"], out["parent_norm"], out["ion_norm"] = t.tolist(), pn.tolist(), xn.tolist()
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -1039,9 +1041,9 @@ def annotate_roles(mz_x: float, mz_p: float, formula_p: str | None = None, tol: 
     d = mz_x - mz_p
     for k in (1, 2, 3):
         if abs(d - k * 1.003355) <= tol:
-            out.append({"role": "isotope", "label": "M+%d di P" % k, "delta_obs": d, "delta_exp": k * 1.003355, "err": d - k * 1.003355})
+            out.append({"role": "isotope", "label": "M+%d of P" % k, "label_key": "of.role.isoP", "params": {"k": k}, "delta_obs": d, "delta_exp": k * 1.003355, "err": d - k * 1.003355})
         if abs(-d - k * 1.003355) <= tol:
-            out.append({"role": "isotope", "label": "X è M+%d (P è l'isotopo di X)" % k, "delta_obs": d, "delta_exp": -k * 1.003355, "err": d + k * 1.003355})
+            out.append({"role": "isotope", "label": "X is M+%d (P is the isotope of X)" % k, "label_key": "of.role.isoX", "params": {"k": k}, "delta_obs": d, "delta_exp": -k * 1.003355, "err": d + k * 1.003355})
     M = mz_p - PROTON
     for name, shift, mult in ADDUCTS:
         if name == "[M+H]+":
@@ -1421,7 +1423,7 @@ def source_ramp(dp, f_int, p_int) -> dict:
     ok = np.isfinite(y)
     out = {"n": int(ok.sum()), "dp": dp.tolist(), "ratio": y.tolist(), "warnings": []}
     if ok.sum() < 3:
-        out["warnings"].append("Servono almeno 3 valori di DP.")
+        out["warnings"].append(message("of.warn.dp3"))
         return out
     d, v = dp[ok], y[ok]
     out["spearman"] = wspearman(d, v)
@@ -1441,7 +1443,7 @@ def source_ramp(dp, f_int, p_int) -> dict:
         out["sigmoid"] = {"ymax": float(ymax), "dp50": float(dp50), "s": float(s), "dp_appearance": float(dp50 - s * math.log(9.0)),
                           "r2": float(1 - sse / sst) if sst > 0 else float("nan")}
     else:
-        out["warnings"].append("Con meno di 4 valori di DP la sigmoide non viene adattata.")
+        out["warnings"].append(message("of.warn.dp4"))
     return out
 
 
@@ -1645,11 +1647,11 @@ def origin_report(samples, mz: float, parent_mz: float, rt0: float | None = None
     """Evidence on where the ion at `mz` comes from, relative to the candidate precursor `parent_mz`. `samples` is a list of
     dicts {"label", "time" (min or None), "table" (reader.PeakTable of the full-scan level), "key" (cache key)}. `ms2` (optional):
     {"x": (mz, int), "p": (mz, int)} product-ion spectra of X and of P. Nothing is concluded: every number is a measurement with its
-    own limits, `warnings` lists them in Italian for the student tool. Heavy parts are cached per sample and window."""
+    own limits, `warnings` lists them as messages {key, params} for the student tool. Heavy parts are cached per sample and window."""
     t_start = time.time()
     rep = {"mz": float(mz), "parent_mz": float(parent_mz), "warnings": [], "samples": [], "candidates": [], "timing": {}}
     if not samples:
-        rep["warnings"].append("Nessun file con scansioni full scan.")
+        rep["warnings"].append(message("of.warn.noFull"))
         return rep
     # reference sample = where the parent is strongest (unless chosen)
     if ref is None:
@@ -1659,7 +1661,7 @@ def origin_report(samples, mz: float, parent_mz: float, rt0: float | None = None
     rt, P = extract_trace(S["table"], parent_mz, 0.5)
     det = detect_peaks(rt, P)
     if not det["peaks"]:
-        rep["warnings"].append("Il candidato progenitore non ha un picco riconoscibile nel file di riferimento.")
+        rep["warnings"].append(message("of.warn.noParentRef"))
         return rep
     pk = det["peaks"][0]
     if rt0 is None or rt1 is None:
@@ -1672,14 +1674,13 @@ def origin_report(samples, mz: float, parent_mz: float, rt0: float | None = None
     rep["timing"]["rois_s"] = time.time() - t_start
     rep["n_rois"] = int(len(w.mz))
     if pk["n_scans"] < MIN_SCANS_RELIABLE:
-        rep["warnings"].append("Il picco del progenitore ha poche scansioni (%d): tutte le metriche di forma sono poco affidabili." % pk["n_scans"])
+        rep["warnings"].append(message("of.warn.parentFewScans", n=pk["n_scans"]))
     # P and X in the reference window
     rtw, Pw = extract_trace(S["table"], parent_mz, tol, rt0, rt1)
     flat = Pw >= 0.97 * Pw.max()
     rep["parent_flat_top_scans"] = int(flat.sum())
     if flat.sum() >= 3 and Pw.max() > 0:
-        rep["warnings"].append("Il picco del progenitore ha la cima piatta (%d scansioni al massimo): possibile saturazione del rivelatore, "
-                               "il rapporto F/P e la forma del picco ne risentono." % int(flat.sum()))
+        rep["warnings"].append(message("of.warn.flatTop", n=int(flat.sum())))
     _, Xw = extract_trace(S["table"], mz, tol, rt0, rt1)
     sim = profile_similarity(rtw, Xw, Pw, p_apex_rt=pk["apex_rt"])
     rep["profile"] = sim
@@ -1722,12 +1723,11 @@ def origin_report(samples, mz: float, parent_mz: float, rt0: float | None = None
     # mass coincidence at unit resolution: another strong co-eluting ROI within 1 Da of X
     near = [c for c in cands if 0.4 < abs(c["mz"] - mz) <= 1.0 and c["area_rel"] > 0.05]
     if near:
-        rep["warnings"].append("Coincidenza di massa possibile: a risoluzione unitaria ci sono ioni vicini (m/z %s) che co-eluiscono." %
-                               ", ".join("%.1f" % c["mz"] for c in near[:3]))
+        rep["warnings"].append(message("of.warn.massCoincidence", mz=", ".join("%.1f" % c["mz"] for c in near[:3])))
     if rf.get("ok") and rf.get("n", 0) < 6:
-        rep["warnings"].append("Rapporto F/P calcolato su pochi punti (%d)." % rf["n"])
+        rep["warnings"].append(message("of.warn.fewRatio", n=rf["n"]))
     if sim.get("x_snr", 1) < 5:
-        rep["warnings"].append("Ione debole: segnale/rumore basso, le metriche sono instabili.")
+        rep["warnings"].append(message("of.warn.weakIon"))
     # across samples
     rows, ratios, ses = [], [], []
     for k, s in enumerate(samples):
@@ -1759,9 +1759,9 @@ def origin_report(samples, mz: float, parent_mz: float, rt0: float | None = None
         rep["kinetics"] = kinetics([a for a, _, _ in tt], [b for _, b, _ in tt], [c for _, _, c in tt])
         rep["warnings"] += rep["kinetics"].get("warnings", [])
     else:
-        rep["warnings"].append("Meno di 3 campioni con tempo di trattamento: nessuna cinetica fra i campioni.")
+        rep["warnings"].append(message("of.warn.fewTimed"))
     if ms2 is not None and ms2.get("p") is not None:
         rep["ms2"] = ms2_similarity(mz, ms2["x"], parent_mz, ms2["p"]) if ms2.get("x") is not None else ms2_membership(mz, parent_mz, ms2["p"])
     rep["timing"]["total_s"] = time.time() - t_start
-    rep["note"] = ("Risoluzione unitaria: un m/z è un candidato, non un'identificazione. Queste sono misure, non una conclusione.")
+    rep["note"] = message("of.note")
     return to_jsonable(rep)

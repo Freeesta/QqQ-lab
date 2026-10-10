@@ -360,7 +360,10 @@
       ],
       "evita_en": [],
       "nota": "",
-      "fonte": "IUPAC2013"
+      "fonte": "IUPAC2013",
+      "escludi_it": [
+        "in fondo"
+      ]
     },
     {
       "id": "baseline",

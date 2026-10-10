@@ -17,6 +17,7 @@ import re
 import numpy as np
 
 from .elements import ELECTRON, MASS, parse_formula
+from ..i18n import UserError
 
 # monoisotopic masses of the isotopes that can be added as separate elements (labelled molecules, isotopologues)
 ISOTOPES = {
@@ -51,13 +52,13 @@ def parse_elements(text: str) -> dict[str, tuple[int, int]]:
             continue
         m = re.fullmatch(r"(\d*[A-Z][a-z]?)\s*:\s*(\d+)(?:\s*-\s*(\d+))?", part)
         if not m:
-            raise ValueError(f"cannot read the element «{part}» (write C:0-13)")
+            raise UserError("err.comp.element", {"part": part}, f"cannot read the element «{part}» (write C:0-13)")
         sym = m.group(1)
         lo = int(m.group(2)); hi = int(m.group(3)) if m.group(3) else lo
         if sym not in MASS and sym not in ISOTOPES:
-            raise ValueError(f"unknown element {sym!r}")
+            raise UserError("err.comp.unknown", {"symbol": sym}, f"unknown element {sym!r}")
         if hi < lo:
-            raise ValueError(f"{sym}: the maximum is below the minimum")
+            raise UserError("err.comp.range", {"symbol": sym}, f"{sym}: the maximum is below the minimum")
         out[sym] = (lo, hi)
     return out
 
@@ -132,15 +133,15 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
     rules_failed, iso {m1, m2, err1, err2, ok}.
     """
     if not (mz > 0):
-        raise ValueError("m/z must be positive")
+        raise UserError("err.comp.mz", text="m/z must be positive")
     if ion not in ADDUCT_ATOMS:
-        raise ValueError(f"unknown ion type {ion!r}")
+        raise UserError("err.comp.ion", {"ion": ion}, f"unknown ion type {ion!r}")
     add_atoms, ch = ADDUCT_ATOMS[ion]
     z = abs(z) * (1 if ch > 0 else -1) if z else ch
     if (z > 0) != (ch > 0):
-        raise ValueError("the charge does not agree with the ion type")
+        raise UserError("err.comp.charge", text="the charge does not agree with the ion type")
     if unit not in ("ppm", "mda"):
-        raise ValueError("the unit of the tolerance is ppm or mDa")
+        raise UserError("err.comp.unit", text="the unit of the tolerance is ppm or mDa")
     db = {**DBEQ, **(dbeq or {})}
     els = {**{k: v for k, v in DEFAULT_ELEMENTS.items()}} if not elements else dict(elements)
     for sym, n in add_atoms.items():                               # the atoms of the adduct are in the ion (Na, K, Cl, ...: at least that many)
@@ -160,7 +161,7 @@ def compose(mz: float, *, elements: dict[str, tuple[int, int]] | None = None, io
     ranges = [range(els[s][0], els[s][1] + 1) for s in others]
     size = int(np.prod([len(r) for r in ranges])) if ranges else 1
     if size > MAX_GRID:
-        raise ValueError("too many combinations: narrow the ranges of the elements")
+        raise UserError("err.comp.many", text="too many combinations: narrow the ranges of the elements")
     grid = (np.stack(np.meshgrid(*[np.arange(r.start, r.stop, dtype=np.int32) for r in ranges], indexing="ij"), -1).reshape(size, len(others))
             if others else np.zeros((1, 0), dtype=np.int32))
     mo = np.array([_mass(s) for s in others], float)

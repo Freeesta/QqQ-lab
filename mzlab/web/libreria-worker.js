@@ -221,7 +221,7 @@ function packIndex(idx, totalPeaks) {
   return buf;
 }
 function unpackIndex(buf) {
-  const h = new Uint32Array(buf, 0, 4); if (h[0] !== MAGIC) throw new Error("archivio non valido");
+  const h = new Uint32Array(buf, 0, 4); if (h[0] !== MAGIC) throw Object.assign(new Error("invalid archive"), { key: "lib.err.archive" });
   const n = h[1], o1 = 16, o2 = o1 + n * 8, o3 = o2 + pad8(n * 4), o4 = o3 + pad8(n);
   return { n, totalPeaks: h[2], prec: new Float64Array(buf, o1, n), ord: new Uint32Array(buf, o2, n), pol: new Int8Array(buf, o3, n), off: new Uint32Array(buf, o4, n + 1) };
 }
@@ -278,7 +278,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
       const idx = unpackIndex(await (await readFile(id + ".idx")).arrayBuffer()), meta = JSON.parse(await (await readFile(id + ".meta.json")).text()), info = JSON.parse(await (await readFile(id + ".info.json")).text()), pf = await readFile(id + ".peaks");
       o = { info, idx, meta, file: pf.size > 200e6 ? pf : null, peaks: pf.size > 200e6 ? null : await pf.arrayBuffer() };
     } else {
-      const r = await idbDo("readonly", s => s.get(id)); if (!r) throw new Error("libreria non trovata");
+      const r = await idbDo("readonly", s => s.get(id)); if (!r) throw Object.assign(new Error("library not found"), { key: "lib.err.notFound" });
       o = { info: r.info, idx: unpackIndex(r.idx), meta: r.meta, peaks: r.peaks, file: null };
     }
     LOADED.set(id, o); return o;
@@ -297,8 +297,8 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
 
   async function addLibrary(file, reqId) {
     const head = await file.slice(0, 4096).text(), fmt = formatOf(file.name, head);
-    if (fmt === "unsupported") throw new Error("Questo formato non si legge: esporta la libreria in MSP (in NIST MS Search: Library Export, formato MSP).");
-    if (fmt === "unknown") throw new Error("Formato non riconosciuto: servono file MSP o MGF.");
+    if (fmt === "unsupported") throw Object.assign(new Error("unsupported format: export the library as MSP"), { key: "lib.err.unsupported" });
+    if (fmt === "unknown") throw Object.assign(new Error("unknown format: MSP or MGF needed"), { key: "lib.err.unknown" });
     const id = "lib" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), sink = new Sink(id); await sink.open();
     const prec = [], pol = [], off = [0], meta = []; let total = 0, last = 0;
     const parser = new LibParser(fmt, s => { prec.push(s.prec); pol.push(s.pol); meta.push(s.meta); sink.add(s.mz, s.it); total += s.mz.length; off.push(total); });
@@ -310,7 +310,7 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
     }
     parser.push(dec.decode()); parser.end();
     const peaksBuf = await sink.close();
-    if (!prec.length) { if (hasOpfs() && opfsOk) { try { await (await root()).removeEntry(id + ".peaks"); } catch (e) { /* none */ } } throw new Error(`Nessuno spettro utilizzabile (scartati: ${parser.stats.dropped}).`); }
+    if (!prec.length) { if (hasOpfs() && opfsOk) { try { await (await root()).removeEntry(id + ".peaks"); } catch (e) { /* none */ } } throw Object.assign(new Error(`no usable spectrum (dropped: ${parser.stats.dropped})`), { key: "lib.err.noSpectrum", params: { dropped: parser.stats.dropped } }); }
     const idx = buildIndex(prec, pol, off), info = { id, name: file.name.replace(/\.(msp|mgf)$/i, ""), file: file.name, size: file.size, n: prec.length, pos: pol.filter(p => p > 0).length, neg: pol.filter(p => p < 0).length,
       dropped: parser.stats.dropped, noPrec: parser.stats.noPrec, noPeaks: parser.stats.noPeaks, broken: parser.stats.broken, peaks: total, date: Date.now(), fmt };
     await saveLibrary(id, info, packIndex(idx, total), meta, peaksBuf);
@@ -371,6 +371,6 @@ if (typeof self !== "undefined" && typeof self.postMessage === "function" && typ
       else if (m.cmd === "analogs") r = await runAnalogs(m);
       else throw new Error("comando sconosciuto: " + m.cmd);
       postMessage({ type: "done", reqId, ...r });
-    } catch (err) { postMessage({ type: "error", reqId, error: String(err && err.message || err) }); }
+    } catch (err) { postMessage({ type: "error", reqId, error: String(err && err.message || err), error_key: err && err.key, params: err && err.params }); }
   };
 }
