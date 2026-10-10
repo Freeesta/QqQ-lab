@@ -13,6 +13,7 @@ try:
         pg.set_input_files("#pickdam", str(DAM)); pg.wait_for_timeout(800)
         assert DAM.name in pg.inner_text("#mlist"), "the .dam is listed on the start screen"
         pg.click("text=Carica dati"); ready(pg)
+        pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
         def pda():
             pg.locator('.pnl.chrom [data-o="kind"]').first.select_option("pda"); pg.wait_for_timeout(2500)
             n = pg.evaluate("E.panels[0]._a.sr.length"); assert n >= 3, n          # one trace per Full Scan file (other types live in their own tab)

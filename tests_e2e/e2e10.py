@@ -39,7 +39,7 @@ try:
             pg.click("#np-ad"); pg.wait_for_timeout(400); pg.click("#sidebar-tablist [data-t=losses]"); pg.wait_for_timeout(300)
             t = pg.inner_text("#sb-panel-losses"); assert "Differenze di massa frequenti" not in t and "Riferimenti" in t and "Levsen" in t
             assert pg.locator("a[href*='jms.1234']").count() == 1
-            pg.click("#sidebar-tablist [data-t=ptable]"); pg.wait_for_timeout(300)             # the periodic table is too wide for the sidebar: it stays a window
+            pg.click("#np-pt"); pg.wait_for_timeout(300)             # the periodic table is in the header: it stays a window
             t = pg.inner_text("#refdlg"); assert "Passa sopra un elemento" not in t and "OpenChemLib" not in t and "CIAAW" not in t
             pg.screenshot(path=SH + "103_tables.png")
         step("removed texts; references listed", texts)

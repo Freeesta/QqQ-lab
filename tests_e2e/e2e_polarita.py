@@ -33,7 +33,7 @@ try:
         def uniform():
             pg.evaluate("E.files.filter(f=>f.polarity==='negative').forEach(f=>{f.gone=true})"); pg.evaluate("renderFileList()"); pg.wait_for_timeout(300)
             assert pg.locator("#flst .pol").count() == 0, "all files ESI+: no badge per file"
-            assert "ESI+" in pg.inner_text("#flst .fgh"), pg.inner_text("#flst .fgh")
+            # Federico: "Non scrivere ESI+ o ESI- dopo il tipo di esperimento nei file"
             ov = pg.evaluate("(()=>{const l=document.querySelector('#flst');return [...l.querySelectorAll('.fl')].every(e=>e.getBoundingClientRect().right<=l.getBoundingClientRect().right+1)})()"); assert ov, "nothing sticks out of the list"
             pg.evaluate("E.files.forEach(f=>{f.gone=false})"); pg.evaluate("renderFileList()")
         def simboli():
@@ -42,10 +42,9 @@ try:
             t = pg.inner_text("body"); bad = [c for c in "\u00b2\u00b3\u207a\u207b\u2080\u2081\u2082\u2083\u2084\u00bd" if c in t]; assert not bad, bad
             pg.click("#dtabs [data-t=full]"); ready(pg)
         step("7.2 MS2 has a real superscript, no Unicode superscripts in the visible text of the Dati tab", simboli)
-        step("one polarity only: no badge per file, ESI+ once in the group heading, nothing out of the row", uniform)
+        step("one polarity only: no badge per file, no ESI in group heading, nothing out of the row", uniform)
         def adduct():
             neg = pg.evaluate("E.files.findIndex(f=>f.polarity==='negative')")
-            pg.evaluate("(k)=>{E.files.forEach((f,i)=>f.vis=i===k);E.browse=false}", neg) if False else None
             pg.evaluate(f"E.files.forEach((f,i)=>f.vis=i==={neg})")
             assert pg.evaluate("defAdduct()") == "[M-H]-"
             pg.evaluate(f"E.files.forEach((f,i)=>f.vis=i!=={neg})"); assert pg.evaluate("defAdduct()") == "[M+H]+"

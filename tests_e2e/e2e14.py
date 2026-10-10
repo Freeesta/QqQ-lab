@@ -25,6 +25,7 @@ with sync_playwright() as p:
             pg.screenshot(path=SH + f"140_start_{w}.png")
         step(f"start screen at {w}px", start_small)
     pg.set_viewport_size({"width": 1500, "height": 900}); pg.click("#opbtn"); pg.wait_for_selector(".pnl.chrom canvas", timeout=60000); pg.wait_for_timeout(2500)
+    pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
     for w, h in SIZES:
         def at():
             pg.set_viewport_size({"width": w, "height": h}); pg.wait_for_timeout(900)

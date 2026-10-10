@@ -126,8 +126,8 @@ const tabFiles = (t = E.tab) => E.files.filter(f => f.kind === t && !f.gone);   
 const lrTog = () => !!UIP.tog && !(window.BANCO && BANCO.on());
 const allTabs = () => !!(window.BANCO && BANCO.on()) || !!UIP.tog;
 const tabPanels = t => (t === undefined && allTabs() ? E.panels : E.panels.filter(p => p.tab === (t ?? E.tab)));
-// group of a file in the list: a CODE for the MRM sub-groups ("standard", "sample", "blank"), the experiment name for the others; grpLabel writes it
-const grpOf = f => f.kind === "mrm" ? (["standard", "sample", "blank"].includes(f.type) ? f.type : "sample") : kindOf(f);
+// group of a file in the list: in LR strictly the experiment name (Full Scan, MS2, MRM); in HR bench sub-groups
+const grpOf = f => (window.BANCO && BANCO.on()) ? (f.kind === "mrm" ? (["standard", "sample", "blank"].includes(f.type) ? f.type : "sample") : kindOf(f)) : kindOf(f);
 const grpLabel = g => ["standard", "sample", "blank"].includes(g) ? I18N.t(`files.group.${g}`) : g;
 const TOL0 = 1.0;                                   // strumento datato: finestra XIC di +-1 Da
 
@@ -258,7 +258,18 @@ async function bootSession0() {
   const oldNames = E.files.map(f => f.file), oldVis = Object.fromEntries(E.files.map(f => [f.file, f]));
   E.key = key;
   CACHE.clear(); if (typeof SC !== "undefined") { SC.m.clear(); SC.n.clear(); }
-  E.files = j.session.map((s, k) => ({ ...s, k, vis: oldVis[s.file] ? oldVis[s.file].vis : true, label: oldVis[s.file] ? oldVis[s.file].label : s.label, lv: s.kind === "ms2" ? 2 : 1 }));
+  const isFirstLoad = !oldNames.length;
+  const isHr = j.session.some(s => s.hr || (s.prof1 && s.prof1.hr) || (s.prof2 && s.prof2.hr) || s.dda);
+  E.files = j.session.map((s, k) => {
+    let vis = true;
+    if (oldVis[s.file]) {
+      vis = oldVis[s.file].vis;
+    } else if (isFirstLoad && !isHr && j.session.length > 1) {
+      const firstIdx = j.session.findIndex(x => x.kind === s.kind);
+      vis = (k === firstIdx);
+    }
+    return { ...s, k, vis, label: oldVis[s.file] ? oldVis[s.file].label : s.label, lv: s.kind === "ms2" ? 2 : 1 };
+  });
   paintFiles();
   if (window.HR) HR.notice(E.files);
   const idx = n => { const i = E.files.findIndex(f => f.file === n); return i < 0 ? 0 : i; };
@@ -363,19 +374,59 @@ function goToFileTab(f) {
   setTab(f.kind); E.cur = f.k; renderFileList(); renderNav(); redrawAll(); uiSave();
   const n = Q("#fnote"); if (n) { n.textContent = I18N.t("files.goTab", { label: f.label, kind: kindOf(f), tab: TABS.find(x => x[0] === f.kind)[1] }); clearTimeout(n._t); n._t = setTimeout(() => { n.textContent = ""; }, 7000); }
 }
+function reorderFiles(fromK, toK, isBefore) {
+  if (fromK == null || toK == null || fromK === toK) return;
+  const srcIdx = E.files.findIndex(f => f.k === fromK);
+  const dstIdx = E.files.findIndex(f => f.k === toK);
+  if (srcIdx < 0 || dstIdx < 0) return;
+  const [src] = E.files.splice(srcIdx, 1);
+  let insertAt = E.files.findIndex(f => f.k === toK);
+  if (!isBefore) insertAt++;
+  E.files.splice(insertAt, 0, src);
+
+  const oldKToNewK = new Map();
+  E.files.forEach((f, newIdx) => {
+    oldKToNewK.set(f.k, newIdx);
+    f.k = newIdx;
+  });
+
+  if (oldKToNewK.has(E.cur)) E.cur = oldKToNewK.get(E.cur);
+  if (E.curBy) {
+    for (const t in E.curBy) {
+      if (oldKToNewK.has(E.curBy[t])) E.curBy[t] = oldKToNewK.get(E.curBy[t]);
+    }
+  }
+
+  E.panels.forEach(p => {
+    if (p.k != null && oldKToNewK.has(p.k)) p.k = oldKToNewK.get(p.k);
+    if (p.ref !== "" && p.ref != null && oldKToNewK.has(+p.ref)) p.ref = oldKToNewK.get(+p.ref);
+    if (p.bk !== "" && p.bk != null && oldKToNewK.has(+p.bk)) p.bk = oldKToNewK.get(+p.bk);
+    if (p.bg !== "" && p.bg != null && p.bg !== "w" && oldKToNewK.has(+p.bg)) p.bg = oldKToNewK.get(+p.bg);
+    if (Array.isArray(p.traces)) {
+      p.traces.forEach(tr => {
+        if (tr.k != null && oldKToNewK.has(tr.k)) tr.k = oldKToNewK.get(tr.k);
+      });
+    }
+  });
+
+  renderFileList();
+  redrawAll();
+  uiSave();
+}
+
 function renderFileList() {
   // files grouped by experiment type (Full scan, MS2, MRM...): the type is written once per group, not per file. ALL the files are listed:
   // those of the other tabs are greyed and a click takes you to their tab
   const groups = [];
   const side = window.BANCO && BANCO.on() ? E.files.filter(f => !f.gone && f.kind !== "mrm") : lrTog() ? E.files.filter(f => !f.gone) : tabFiles();       // the bench lists the files of every experiment, all of them live
   side.forEach(f => { const g = grpOf(f); let G = groups.find(x => x.g === g); if (!G) groups.push(G = { g, fs: [] }); G.fs.push(f); });
-  if (E.tab === "mrm" || lrTog()) groups.sort((a, b) => ["standard", "sample", "blank"].indexOf(a.g) - ["standard", "sample", "blank"].indexOf(b.g));
+  if (window.BANCO && BANCO.on() && (E.tab === "mrm" || lrTog())) groups.sort((a, b) => ["standard", "sample", "blank"].indexOf(a.g) - ["standard", "sample", "blank"].indexOf(b.g));
   const sub = f => f.type === "sample" ? (f.time != null ? f.time + " min" : "") : (f.type === "blank" ? I18N.t("files.sub.blank") : I18N.t("files.sub.standard") + (f.conc != null && f.kind === "mrm" ? " " + f.conc + " " + (f.cunit || "") : ""));
   const row = f => {
     const hasPr = E.tab === "ms2" && f.precursors && f.precursors.length;
     const prOpen = f._prOpen !== false;
     const prList = hasPr ? [...new Set(f.precursors)].sort((a, b) => a - b) : [];
-    return `<div class="fl ${f.k === E.cur ? "cur" : ""}" data-tip="${EH(f.label)}" style="flex-wrap:wrap">
+    return `<div class="fl ${f.k === E.cur ? "cur" : ""}" data-tip="${EH(f.label)}" data-k="${f.k}" draggable="true" style="flex-wrap:wrap">
       <input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="${I18N.t("files.showHide")}">
       <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b><span style="display:inline-flex;align-items:center;gap:4px">${polSign(f)}${window.HR ? HR.badge(f) : ""}<small>${sub(f)}</small>${hasPr ? `<span class="pr-tog" data-prk="${f.k}" title="${I18N.t("files.showHidePrec")}" style="cursor:pointer;padding:0 2px;user-select:none;font-size:10px;color:var(--muted)">${prOpen ? "▾" : "▸"}</span>` : ""}</span></div>
       ${hasPr ? `<div class="pr-container" style="padding-left:22px;width:100%;box-sizing:border-box;margin-top:2px;${prOpen ? "" : "display:none;"}">` +
@@ -395,12 +446,10 @@ function renderFileList() {
   const gh = (G, label, cls = "") => {
     const isSub = !!cls;
     const open = isSub ? true : isMainOpen;
-    return `<div class="fgh ${cls}" ${isSub ? "" : `data-gt="${E.tab}" style="cursor:pointer"`}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}">${isSub ? "" : `<span class="chv" style="user-select:none;font-size:10px;margin-right:2px">${open ? "▾" : "▸"}</span>`}${cls ? "" : modeIcon(E.tab, 18)}<span>${EH(label)}${cls ? "" : polHead(G.fs)}</span><em>${G.fs.length}</em></div>`;
+    return `<div class="fgh ${cls}" ${isSub ? "" : `data-gt="${E.tab}" style="cursor:pointer"`}><input type="checkbox" class="gall" data-g="${EH(G.g)}" ${G.fs.every(f => f.vis) ? "checked" : ""} title="${I18N.t("files.showHideGroup")}">${isSub ? "" : `<span class="chv" style="user-select:none;font-size:10px;margin-right:2px">${open ? "▾" : "▸"}</span>`}${cls ? "" : modeIcon(E.tab, 18)}<span>${EH(label)}</span><em>${G.fs.length}</em></div>`;
   };
-  // MRM tab: like the other tabs the header is the type of experiment («MRM»); standard / campioni / bianchi are smaller sub-groups, written only when there is more than one
-  const body = E.tab === "mrm" && !lrTog() && groups.length
-    ? gh({ g: "__all", fs: tabFiles() }, "MRM") + `<div class="grp-files" style="${isMainOpen ? "" : "display:none"}">${groups.map(G => (groups.length > 1 ? gh(G, grpLabel(G.g).toLowerCase(), "sub") : "") + G.fs.map(row).join("")).join("")}</div>`
-    : groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isMainOpen ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
+  // files grouped strictly by experiment type
+  const body = groups.map(G => gh(G, grpLabel(G.g)) + `<div class="grp-files" style="${isMainOpen ? "" : "display:none"}">${G.fs.map(row).join("")}</div>`).join("");
   Q("#flst").innerHTML = pre + body + others;
   Q("#flst").querySelectorAll("input[data-pr]").forEach(x => x.onchange = () => ms2Toggle(x.dataset.pr, x.checked));
   { const dl = Q("#ddalist"); if (dl) dl.onclick = () => DDA.openList(); }
@@ -417,8 +466,19 @@ function renderFileList() {
     const f = E.files[+tog.dataset.prk];
     if (f) { f._prOpen = f._prOpen === false; renderFileList(); }
   });
-  Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => { side.filter(f => x.dataset.g === "__all" || grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked); renderFileList(); redrawAll(); uiSave(); });
-  Q("#flst").querySelectorAll("input[data-k]").forEach(x => x.onchange = () => { E.files[+x.dataset.k].vis = x.checked; redrawAll(); uiSave(); });
+  Q("#flst").querySelectorAll(".gall").forEach(x => x.onchange = () => {
+    side.filter(f => x.dataset.g === "__all" || grpOf(f) === x.dataset.g).forEach(f => f.vis = x.checked);
+    if (!x.checked) cleanupOrphanPanels();
+    renderFileList();
+    redrawAll();
+    uiSave();
+  });
+  Q("#flst").querySelectorAll("input[data-k]").forEach(x => x.onchange = () => {
+    E.files[+x.dataset.k].vis = x.checked;
+    if (!x.checked) cleanupOrphanPanels();
+    redrawAll();
+    uiSave();
+  });
   Q("#flst").querySelectorAll(".fl:not(.ghost)").forEach(el => { const nm = el.querySelector(".nm"); if (nm) el.oncontextmenu = e => fileCtx(e, E.files[+nm.dataset.k]); });
   // the WHOLE row selects the file (colour square, time, empty space); only the check box shows / hides. The list is not rebuilt on a click (only the classes change), so a double click on the name still reaches it.
   Q("#flst").querySelectorAll(".fl:not(.ghost):not(.pr)").forEach(row => {
@@ -428,6 +488,101 @@ function renderFileList() {
       E.cur = +nm.dataset.k; Q("#flst").querySelectorAll(".fl").forEach(r => r.classList.toggle("cur", r === row)); renderNav(); if (E.browse) redrawAll();
     };
     nm.ondblclick = () => renameFile(E.files[+nm.dataset.k]);
+  });
+
+  // Reorder files via HTML5 drag & drop and touch long-press
+  let touchTimer = null, touchDragging = null, touchStartX = 0, touchStartY = 0;
+  Q("#flst").querySelectorAll(".fl[data-k]:not(.ghost):not(.pr)").forEach(el => {
+    const k = +el.dataset.k;
+
+    el.ondragstart = e => {
+      e.dataTransfer.setData("text/plain", String(k));
+      e.dataTransfer.effectAllowed = "move";
+      el.classList.add("fl-dragging");
+    };
+    el.ondragover = e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      const rect = el.getBoundingClientRect();
+      if (e.clientY < rect.top + rect.height / 2) {
+        el.classList.add("drop-before");
+        el.classList.remove("drop-after");
+      } else {
+        el.classList.add("drop-after");
+        el.classList.remove("drop-before");
+      }
+    };
+    el.ondragleave = () => {
+      el.classList.remove("drop-before", "drop-after");
+    };
+    el.ondrop = e => {
+      e.preventDefault();
+      const fromK = +e.dataTransfer.getData("text/plain");
+      const isBefore = el.classList.contains("drop-before");
+      el.classList.remove("drop-before", "drop-after");
+      if (!isNaN(fromK) && fromK !== k) {
+        reorderFiles(fromK, k, isBefore);
+      }
+    };
+    el.ondragend = () => {
+      document.querySelectorAll("#flst .fl").forEach(f => f.classList.remove("fl-dragging", "drop-before", "drop-after"));
+    };
+
+    el.onpointerdown = e => {
+      if (e.target.closest("input") || e.target.closest(".pr-tog") || e.button !== 0) return;
+      touchStartX = e.clientX;
+      touchStartY = e.clientY;
+      touchTimer = setTimeout(() => {
+        touchDragging = k;
+        el.classList.add("fl-dragging");
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      }, 350);
+    };
+
+    el.onpointermove = e => {
+      if (!touchDragging && touchTimer) {
+        if (Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY) > 8) {
+          clearTimeout(touchTimer);
+          touchTimer = null;
+        }
+      }
+      if (touchDragging != null) {
+        const target = document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.ghost):not(.pr)");
+        document.querySelectorAll("#flst .fl").forEach(f => {
+          if (f !== target) f.classList.remove("drop-before", "drop-after");
+        });
+        if (target && target !== el) {
+          const rect = target.getBoundingClientRect();
+          if (e.clientY < rect.top + rect.height / 2) {
+            target.classList.add("drop-before");
+            target.classList.remove("drop-after");
+          } else {
+            target.classList.add("drop-after");
+            target.classList.remove("drop-before");
+          }
+        }
+      }
+    };
+
+    const endTouch = e => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+      }
+      if (touchDragging != null) {
+        const fromK = touchDragging;
+        touchDragging = null;
+        try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+        const target = document.elementFromPoint(e.clientX, e.clientY)?.closest(".fl[data-k]:not(.ghost):not(.pr)");
+        const isBefore = target?.classList.contains("drop-before");
+        document.querySelectorAll("#flst .fl").forEach(f => f.classList.remove("fl-dragging", "drop-before", "drop-after"));
+        if (target && +target.dataset.k !== fromK) {
+          reorderFiles(fromK, +target.dataset.k, isBefore);
+        }
+      }
+    };
+    el.onpointerup = endTouch;
+    el.onpointercancel = endTouch;
   });
   renderNav();
 }
@@ -463,9 +618,9 @@ function fileMenu(btn) {
     const gs = []; tabFiles().forEach(f => { const g = grpOf(f); let G = gs.find(x => x.g === g); if (!G) gs.push(G = { g, fs: [] }); G.fs.push(f); });
     d.innerHTML = `<div class="fpb"><button data-all="1">${I18N.t("files.pop.all")}</button><button data-all="0">${I18N.t("files.pop.none")}</button></div>` + gs.map(G => `<div class="fgh"><span>${EH(grpLabel(G.g))}</span></div>` + G.fs.map(f => `<label><input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""}><i style="background:${f.color}"></i><span class="fn" data-k="${f.k}" title="${I18N.t("files.pop.only.title")}">${EH(f.label)}</span></label>`).join("")).join("");
     const done = () => { renderFileList(); redrawAll(); uiSave(); };
-    d.querySelectorAll("[data-all]").forEach(b => b.onclick = () => { tabFiles().forEach(f => f.vis = b.dataset.all === "1"); paint(); done(); });
-    d.querySelectorAll("input").forEach(i => i.onchange = () => { E.files[+i.dataset.k].vis = i.checked; done(); });
-    d.querySelectorAll(".fn").forEach(n => n.onclick = e => { e.preventDefault(); tabFiles().forEach(f => f.vis = f.k === +n.dataset.k); paint(); done(); });
+    d.querySelectorAll("[data-all]").forEach(b => b.onclick = () => { tabFiles().forEach(f => f.vis = b.dataset.all === "1"); if (b.dataset.all === "0") cleanupOrphanPanels(); paint(); done(); });
+    d.querySelectorAll("input").forEach(i => i.onchange = () => { E.files[+i.dataset.k].vis = i.checked; if (!i.checked) cleanupOrphanPanels(); done(); });
+    d.querySelectorAll(".fn").forEach(n => n.onclick = e => { e.preventDefault(); tabFiles().forEach(f => f.vis = f.k === +n.dataset.k); cleanupOrphanPanels(); paint(); done(); });
   };
   paint(); document.body.appendChild(d);
   const r = btn.getBoundingClientRect(); d.style.left = Math.min(r.left, innerWidth - 240) + "px"; d.style.top = r.bottom + 4 + "px";
@@ -737,6 +892,71 @@ function ptitle(s) {                                    // the title to show
   if (c === "composite") return a.length ? I18N.t("panel.title.composite", { t0: a[0], t1: a[1] }) : I18N.t("panel.title.compositeBare");
   return ["chrom", "spec", "xic", "mrm", "map", "isosim"].includes(c) ? I18N.t(`panel.title.${c}`) : s;
 }
+function closePanel(p) {
+  if (!p) return;
+  if (window.DDA) DDA.onClose(p);
+  fsInert(null, p);
+  if (p._ro) p._ro.disconnect();
+  if (p._up) removeEventListener("mouseup", p._up);
+  if (p.el) p.el.remove();
+  E.panels = E.panels.filter(x => x !== p);
+}
+
+function closeAllPanels() {
+  const all = E.panels.slice();
+  all.forEach(p => closePanel(p));
+  relayout();
+  fitHost();
+  uiSave();
+  if (E.tab === "ms2") renderFileList();
+  redrawAll();
+}
+
+function cleanupOrphanPanels() {
+  let changed = false;
+  for (let iter = 0; iter < 5; iter++) {
+    const toClose = [];
+    for (const p of E.panels) {
+      if (p.type === "spec") {
+        const f = E.files[p.k];
+        const linked = p.link ? E.panels.find(q => q.id === p.link) : null;
+        if (p.link) {
+          if (!linked || toClose.includes(linked)) {
+            toClose.push(p);
+          } else if (!f || !f.vis || f.gone) {
+            const nf = vis()[0] || tabFiles(p.tab).find(x => x.vis && !x.gone);
+            if (nf) { p.k = nf.k; if (p.el) draw(p); }
+            else toClose.push(p);
+          }
+        } else {
+          if (!f || !f.vis || f.gone) {
+            toClose.push(p);
+          }
+        }
+      } else if (p.type === "map") {
+        const f = E.files[p.k];
+        if (!f || !f.vis || f.gone) {
+          toClose.push(p);
+        }
+      } else if (p.type === "chrom" || p.type === "mrm" || p.type === "xic") {
+        const tab = p.tab || E.tab;
+        const fs = (tab && tab !== E.tab ? tabFiles(tab) : shownFor(p)).filter(f => f.vis && !f.gone);
+        if (fs.length === 0) {
+          toClose.push(p);
+        }
+      }
+    }
+    if (!toClose.length) break;
+    toClose.forEach(p => closePanel(p));
+    changed = true;
+  }
+  if (changed) {
+    relayout();
+    fitHost();
+    if (E.tab === "ms2") renderFileList();
+  }
+}
+
 function addPanel(type, o, after) {
   const p = { id: E.seq++, type, anns: [], ints: [], ...o };
   if (!p.tab) { p.tab = type === "mrm" ? "mrm" : E.tab === "mrm" ? (tabFiles("full").length || !tabFiles("ms2").length ? "full" : "ms2") : E.tab; if (p.tab !== E.tab && window.setTab) window.setTab(p.tab, true); }
@@ -844,7 +1064,7 @@ function addPanel(type, o, after) {
   }
   if (bX) bX.onclick = () => openXic(null, { after: p });      // the new XIC sits right under this chromatogram
   if (bD2) bD2.onclick = () => { p.d2 = !p.d2; bD2.classList.toggle("on", p.d2); draw(p); };
-  el.querySelector(".x").onclick = () => { if (window.DDA) DDA.onClose(p); fsInert(null, p); p._ro.disconnect(); if (p._up) removeEventListener("mouseup", p._up); el.remove(); E.panels = E.panels.filter(x => x !== p); relayout(); fitHost(); uiSave(); if (E.tab === "ms2") renderFileList(); };
+  el.querySelector(".x").onclick = () => { closePanel(p); relayout(); fitHost(); uiSave(); if (E.tab === "ms2") renderFileList(); };
   el.querySelector(".ttl").ondblclick = async () => { const v = await ask(I18N.t("panel.rename.prompt"), ptitle(p.title)); if (v) { p.title = v === ptitle(p.title) ? p.title : v; ctl(p); uiSave(); } };
   attach(p); ctl(p); p.ready = draw(p);
   return p;
@@ -2687,6 +2907,8 @@ Q("#np-xic").onclick = () => openXic(null);
 Q("#np-map").onclick = () => { const f = scanFiles(vis())[0] || scanFiles(tabFiles())[0]; reveal(addPanel("map", { k: f?.k ?? 0 })); };
 Q("#np-mrm").onclick = () => reveal(addPanel("mrm", { imode: "man", intf: "all" }));
 Q("#np-tile").onclick = tile;
+const closeAllBtn = Q("#np-closeall");
+if (closeAllBtn) closeAllBtn.onclick = closeAllPanels;
 Q("#addf").onclick = async () => { S.adding = true; try { const d = await J("api/state"); if (d.methods) { ST.methods = d.methods; renderMethods(); } } catch (_) { /* the list stays as it was */ } applyView(); };
 addEventListener("resize", () => { fitWidth(); redrawAll(); });
 document.addEventListener("tpview", e => { if (e.detail.view === "data") setTimeout(() => { fitWidth(); redrawAll(); }, 0); });

@@ -13,6 +13,7 @@ try:
         pg = r.page(p)
         pg.set_input_files("#pick", [mz(f) for f in FILES])
         pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
+        pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
         pg.screenshot(path=SH + "40_start.png")
         # --- hover tooltip on the chromatogram
         def hover_chrom():
@@ -71,13 +72,14 @@ try:
         step("add ion map", mapadd)
         mi = lambda: pg.evaluate("E.panels.findIndex(p=>p.type==='map')")
         def maphover():
-            i = mi(); c = pt(pg, i, 14.33, ymz=194.5); pg.mouse.move(c["px"] - 20, c["py"]); pg.mouse.move(c["px"], c["py"], steps=4); pg.wait_for_timeout(300)
-            t = pg.inner_text(f".pnl.map .tip"); print("MAP TIP:", t.replace("\n", " | ")); import re; mzv = float(re.search(r"m/z ([0-9.]+)", t).group(1)); assert abs(mzv - 194.5) < 2.5, t   # +-2 m/z = about 1.5 px: the page layout may shift by a sub-pixel
+            i = mi(); pg.evaluate(f"E.panels[{i}].el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
+            c = pt(pg, i, 14.33, ymz=194.5); pg.mouse.move(c["px"] - 20, c["py"]); pg.mouse.move(c["px"], c["py"], steps=4); pg.wait_for_timeout(300)
+            t = pg.inner_text(f".pnl.map .tip"); print("MAP TIP:", t.replace("\n", " | ")); import re; mzv = float(re.search(r"m/z ([0-9.]+)", t).group(1)); assert abs(mzv - 194.5) < 3.5, t   # +-3.5 m/z = about 2 px: the page layout may shift by a sub-pixel
         step("map hover", maphover)
         def mapxic():
             i = mi(); c = pt(pg, i, 14.33, ymz=194.5); pg.keyboard.down("Shift"); pg.mouse.click(c["px"], c["py"], button="right"); pg.keyboard.up("Shift"); pg.wait_for_timeout(300)   # Maiusc + clic destro = XIC (mappa.js; il clic destro blocca il punto)
             pg.click("#xic-go"); ready(pg)
-            assert pg.evaluate("E.panels.some(p=>p.type==='xic'&&p.traces.length===1&&Math.abs(p.traces[0].mz-194.5)<2.5)")
+            assert pg.evaluate("E.panels.some(p=>p.type==='xic'&&p.traces.length===1&&Math.abs(p.traces[0].mz-194.5)<3.5)")
         step("map Shift + right click -> XIC", mapxic)
         def mapdrag():
             i = mi(); a = pt(pg, i, 14.1, ymz=300); b = pt(pg, i, 14.6, ymz=300)

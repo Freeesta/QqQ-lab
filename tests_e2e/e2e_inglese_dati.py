@@ -40,7 +40,7 @@ try:
             pg.click("#sb-tab-file")
         step("sidebar tabs: calculator, losses, adducts, lists", sidebar)
         def periodic():
-            pg.click("#sb-tab-ptable"); pg.wait_for_timeout(600)
+            pg.click("#np-pt"); pg.wait_for_timeout(600)
             assert "Hydrogen" in pg.inner_text("#refdlg") or "Carbon" in pg.inner_text("#refdlg"), pg.inner_text("#refdlg")[:200]
             it = italian(pg); assert not it, it
             pg.click("#refx")

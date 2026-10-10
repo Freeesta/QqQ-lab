@@ -100,6 +100,8 @@ try:
             pg.select_option("#uip-pal", "time") if pg.locator("#uipset").count() else (pg.click("#np-set"), pg.select_option("#uip-pal", "time"))
         step("the palette survives a reload (localStorage qqq.prefs)", persists)
         def traces_use_palette():
+            pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
+            pg.wait_for_function("(()=>{const p=E.panels.find(p=>p.type==='chrom'); return !!(p && p._a && p._a.sr && p._a.sr.length >= 5)})()", timeout=10000)
             pg.evaluate("(()=>{E.tab='full'})()")
             fl = pg.evaluate("E.panels.filter(p=>p.type==='chrom').length"); assert fl >= 1
             col = pg.evaluate("(()=>{const p=E.panels.find(p=>p.type==='chrom');return p._a && p._a.sr ? p._a.sr.map(s=>s.color) : null})()")
