@@ -39,10 +39,14 @@ def _item(path: Path) -> Item:
     return Item(path.name, None, None, "x", path)
 
 
+MIN_REL_HEIGHT = 0.05          # noise peaks (a few thousandths of the maximum) flip with the last digits of the numpy build: not frozen
+
+
 def _peaks(rt, y) -> list[dict]:
     r = detect_peaks(rt, y)
+    top = float(np.max(y)) if len(y) else 0.0
     return sorted(({"apex_i": p["apex_i"], "lo": p["lo"], "hi": p["hi"], "area": p["area"]}
-                   for p in r["peaks"]), key=lambda p: p["apex_i"])
+                   for p in r["peaks"] if p["height"] >= MIN_REL_HEIGHT * top), key=lambda p: p["apex_i"])
 
 
 def _trace(rt, y) -> dict:
