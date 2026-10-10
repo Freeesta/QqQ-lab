@@ -27,6 +27,24 @@ jobs:
           python-version: "3.13"
       - name: Build the site (downloads Pyodide from jsDelivr)
         run: python tools/build_site.py
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-bindgen
+            target
+          key: pages-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+      - name: Build the WASM engine (only in the published site, never committed)
+        run: |
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          if ! wasm-bindgen --version 2>/dev/null | grep -q "$ver"; then
+            cargo install wasm-bindgen-cli --version "$ver" --locked --force
+          fi
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
+          wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

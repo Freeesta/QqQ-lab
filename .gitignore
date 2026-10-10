@@ -44,3 +44,7 @@ site/
 
 # The bin is local: it never goes to GitHub
 _cestino/
+
+# Rust: build output (the .wasm is built by the CI only, never committed)
+target/
+pkg/

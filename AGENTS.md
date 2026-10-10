@@ -9,7 +9,7 @@ Nucleo per tutti gli agenti: solo lo STATO ATTUALE (la storia è in git). Leggi 
 - **Distribuzione**: SOLO il sito https://freeesta.github.io/mzlab/ (GitHub Pages, `pages.yml` a ogni push su `main`). Tutto gira nel browser (Pyodide); i file degli studenti non lasciano il computer. Nessun tracciamento né statistica.
 - **Principi da non violare**:
   1. **Il programma NON dà le risposte** nel mondo LR (niente «ecco i TP», niente rette di taratura o tabelle della relazione: gli studenti le fanno in Excel). Il mondo HR è uno strumento di ricerca: librerie, formule e analoghi come candidati con punteggio e prove, mai come verità. Eccezione: mzFinder (nascosto, solo per Federico).
-  2. Leggero e senza build: Python ≥ 3.11 + numpy; HTML/JS semplice, nessun bundler, nessuna dipendenza pesante.
+  2. Leggero: Python ≥ 3.11 + numpy; HTML/JS semplice, nessun bundler, nessuna dipendenza pesante; JS senza build; Rust → .wasm solo nella CI (mai committato).
   3. Interfaccia in italiano e inglese; Teoria e Pratica solo in italiano; codice e commenti in inglese. Sempre «m/z», «RT», «XIC», «TIC», «MRM», «MS2» (la pagina mostra MS<sup>2</sup>).
   4. A risoluzione unitaria un m/z è un candidato, non un'identificazione (spiegato in Teoria, senza avvisi ripetuti nell'interfaccia).
   5. **Teoria e Pratica**: niente traduzioni, aggiunte o tagli senza un'istruzione esplicita di Federico; l'accessibilità (presentazione) è ammessa.
@@ -53,6 +53,7 @@ Nucleo per tutti gli agenti: solo lo STATO ATTUALE (la storia è in git). Leggi 
 | Teoria e Pratica (`mzlab/web/teoria/`) | `docs/agenti/teoria.md` (e `teoria/LEGGIMI.md` se scrivi capitoli) |
 | testi, `lang/`, `help.js`, inglese | `docs/agenti/lingue.md` |
 | mzFinder (`TP_Mine/`, `tpmine-loader.js`) | `docs/agenti/mzfinder.md` |
+| motore Rust (`crates/`, dati d'oro `tools/golden.py`) | `docs/agenti/rust.md` |
 
 ## 6. Trappole generali
 - Il service worker tiene in cache l'app: dopo un deploy prova con Cmd/Ctrl+Shift+R. Le anteprime dei link restano in cache presso le app di messaggistica (`?v=2` sul link; con un'immagine nuova cambia anche il `?v=` di `og:image` in `build_site.py`).

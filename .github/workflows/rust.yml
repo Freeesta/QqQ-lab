@@ -1,0 +1,49 @@
+# Rust engine (crates/): tests, WASM build and a check of the dependencies in the WASM graph.
+# Not a required check of the protected main branch. fmt and clippy only warn.
+name: rust
+
+on:
+  push:
+    branches: [main]
+    paths: ["crates/**", "Cargo.*", "rust-toolchain.toml", ".cargo/**", ".github/workflows/rust.yml"]
+  pull_request:
+    paths: ["crates/**", "Cargo.*", "rust-toolchain.toml", ".cargo/**", ".github/workflows/rust.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Toolchain (version pinned in rust-toolchain.toml)
+        run: rustup show
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+      - name: Tests
+        run: cargo test --locked
+      - name: WASM build (release)
+        run: cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
+      - name: No native dependencies in the WASM graph
+        run: |
+          tree=$(cargo tree --locked --target wasm32-unknown-unknown -p mzlab-wasm)
+          if echo "$tree" | grep -E '(^|[^A-Za-z0-9_-])(memmap2|zstd-sys|libz-sys|cc) v'; then
+            echo "::error::forbidden dependency in the WASM graph"; exit 1
+          fi
+      - name: fmt (warning only)
+        run: cargo fmt --all --check || echo "::warning::cargo fmt differences"
+      - name: clippy (warning only)
+        run: cargo clippy --locked --all-targets || echo "::warning::cargo clippy warnings"
