@@ -1531,6 +1531,8 @@ I18N.add("en", {
   "dda.col.n": "no. of MS2",
   "dda.show": "Show the MS2 under the Full Scan",
   "dda.show.tip": "Opens the panel with the MS2 under the Full Scan: ▼ on the peaks, a click shows its MS2",
+  "dda.add": "Add an MS2 panel beside",
+  "dda.add.tip": "Puts another MS2 panel next to the others under the same Full Scan: the next choice (▼ or a click on a flag) goes to the active panel",
   "comp.preset.organic": "C H N O (organic)",
   "comp.preset.halogens": "C H N O S P + halogens",
   "comp.ion.plus": "ion as it is (+)",

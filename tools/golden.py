@@ -92,7 +92,7 @@ def entropy_similarity(a_mz, a_it, b_mz, b_it, tol=FRAG_TOL) -> float:
     return max(0.0, min(1.0, s))
 
 
-def _ms2_pairs(it: Item, n: int = 5) -> list[dict]:
+def _ms2_pairs(it: Item, n: int = 10) -> list[dict]:
     """n pairs of MS2 spectra of one file: scans with >= 8 ions, picked at even steps; the last pair is a spectrum with itself."""
     t = it._tbl(2)
     counts = np.bincount(t.pos, minlength=len(t.rt))
@@ -127,7 +127,30 @@ def _full(path: Path) -> dict:
 def _ms2(path: Path) -> dict:
     it = _item(path)
     rt, tic = it.total("tic", 2)
-    return {"kind": "ms2", "n_scans": int(len(rt)), "tic": _trace(rt, tic), "entropy_pairs": _ms2_pairs(it)}
+    return {"kind": "ms2", "n_scans": int(len(rt)), "tic": _trace(rt, tic), "entropy_pairs": _ms2_pairs(it, 10)}
+
+
+def _hrms(path: Path) -> dict:
+    it = _item(path)
+    rt, tic = it.total("tic")
+    apex_idx = int(np.argmax(tic))
+    t1 = it._tbl(1)
+    mask = t1.pos == apex_idx
+    top_idx = np.argsort(t1.inten[mask])[-5:][::-1]
+    top_mzs = sorted([round(float(v), 5) for v in t1.mz[mask][top_idx]])
+    xics = []
+    for mz in top_mzs:
+        lo, hi = round(mz - 0.01, 5), round(mz + 0.01, 5)
+        rt_x, y = it.xic(mz, 0.01, 1)
+        xics.append({"mz": mz, "mz_lo": lo, "mz_hi": hi, **_trace(rt_x, y)})
+    out = {"kind": "hrms", "n_scans": int(len(rt)), "tic": _trace(rt, tic), "xic": xics}
+    t2 = it._tbl(2)
+    if len(t2.rt) and len(t2.mz):
+        try:
+            out["entropy_pairs"] = _ms2_pairs(it, 10)
+        except SystemExit:
+            pass
+    return out
 
 
 def _mrm(path: Path) -> dict:
@@ -142,24 +165,37 @@ def _mrm(path: Path) -> dict:
 
 
 def write_synthetic(out: Path) -> dict[str, Path]:
-    """The two synthetic files of the golden data (fixed seeds), for the tests of other engines."""
+    """The three synthetic files of the golden data (fixed seeds), for the tests of other engines."""
     import dati_sintetici as ds
     out.mkdir(parents=True, exist_ok=True)
-    full, mrm = out / "sintetico_FullScan.mzML", out / "sintetico_MRM.mzML"
+    full, ms2, mrm = out / "sintetico_FullScan.mzML", out / "sintetico_MS2.mzML", out / "sintetico_MRM.mzML"
     ds.full_scan(full, 15, np.random.default_rng(2026))
+    ds.ms2(ms2, np.random.default_rng(2026), 15)
     ds.mrm(mrm, 1.0e4 * 2.4, np.random.default_rng(2026), 3)
-    return {"sintetico_FullScan": full, "sintetico_MRM": mrm}
+    return {"sintetico_FullScan": full, "sintetico_MS2": ms2, "sintetico_MRM": mrm}
 
 
-def compute() -> dict[str, dict]:
+def compute(skip_missing: bool = False) -> dict[str, dict]:
     """name -> result for every golden file."""
     res: dict[str, dict] = {}
-    res["esempio_FullScan_t10"] = _full(EXAMPLES / "FullScan_t10.mzML")
-    res["esempio_MS2_t15"] = _ms2(EXAMPLES / "MS2_t15.mzML")
-    res["esempio_MRM_std_2.4ppm"] = _mrm(EXAMPLES / "MRM_std_2.4ppm.mzML")
+    for stem, fn in [
+        ("FullScan_t10", _full),
+        ("MS2_t15", _ms2),
+        ("MRM_std_2.4ppm", _mrm),
+    ]:
+        p = EXAMPLES / f"{stem}.mzML"
+        if p.exists():
+            res[f"esempio_{stem}"] = fn(p)
+        elif not skip_missing:
+            raise FileNotFoundError(f"{p} missing")
+
+    for f in sorted(EXAMPLES.glob("HRMS_*.mzML")):
+        res[f"esempio_{f.stem}"] = _hrms(f)
+
     with tempfile.TemporaryDirectory() as d:
         files = write_synthetic(Path(d))
         res["sintetico_FullScan"] = _full(files["sintetico_FullScan"])
+        res["sintetico_MS2"] = _ms2(files["sintetico_MS2"])
         res["sintetico_MRM"] = _mrm(files["sintetico_MRM"])
     return res
 
@@ -185,11 +221,13 @@ def _cmp_trace(name, new, old, bad: list[str]) -> None:
         bad.append(f"{name}: RT differs")
 
 
-def controlla(new: dict[str, dict], old: dict[str, dict]) -> list[str]:
+def controlla(new: dict[str, dict], old: dict[str, dict], skip_missing: bool = False) -> list[str]:
     bad: list[str] = []
-    for name in sorted(set(old) | set(new)):
+    keys = (set(old) & set(new)) if skip_missing else (set(old) | set(new))
+    for name in sorted(keys):
         if name not in old or name not in new:
-            bad.append(f"{name}: missing in {'golden' if name not in old else 'engine'}"); continue
+            bad.append(f"{name}: missing in {'golden' if name not in old else 'engine'}")
+            continue
         a, b = new[name], old[name]
         for k in ("tic",):
             if k in b:
@@ -215,12 +253,13 @@ def main(argv=None) -> int:
     g.add_argument("--crea", action="store_true")
     g.add_argument("--controlla", action="store_true")
     g.add_argument("--sintetici", metavar="DIR", help="only write the two synthetic mzML files of the golden data in DIR")
+    ap.add_argument("--skip-missing", action="store_true", help="skip files whose source .mzML is missing")
     args = ap.parse_args(argv)
     if args.sintetici:
         for p in write_synthetic(Path(args.sintetici)).values():
             print(p)
         return 0
-    new = compute()
+    new = compute(skip_missing=args.skip_missing)
     if args.crea:
         GOLDEN.mkdir(parents=True, exist_ok=True)
         for name, data in new.items():
@@ -230,7 +269,7 @@ def main(argv=None) -> int:
     old = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted(GOLDEN.glob("*.json"))}
     if not old:
         print("no golden files: run --crea"); return 1
-    bad = controlla(new, old)
+    bad = controlla(new, old, skip_missing=args.skip_missing)
     for b in bad:
         print("FAIL", b)
     print(f"golden: {'OK' if not bad else str(len(bad)) + ' differences'} ({len(old)} files)")
