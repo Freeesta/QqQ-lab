@@ -1,5 +1,5 @@
 "use strict";
-// Lists of reference m/z (known contaminants: Keller 2008, LC-MS solvents/background Guo 2006, laboratory contaminants, user suspect lists).
+// Lists of reference m/z (known contaminants: Keller 2008, laboratory contaminants, user suspect lists).
 // ONE engine for every list of reference: unit resolution (nominal m/z ±0.5 Da, ordered by proximity) and high resolution (ppm tolerance).
 // Pure functions first (also run by node in tests/test_liste.py); page UI (mount, dialogs, IndexedDB storage) below.
 // Principle 1 of AGENTS.md: in low resolution, coincidences are often accidental. The program NEVER shows automatic annotations on LR spectra.
@@ -15,7 +15,7 @@ const LISTE = (() => {
       if (active && active[L.id] === false) return;
       const en = I18N.lang === "en";                       // the built-in list carries English names and classes (name_en, cls_en); the lists of the user are shown as written
       (L.items || []).forEach(it => {
-        const x = { ...it, list: L.id, listName: (en && L.name_en) || L.name || L.id };
+        const x = { ...it, clsKey: it.cls, list: L.id, listName: (en && L.name_en) || L.name || L.id, listBuiltin: !!L.builtin };
         if (en && it.name_en) x.name = it.name_en;
         if (en && it.cls_en) x.cls = it.cls_en;
         if (it.pol !== -1) pos.push(x);
@@ -241,7 +241,7 @@ const LISTE = (() => {
   const IDB_NAME = "qqq_lab", IDB_VER = 2, IDB_STORE = "liste_utente";
 
   const ST = {
-    lists: [],           // built-in lists (/api/contaminants: Keller 2008 + Guo 2006)
+    lists: [],           // built-in lists (/api/contaminants: Keller 2008)
     userLists: [],       // lists uploaded by the user from CSV, persisted in IndexedDB
     idx: null,
     loading: null,
@@ -252,6 +252,33 @@ const LISTE = (() => {
   const rd = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const wr = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode / quota */ } };
   const isOn = () => rd(KEY_ON, true) !== false;
+
+  // Exclusions (HR only): hide a compatible peak from the lists and the tables, never change the data. Stored in the browser, the same for every file.
+  const KEY_EXCL = "qqq.contaminanti.esclusi";
+  const exclKinds = ["entry", "cls", "list"];
+  const FLD = { entry: "voc" + "i", cls: "class" + "i", list: "list" + "e" };         // names of the stored object (user data: do not rename)
+  let exclCache = null;
+  const exclRead = () => {
+    if (exclCache) return exclCache;
+    const o = rd(KEY_EXCL, {}) || {}, r = {};
+    exclKinds.forEach(k => { r[k] = Array.isArray(o[FLD[k]]) ? o[FLD[k]].filter(x => typeof x === "string") : []; });
+    return (exclCache = r);
+  };
+  const exclSave = e => { const o = {}; exclKinds.forEach(k => { o[FLD[k]] = e[k]; }); wr(KEY_EXCL, o); if (typeof redrawAll === "function") redrawAll(); };
+  const voceKey = it => it.list + ":" + it.id + (it.series ? "#" + it.series.n : "");
+  const classKey = it => it.clsKey || it.cls || "";
+  const keyFor = (kind, it) => kind === "entry" ? voceKey(it) : kind === "cls" ? classKey(it) : it.list;
+  const isExcluded = it => { const e = exclRead(); return e.entry.includes(voceKey(it)) || (!!classKey(it) && e.cls.includes(classKey(it))) || e.list.includes(it.list); };
+  function exclSet(kind, key, on) {
+    if (!exclKinds.includes(kind) || !key) return;
+    const e = exclRead(), a = e[kind], i = a.indexOf(key);
+    if (on && i < 0) a.push(key); else if (!on && i >= 0) a.splice(i, 1); else return;
+    exclSave(e);
+  }
+  function exclReset() { exclCache = { entry: [], cls: [], list: [] }; exclSave(exclCache); }
+  const exclItems = () => { const e = exclRead(); return exclKinds.flatMap(k => e[k].map(key => ({ kind: k, key }))); };
+  // the compatible entries of a peak: vis = those not excluded (the peak keeps its mark); hid = there are some, and all are excluded (the peak is hidden)
+  const split = ms => { const vis = ms.filter(x => !isExcluded(x)); return { vis, hid: ms.length > 0 && !vis.length }; };
   function setOn(v) { wr(KEY_ON, !!v); if (typeof redrawAll === "function") redrawAll(); }
   const labRows = () => { const r = rd(KEY_ROWS, []); return Array.isArray(r) ? r.filter(x => x && x.mz > 0) : []; };
   const saveRows = rows => { wr(KEY_ROWS, rows); reindex(); if (typeof redrawAll === "function") redrawAll(); };
@@ -345,14 +372,22 @@ const LISTE = (() => {
         }
         return tipHtml(find(idx, polarity, m, ppm), runs.map);
       },
-      match: m => (ST.idx ? find(ST.idx, polarity, m, ppm) : [])
+      match: m => (ST.idx ? find(ST.idx, polarity, m, ppm) : []),
+      state(m) { const ms = ST.idx ? find(ST.idx, polarity, m, ppm) : []; const s = split(ms); return { vis: s.vis, hid: s.hid, all: ms }; }
     };
+  }
+
+  // Peak tables (HR): compatible entries of an m/z, split into shown and hidden-by-exclusion; null if the switch is off
+  function compat(mz, polarity, ppm) {
+    const idx = ST.idx || ensure(); if (!idx || !isOn()) return null;
+    const ms = find(idx, polarity, mz, ppm), s = split(ms);
+    return { vis: s.vis, hid: s.hid, all: ms };
   }
 
   // Summary text for formulas / library matches: "name (adduct, ±ppm)"
   function textFor(mz, polarity, ppm) {
     const idx = ST.idx || ensure(); if (!idx || !isOn()) return "";
-    const m = find(idx, polarity, mz, ppm); if (!m.length) return "";
+    const m = find(idx, polarity, mz, ppm).filter(x => !isExcluded(x)); if (!m.length) return "";
     return m.slice(0, 2).map(x => `${x.name} (${x.adduct || I18N.t("lst.mzOnly")}${x.formula ? ", " + x.formula.replace(/x(\d+)$/, " ×$1") : ""}; ${x.err >= 0 ? "+" : ""}${x.err.toFixed(1)} ppm)`).join("; ") + (m.length > 2 ? " " + I18N.t("lst.textMore", { n: m.length - 2 }) : "");
   }
 
@@ -514,6 +549,7 @@ const LISTE = (() => {
         </div>
 
         <div id="lst-userlists-bar" style="font-size:12px;padding:4px 8px;background:var(--panel,#fff);border:1px dashed var(--line,#cbd5e1);border-radius:6px" hidden></div>
+        <div id="lst-excl" class="sm" style="padding:4px 8px;border:1px dashed var(--line,#cbd5e1);border-radius:6px" hidden></div>
         <span id="lst-count" hidden></span>
 
         <div id="lst-table-wrap" style="flex:1;min-height:220px;overflow:auto;border:1px solid var(--line,#e2e8f0);border-radius:6px;background:var(--panel,#fff)">
@@ -547,7 +583,18 @@ const LISTE = (() => {
     const elUListBar = container.querySelector("#lst-userlists-bar");
     const elFileIn = container.querySelector("#lst-file-in");
 
+    const KIND_LBL = { entry: () => I18N.t("cont.excl.k.entry"), cls: () => I18N.t("cont.excl.k.cls"), list: () => I18N.t("cont.excl.k.list") };
+    const elExcl = container.querySelector("#lst-excl");
+    function renderExcl() {
+      const ex = exclItems();
+      elExcl.hidden = !ex.length;
+      if (!ex.length) return;
+      elExcl.innerHTML = `<b>${I18N.t("cont.excl.h")}</b> ` + ex.map((q, i) => `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--soft,#f1f5f9);padding:2px 6px;border-radius:4px;margin:2px 6px 2px 0">${KIND_LBL[q.kind]()}: <b>${EH(q.key)}</b> <button type="button" data-ex="${i}" aria-label="${EH(I18N.t("cont.excl.back"))}: ${EH(q.key)}" title="${EH(I18N.t("cont.excl.back"))}" style="border:none;background:none;cursor:pointer;color:var(--muted);padding:0 2px">&times;</button></span>`).join("") + ` <button type="button" id="lst-excl-reset">${I18N.t("cont.excl.reset")}</button>`;
+      elExcl.querySelectorAll("[data-ex]").forEach(b => { b.onclick = () => { const q = ex[+b.dataset.ex]; exclSet(q.kind, q.key, false); renderExcl(); }; });
+      elExcl.querySelector("#lst-excl-reset").onclick = () => { exclReset(); renderExcl(); };
+    }
     function renderSourceChecks() {
+      renderExcl();
       const act = rd(KEY_LISTS, {});
       const allLists = [...ST.lists, ...ST.userLists];
       elChecks.innerHTML = allLists.map(L => {
@@ -729,6 +776,7 @@ const LISTE = (() => {
     toggleListActive,
     forSpec,
     textFor,
+    compat, isExcluded, keyFor, exclSet, exclReset, exclItems, split,
     ensure,
     ready,
     isOn,
