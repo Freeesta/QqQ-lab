@@ -1,0 +1,42 @@
+"""The public example files stay small and the research compound name never appears in public files."""
+import os
+import subprocess
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+ESEMPI = ROOT / "mzlab" / "web" / "esempi"
+MAX_BYTES = 10 * 1024 * 1024
+
+
+def _nomi():
+    """Forbidden names: MZLAB_NOMI_VIETATI (comma separated) or nomi_vietati.txt in the private data repository."""
+    env = os.environ.get("MZLAB_NOMI_VIETATI")
+    if env:
+        return [n.strip().lower() for n in env.split(",") if n.strip()]
+    for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), str(ROOT.parent / "mzlab-dati")):
+        f = Path(c) / "nomi_vietati.txt" if c else None
+        if f and f.is_file():
+            return [n.strip().lower() for n in f.read_text(encoding="utf-8").splitlines() if n.strip() and not n.startswith("#")]
+    return []
+
+
+def test_no_example_file_exceeds_10_mb():
+    big = {p.name: p.stat().st_size for p in ESEMPI.iterdir() if p.is_file() and p.stat().st_size > MAX_BYTES}
+    assert not big, big
+
+
+def test_the_forbidden_names_are_not_in_public_files():
+    nomi = _nomi()
+    if not nomi:
+        pytest.skip("MZLAB_NOMI_VIETATI or nomi_vietati.txt in the data repository not available")
+    out = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, check=True).stdout.decode("utf-8")
+    hits = []
+    for rel in filter(None, out.split("\0")):
+        p = ROOT / rel
+        if not p.is_file() or "/vendor/" in rel:
+            continue
+        low = (rel + "\n").lower().encode("utf-8") + p.read_bytes().lower()
+        hits += [(rel, n) for n in nomi if n.encode("utf-8") in low]
+    assert not hits, [h[0] for h in hits]

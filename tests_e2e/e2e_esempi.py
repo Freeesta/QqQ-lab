@@ -38,7 +38,7 @@ try:
         # HRMS: 4 Orbitrap DDA files (Full Scan + MS2), opened in the high-resolution mode like files loaded by hand
         pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500); reqs.clear()
         pg.click("#demobtn"); pg.click("#demochoice [data-demo=hrms]"); pg.wait_for_function("document.querySelectorAll('#flist [data-k=time]').length>=4", timeout=60000); pg.wait_for_timeout(500)
-        assert "TIM_TiO2_t000min" in pg.inner_text("#flist") and all("TIM_TiO2" in u for u in reqs) and len(reqs) == 4, reqs
+        assert "HRMS_t000" in pg.inner_text("#flist") and all("HRMS_t" in u for u in reqs) and len(reqs) == 4, reqs
         pg.click("text=Carica dati"); ready(pg)
         fl = pg.evaluate("E.files.map(f=>[f.file,f.lv,!!(f.prof1&&f.prof1.hr),f.prof1&&f.prof1.dec,!!f.dda])")
         assert any(f[1] == 1 and f[2] and f[3] >= 4 for f in fl) and any(f[1] == 2 and f[4] for f in fl), fl

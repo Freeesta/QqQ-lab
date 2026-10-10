@@ -4,7 +4,7 @@ mzlab/web/draw.js	esempio-frammentazione.png
 mzlab/web/index.html	FullScan_t
 mzlab/web/index.html	MS2_t
 mzlab/web/index.html	MRM_std_
-mzlab/web/index.html	TIM_TiO2_t
+mzlab/web/index.html	HRMS_t
 mzlab/web/index.html	static/esempi/
 mzlab/web/index.html	static/teoria/glossario-dati.js
 mzlab/web/index.html	static/teoria/tema.js
