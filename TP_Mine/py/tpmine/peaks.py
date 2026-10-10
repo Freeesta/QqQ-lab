@@ -84,7 +84,7 @@ def find_peaks(rt: np.ndarray, y: np.ndarray, rt_tol: float = 0.25, smooth_k: in
     ys = smooth(y, smooth_k)
     base = float(np.median(ys))
     noise = float(1.4826 * np.median(np.abs(ys - base))) or float(np.std(ys[ys <= np.percentile(ys, 90)])) or 1.0
-    thr = max(base + 3.0 * noise, base + 0.05 * (float(ys.max()) - base))       # a peak under 5 % of the strongest one is not worth a candidate
+    thr = max(base + 3.0 * noise, base + 0.10 * (float(ys.max()) - base))       # a peak under 10 % of the strongest one is not worth a candidate
     mid = ys[1:-1]
     idx = [int(i) + 1 for i in np.flatnonzero((mid >= ys[:-2]) & (mid > ys[2:]) & (mid > thr))]
     if ys[0] > thr and ys[0] > ys[1]:

@@ -354,8 +354,8 @@ class Experiment:
         lo, hi = min(float(t.mz.min()) for t in tabs), max(float(t.mz.max()) for t in tabs)
         rt0, rt1 = self.rt_min, max(float(t.rt.max()) for t in tabs)
         dts = np.diff(tabs[0].rt)
-        drt = float(np.clip(1.25 * (np.median(dts) if len(dts) else 0.05), 0.02, 0.06))
-        dmz = max(0.1, (hi - lo) / 16000)
+        drt = float(np.clip(1.25 * (np.median(dts) if len(dts) else 0.05), 0.04, 0.08))
+        dmz = max(self.tol / 2, (hi - lo) / 16000)
         nrt, nmz = max(int(math.ceil((rt1 - rt0) / drt)), 3), int(math.ceil((hi - lo) / dmz)) + 1
         win = max(int(self.tol / dmz), 1)
         self.progress("Searching for unexpected ions...", 0.7)
