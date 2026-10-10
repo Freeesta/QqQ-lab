@@ -32,11 +32,13 @@ const LIB = (() => {
       d = document.createElement("dialog"); d.id = "libdlg"; document.body.appendChild(d);
       d.innerHTML = `<div class="top" style="display:flex;align-items:center"><h3 style="margin:0;flex:1">${I18N.t("lib.title")}</h3><button class="x" id="lib-x" title="${I18N.t("common.close")}">&times;</button></div>
         <p class="sm muted" style="margin:6px 0">${I18N.t("lib.intro")}</p>
-        <div class="drop" id="lib-drop">${I18N.t("lib.drop")} <button id="lib-pick">${I18N.t("lib.pick")}</button><input type="file" id="lib-file" accept=".msp,.mgf,.lib,.mzvault,.txt" multiple hidden></div>
+        <div class="drop" id="lib-drop">${I18N.t("lib.drop")} <button id="lib-pick">${I18N.t("lib.pick")}</button><input type="file" id="lib-file" accept=".msp,.mgf,.lib,.mzvault,.txt" multiple hidden>
+          ${window.showDirectoryPicker ? `<div class="sm" style="margin-top:8px"><button id="lib-dir">${I18N.t("lib.dir")}</button> <button id="lib-dir-new">${I18N.t("lib.dirNew")}</button></div>` : ""}</div>
         <div id="lib-st"></div><div id="lib-list"></div><div class="sm muted" id="lib-space" style="margin-top:6px"></div>`;
       d.querySelector("#lib-x").onclick = () => d.close();
       const input = d.querySelector("#lib-file"), drop = d.querySelector("#lib-drop");
       d.querySelector("#lib-pick").onclick = () => input.click();
+      const bd = d.querySelector("#lib-dir"); if (bd) { bd.onclick = () => reloadFolder(false); d.querySelector("#lib-dir-new").onclick = () => reloadFolder(true); }
       input.onchange = () => { addFiles([...input.files]); input.value = ""; };
       drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); }; drop.ondragleave = () => drop.classList.remove("over");
       drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); addFiles([...e.dataTransfer.files]); };
@@ -49,11 +51,27 @@ const LIB = (() => {
     const box = d.querySelector("#lib-list");
     try {
       const r = await call("list"), L = r.libs;
-      box.innerHTML = L.length ? `<table><tr><th>${I18N.t("lib.col.library")}</th><th class="num">${I18N.t("lib.col.spectra")}</th><th>${I18N.t("lib.col.polarity")}</th><th class="num">${I18N.t("lib.col.dropped")}</th><th>${I18N.t("lib.col.loaded")}</th><th></th></tr>${L.map(l => `<tr><td title="${EHt(l.file)}">${EHt(l.name)}</td><td class="num">${fmtN(l.n)}</td><td>ESI+ ${fmtN(l.pos)} · ESI&minus; ${fmtN(l.neg)}${l.n - l.pos - l.neg ? " · ? " + fmtN(l.n - l.pos - l.neg) : ""}</td>
+      box.innerHTML = L.length ? `<table><tr><th>${I18N.t("lib.col.library")}</th><th class="num">${I18N.t("lib.col.spectra")}</th><th class="num">${I18N.t("lib.col.size")}</th><th>${I18N.t("lib.col.polarity")}</th><th class="num">${I18N.t("lib.col.dropped")}</th><th>${I18N.t("lib.col.loaded")}</th><th></th></tr>${L.map(l => `<tr><td title="${EHt(l.file)}">${EHt(l.name)}</td><td class="num">${fmtN(l.n)}</td><td class="num">${l.size ? fmtN(Math.round(l.size / 1e6)) + " MB" : ""}</td><td>ESI+ ${fmtN(l.pos)} · ESI&minus; ${fmtN(l.neg)}${l.n - l.pos - l.neg ? " · ? " + fmtN(l.n - l.pos - l.neg) : ""}</td>
         <td class="num" title="${I18N.t("lib.droppedTitle", { prec: l.noPrec, peaks: l.noPeaks, broken: l.broken })}">${fmtN(l.dropped)}</td><td>${new Date(l.date).toLocaleDateString(loc())}</td><td><button data-rm="${EHt(l.id)}">${I18N.t("lib.remove")}</button></td></tr>`).join("")}</table>` : `<p class="muted">${I18N.t("lib.none")}</p>`;
       box.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => { b.disabled = true; await call("remove", { id: b.dataset.rm }); refresh(); });
       if (navigator.storage && navigator.storage.estimate) { const s = await navigator.storage.estimate(); d.querySelector("#lib-space").textContent = I18N.t("lib.space", { mb: Math.round((s.usage || 0) / 1e6) }) + (r.opfs ? "" : " " + I18N.t("lib.noOpfs")); }
     } catch (e) { box.innerHTML = `<p class="err">${EHt(e.message)}</p>`; }
+  }
+  // Optional shortcut (Chrome / Edge, File System Access API): the folder is remembered and its MSP / MGF files that are not archived yet are imported again. Never the only way.
+  const dirDb = () => new Promise((ok, no) => { const r = indexedDB.open("mzlab-libdir", 1); r.onupgradeneeded = () => r.result.createObjectStore("h"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+  const dirGet = async () => { const db = await dirDb(); return new Promise(ok => { const r = db.transaction("h").objectStore("h").get("dir"); r.onsuccess = () => { db.close(); ok(r.result || null); }; r.onerror = () => { db.close(); ok(null); }; }); };
+  const dirPut = async h => { const db = await dirDb(); return new Promise(ok => { const t = db.transaction("h", "readwrite"); t.objectStore("h").put(h, "dir"); t.oncomplete = () => { db.close(); ok(); }; t.onerror = () => { db.close(); ok(); }; }); };
+  async function reloadFolder(choose) {
+    const st = document.querySelector("#libdlg #lib-st");
+    try {
+      let h = choose ? null : await dirGet();
+      if (h && (await h.requestPermission({ mode: "read" })) !== "granted") h = null;
+      if (!h) { h = await window.showDirectoryPicker({ id: "mzlab-libs", mode: "read" }); await dirPut(h); }
+      const have = new Set((await call("list")).libs.map(l => l.file + "|" + l.size)), todo = [];
+      for await (const [name, fh] of h.entries()) if (fh.kind === "file" && /\.(msp|mgf)$/i.test(name)) { const f = await fh.getFile(); if (!have.has(f.name + "|" + f.size)) todo.push(f); }
+      if (!todo.length) { st.innerHTML = `<div class="sm">${I18N.t("lib.dirNone", { name: EHt(h.name) })}</div>`; return; }
+      await addFiles(todo);
+    } catch (e) { if (e && e.name !== "AbortError") st.innerHTML = `<div class="err">${EHt(e.message)}</div>`; }
   }
   async function addFiles(files) {
     const d = document.getElementById("libdlg"), st = d.querySelector("#lib-st");

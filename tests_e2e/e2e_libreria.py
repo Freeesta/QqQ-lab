@@ -1,6 +1,7 @@
 """Part D: the «Librerie» window (gear), a synthetic MSP library, search from the MS2 spectrum, results table and mirror plot, copy / Excel."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
+import json
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))
@@ -72,6 +73,22 @@ try:
             pg.set_input_files("#lib-file", {"name": "x.lib", "mimeType": "application/octet-stream", "buffer": b"\x00\x01"}); pg.wait_for_timeout(800)
             assert "MSP" in pg.inner_text("#lib-st"), pg.inner_text("#lib-st")
         step("a NIST .lib is refused with the hint to export MSP", unsupported)
+        def persists():
+            big = "\n".join(rec(f"Fill{i}", 150 + i * 0.01, [(50 + j * 3.7, 100 + j) for j in range(60)]) for i in range(5000)) + "\n" + rec("Target", 777.1234, pk)
+            assert len(big) > 3_000_000, len(big)
+            pg.click("#np-set"); pg.click("#uipset button >> text=Librerie"); pg.wait_for_timeout(400)
+            pg.set_input_files("#lib-file", {"name": "grande.msp", "mimeType": "text/plain", "buffer": big.encode()}); pg.wait_for_timeout(6000)
+            t = pg.inner_text("#lib-list"); assert "grande" in t and "5001" in t.replace(".", "").replace("\u202f", ""), t
+            assert "MB" in t, t
+            pg.reload(); pg.wait_for_timeout(2500)
+            pg.click("#np-set"); pg.click("#uipset button >> text=Librerie"); pg.wait_for_timeout(1000)
+            assert "grande" in pg.inner_text("#lib-list"), pg.inner_text("#lib-list")                  # still there after the reload: no new import
+            res = pg.evaluate("LIB.call('search', {peaks: %s, prec: 777.1234, pol: 1, tol: {v: 10, unit: 'ppm'}, frag: 0.02})" % json.dumps([[m, i] for m, i in pk]))
+            assert res["results"] and res["results"][0]["name"] == "Target", res
+            pg.click("#lib-list [data-rm]"); pg.wait_for_timeout(1000); assert "Nessuna libreria" in pg.inner_text("#lib-list")
+            pg.reload(); pg.wait_for_timeout(2000); pg.click("#np-set"); pg.click("#uipset button >> text=Librerie"); pg.wait_for_timeout(800)
+            assert "Nessuna libreria" in pg.inner_text("#lib-list")                                    # removed for good
+        step("a library of some MB survives a reload, is searched without re-importing and «Togli» removes it", persists)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

@@ -158,6 +158,7 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 @media (prefers-reduced-motion: reduce) { #loading { transition:none; } }
 .ms{display:flex;align-items:flex-end;gap:5px;height:90px}.ms i{display:block;width:9px;background:var(--accent);border-radius:2px 2px 0 0;animation:pk 1.3s ease-in-out infinite}
 @keyframes pk{0%,100%{transform:scaleY(.15)}50%{transform:scaleY(1)}}.ms i{transform-origin:bottom}
+#ldion{width:min(80vw,380px);height:auto;display:block}
 #ldmsg{font-size:15px;max-width:520px;min-height:44px}#ldsub{color:var(--muted)}
 #refbody tr.exp td{background:color-mix(in srgb,var(--accent) 9%,transparent)}
 .pnl.chrom .leg,.pnl.xic .leg,.pnl.mrm .leg,.pnl.spec .leg2{position:absolute;z-index:2;max-width:55%;margin:0;padding:2px 8px;font-size:11px;max-height:40%;background:color-mix(in srgb,var(--panel) 86%,transparent);border:1px solid var(--line);border-radius:6px}.pnl.spec .leg2{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted)}.pnl.spec .leg2 span{display:inline-flex;gap:4px;align-items:center}.pnl .leg:empty,.pnl .leg2:empty{display:none}.pnl.chrom .rd:not(.show),.pnl.xic .rd:not(.show),.pnl.mrm .rd:not(.show),.pnl.spec .rd{display:none}.pnl.spec .leg{position:absolute;z-index:2;display:block;margin:0;padding:0;max-width:calc(50% - 56px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10.5px;text-align:right;color:var(--muted);pointer-events:none}.pnl.spec .leg span{display:inline}
@@ -257,11 +258,38 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
  <li data-i18n="bt.step4">Invia e attendi la tabella dei prodotti (formula, massa monoisotopica, SMILES).</li>
  <li data-i18n-html="bt.step5">Torna qui: calcola [M+H]<sup>+</sup> = massa + 1.00728 e controlla nel full scan, con una finestra di ±1 Da, se compare uno ione che cresce con il tempo. Annota i candidati che trovi (m/z, RT, andamento) per la relazione.</li></ol>
  <div class="bar"><button id="bt-open" data-i18n="bt.reopen">Riapri BioTransformer</button><span class="sp"></span><button id="btx2" data-i18n="common.close">Chiudi</button></div></div>
-<div id="loading"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><div id="ldmsg"></div><div id="ldsub"></div></div>
+<div id="loading"><div class="ms"><i style="height:30%;animation-delay:0s"></i><i style="height:55%;animation-delay:.1s"></i><i style="height:80%;animation-delay:.2s"></i><i style="height:45%;animation-delay:.3s"></i><i style="height:100%;animation-delay:.4s"></i><i style="height:60%;animation-delay:.5s"></i><i style="height:35%;animation-delay:.6s"></i><i style="height:70%;animation-delay:.7s"></i><i style="height:25%;animation-delay:.8s"></i></div><canvas id="ldion" width="420" height="120" aria-hidden="true" style="display:none"></canvas><div id="ldmsg"></div><div id="ldsub"></div></div>
 <script>
 const NPHRASES = 17;   // the phrases are the catalog keys load.phrase.1 ... load.phrase.17 (lang/it.js, en.js)
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
 let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
+// data loading (engine already running): three ions turning on a helix in place, their trail drifting back so they seem to fly forward.
+// The helix is centred on the canvas, so it sits right above the phrase. Colours from the theme; one still frame with reduced motion.
+let ldIonRaf = 0;
+function ldIon(on) {
+  const cv = document.getElementById("ldion"), bars = document.querySelector("#loading .ms");
+  cancelAnimationFrame(ldIonRaf); ldIonRaf = 0;
+  cv.style.display = on ? "block" : "none"; bars.style.display = on ? "none" : "";
+  if (!on) return;
+  const W = 420, H = 120, N = 26, STEP = 9, A = 30, w = 2 * Math.PI / 1.6, R = window.devicePixelRatio || 1;
+  const X0 = W / 2 + (N - 1) * STEP / 2;                              // head at the right, trail to the left: the whole helix is centred
+  const css = getComputedStyle(document.documentElement), col = ["--accent", "--ok", "--bad"].map(v => css.getPropertyValue(v).trim());
+  cv.width = W * R; cv.height = H * R; const cx = cv.getContext("2d"); cx.setTransform(R, 0, 0, R, 0, 0);
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const frame = ms => {
+    const t = still ? 0.4 : ms / 1000, pts = [];
+    cx.clearRect(0, 0, W, H);
+    for (let j = 0; j < 3; j++) for (let k = 0; k < N; k++) {
+      const ph = w * (t - k * 0.045) + j * 2 * Math.PI / 3, z = Math.cos(ph);
+      pts.push({ x: X0 - k * STEP, y: H / 2 + A * Math.sin(ph), z, r: (5.5 + 2.5 * z) * (1 - k / N * 0.7), a: (1 - k / N) * (0.55 + 0.45 * (z + 1) / 2), c: col[j] });
+    }
+    pts.sort((p, q) => p.z - q.z);                                   // far points first, near ones on top
+    for (const p of pts) { cx.globalAlpha = p.a; cx.fillStyle = p.c; cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 7); cx.fill(); }
+    cx.globalAlpha = 1;
+    if (!still) ldIonRaf = requestAnimationFrame(frame);
+  };
+  ldIonRaf = requestAnimationFrame(frame);
+}
 function ldNext() {
   if (window.qqFailed) return;                                    // a failed start keeps its error message on screen
   if (!ldBag.length) {                                            // refill with a fresh shuffle, never starting with the phrase just shown
