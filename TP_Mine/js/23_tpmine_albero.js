@@ -47,7 +47,7 @@
     if (!document.getElementById("tp-alb-css")) { const s = document.createElement("style"); s.id = "tp-alb-css"; s.textContent = CSS; document.head.appendChild(s); }
     const { esc, call } = h;
     el.classList.add("alb");
-    el.innerHTML = `<div class="mut">Computing the fragmentation tree...</div>`;
+    el.innerHTML = `<div class="mut">${opts.live ? "Waiting for the first node..." : "Computing the fragmentation tree..."}</div>`;
     const inst = { marks: {}, compareId: null, compare: null };
     let L = null, data = null, sel = null, view = { k: 1, x: 0, y: 0 };
 
@@ -215,7 +215,13 @@
       } catch (e) { if (leg) leg.textContent = String(e.message || e); }
     };
 
-    inst.ready = (async () => {
+    // live mode (opts.live): no request; the page gives the nodes as they are built (24_tpmine_diretta.js) and the tree grows
+    inst.live = d => {
+      data = d; L = layout(d); sel = sel && L.by.get(sel) ? sel : (L.root && L.root.id);
+      const sv = el.querySelector("svg.alb-svg");
+      if (!sv) shell(); else { sv.setAttribute("viewBox", `0 0 ${L.W} ${L.H}`); redraw(); }
+    };
+    inst.ready = opts.live ? Promise.resolve(inst) : (async () => {
       try { data = await call("frag_tree"); } catch (e) { el.innerHTML = `<div class="err">${esc(e.message || e)}</div>`; return inst; }
       if (!data.ok) { el.innerHTML = `<div class="mut">Fragmentation tree: ${esc(data.note)}.</div>`; return inst; }
       L = layout(data);
@@ -224,7 +230,7 @@
       
       return inst;
     })();
-    last = inst;
+    if (!opts.live) last = inst;
     return inst;
   }
 

@@ -69,7 +69,7 @@
       worker = new Worker(url, { type: "module" });
       worker.onmessage = ev => {
         const m = ev.data;
-        if (m.type === "progress") return onProgress(m.text, m.frac);
+        if (m.type === "progress") return onProgress(m.text, m.frac, m);
         if (m.type === "step") return onProgress(m.text, null);
         if (m.type === "ready") { const p = pending.get("init"); pending.delete("init"); return p && p.res(); }
         const p = pending.get(m.id); if (!p) return; pending.delete(m.id);
@@ -172,7 +172,7 @@
     const st = { files: [], showAll: false, summary: null, sel: null, view: "gems", took: 0, filter: { forte: true, possibile: true, unexp: true, debole: false } };
     const msg = (t, err) => { $("#tp-msg").textContent = t || ""; $("#tp-msg").className = "mut" + (err ? " err" : ""); };
     const bar = f => { const w = Math.round(f * 100); $("#tp-bar").style.width = w + "%"; $("#tp-barbox").setAttribute("aria-valuenow", w); };
-    onProgress = (t, f) => { msg(t); if (f != null) bar(f); };
+    onProgress = (t, f, m) => { if (t) msg(t); if (f != null) bar(f); if (m && window.TPLIVE) TPLIVE.event(m); };
 
     $("#tp-more").onclick = () => { st.showAll = !st.showAll; renderFiles(); };
     // ---- files
@@ -367,6 +367,7 @@
       if (!hrMode && !st.files.some(f => f.kind === "full")) return msg("Full-scan (MS1) sample files are needed.", true);
       if (!mol) return msg("Enter the neutral molecular formula or the SMILES of the parent.", true);
       setBusy(true); $("#tp-bar").style.width = "2%"; msg("Digging..."); const t0 = performance.now();
+      if (window.TPLIVE) TPLIVE.start($("#tp-right"), hrMode, { esc, call });
       try {
         const files = st.files.filter(f => f.kind !== "error" && f.kind !== "empty").map(f => ({ name: f.name, type: f.type, time: f.time, kind: f.kind }));
         const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, discover: $("#tp-disc").checked };
@@ -376,13 +377,14 @@
           if (parent.adduct !== "[M+H]+") throw new Error("High resolution uses the [M+H]+ ion: choose that adduct.");
           const hs = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify({ ppm_prec: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value }), ""));
           st.took = performance.now() - t0; st.summary = null; st.det = {};
+          if (window.TPLIVE) TPLIVE.stop(true);
           window.TPHR.render($("#tp-right"), hs, { esc, fmtA, chart, hue, call, callRaw, toast, dl });
           $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
           setBusy(false); return;
         }
         st.summary = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
-        st.took = performance.now() - t0; st.sel = null; st.det = {}; render(); $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
-      } catch (e) { msg(String(e.message || e), true); $("#tp-bar").style.width = "0"; }
+        st.took = performance.now() - t0; st.sel = null; st.det = {}; if (window.TPLIVE) TPLIVE.stop(true); render(); $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (e) { if (window.TPLIVE) TPLIVE.stop(false); msg(String(e.message || e), true); $("#tp-bar").style.width = "0"; }
       setBusy(false);
     };
 
