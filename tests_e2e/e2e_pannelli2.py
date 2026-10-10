@@ -62,6 +62,33 @@ try:
             pg.click("#np-map"); pg.wait_for_timeout(1500)
             v = pg.evaluate("[...document.querySelectorAll('[data-o=view]')].map(b=>b.dataset.v)"); assert v == ["2d", "3d"], v
         step("map: only 2D and 3D (no Mirino, no Ridge)", map_views)
+        def grips():
+            pg.evaluate("setFold(false)")
+            pg.click("#np-spec"); pg.wait_for_timeout(1200)
+            ps = pg.evaluate("E.panels.filter(q=>q.full).map(q=>q.id)"); assert len(ps) >= 2, ps
+            for w in (1100, 1440, 1920):
+                for fold in (False, True):
+                    pg.set_viewport_size({"width": w, "height": 1000}); pg.evaluate(f"setFold({str(fold).lower()})"); pg.wait_for_timeout(500)
+                    ov = pg.evaluate("[document.documentElement.scrollWidth - document.documentElement.clientWidth, E.panels.filter(q=>!q.el.classList.contains('max')).map(q=>q.x+q.w-document.getElementById('dpanels').clientWidth).reduce((m,v)=>Math.max(m,v),-9)]")
+                    assert ov[0] <= 1 and ov[1] <= 2, (w, fold, ov)               # no horizontal scroll, no panel wider than the column
+            pg.set_viewport_size({"width": 1280, "height": 1000}); pg.evaluate("setFold(false)"); pg.wait_for_timeout(400)
+            assert pg.evaluate("getComputedStyle(E.panels[0].el).resize") == "none"
+            assert pg.locator(".pnl .pgrip.t").count() >= 2 and pg.locator(".pnl .pgrip.b").count() >= 2
+        step("panels: grips on the top and bottom edge, never wider than the column at 1100, 1440 and 1920 px (sidebar open and closed)", grips)
+        def drag_top():
+            pg.evaluate("window.scrollTo(0,0)")
+            ids = pg.evaluate("E.panels.filter(q=>q.full&&q.el.offsetParent).sort((a,b)=>a.y-b.y).map(q=>q.id)")
+            i = ids[1]; h = lambda: pg.evaluate("id=>E.panels.find(q=>q.id===id).h", i); hp = lambda: pg.evaluate("id=>E.panels.find(q=>q.id===id).h", ids[0])
+            h0, p0 = h(), hp()
+            pg.evaluate("id=>E.panels.find(q=>q.id===id).el.scrollIntoView({block:'center'})", i); pg.wait_for_timeout(300)
+            bb = pg.evaluate("id=>{const r=E.panels.find(q=>q.id===id).el.querySelector('.pgrip.t').getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]}", i)
+            pg.mouse.move(bb[0], bb[1]); pg.mouse.down(); pg.mouse.move(bb[0], bb[1] - 60, steps=5); pg.mouse.up(); pg.wait_for_timeout(500)
+            assert h() == h0 + 60 and hp() == p0 - 60, (h0, h(), p0, hp())     # splitter: the panel above gives what this one gains
+            pg.evaluate("id=>E.panels.find(q=>q.id===id).el.querySelector('.pgrip.t').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}))", i); pg.wait_for_timeout(400)
+            assert h() == 300, h()                                              # double click = default height
+            pg.evaluate("id=>{const g=E.panels.find(q=>q.id===id).el.querySelector('.pgrip.b');g.focus()}", i); pg.keyboard.press("ArrowDown"); pg.wait_for_timeout(300)
+            assert h() == 320, h()
+        step("panels: the top grip moves the boundary with the panel above, double click = default height, arrows on the focused grip", drag_top)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))
