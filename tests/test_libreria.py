@@ -196,3 +196,12 @@ const q=mk(316.1,[[60.5,100],[100.1,400],[166.2,900],[216.3,300],[266.4,200]]);
 const r=L.analogIndex(idx,q,{maxDelta:200,frag:0.01,pol:1},pos=>specs[pos],null);
 console.log(JSON.stringify(r.map(x=>({pos:x.pos,mcos:x.mcos,delta:x.delta,shifted:x.shifted}))));""")
     assert [r["pos"] for r in out] == [0] and out[0]["mcos"] > 0.99 and abs(out[0]["delta"] - 16.0) < 1e-6 and out[0]["shifted"] == 3
+
+
+def test_index_positions_point_to_the_right_spectra_for_a_precursor_search():
+    r = run("""
+      const prec=[], pol=[], off=[0], peaks=[]; let tot=0;
+      for (let i=0;i<50;i++){ prec.push(100+i*7.3); pol.push(1); peaks.push({mz:Float32Array.from([i+1,i+2]),it:Float32Array.from([1,0.5])}); tot+=2; off.push(tot); }
+      const u=L.unpackIndex(L.packIndex(L.buildIndex(prec,pol,off),tot)), want=prec[37], k=L.lowerBound(u.prec,want-0.001);
+      console.log(JSON.stringify({pos:u.ord[k], off:[u.off[u.ord[k]],u.off[u.ord[k]+1]]}));""")
+    assert r == {"pos": 37, "off": [74, 76]}
