@@ -132,3 +132,19 @@ def isf_classify(mzs_json: str, formula_p: str = "") -> str:
     res = isf.classify_ions(samples, float(_ex.entries[0]["mz_x"]), [float(v) for v in json.loads(mzs_json)], formula_p or (chem.fmt(_ex.neutral) if _ex.neutral else None))
     res["sheets"] = isf.to_sheets(res)
     return _out(res)
+
+
+def esperti_trova(json_in: str) -> str:
+    """Expert tools on the difference map (esperti.py): the points of A - B. In: {diff, a (base64 float32 grids), nrt, nmz, rt0, rt1, mz0, dmz, soglie}."""
+    from . import esperti
+    q = json.loads(json_in)
+    nrt, nmz = int(q["nrt"]), int(q["nmz"])
+    pts = esperti.find_points(esperti._grid(q["diff"], nrt, nmz), esperti._grid(q["a"], nrt, nmz), float(q["rt0"]), float(q["rt1"]), float(q["mz0"]), float(q["dmz"]), q.get("soglie"))
+    return _out({"points": pts})
+
+
+def esperti_analisi(json_in: str) -> str:
+    """Groups, roles with proof, time course and priority of the points (esperti.analyse). In: {points (with traces per file), files, hr, ppm, losses, soglie}."""
+    from . import esperti
+    q = json.loads(json_in)
+    return _out({"rows": esperti.analyse(q["points"], q["files"], bool(q.get("hr")), float(q.get("ppm") or 5.0), q.get("losses") or [], q.get("soglie"))})

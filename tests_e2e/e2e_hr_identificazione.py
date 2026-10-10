@@ -42,6 +42,19 @@ try:
             assert dl.value.suggested_filename.startswith("identificazione") and os.path.getsize(dl.value.path()) > 1500
             pg.evaluate("document.querySelector('#libid').close()")
         step("identify all the MS2 of the file: the library entry is found, with a verdict and the level", identify)
+        def excluded():
+            pol = pg.evaluate("E.files.find(f=>f.kind==='ms2').polarity")
+            pg.evaluate("LISTE.ready()"); assert pg.evaluate("LISTE.isOn()"), "the contaminant lists are on"
+            prec = pg.evaluate("(async()=>{const k=E.files.find(f=>f.kind==='ms2').k;const d=await J('api/dda?k='+k);const c={};d.tgt.forEach(t=>{if(t)c[t]=(c[t]||0)+1});return +Object.keys(c).sort((a,b)=>c[b]-c[a])[0]})()")
+            pg.evaluate(f"LISTE.addLab({prec}, {{name:'Rumore di prova', polarity:{1 if pol == 'positive' else -1}}})"); pg.wait_for_timeout(400)
+            pg.evaluate(f"[...new Set(LISTE.compat({prec}, '{pol}', 5).all.map(x => x.list))].forEach(l => LISTE.exclSet('list', l, true))")          # every list this precursor is compatible with
+            pg.evaluate("LIB.identifyAll(E.files.find(f=>f.kind==='ms2').k)"); pg.wait_for_selector("#li-body .cont-cnt", timeout=60000)
+            t = pg.inner_text("#li-body")
+            assert "Voce di prova" not in t and "nascosti" in pg.inner_text("#li-body .cont-cnt"), t[:300]
+            pg.click("#li-chid"); pg.wait_for_function("document.querySelector('#li-body').innerText.includes('Voce di prova')", timeout=10000)
+            pg.click("#li-chid"); assert "Voce di prova" not in pg.inner_text("#li-body")
+            pg.evaluate("document.querySelector('#libid').close(); LISTE.exclReset()")
+        step("a candidate whose precursor is an excluded contaminant stays out of the list, counted, until «Mostra»", excluded)
         def analogs():
             r = pg.evaluate("""(async()=>{const q=%s;const j=await LIB.call('analogs',{peaks:q.mz.map((m,i)=>[m,q.y[i]]),prec:q.t,pol:1,frag:0.01,maxDelta:200,max:10});return j.results.map(x=>({name:x.name,delta:x.delta,matched:x.matched,mcos:x.mcos}))})()""" % __import__("json").dumps(info))
             assert r and r[0]["name"] == "Analogo di prova" and abs(r[0]["delta"] - 15.9949) < 1e-3 and r[0]["matched"] >= 4 and r[0]["mcos"] > 0.9, r
