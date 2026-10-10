@@ -23,11 +23,14 @@ MRM: quattro standard a concentrazione crescente (curva di taratura).
   MRM_std_7.2ppm.mzML   7,2 ppm
   MRM_std_18ppm.mzML    18 ppm
 
-HRMS (alta risoluzione): un file Orbitrap (ESI positivo, DDA) di un altro composto degradato per fotocatalisi con TiO2,
-a un tempo intermedio del trattamento. È un ritaglio: una finestra di tempi di ritenzione con il composto e i suoi prodotti,
-Full Scan + MS2 (centroidi). Dati di ricerca, pubblicati come esempio con il permesso dell'autore. Si apre nella modalità ad alta risoluzione.
+HRMS (alta risoluzione): quattro file Orbitrap (ESI positivo, DDA) di degradazione per fotocatalisi con TiO2 del timololo,
+a tempi crescenti di trattamento (0, 5, 10 e 30 minuti).
+Full Scan + MS2 (centroidi). Dati di ricerca, pubblicati come esempio con il permesso dell'autore. Si aprono nella modalità ad alta risoluzione.
 
-  HRMS_DDA.mzML       Orbitrap, Full Scan + MS2 (DDA)
+  TIM_TiO2_t000min.mzML   tempo 0 min   (prima dell'irraggiamento)
+  TIM_TiO2_t005min.mzML   tempo 5 min
+  TIM_TiO2_t010min.mzML   tempo 10 min
+  TIM_TiO2_t030min.mzML   tempo 30 min
 
 Il numero dopo «t» nel nome è il tempo di trattamento in minuti, il numero prima di «ppm» la concentrazione: mzLab li legge da soli.
 Si aprono con il pulsante «Prova con i file di esempio» della pagina iniziale (si sceglie fra Full Scan, MS2, MRM e HRMS e si scarica solo il gruppo scelto), oppure scaricandoli e
