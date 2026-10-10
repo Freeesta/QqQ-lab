@@ -129,13 +129,12 @@
     const rows = pol => { const l = ADD.filter(a => Math.sign(a.z) === pol);
       return l.filter(a => a.exp).map(a => row(a, pol)).join("") + `<tr class="admore" data-pol="${pol}"><td colspan="6" style="padding-top:8px"><a href="#" class="adtog">${AD_MORE[pol] ? "&#9662;" : "&#9656;"} ${I18N.t("tbl.add.more")}</a></td></tr>` + (AD_MORE[pol] ? l.filter(a => !a.exp).map(a => row(a, pol)).join("") : ""); };
     const head = pol => `<tr><th>${I18N.t("tbl.add.col.adduct")}</th><th>m/z =</th><th class="num">${I18N.t("tbl.add.col.exact")}</th><th class="num">${I18N.t("tbl.add.col.nominal")}</th><th class="num">${I18N.t("tbl.add.col.delta", { ref: pol > 0 ? "[M+H]<sup>+</sup>" : "[M&minus;H]<sup>&minus;</sup>" })}</th><th>${I18N.t("tbl.add.col.when")}</th></tr>`;
-    const blk = pol => `<h4>${I18N.t(pol > 0 ? "tbl.add.esiPos" : "tbl.add.esiNeg")}</h4><table>${head(pol)}${rows(pol)}</table>`;
+    const blk = pol => `<div class="ad-card ${pol > 0 ? "pos" : "neg"}"><div class="ad-hd"><span class="ad-badge ${pol > 0 ? "pos" : "neg"}">${pol > 0 ? "ESI+" : "ESI&minus;"}</span> <b>${I18N.t(pol > 0 ? "tbl.add.esiPos" : "tbl.add.esiNeg")}</b></div><div class="ad-sc"><table>${head(pol)}${rows(pol)}</table></div></div>`;
     const neg = typeof E !== "undefined" && E.files.some(f => f.polarity === "negative") && !E.files.some(f => f.polarity === "positive");      // the polarity of the loaded files first
     return (neg ? blk(-1) + blk(1) : blk(1) + blk(-1)) + diffsHtml();
   }
   function adductTab() {
-    return `<div class="bar"><label>${I18N.t("tbl.add.input")} <input id="ad-in" placeholder="${I18N.t("tbl.add.placeholder")}" style="width:260px"></label><span id="ad-msg" class="muted sm"></span></div>
-      <div class="sm">${I18N.t("tbl.add.intro")}</div>
+    return `<div class="adbar" style="margin-bottom:8px"><div class="sb-search-box"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input id="ad-in" placeholder="${I18N.t("tbl.add.placeholder")}" autocomplete="off"></div><div id="ad-msg" class="muted sm" style="margin-top:4px"></div></div>
       <div id="ad-tbl">${adducts(null)}</div>`;
   }
   function bindAdducts(root) {
@@ -157,37 +156,23 @@
   // ---------------------------------------------------------------- common neutral losses (MS/MS and in-source)
   // The masses are computed from the formulas (exact mass rounded to the integer); the "typical of" column summarises what the reviews below
   // describe for even-electron ions in ESI-MS/MS. A loss is only a hypothesis: it must be checked against the structure.
-  function lossRefs() {
-    const L = (u, t) => `<a href="${u}" target="_blank" rel="noopener">${t}</a>`;
-    return `<div class="muted sm" style="margin-top:8px"><b>${I18N.t("tbl.loss.refs")}</b><ol style="margin:4px 0 0 18px;padding:0;line-height:1.5">
-      <li>Levsen K., Schiebel H.-M., Terlouw J. K., et al. <i>Even-electron ions: a systematic study of the neutral species lost in the dissociation of quasi-molecular ions.</i> J. Mass Spectrom. 2007, 42, 1024-1044. ${L("https://analyticalsciencejournals.onlinelibrary.wiley.com/doi/10.1002/jms.1234", "link")}</li>
-      <li>De Vijlder T., Valkenborg D., Lemi&egrave;re F., Romijn E. P., Laukens K., Cuyckens F. <i>A tutorial in small molecule identification via electrospray ionization-mass spectrometry: the practical art of structural elucidation.</i> Mass Spectrom. Rev. 2018, 37, 607-629. ${L("https://pmc.ncbi.nlm.nih.gov/articles/PMC6099382/", I18N.t("tbl.loss.refFree"))}</li>
-      <li>Demarque D. P., Crotti A. E. M., Vessecchi R., Lopes J. L. C., Lopes N. P. <i>Fragmentation reactions using electrospray ionization mass spectrometry: an important tool for the structural elucidation and characterization of synthetic and natural products.</i> Nat. Prod. Rep. 2016, 33, 432-455. ${L("https://pubs.rsc.org/en/content/articlelanding/2016/np/c5np00073d", "link")}</li>
-      <li>Hol&ccaron;apek M., Jir&aacute;sko R., L&iacute;sa M. <i>Basic rules for the interpretation of atmospheric pressure ionization mass spectra of small molecules.</i> J. Chromatogr. A 2010, 1217, 3908-3921. ${L("https://pubmed.ncbi.nlm.nih.gov/20303090/", "link")}</li></ol></div>`;
-  }
-  // «Perdite neutre»: one line per loss (Δm, formula, name, where it is seen, typical polarity); «Dettagli» opens exact mass, mechanism and source;
+  // «Perdite neutre»: one line per loss (Δm, formula, where it is seen); «Dettagli» opens loss name, exact mass, mechanism and source;
   // the losses with the same nominal mass sit in a box (unit resolution cannot tell them apart); «Cerca Δm» lists single, pair and repeated candidates.
-  const NL = { q: "", pol: "", open: new Set(), more: false };       // state kept while the window is open (the ruler of the spectrum can fill q)
+  const NL = { q: "", pols: new Set(["+", "-"]), open: new Set() };       // state kept while the window is open (the ruler of the spectrum can fill q)
   const fl = f => sub(f.replace(/^(CH3|NO2|Cl)$/, "•$1")).replace(/^•/, "•");   // radicals are written with the dot
   // high resolution (an Orbitrap / Q-TOF file is loaded): the exact mass of each loss is shown and «Cerca Δm» looks within 3 mDa instead of 0.5 Da
   const hrOn = () => !!(window.HR && typeof E !== "undefined" && E.files.some(f => !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2))));
   const NL_TOL = () => hrOn() ? 0.003 : 0.5, NL_DEC = () => hrOn() ? 4 : 1;
-  const polChip = p => {
-    const cls = p === "+" ? "pol pos" : p === "-" ? "pol neg" : "pol both";
-    const txt = p === "+" ? "ESI+" : p === "-" ? "ESI&minus;" : "ESI+/-";
-    const tip = I18N.t(p === "+" ? "tbl.loss.polPos" : p === "-" ? "tbl.loss.polNeg" : "tbl.loss.polBoth");
-    return `<span class="${cls}" title="${tip}">${txt}</span>`;
-  };
   const lossRow = (l, o) => {
     const m = massOf(l.f), id = l.f;
-    return `<div class="nlr${o.hit.has(id) ? " hit" : ""}" data-f="${id}"><div class="nlm">${Math.round(m)}${hrOn() ? `<small class="muted" title="${I18N.t("tbl.loss.exactTitle")}" style="display:block;font-size:10.5px;font-weight:400">${m.toFixed(4)}</small>` : ""}</div><div class="nlf"><b>${fl(l.f)}</b><span class="muted">${H(I18N.t(l.name))}</span></div>
-      <div class="nls">${H(I18N.t(l.seen))}</div><div class="nlpp">${polChip(l.pol)}</div><button class="nld" type="button" data-d="${id}" aria-expanded="${NL.open.has(id)}">${I18N.t("tbl.loss.details")}</button>
+    return `<div class="nlr${o.hit.has(id) ? " hit" : ""}" data-f="${id}"><div class="nlr-main"><div class="nlr-head"><span class="nlm">${Math.round(m)}${hrOn() ? `<small class="muted" title="${I18N.t("tbl.loss.exactTitle")}">${m.toFixed(4)}</small>` : ""}</span><span class="nlf"><b>${fl(l.f)}</b></span><button class="nld" type="button" data-d="${id}" aria-expanded="${NL.open.has(id)}" title="${I18N.t("tbl.loss.details")}">${I18N.t("tbl.loss.details")}</button></div>
+      <div class="nls">${H(I18N.t(l.seen))}</div></div>
       ${l.rad ? `<div class="nlrad">• ${H(I18N.t(LOSS_RAD))}</div>` : ""}
-      <div class="nldet"${NL.open.has(id) ? "" : " hidden"}><div>${I18N.t("tbl.loss.detail", { m: m.toFixed(4), mech: H(I18N.t(l.mech)) })}</div><div class="muted sm">${I18N.t(l.rad ? "tbl.loss.sourcesRad" : "tbl.loss.sources", { refs: H(LOSS_REFS) })}</div></div></div>`;
+      <div class="nldet"${NL.open.has(id) ? "" : " hidden"}><div class="nld-name"><b>${H(I18N.t(l.name))}</b></div><div>${I18N.t("tbl.loss.detail", { m: m.toFixed(4), mech: H(I18N.t(l.mech)) })}</div><div class="muted sm">${I18N.t(l.rad ? "tbl.loss.sourcesRad" : "tbl.loss.sources", { refs: H(LOSS_REFS) })}</div></div></div>`;
   };
   function lossList() {
     const hit = new Set(), q = parseFloat(String(NL.q).replace(",", "."));
-    const vis = LOSSES.filter(l => !NL.pol || l.pol === "±" || l.pol === NL.pol).sort((a, b) => massOf(a.f) - massOf(b.f));
+    const vis = LOSSES.filter(l => l.pol === "±" || NL.pols.has(l.pol)).sort((a, b) => massOf(a.f) - massOf(b.f));
     if (isFinite(q)) vis.forEach(l => { if (Math.abs(massOf(l.f) - q) <= NL_TOL()) hit.add(l.f); });
     const groups = []; vis.forEach(l => { const n = Math.round(massOf(l.f)), g = groups[groups.length - 1]; if (g && g.n === n) g.ls.push(l); else groups.push({ n, ls: [l] }); });
     return groups.map(g => g.ls.length < 2 ? lossRow(g.ls[0], { hit }) : `<div class="nlg"><div class="nlgn">${I18N.t("tbl.loss.sameNominal", { n: g.n })}${g.n === 80 ? " " + I18N.t("tbl.loss.checkM2") : ""}</div>${g.ls.map(l => lossRow(l, { hit })).join("")}</div>`).join("");
@@ -199,12 +184,9 @@
     return `<div class="nlc"><b>${I18N.t("tbl.loss.possible")}</b>${li.length ? `<ul>${li.join("")}</ul>` : `<div class="muted sm">${I18N.t("tbl.loss.none", { tol: hrOn() ? "0.003" : "0.5" })}</div>`}</div>`;
   }
   function lossTab() {
-    return `<div class="nlintro"><p>${I18N.t("tbl.loss.intro")}</p>
-      <a href="#" id="nl-more-t" aria-expanded="${NL.more}">${NL.more ? "&#9662;" : "&#9656;"} ${I18N.t("tbl.loss.moreLink")}</a>
-      <p id="nl-more"${NL.more ? "" : " hidden"}>${I18N.t("tbl.loss.more")}</p></div>
-      <div class="nlbar"><label>${I18N.t("tbl.loss.search")} <input id="nl-q" inputmode="decimal" autocomplete="off" placeholder="${I18N.t("tbl.loss.searchPh")}" value="${H(NL.q)}" title="${I18N.t("tbl.loss.searchTitle")}"></label>
-      <span class="seg" id="nl-pol" title="${I18N.t("tbl.loss.polTitle")}"><button data-p="+" class="${NL.pol === "+" ? "on" : ""}">ESI+</button><button data-p="-" class="${NL.pol === "-" ? "on" : ""}">ESI&minus;</button><button data-p="" class="${NL.pol === "" ? "on" : ""}">${I18N.t("tbl.loss.all")}</button></span></div>
-      <div id="nl-res">${lossCombosHtml()}</div><div id="nl-list">${lossList()}</div>` + lossRefs();
+    return `<div class="nlbar"><div class="sb-search-box"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input id="nl-q" inputmode="decimal" autocomplete="off" placeholder="${I18N.t("tbl.loss.searchPh")}" value="${H(NL.q)}" title="${I18N.t("tbl.loss.searchTitle")}"></div>
+      <span class="seg" id="nl-pol" title="${I18N.t("tbl.loss.polTitle")}"><button type="button" data-p="+" class="${NL.pols.has("+") ? "on" : ""}">ESI+</button><button type="button" data-p="-" class="${NL.pols.has("-") ? "on" : ""}">ESI&minus;</button></span></div>
+      <div id="nl-res">${lossCombosHtml()}</div><div id="nl-list">${lossList()}</div>`;
   }
   function bindLoss(root, show) {
     const list = () => { root.querySelector("#nl-list").innerHTML = lossList(); wire(); root.querySelector("#nl-res").innerHTML = lossCombosHtml(); };
@@ -213,13 +195,22 @@
       root.querySelectorAll("[data-go]").forEach(a => a.onclick = e => { e.preventDefault(); show(a.dataset.go); });
     };
     wire();
-    root.querySelector("#nl-more-t").onclick = e => { e.preventDefault(); NL.more = !NL.more; root.querySelector("#nl-more").hidden = !NL.more; e.currentTarget.setAttribute("aria-expanded", NL.more); e.currentTarget.innerHTML = (NL.more ? "&#9662;" : "&#9656;") + " " + I18N.t("tbl.loss.moreLink"); };
     root.querySelector("#nl-q").oninput = e => { NL.q = e.target.value; list(); };
-    root.querySelectorAll("#nl-pol button").forEach(b => b.onclick = () => { NL.pol = b.dataset.p; root.querySelectorAll("#nl-pol button").forEach(x => x.classList.toggle("on", x === b)); list(); });
+    root.querySelectorAll("#nl-pol button").forEach(b => b.onclick = () => {
+      const p = b.dataset.p;
+      if (NL.pols.has(p)) {
+        if (NL.pols.size === 1) NL.pols.add(p === "+" ? "-" : "+");
+        NL.pols.delete(p);
+      } else {
+        NL.pols.add(p);
+      }
+      root.querySelectorAll("#nl-pol button").forEach(x => x.classList.toggle("on", NL.pols.has(x.dataset.p)));
+      list();
+    });
   }
   // the polarity of the loaded files sets the filter when the window opens (the student can change it)
   function lossPolStart() {
-    try { const fl = typeof shown === "function" && shown().length ? shown() : E.files.filter(f => f.vis), pos = fl.some(f => f.polarity === "positive"), neg = fl.some(f => f.polarity === "negative"); NL.pol = pos && !neg ? "+" : neg && !pos ? "-" : ""; } catch (_) { NL.pol = ""; }
+    try { const fl = typeof shown === "function" && shown().length ? shown() : E.files.filter(f => f.vis), pos = fl.some(f => f.polarity === "positive"), neg = fl.some(f => f.polarity === "negative"); NL.pols = pos && !neg ? new Set(["+"]) : neg && !pos ? new Set(["-"]) : new Set(["+", "-"]); } catch (_) { NL.pols = new Set(["+", "-"]); }
   }
 
   // ---------------------------------------------------------------- isotope pattern, computed here (no external library)

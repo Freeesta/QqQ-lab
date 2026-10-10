@@ -19,24 +19,25 @@ try:
             n = pg.locator("#nl-list .nlr").count(); assert 18 <= n <= 24, n
             ms = [int(x) for x in pg.locator("#nl-list .nlm").all_inner_texts()]; print(ms); assert ms == sorted(ms) and ms[0] == 15, ms
             assert pg.locator("#nl-list .nldet:visible").count() == 0, "details closed by default"
-            assert pg.evaluate("document.querySelector('#nl-pol .on').dataset.p") == "+", "positive files -> the filter starts on +"
-            t = pg.inner_text("#nl-list"); assert "acqua" in t and "solfuro di idrogeno" in t and "idrossido" not in t and "%" not in t, t
+            assert pg.evaluate("document.querySelector('#nl-pol button.on').dataset.p") == "+", "positive files -> the filter starts on +"
+            t = pg.inner_text("#nl-list"); assert "alcoli" in t and "tioli" in t and "idrossido" not in t and "%" not in t, t
         step("4.1/4.6: simple view, sorted by Δm, polarity of the files", simple)
         def details():
             pg.locator('#nl-list [data-d="H2O"]').click(); pg.wait_for_timeout(200)
-            t = pg.inner_text('#nl-list [data-f="H2O"] .nldet'); print(t[:120]); assert "18.0106" in t and "meccanismo" in t and "Levsen" in t, t
+            t = pg.inner_text('#nl-list [data-f="H2O"] .nldet'); print(t[:120]); assert "18.0106" in t and "meccanismo" in t and "Levsen" in t and "acqua" in t, t
             pg.locator('#nl-list [data-d="H2O"]').click(); assert pg.locator('#nl-list [data-f="H2O"] .nldet:visible').count() == 0
-        step("4.2: Dettagli: exact mass (4 decimals), mechanism, source", details)
+        step("4.2: Dettagli: exact mass (4 decimals), mechanism, source, loss name", details)
         def groups():
             g = pg.locator("#nl-list .nlg"); assert g.count() == 2, g.count()      # with + : 28 and 42 (46 and 80 need a negative-only loss)
             t = pg.inner_text("#nl-list .nlg"); assert "risoluzione unitaria" in t
-            pg.locator("#nl-pol [data-p='']").click(); pg.wait_for_timeout(200)
+            # Click ESI- to activate both + and -
+            pg.locator("#nl-pol [data-p='-']").click(); pg.wait_for_timeout(200)
             g80 = pg.locator("#nl-list .nlg", has_text="(80)"); assert g80.count() == 1 and "M+2" in g80.inner_text()
             assert pg.locator("#nl-list .nlg").count() == 4
             assert "profilo isotopico nello spettro" in g80.inner_text() and "scheda" not in g80.inner_text()
         step("4.3: same nominal mass in a box; 80 points to the isotope profile of the spectrum", groups)
         def radicals():
-            t = pg.inner_text('#nl-list [data-f="CH3"]'); assert "•" in t and "radicale" in t and "elettroni pari" in t, t
+            t = pg.inner_text('#nl-list [data-f="CH3"]'); assert "•" in t and "elettroni pari" in t, t
             assert "•" in pg.inner_text('#nl-list [data-f="NO2"]')
         step("4.4: radical losses with the dot and the short label", radicals)
         def search():
@@ -47,28 +48,30 @@ try:
             pg.fill("#nl-q", "")
         step("4.5: Cerca Δm: 62 = H2O + CO2, 72 = 2 x HCl, 28 highlights two rows", search)
         def polarity():
-            pg.click("#nl-pol [data-p='-']"); pg.wait_for_timeout(200)
-            ids = pg.evaluate("[...document.querySelectorAll('#nl-list .nlr')].map(r=>r.dataset.f)"); assert "NO2" in ids and "SO3" in ids and "NH3" not in ids, ids
+            # Turn off + so only - is active
             pg.click("#nl-pol [data-p='+']"); pg.wait_for_timeout(200)
+            ids = pg.evaluate("[...document.querySelectorAll('#nl-list .nlr')].map(r=>r.dataset.f)"); assert "NO2" in ids and "SO3" in ids and "NH3" not in ids, ids
+            # Turn on + and turn off -
+            pg.click("#nl-pol [data-p='+']"); pg.wait_for_timeout(100); pg.click("#nl-pol [data-p='-']"); pg.wait_for_timeout(200)
             ids = pg.evaluate("[...document.querySelectorAll('#nl-list .nlr')].map(r=>r.dataset.f)"); assert "NH3" in ids and "SO3" not in ids and "H2O" in ids, ids
             shut(pg, "#refx")
-        step("4.6: +/-/tutte filter", polarity)
+        step("4.6: +/- toggle filter", polarity)
         def a2():
-            pg.click("#np-nl"); pg.wait_for_timeout(300); pg.click("#nl-pol [data-p='']"); pg.wait_for_timeout(200)
-            t = pg.inner_text("#nl-intro, .nlintro") if pg.locator(".nlintro").count() else ""
-            assert "Nella cella di collisione (q2)" in t and "Δm = m/z del precursore − m/z del frammento" in t, t
-            assert not pg.is_visible("#nl-more"), "«Più dettagli» closed by default"
-            pg.click("#nl-more-t"); pg.wait_for_timeout(150); assert pg.is_visible("#nl-more") and "perdite in cascata" in pg.inner_text("#nl-more")
-            assert pg.evaluate("Q('.nlintro sup') && Q('.nlintro sub')")
-            pg.click("#nl-more-t"); assert not pg.is_visible("#nl-more")
-            assert [b.strip() for b in pg.locator("#nl-pol button").all_inner_texts()] == ["ESI+", "ESI−", "tutte"], pg.locator("#nl-pol button").all_inner_texts()
-            chips = set(pg.locator("#nl-list .nlpp").all_inner_texts()); assert chips <= {"ESI+", "ESI−", "ESI+/-"} and len(chips) == 3, chips
-            assert pg.locator("#nl-list .pol.pos").count() > 0 and pg.locator("#nl-list .pol.neg").count() > 0 and pg.locator("#nl-list .pol.both").count() > 0
+            pg.click("#np-nl"); pg.wait_for_timeout(300)
+            assert [b.strip() for b in pg.locator("#nl-pol button").all_inner_texts()] == ["ESI+", "ESI−"]
+            assert pg.locator("#nl-list .nlpp").count() == 0, "polarity column removed"
+            # Turn on both + and -
+            pg.click("#nl-pol [data-p='-']"); pg.wait_for_timeout(200)
             row = pg.locator('#nl-list [data-f="Cl"]'); assert row.count() == 1
-            assert row.locator(".nlm").inner_text() == "35" and "•Cl" in row.inner_text() and "radicale" in row.inner_text() and "aromatico" in row.inner_text()
-            pg.locator('#nl-list [data-d="Cl"]').click(); d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" in d and "HCl (36)" in d and "37Cl" in d, d
+            assert row.locator(".nlm").inner_text() == "35" and "•Cl" in row.inner_text() and "aromatico" in row.inner_text()
+            pg.locator('#nl-list [data-d="Cl"]').click(); d = pg.inner_text('#nl-list [data-f="Cl"] .nldet'); assert "34.9689" in d and "HCl (36)" in d and "37Cl" in d and "radicale" in d, d
+            # Help button in header
+            assert pg.is_visible("#sb-help") and pg.locator("#sb-help").get_attribute("data-help") == "losses"
+            pg.click("#sb-help"); pg.wait_for_timeout(200)
+            assert pg.is_visible("#helppop") and "cella di collisione" in pg.inner_text("#helppop")
+            pg.click("#helppop .x")
             pg.fill("#nl-q", "62"); pg.wait_for_timeout(300); assert "H2O" in pg.inner_text("#nl-res").replace("H₂O", "H2O"); pg.fill("#nl-q", ""); shut(pg, "#refx")
-        step("A2: intro, Più dettagli, ESI+/ESI-, •Cl", a2)
+        step("A2: compact view, ESI+/ESI- toggles, •Cl, help in header", a2)
         def ruler():
             pg.evaluate(f"{SPEC}.el.scrollIntoView({{block:'center'}})"); pg.wait_for_timeout(300)
             pg.evaluate(f"(()=>{{const p={SPEC};p.meas={{ref:364.4,list:[{{a:364.4,b:194.2}}]}};draw(p)}})()"); pg.wait_for_timeout(500)

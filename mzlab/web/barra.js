@@ -147,6 +147,19 @@ const BARRA = (() => {
       ttlEl.textContent = getTabTitle(tabId);
     }
 
+    // Toggle help button for tools
+    const sbHelp = document.querySelector("#sb-help");
+    if (sbHelp) {
+      const helpKeys = { losses: "losses", adducts: "adducts", lists: "liste" };
+      if (helpKeys[tabId]) {
+        sbHelp.style.display = "";
+        sbHelp.dataset.help = helpKeys[tabId];
+      } else {
+        sbHelp.style.display = "none";
+        sbHelp.dataset.help = "";
+      }
+    }
+
     // Toggle actions (e.g. + button for file)
     const addf = document.querySelector("#addf");
     if (addf) {
