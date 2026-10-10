@@ -83,6 +83,27 @@ try:
             assert pg.evaluate("LISTE.exclItems().length") == 0
         step("exclude a class; list in the panel; Restore all", excl_cls)
 
+        def kbd_menu():
+            pg.evaluate("LISTE.exclReset()"); pg.wait_for_timeout(800)
+            assert pg.evaluate(f"{SP}._a.chid") == 0
+            pg.focus(".cont-lb"); pg.keyboard.press("Enter"); pg.wait_for_timeout(300)
+            assert pg.evaluate("document.activeElement.getAttribute('role')") == "menuitem", pg.evaluate("[document.activeElement.outerHTML.slice(0,80), document.querySelector('#ctx').hidden, document.querySelector('#ctx').innerHTML.slice(0,200), !!document.querySelector('.cont-lb')]")
+            pg.keyboard.press("Enter"); pg.wait_for_timeout(300)          # the first marked peak -> its exclude menu
+            pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter"); pg.wait_for_timeout(1000)     # (name is a dim line) the first action: exclude this entry
+            assert pg.evaluate("LISTE.exclItems().length") == 1, pg.evaluate("LISTE.exclItems().length")
+            pg.evaluate("LISTE.exclReset()")
+        step("keyboard: legend button -> menu -> exclude, arrows and Enter", kbd_menu)
+
+        def sess():
+            k = pg.evaluate(f"LISTE.keyFor('entry', {SP}._a.cont.match({SP}._a.cmarks[0].m)[0])")
+            pg.evaluate(f"LISTE.exclSet('entry', {json.dumps(k)}, true)"); pg.wait_for_timeout(300)
+            pg.evaluate("uiSave(true)"); pg.wait_for_timeout(500)
+            assert k in pg.evaluate("NB.ui.contEx.voci"), "exclusions saved with the session"
+            pg.evaluate("localStorage.removeItem('qqq.contaminanti.esclusi')"); pg.evaluate("LISTE.exclReset()")
+            pg.evaluate("LISTE.exclImport(NB.ui.contEx)"); assert pg.evaluate("LISTE.exclItems().length") == 1
+            pg.evaluate("LISTE.exclReset()")
+        step("exclusions saved with the session and restored", sess)
+
         def reset_all():
             pg.evaluate("LISTE.exclReset()"); assert pg.evaluate("LISTE.exclItems().length") == 0
         step("restore all", reset_all)

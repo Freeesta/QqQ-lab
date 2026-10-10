@@ -275,6 +275,14 @@ const LISTE = (() => {
     if (on && i < 0) a.push(key); else if (!on && i >= 0) a.splice(i, 1); else return;
     exclSave(e);
   }
+  // saved with the session: the stored object as is; restoring adds what the browser does not have yet
+  const exclExport = () => { const e = exclRead(), o = {}; exclKinds.forEach(k => { o[FLD[k]] = e[k].slice(); }); return o; };
+  function exclImport(o) {
+    if (!o || typeof o !== "object") return;
+    const e = exclRead(); let ch = false;
+    exclKinds.forEach(k => (Array.isArray(o[FLD[k]]) ? o[FLD[k]] : []).forEach(x => { if (typeof x === "string" && !e[k].includes(x)) { e[k].push(x); ch = true; } }));
+    if (ch) exclSave(e);
+  }
   function exclReset() { exclCache = { entry: [], cls: [], list: [] }; exclSave(exclCache); }
   const exclItems = () => { const e = exclRead(); return exclKinds.flatMap(k => e[k].map(key => ({ kind: k, key }))); };
   // the compatible entries of a peak: vis = those not excluded (the peak keeps its mark); hid = there are some, and all are excluded (the peak is hidden)
@@ -776,7 +784,7 @@ const LISTE = (() => {
     toggleListActive,
     forSpec,
     textFor,
-    compat, isExcluded, keyFor, exclSet, exclReset, exclItems, split,
+    compat, isExcluded, keyFor, exclSet, exclReset, exclExport, exclImport, exclItems, split,
     ensure,
     ready,
     isOn,
