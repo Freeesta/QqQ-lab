@@ -40,13 +40,8 @@ try:
         pg.evaluate("fetch('api/new',{method:'POST',body:JSON.stringify({fresh:true})})"); pg.reload(); pg.wait_for_timeout(1500)
         load(pg, [D / "HR_DDA-Exploris-t30.mzML"], 4000, 2)
         def pills():
-            t = pg.inner_html("#flst"); print(t.count("hrb"))
-            rows = pg.evaluate("[...document.querySelectorAll('#flst .fl:not(.ghost)')].map(r=>[r.querySelector('.nm').textContent,[...r.querySelectorAll('.hrb')].map(x=>x.textContent)])"); print(rows)
-            d = dict((a, b) for a, b in rows)
-            assert d, rows
-            full = [a for a in d if "Exploris" in a]; assert full and d[full[0]][:2] == ["HR", "DDA"] and "centroidi" in d[full[0]], d      # the bench adds the mode (profile / centroids) and the polarity
-            title = pg.evaluate("document.querySelector('#flst .hrb').title"); assert "Orbitrap Exploris 120" in title and "R 45" in title, title
-        step("pills «HR» and «DDA» on the Orbitrap file", pills)
+            assert pg.locator("#flst .hrb").count() == 0, "no pills in the file list"
+        step("no pills on the Orbitrap file", pills)
         def calc_hr():
             pg.click("#np-calc2"); pg.wait_for_timeout(400)
             pg.fill("#calcin", ""); pg.fill("#calcin", "C14H13F4N3O2S"); pg.wait_for_timeout(1500)

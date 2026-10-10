@@ -281,5 +281,9 @@
   "cont.lb": "Pulsante sotto lo spettro HR; {n} = numero di picchi compatibili.",
   "cont.lb.aria": "Etichetta per il lettore di schermo del pulsante; {n} = numero di picchi.",
   "cont.cnt": "Contatore dei picchi nascosti per esclusione; {n} = numero.",
-  "cont.cnt.shown": "Contatore quando i picchi nascosti sono mostrati; {n} = numero."
+  "cont.cnt.shown": "Contatore quando i picchi nascosti sono mostrati; {n} = numero.",
+  "bn.sub.count": "Riga sopra la tabella dell'XIC da formula; {hit} = sottoformule con segnale, {n} = sottoformule provate.",
+  "bn.sub.label": "Etichetta del grafico dell'XIC da formula; {formula} = formula dello ione, {ppm} = tolleranza.",
+  "err.subxic.many": "Errore dell'XIC da formula; {n} = numero di sottoformule della formula scritta.",
+  "err.subxic.none": "Errore dell'XIC da formula; {mz} = m/z minimo scelto."
 }
