@@ -2,6 +2,7 @@
 
     python3 tools/golden.py --crea        # recompute and WRITE tests/golden/*.json (only when the reference engine changes on purpose)
     python3 tools/golden.py --controlla   # recompute and COMPARE with the JSON; exit 1 on any difference
+    python3 tools/golden.py --sintetici DIR   # write only the two synthetic mzML files (the Rust tests read them)
 
 Sources: the anonymous example files of mzlab/web/esempi (Full Scan, MS2, MRM) and two synthetic files written by
 tools/dati_sintetici.py with a fixed seed (a Full Scan and an MRM, peaks of known shape). No compound names.
@@ -140,21 +141,26 @@ def _mrm(path: Path) -> dict:
     return {"kind": "mrm", "chromatograms": chroms}
 
 
+def write_synthetic(out: Path) -> dict[str, Path]:
+    """The two synthetic files of the golden data (fixed seeds), for the tests of other engines."""
+    import dati_sintetici as ds
+    out.mkdir(parents=True, exist_ok=True)
+    full, mrm = out / "sintetico_FullScan.mzML", out / "sintetico_MRM.mzML"
+    ds.full_scan(full, 15, np.random.default_rng(2026))
+    ds.mrm(mrm, 1.0e4 * 2.4, np.random.default_rng(2026), 3)
+    return {"sintetico_FullScan": full, "sintetico_MRM": mrm}
+
+
 def compute() -> dict[str, dict]:
     """name -> result for every golden file."""
     res: dict[str, dict] = {}
     res["esempio_FullScan_t10"] = _full(EXAMPLES / "FullScan_t10.mzML")
     res["esempio_MS2_t15"] = _ms2(EXAMPLES / "MS2_t15.mzML")
     res["esempio_MRM_std_2.4ppm"] = _mrm(EXAMPLES / "MRM_std_2.4ppm.mzML")
-    import dati_sintetici as ds
     with tempfile.TemporaryDirectory() as d:
-        rng = np.random.default_rng(2026)
-        p = Path(d) / "sintetico_FullScan.mzML"
-        ds.full_scan(p, 15, rng)
-        res["sintetico_FullScan"] = _full(p)
-        p = Path(d) / "sintetico_MRM.mzML"
-        ds.mrm(p, 1.0e4 * 2.4, np.random.default_rng(2026), 3)
-        res["sintetico_MRM"] = _mrm(p)
+        files = write_synthetic(Path(d))
+        res["sintetico_FullScan"] = _full(files["sintetico_FullScan"])
+        res["sintetico_MRM"] = _mrm(files["sintetico_MRM"])
     return res
 
 
@@ -208,7 +214,12 @@ def main(argv=None) -> int:
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--crea", action="store_true")
     g.add_argument("--controlla", action="store_true")
+    g.add_argument("--sintetici", metavar="DIR", help="only write the two synthetic mzML files of the golden data in DIR")
     args = ap.parse_args(argv)
+    if args.sintetici:
+        for p in write_synthetic(Path(args.sintetici)).values():
+            print(p)
+        return 0
     new = compute()
     if args.crea:
         GOLDEN.mkdir(parents=True, exist_ok=True)
