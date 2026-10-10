@@ -192,6 +192,7 @@
   "lst.csvError": "{message} = testo tecnico (inglese).",
   "lst.member": "Suggerimento su una riga di una serie omologa (es. PEG); {n} = numero d'ordine del membro nella serie.",
   "method.name": "Nome di un metodo dentro un file .dam che ne contiene più d'uno (uno per campione); {n} = numero.",
+  "mappa.read.scan": "Lettura del mirino della mappa; {n} = numero d'ordine della scansione nel file.",
   "hr.pol.tip": "Suggerimento sul segno di polarità; {pol} = positive / negative / mixed (come scritto nel file).",
   "hr.notice": "Avviso temporaneo in basso; {files} = nomi dei file.",
   "hr.iso.widthDef": "Larghezza dei picchi nella legenda del profilo isotopico; {def} = percentuale dell'altezza a cui è misurata.",

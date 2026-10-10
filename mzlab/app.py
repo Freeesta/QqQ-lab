@@ -425,6 +425,13 @@ class App:
         m = item.ionmap(level, grid)
         return {**grid, "level": level, "data": base64.b64encode(np.ascontiguousarray(m, dtype="<f4").tobytes()).decode("ascii")}
 
+    def ionmap_region(self, k: int, level: int, rt0: float, rt1: float, mz0: float, mz1: float, nrt: int, nmz: int) -> dict:
+        """The true zoom of the map: the region rt0..rt1 x mz0..mz1 on new bins (at most 1000 x 1000), same format as ionmap()."""
+        nrt, nmz = min(1000, max(1, int(nrt))), min(1000, max(1, int(nmz)))
+        m = self._item(k).ionmap_region(level, rt0, rt1, nrt, mz0, mz1, nmz)
+        return {"rt0": rt0, "rt1": rt1, "nrt": nrt, "mz0": mz0, "dmz": (mz1 - mz0) / nmz, "nmz": nmz, "level": level, "region": True,
+                "data": base64.b64encode(np.ascontiguousarray(m, dtype="<f4").tobytes()).decode("ascii")}
+
     def reset(self, fresh: bool = False):
         with self.lock:
             if self.session:

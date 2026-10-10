@@ -158,6 +158,12 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             except (ValueError, KeyError) as e:
                 return _fail(e)
         if path == "/api/map":
+            if q.get("rt0") not in (None, ""):      # true zoom: one region on new bins
+                try:
+                    return _json(app.ionmap_region(int(q["k"]), int(q.get("level", 1)), float(q["rt0"]), float(q["rt1"]), float(q["mz0"]), float(q["mz1"]),
+                                                   int(q.get("nrt", 400)), int(q.get("nmz", 400))))
+                except (ValueError, KeyError) as e:
+                    return _fail(e)
             return _json(app.ionmap(int(q["k"]), int(q.get("level", 1))))
         return _json({"error": "unknown endpoint"}, 404)
     except MemoryError:   # a file too big for the browser's memory: say what to do, not a bare exception name
