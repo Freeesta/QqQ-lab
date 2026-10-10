@@ -33,8 +33,12 @@ jobs:
             ~/.cargo/git
             target
           key: rust-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-      - name: Tests
-        run: cargo test --locked
+      - name: numpy (the parity tests write the synthetic files with tools/golden.py)
+        run: python -m pip install numpy
+      - name: Tests (parity with tests/golden/)
+        env:
+          MZLAB_GOLDEN_STRICT: "1"
+        run: cargo test --locked --release
       - name: WASM build (release)
         run: cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
       - name: No native dependencies in the WASM graph
