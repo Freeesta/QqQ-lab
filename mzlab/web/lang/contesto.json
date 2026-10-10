@@ -275,5 +275,6 @@
   "err.comp.range": "{symbol} = simbolo.",
   "err.comp.ion": "{ion} = nome dello ione.",
   "err.tree.formula": "{formula} = testo scritto dall'utente.",
-  "err.tree.tooMany": "{n} = numero di percorsi."
+  "err.tree.tooMany": "{n} = numero di percorsi.",
+  "mappa.tab.title": "Titolo della tabella dei punti segnati sotto la mappa; {n} = quanti punti."
 }

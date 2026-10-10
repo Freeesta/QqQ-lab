@@ -5,11 +5,15 @@ same routes, same answers, one implementation.
 """
 from __future__ import annotations
 
+import base64
 import json
+
+import numpy as np
 
 from .bigfiles import too_big
 from .i18n import UserError
 from .chem.elements import formula_mz
+from .explore import diff_tolerant, rt_groups
 
 
 def _json(obj, code=200):
@@ -24,6 +28,59 @@ def _fail(e, code=400):
 
 
 MAX_BODY = 8 << 20  # bytes accepted for a JSON request
+
+
+def _map_factor(app, k: int, level: int, norm: str) -> float:
+    """Normalisation of a map before a comparison, from the WHOLE map of the file: «max» = 1 / its most intense bin, «tic» = 1000 / its sum."""
+    if norm not in ("max", "tic"):
+        return 1.0
+    m = app._item(k).ionmap(level, app.session.grid(level))
+    t = float(m.max()) if norm == "max" else float(m.sum())
+    return (1.0 if norm == "max" else 1000.0) / t if t > 0 else 1.0
+
+
+def _map(app, q: dict) -> dict:
+    """/api/map with a region (rt0, rt1, mz0, mz1, nrt, nmz; at most 1000 x 1000) and/or a reference (ref, norm, rttol = tolerance in RT of the
+    difference, default 0.1 min: the reference is replaced by its local maximum over +-rttol)."""
+    k, level = int(q["k"]), int(q.get("level", 1))
+    region = q.get("rt0") not in (None, "")
+    if region:
+        rt0, rt1, mz0, mz1 = float(q["rt0"]), float(q["rt1"]), float(q["mz0"]), float(q["mz1"])
+        nrt, nmz = min(1000, max(1, int(q.get("nrt", 400)))), min(1000, max(1, int(q.get("nmz", 400))))
+        grid = {"rt0": rt0, "rt1": rt1, "nrt": nrt, "mz0": mz0, "dmz": (mz1 - mz0) / nmz, "nmz": nmz}
+        get = lambda kk: app._item(kk).ionmap_region(level, rt0, rt1, nrt, mz0, mz1, nmz)
+    else:
+        grid = app.session.grid(level)
+        get = lambda kk: app._item(kk).ionmap(level, grid)
+    m = get(k)
+    out = {**grid, "level": level, "region": region}
+    if q.get("ref") not in (None, ""):
+        ref, norm = int(q["ref"]), q.get("norm", "abs")
+        w = int(round(float(q.get("rttol", 0.1)) / max((grid["rt1"] - grid["rt0"]) / grid["nrt"], 1e-9)))
+        m = diff_tolerant(m * _map_factor(app, k, level, norm), get(ref) * _map_factor(app, ref, level, norm), w)
+        out.update(ref=ref, rttol=float(q.get("rttol", 0.1)), w=w)
+    out["data"] = base64.b64encode(np.ascontiguousarray(m, dtype="<f4").tobytes()).decode("ascii")
+    return out
+
+
+def _map_points(app, q: dict) -> dict:
+    """pts = "rt,mz;rt,mz;..." (the marked points, already on their apex). XIC window: high resolution (ppm > 0) mz +- ppm, otherwise the
+    nominal window [n - 0.2; n + 0.8]. grp = tolerance of the RT groups (min)."""
+    k, level = int(q["k"]), int(q.get("level", 1))
+    ref = app._item(int(q["ref"])) if q.get("ref") not in (None, "") else None
+    ppm, item = float(q.get("ppm", 0) or 0), app._item(k)
+    pts = []
+    for s in (q.get("pts") or "").split(";"):
+        if not s.strip():
+            continue
+        rt, mz = (float(x) for x in s.split(","))
+        c, tol = (mz, mz * ppm * 1e-6) if ppm > 0 else (round(mz) + 0.3, 0.5)
+        pts.append({"rt": rt, "mz": mz, **item.map_measure(level, rt, c, tol, ref)})
+    rows = rt_groups(pts, float(q.get("grp", 0.05)))
+    for r in rows:
+        r["d"] = r["ia"] - r["ib"] if r["ib"] is not None else None
+        r["ratio"] = r["ia"] / r["ib"] if r["ib"] else None
+    return {"rows": rows}
 
 
 def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0):
@@ -158,13 +215,22 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             except (ValueError, KeyError) as e:
                 return _fail(e)
         if path == "/api/map":
-            if q.get("rt0") not in (None, ""):      # true zoom: one region on new bins
+            if q.get("rt0") not in (None, "") or q.get("ref") not in (None, ""):      # true zoom (a region on new bins) and/or the difference with a reference
                 try:
-                    return _json(app.ionmap_region(int(q["k"]), int(q.get("level", 1)), float(q["rt0"]), float(q["rt1"]), float(q["mz0"]), float(q["mz1"]),
-                                                   int(q.get("nrt", 400)), int(q.get("nmz", 400))))
+                    return _json(_map(app, q))
                 except (ValueError, KeyError) as e:
                     return _fail(e)
             return _json(app.ionmap(int(q["k"]), int(q.get("level", 1))))
+        if path == "/api/mapsnap":     # marked point of the map: the local maximum near the click (+-0.2 min, +-1 bin)
+            try:
+                return _json(app._item(int(q["k"])).map_snap(int(q.get("level", 1)), float(q["rt"]), float(q["mz"]), float(q.get("dmz", 1.0))) or {})
+            except (ValueError, KeyError) as e:
+                return _fail(e)
+        if path == "/api/mappunti":    # measures of the marked points (A, B, A - B, A/B, S/N, RT groups, delta m): numbers only
+            try:
+                return _json(_map_points(app, q))
+            except (ValueError, KeyError) as e:
+                return _fail(e)
         return _json({"error": "unknown endpoint"}, 404)
     except MemoryError:   # a file too big for the browser's memory: say what to do, not a bare exception name
         return _json(too_big(), 507)
