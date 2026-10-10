@@ -20,12 +20,9 @@ try:
             n = pg.locator("#hrbar button[data-hb]").count(); assert n >= 14, n
             assert not pg.is_visible("#g-add"), "the old «+ Cromatogramma» group is replaced by the menu «Cella»"
         step("toolbar instead of the tabs, with its buttons", tabs_gone)
-        def badges():
-            t = pg.inner_text("#flst"); assert "HR" in t and "DDA" in t, t[:300]
-            assert "MS" in pg.inner_text("#flst") or True
-            assert pg.locator("#flst .hrb").count() >= 3
-            assert "centroidi" in t or "profilo" in t, t[:300]
-        step("file marks: HR, DDA, profile/centroids", badges)
+        def no_badges():
+            assert pg.locator("#flst .hrb").count() == 0 and pg.locator("#flst .fl:not(.ghost)").count() >= 1
+        step("no marks (HR, DDA, profile) in the rows of the files", no_badges)
         def add_del():
             n0 = pg.evaluate("E.panels.length")
             pg.click("#hrbar [data-hb=add]"); pg.click("#ctx >> text=Cromatogramma"); pg.wait_for_timeout(1500)
@@ -102,7 +99,7 @@ for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), "/home/user/
     if c and glob.glob(c + "/HRMS/*/*direct-infusion_MSn.mzML"): DATI = c; break
 if DATI:
     MSN = glob.glob(DATI + "/HRMS/*/*direct-infusion_MSn.mzML")[0]
-    TIO = [glob.glob(DATI + f"/HRMS/*/TIM_TiO2_t0{n}min.mzML")[0] for n in ("10", "20", "45")]
+    TIO = [glob.glob(DATI + f"/HRMS/*/*_TiO2_t0{n}min.mzML")[0] for n in ("10", "20", "45")]
     r = Run(port=8980, wd="/tmp/wd_msnbarra")
     try:
         with sync_playwright() as p:

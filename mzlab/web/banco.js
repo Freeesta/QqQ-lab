@@ -24,7 +24,8 @@ const BANCO = (() => {
 #hri-list{position:relative;overflow:auto;height:100%}#hri-list .hd{position:sticky;top:0;background:var(--panel);z-index:1;display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;font-weight:600;border-bottom:1px solid var(--line)}
 #hri-list .hd span{cursor:pointer;padding:2px 2px}#hri-list .r{display:grid;grid-template-columns:44px 58px 74px 74px 78px 78px;height:20px;line-height:20px;cursor:pointer;white-space:nowrap}
 #hri-list .r:hover{background:var(--sel)}#hri-list .r.cur{background:var(--sel);font-weight:600}
-.hrw #flst{max-height:34vh;overflow:auto}`;
+.hrw #flst{max-height:34vh;overflow:auto}
+.mslv{margin-left:8px;padding:0 8px;border:1px solid var(--accent);border-radius:4px;color:var(--accent);font-size:14px;line-height:20px}`;
   document.head.appendChild(st);
   const on = () => !!window.HR && E.files.some(f => f && !f.gone && (HR.isHr(f, 1) || HR.isHr(f, 2)));
   const sync = () => { try { document.body.classList.toggle("hrw", on()); } catch (e) { /* page not ready */ } return on(); };
@@ -66,7 +67,7 @@ const BANCO = (() => {
     ctl(p); uiSave();
   }
   // ---------------------------------------------------------------- stacked graphs of a chromatogram cell (the «Ranges» of Xcalibur)
-  // p.ranges = [{id, kind: "tic" | "bpc" | "xic", mz, ppm, filt, flv, prec, label}], at most 8. Every range is one row of the stacked chromatogram, with the
+  // p.ranges = [{id, kind: "tic" | "bpc" | "xic" | "sub" (formula, ppm, min), mz, ppm, filt, flv, prec, label}], at most 8. Every range is one row of the stacked chromatogram, with the
   // files of the bench overlaid in it; every row says its NL (the highest intensity) and p.norm100 puts them all on the 0-100 scale.
   const MAXR = 8;
   const filesFor = lv => {
@@ -80,6 +81,10 @@ const BANCO = (() => {
     p.ranges.forEach((r, ri) => {
       const lv = r.flv || 1;
       filesFor(lv).forEach(({ f, vis: vf }) => {
+        if (r.kind === "sub") {         // the sum of the sub-formulas of a formula (chem/subformulas.py): one request per file
+          jobs.push(subData(f, r).then(d => { if (d.rt.length) out.push({ x: d.rt, y: d.y, color: vf.color, dash: fdash(vf), name: `${rangeLabel(r)} · ${vf.label}`, k: f.k, key: `r|${r.id}|${f.k}`, ion: rangeLabel(r), time: vf.time, grp: ri, rlabel: rangeLabel(r) }); }).catch(() => null));
+          return;
+        }
         const q = HR.prof(f, lv), w = r.kind === "xic" ? r.mz * (r.ppm ?? q.tol) * 1e-6 : null;
         jobs.push(getChrom(f.k, r.kind === "xic" ? "tic" : r.kind, lv, w != null ? r.mz - w : null, w != null ? r.mz + w : null, r.prec ?? null, r.filt || null).then(d => {
           if (d.rt.length) out.push({ x: d.rt, y: d.y, color: vf.color, dash: fdash(vf), name: `${rangeLabel(r)} · ${vf.label}`, k: f.k, key: `r|${r.id}|${f.k}`, ion: rangeLabel(r), time: vf.time, grp: ri, rlabel: rangeLabel(r) });
@@ -114,6 +119,45 @@ const BANCO = (() => {
       };
     });
   }
+  // ---------------------------------------------------------------- formula -> combined XIC (high resolution only)
+  // The student writes the formula of an ion; the server sums the peaks at the exact m/z of ALL its sub-formulas (/api/subxic) and measures each one.
+  // The table has measures only (no label, no proposal); the sum goes into the cell as one more graph of the stack.
+  const subData = (f, r) => memo(`sub|${baseOf(f)}|${f.k}|${r.formula}|${r.ppm}|${r.min}|${r.z}`, () => J(`api/subxic?k=${f.k}&f=${encodeURIComponent(r.formula)}&ppm=${r.ppm}&min=${r.min}&z=${r.z}`));
+  const zOf = f => (f && f.polarity === "negative" ? -1 : 1);
+  function subXic(p) {
+    if ((p.ranges || []).length >= MAXR) return info(I18N.t("bn.maxRanges", { n: MAXR }));
+    const f0 = fileOf(p) || vis()[0]; if (!f0) return;
+    big(I18N.t("bn.sub.title"), `<div class="muted sm" style="margin-bottom:6px">${I18N.t("bn.sub.note")}</div>
+      <div class="cmp-grid"><label>${I18N.t("bn.sub.formula")} <input id="bs-f" placeholder="C34H54O31N5" style="width:200px" autocomplete="off" spellcheck="false"></label>
+      <label>${I18N.t("bn.sub.ppm")} <input id="bs-ppm" type="number" min="0.1" max="100" step="0.5" value="5" style="width:70px"></label>
+      <label>${I18N.t("bn.sub.min")} <input id="bs-min" type="number" min="0" step="10" value="100" style="width:80px"></label></div>
+      <div style="margin-top:8px"><button id="bs-go" type="button" class="go">${I18N.t("bn.sub.calc")}</button> <button id="bs-add" type="button" hidden>${I18N.t("bn.sub.add")}</button> <span id="bs-err" class="fail"></span></div>
+      <div id="bs-out" style="margin-top:8px;max-height:46vh;overflow:auto"></div>`, () => {
+      const $ = x => Q(x); let cur = null;
+      const par = () => ({ formula: $("#bs-f").value.trim(), ppm: parseFloat($("#bs-ppm").value) || 5, min: parseFloat($("#bs-min").value) || 0, z: zOf(f0) });
+      const dec = HR.prof(f0, 1).dec;
+      $("#bs-go").onclick = async () => {
+        const r = par(); $("#bs-err").textContent = ""; $("#bs-out").innerHTML = ""; $("#bs-add").hidden = true; cur = null;
+        if (!r.formula) return;
+        try {
+          const d = await subData(f0, r);
+          cur = r;
+          const HEAD = { mz: I18N.t("bn.sub.th.mz"), ppm: I18N.t("bn.sub.th.ppm"), int: I18N.t("bn.sub.th.int"), rt: I18N.t("bn.sub.th.rt"), r: I18N.t("bn.sub.th.r") }, th = c => `<th class="num">${HEAD[c]}</th>`, n = (v, k) => (v == null ? "" : v.toFixed(k));
+          $("#bs-out").innerHTML = `<div class="muted sm">${I18N.t("bn.sub.count", { hit: d.n_hit, n: d.n_sub })}</div>` + (d.rows.length ? `<table><thead><tr><th>${I18N.t("bn.sub.th.formula")}</th>${["mz", "ppm", "int", "rt", "r"].map(th).join("")}</tr></thead><tbody>`
+            + d.rows.map(x => `<tr><td>${EH(x.formula)}</td><td class="num">${x.mz.toFixed(dec)}</td><td class="num">${n(x.ppm, 1)}</td><td class="num">${x.int.toExponential(2).replace("e+", "E")}</td><td class="num">${x.rt.toFixed(2)}</td><td class="num">${n(x.r, 2)}</td></tr>`).join("") + "</tbody></table>" : `<div class="muted">${I18N.t("bn.sub.none")}</div>`);
+          $("#bs-add").hidden = false;
+        } catch (e) { $("#bs-err").textContent = e && e.message || String(e); }
+      };
+      $("#bs-f").onkeydown = e => { if (e.key === "Enter") $("#bs-go").click(); };
+      $("#bs-add").onclick = () => {
+        if (!cur) return;
+        const r = { id: E.seq++, kind: "sub", formula: cur.formula, ppm: cur.ppm, min: cur.min, z: cur.z, filt: null, flv: 1, prec: null, label: I18N.t("bn.sub.label", { formula: cur.formula, ppm: +cur.ppm.toFixed(1) }) };
+        p.ranges = [...(p.ranges || []), r]; if (p.ranges.length > 1) p.mode = "stk";
+        Q("#bigdlg").close(); ctl(p); draw(p); uiSave();
+      };
+      $("#bs-f").focus();
+    });
+  }
   const dropRange = (p, id) => { p.ranges = (p.ranges || []).filter(r => r.id !== id); if (!p.ranges.length) p.ranges = null; ctl(p); draw(p); uiSave(); };
   // short header of a spectrum cell (as in Xcalibur): the scan type and the NL (highest intensity) next to the retention time
   function header(p) {
@@ -123,9 +167,11 @@ const BANCO = (() => {
     if (ac && (p === ac || (p.type === "spec" && p.link === ac.id)) && ist.tab === "hdr") { clearTimeout(ist.t); ist.t = setTimeout(renderInfo, 250); }      // the header of the scan follows the cursor (of the cell or of its chromatogram)
     if (p.type !== "spec") return;
     const rl = p.el.querySelector(".rtl"); if (!rl) return;
+    let lv = p.el.querySelector(".mslv"); if (!lv) { lv = document.createElement("b"); lv.className = "mslv"; rl.before(lv); }       // the stage of the spectrum, well visible: MS1 / MS2
+    const stage = p.level > 1 ? p.level : 1; if (lv.dataset.n !== String(stage)) { lv.dataset.n = String(stage); lv.innerHTML = `MS<sup>${stage}</sup>`; }
     let h = p.el.querySelector(".bnl"); if (!h) { h = document.createElement("span"); h.className = "bnl muted sm"; h.style.marginLeft = "8px"; rl.after(h); }
     const d = p._a && p._a.data && p._a.data[0] && p._a.data[0].d, nl = d && d.y && d.y.length ? Math.max(...d.y) : null;
-    h.textContent = nl == null ? "" : `${p.filt ? p.filt + " · " : p.level > 1 ? "MS" + p.level + " · " : ""}NL: ${nl.toExponential(2).replace("e+", "E")}`;
+    h.textContent = nl == null ? "" : `${p.filt ? p.filt + " · " : ""}NL: ${nl.toExponential(2).replace("e+", "E")}`;
   }
   function decorate(p, c) {
     if (!sync() || !c || !(eligible(p) || p.type === "xic")) return;
@@ -191,6 +237,7 @@ const BANCO = (() => {
     const n = type === "spec" ? addPanel("spec", { ...o, k: f.k, level: f.lv || 1, link: null }) : addPanel(type, o);
     relayout(); fitHost(); setActive(n); n.el.scrollIntoView({ block: "center", behavior: "smooth" }); uiSave();
   }
+  function subXicCell() { let a = act(); if (!a || a.type !== "chrom") { addCell("chrom"); a = act(); } if (a && a.type === "chrom") subXic(a); }
   function retype(type) {
     const o = act(); if (!o || o.type === type) return;
     if (!["chrom", "spec", "map"].includes(type) || !["chrom", "spec", "map", "xic"].includes(o.type)) return info(I18N.t("bn.noRetype"));
@@ -472,7 +519,7 @@ const BANCO = (() => {
         const id = x.dataset.hb;
         x.onclick = e => {
           e.stopPropagation();
-          if (id === "add") return menu(e, [["chrom", I18N.t("bn.m.chrom")], ["spec", I18N.t("bn.m.spec")], ["map", I18N.t("bn.m.map")], ["xic", I18N.t("bn.m.xic")]].map(([t, l]) => ({ label: l, fn: () => (t === "xic" ? openXic() : addCell(t)) })));
+          if (id === "add") return menu(e, [["chrom", I18N.t("bn.m.chrom")], ["spec", I18N.t("bn.m.spec")], ["map", I18N.t("bn.m.map")], ["xic", I18N.t("bn.m.xic")], ["sub", I18N.t("bn.m.sub")]].map(([t, l]) => ({ label: l, fn: () => (t === "xic" ? openXic() : t === "sub" ? subXicCell() : addCell(t)) })));
           if (id === "type") return menu(e, [["chrom", I18N.t("bn.m.chrom")], ["spec", I18N.t("bn.m.spec")], ["map", I18N.t("bn.m.map")]].map(([t, l]) => ({ label: l, fn: () => retype(t) })));
           if (id === "copy") { const a = act(); if (!a) return; return menu(e, [{ label: I18N.t("bn.m.png"), fn: () => copyPng(a) }, { label: I18N.t("bn.m.data"), fn: () => copyText(a) }]); }
           if (FN[id]) FN[id]();

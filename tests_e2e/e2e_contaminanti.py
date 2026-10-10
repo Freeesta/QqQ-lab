@@ -47,14 +47,66 @@ try:
 
         def pixels():
             pg.evaluate("LISTE.setOn(true)"); pg.wait_for_timeout(1200)
-            a = pg.evaluate(f"{SP}.cv.toDataURL()")
+            n_on = pg.evaluate(f"{SP}._a.cmarks.length"); assert n_on >= 1, n_on
             pg.evaluate("LISTE.setOn(false)"); pg.wait_for_timeout(1200)
-            b = pg.evaluate(f"{SP}.cv.toDataURL()")
-            assert a == b, "the spectrum is drawn the same with the switch on and off"
+            assert pg.evaluate(f"{SP}._a.cmarks.length") == 0 and pg.evaluate(f"{SP}._a.cont") is None, "switch off = no signs"
             h = hov(pg, 279.1591); assert h and "contaminante" not in h, h
             pg.evaluate("LISTE.setOn(true)"); pg.wait_for_timeout(1000)
             assert "contaminante" in hov(pg, 279.1591)
-        step("same pixels on and off; off = the box of before", pixels)
+        step("signs only with the switch on; off = the box of before", pixels)
+
+        def excl():
+            def st(): return pg.evaluate(f"(()=>{{const a={SP}._a;return {{marks:a.cmarks.length,hid:a.chid}}}})()")
+            def sig(): return pg.evaluate("JSON.stringify(E.panels.filter(q=>q.type==='tic'&&q.cv).map(q=>q.cv.toDataURL()))")
+            m0 = st()["marks"]; assert m0 >= 1, m0
+            t0 = sig()
+            kks = pg.evaluate(f"{SP}._a.cont.match({SP}._a.cmarks[0].m).map(x=>LISTE.keyFor('entry', x))"); kk = kks[0]
+            for k in kks: pg.evaluate(f"LISTE.exclSet('entry', {json.dumps(k)}, true)")
+            pg.wait_for_timeout(1200)
+            s1 = st(); assert s1["hid"] >= 1 and s1["marks"] < m0, (m0, s1, pg.evaluate(f"{SP}._a.cmarks.map(c=>c.m)"), pg.evaluate("JSON.stringify(localStorage.getItem(\"qqq.contaminanti.esclusi\"))"))
+            assert "Mostra" in pg.inner_text(".cont-cnt")
+            assert t0 == sig(), "TIC drawn the same"
+            pg.focus(".cont-show"); pg.keyboard.press("Enter"); pg.wait_for_timeout(1000)
+            assert st()["marks"] == m0 and "Nascondi" in pg.inner_text(".cont-cnt")
+            pg.click(".cont-show"); pg.wait_for_timeout(800)
+            ls = json.loads(pg.evaluate("localStorage.getItem('qqq.contaminanti.esclusi')")); assert kk in ls["voci"], ls
+        step("exclude one entry: sign gone, counter, Show/Hide by keyboard, TIC identical, kept in qqq.contaminanti.esclusi", excl)
+
+        def excl_cls():
+            pg.evaluate("LISTE.exclReset()"); pg.wait_for_timeout(600)
+            ck = pg.evaluate(f"LISTE.keyFor('cls', {SP}._a.cont.match(391.2843)[0])")
+            pg.evaluate(f"LISTE.exclSet('cls', {json.dumps(ck)}, true)"); pg.wait_for_timeout(1000)
+            assert pg.evaluate(f"{SP}._a.cont.state(391.2843).hid") is True
+            assert json.loads(pg.evaluate("localStorage.getItem('qqq.contaminanti.esclusi')"))["classi"] == [ck]
+            pg.click("#np-liste"); pg.wait_for_selector("#lst-excl", timeout=5000); pg.wait_for_timeout(500)
+            assert pg.is_visible("#lst-excl-reset"); pg.click("#lst-excl-reset"); pg.wait_for_timeout(500)
+            assert pg.evaluate("LISTE.exclItems().length") == 0
+        step("exclude a class; list in the panel; Restore all", excl_cls)
+
+        def kbd_menu():
+            pg.evaluate("LISTE.exclReset()"); pg.wait_for_timeout(800)
+            assert pg.evaluate(f"{SP}._a.chid") == 0
+            pg.focus(".cont-lb"); pg.keyboard.press("Enter"); pg.wait_for_timeout(300)
+            assert pg.evaluate("document.activeElement.getAttribute('role')") == "menuitem", pg.evaluate("[document.activeElement.outerHTML.slice(0,80), document.querySelector('#ctx').hidden, document.querySelector('#ctx').innerHTML.slice(0,200), !!document.querySelector('.cont-lb')]")
+            pg.keyboard.press("Enter"); pg.wait_for_timeout(300)          # the first marked peak -> its exclude menu
+            pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter"); pg.wait_for_timeout(1000)     # (name is a dim line) the first action: exclude this entry
+            assert pg.evaluate("LISTE.exclItems().length") == 1, pg.evaluate("LISTE.exclItems().length")
+            pg.evaluate("LISTE.exclReset()")
+        step("keyboard: legend button -> menu -> exclude, arrows and Enter", kbd_menu)
+
+        def sess():
+            k = pg.evaluate(f"LISTE.keyFor('entry', {SP}._a.cont.match({SP}._a.cmarks[0].m)[0])")
+            pg.evaluate(f"LISTE.exclSet('entry', {json.dumps(k)}, true)"); pg.wait_for_timeout(300)
+            pg.evaluate("uiSave(true)"); pg.wait_for_timeout(500)
+            assert k in pg.evaluate("NB.ui.contEx.voci"), "exclusions saved with the session"
+            pg.evaluate("localStorage.removeItem('qqq.contaminanti.esclusi')"); pg.evaluate("LISTE.exclReset()")
+            pg.evaluate("LISTE.exclImport(NB.ui.contEx)"); assert pg.evaluate("LISTE.exclItems().length") == 1
+            pg.evaluate("LISTE.exclReset()")
+        step("exclusions saved with the session and restored", sess)
+
+        def reset_all():
+            pg.evaluate("LISTE.exclReset()"); assert pg.evaluate("LISTE.exclItems().length") == 0
+        step("restore all", reset_all)
 
         def gear():
             pg.click("#np-set"); pg.wait_for_selector("#uip-cont", timeout=5000)

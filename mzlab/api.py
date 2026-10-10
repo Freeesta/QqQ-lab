@@ -143,6 +143,11 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
         if path == "/api/xic":
             return _json(app.xic([int(x) for x in q["k"].split(",") if x], float(q["mz"]),
                                  float(q.get("tol", 0.35)), int(q.get("level", 1))))
+        if path == "/api/subxic":        # combined XIC of all the sub-formulas of a formula (high resolution only): measures, no labels
+            try:
+                return _json(app.subxic(int(q["k"]), q["f"], float(q.get("ppm", 5)), float(q.get("min", 100)), int(q.get("z", 1))))
+            except (ValueError, KeyError) as e:
+                return _fail(e)
         if path == "/api/origin":        # evidence on where an ion comes from (ionfamily); never a verdict
             return _json(app.origin(int(q.get("k", -1)), float(q["mz"]), float(q["parent"]),
                                     float(q["rt0"]) if q.get("rt0") else None, float(q["rt1"]) if q.get("rt1") else None, q.get("formula")))

@@ -272,5 +272,18 @@
   "err.tree.formula": "{formula} = testo scritto dall'utente.",
   "err.tree.tooMany": "{n} = numero di percorsi.",
   "mappa.tab.title": "Titolo della tabella dei punti segnati sotto la mappa; {n} = quanti punti.",
-  "mappa.v3.pin": "Etichetta del punto cliccato nella mappa 3D; {rt} = tempo di ritenzione in minuti, {mz} = valore m/z."
+  "mappa.v3.pin": "Etichetta del punto cliccato nella mappa 3D; {rt} = tempo di ritenzione in minuti, {mz} = valore m/z.",
+  "cont.in.one": "Menu del rombo contaminante; {n} = nome della voce.",
+  "cont.in.cls": "Menu del rombo contaminante; {n} = nome della classe.",
+  "cont.in.list": "Menu del rombo contaminante; {n} = nome della lista.",
+  "cont.ex.cls": "Menu del rombo contaminante; {n} = nome della classe.",
+  "cont.ex.list": "Menu del rombo contaminante; {n} = nome della lista.",
+  "cont.lb": "Pulsante sotto lo spettro HR; {n} = numero di picchi compatibili.",
+  "cont.lb.aria": "Etichetta per il lettore di schermo del pulsante; {n} = numero di picchi.",
+  "cont.cnt": "Contatore dei picchi nascosti per esclusione; {n} = numero.",
+  "cont.cnt.shown": "Contatore quando i picchi nascosti sono mostrati; {n} = numero.",
+  "bn.sub.count": "Riga sopra la tabella dell'XIC da formula; {hit} = sottoformule con segnale, {n} = sottoformule provate.",
+  "bn.sub.label": "Etichetta del grafico dell'XIC da formula; {formula} = formula dello ione, {ppm} = tolleranza.",
+  "err.subxic.many": "Errore dell'XIC da formula; {n} = numero di sottoformule della formula scritta.",
+  "err.subxic.none": "Errore dell'XIC da formula; {mz} = m/z minimo scelto."
 }

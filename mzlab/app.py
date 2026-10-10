@@ -228,6 +228,19 @@ class App:
             out.append({"k": k, "rt": [round(float(v), 4) for v in rt], "y": [round(float(v), 1) for v in y]})
         return {"mz": mz, "tol": tol, "traces": out}
 
+    def subxic(self, k: int, formula: str, ppm: float = 5.0, min_mz: float = 100.0, z: int = 1) -> dict:
+        """XIC that sums every sub-formula of `formula` (high resolution files only) and the measures of each one (chem/subformulas.py)."""
+        from .chem.subformulas import measure, subformulas
+        item = self._item(k)
+        if not item.hr_on(1):
+            raise UserError("err.subxic.lr", text="the combined XIC of the sub-formulas needs a high-resolution file")
+        if not 0 < ppm <= 100:
+            raise UserError("err.subxic.ppm", text="ppm must be between 0 and 100")
+        f, subs = subformulas(formula, z, min_mz)
+        if not subs:
+            raise UserError("err.subxic.none", {"mz": min_mz}, "no sub-formula above the lower limit")
+        return {"k": k, "ppm": ppm, "min_mz": min_mz, "z": z, **measure(item._tbl(1), f, subs, ppm)}
+
     def mrm(self, ks: list[int]) -> dict:
         return {"files": [{"k": k, "transitions": self._item(k).mrm()} for k in ks]}
 

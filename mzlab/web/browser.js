@@ -41,6 +41,28 @@
   });
   ready.catch(() => {});
 
+  // Rust engine (?motore=rust, or localStorage qqq.motore = "rust"; ?motore=python forces it off): TIC, XIC and single scans are answered by
+  // rust-worker.js when it can answer exactly as Python does (rust-bridge.js decides); without the option nothing of it is loaded.
+  const rustOn = (() => {
+    const m = /[?&]motore=(\w+)/.exec(location.search);
+    if (m) return m[1] === "rust";
+    try { return localStorage.getItem("qqq.motore") === "rust"; } catch (_) { return false; }
+  })();
+  const notice = key => {                                                    // a short message under the header (a polite live region)
+    const show = () => {
+      let el = document.getElementById("rust-note");
+      if (!el) { el = document.createElement("div"); el.id = "rust-note"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite"); el.style.cssText = "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9999;max-width:90vw;padding:8px 14px;border-radius:8px;background:var(--panel,#222);color:var(--fg,#fff);border:1px solid var(--accent,#888);font:14px system-ui,sans-serif"; document.body.appendChild(el); }
+      el.textContent = window.I18N ? I18N.t(key) : key; el.hidden = false;
+      clearTimeout(el._t); el._t = setTimeout(() => { el.hidden = true; }, 9000);
+    };
+    if (document.body) show(); else document.addEventListener("DOMContentLoaded", show);
+  };
+  const rustReady = rustOn && !window.QQQ_PHONE && modern
+    ? import(new URL("rust-bridge.js", SRC).href).then(m => { const b = m.createBridge({ workerUrl: new URL("rust-worker.js", SRC), notify: notice }); b.start(); window.MZLAB_RUST = b; return b; })
+        .catch(e => { console.debug("[mzLab] Rust engine not available", e); return null; })
+    : Promise.resolve(null);
+  const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|spectra)\b/;
+
   const realFetch = window.fetch.bind(window);
   const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
   window.fetch = async (input, init = {}) => {
@@ -49,14 +71,32 @@
     if (/^(\.\/)?api\/(ping|bye)/.test(url)) return json({ ok: true });      // presence: not needed without a server
     await ready;
     const method = (init.method || "GET").toUpperCase();
+    const rb = await rustReady;
+    if (rb && method === "GET" && RUST_ROUTES.test(url)) {
+      const r = await rb.handle(method, url);
+      if (r) return new Response(r.text, { status: r.status, headers: { "Content-Type": "application/json", "X-Py-Ms": String(r.ms || 0), "X-Engine": "rust" } });
+      rb.stats.python++;
+    }
+    if (rb && method === "POST" && /^(\.\/)?api\/upload/.test(url)) rb.noteUpload(new URL(url, "http://x/").searchParams.get("name"), init.body);
     let body = null, blob = null;
     const BIG = 50 << 20;      // a big file goes to the worker as a Blob (no copy: it is mounted there, see browser-worker.js)
     if (method === "POST" && /^(\.\/)?api\/upload/.test(url) && typeof Blob !== "undefined" && init.body instanceof Blob && init.body.size > BIG) blob = init.body;
     else if (init.body != null) body = typeof init.body === "string" ? new TextEncoder().encode(init.body) : new Uint8Array(await new Response(init.body).arrayBuffer());
     const id = ++seq;
+    const post = rb && method === "POST" && r_ok_post(url) ? new TextDecoder().decode(body || new Uint8Array(0)) : null;     // read before the buffer is moved
     const r = await new Promise(res => { pending.set(id, res); worker.postMessage({ id, method, url, body, blob }, body ? [body.buffer] : []); });
+    if (post !== null && r.status === 200) rustSession(rb, url, post);
     if (r.buf) return new Response(r.buf, { status: r.status, headers: { "Content-Type": r.ctype || "application/octet-stream", "X-Py-Ms": String(r.ms || 0) } });
     return new Response(r.text, { status: r.status, headers: { "Content-Type": "application/json", "X-Py-Ms": String(r.ms || 0) } });   // X-Py-Ms: time in Python, for the ?perf meter
+  };
+  const r_ok_post = url => /^(\.\/)?api\/(explore|remove|new)\b/.test(url);
+  const rustSession = (rb, url, text) => {                                  // keeps the Rust engine's files in step with the session of Python
+    try {
+      const j = text ? JSON.parse(text) : {};
+      if (/api\/explore/.test(url)) rb.noteExplore(j);
+      else if (/api\/remove/.test(url)) { rb.noteRemove(j.name); rb.noteExplore(null); }
+      else rb.noteNew();
+    } catch (_) { /* optional */ }
   };
   window.EventSource = class { constructor() {} close() {} };                  // "the tab is open" signal: only for the local program
   navigator.sendBeacon = () => true;

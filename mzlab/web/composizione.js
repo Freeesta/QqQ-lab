@@ -96,8 +96,11 @@ const COMP = (() => {
               const n = nd[+tr.dataset.n];
               Q("#mt-tbl").querySelectorAll("tr").forEach(x => { x.style.background = ""; }); tr.style.background = "var(--sel, rgba(120,160,255,.2))";
               Q("#mt-pk").innerHTML = `<div><b>${EH(n.label)}</b></div><div class="muted sm">${I18N.t("tree.nodeInfo", { scans: n.scans, peaks: n.n_peaks })} ${I18N.t("tree.clickPeak")}</div>
-                <table class="lct"><tr><th class="num">m/z</th><th class="num">%</th><th>Formula</th><th class="num">ppm</th><th></th></tr>
-                ${n.peaks.slice().sort((a, b) => b.rel - a.rel).map(p => `<tr data-mz="${p.mz}" style="cursor:pointer"><td class="num">${p.mz.toFixed(4)}</td><td class="num">${p.rel}</td><td>${p.formula ? fmtFormula(p.formula) : "–"}</td><td class="num">${p.ppm == null ? "" : p.ppm.toFixed(1)}</td><td class="muted sm">${p.contam ? I18N.t("tree.contam") : ""}</td></tr>`).join("")}</table>`;
+                <span id="mt-cnt"></span><table class="lct"><tr><th class="num">m/z</th><th class="num">%</th><th>Formula</th><th class="num">ppm</th><th></th><th>${I18N.t("cont.col")}</th></tr>
+                ${n.peaks.slice().sort((a, b) => b.rel - a.rel).map(p => { const c = window.LISTE ? LISTE.compat(p.mz, f && f.polarity, UIP.hrPpm) : null; return `<tr data-mz="${p.mz}"${c && c.hid ? ' data-hid="1"' : ""} style="cursor:pointer"><td class="num">${p.mz.toFixed(4)}</td><td class="num">${p.rel}</td><td>${p.formula ? fmtFormula(p.formula) : "–"}</td><td class="num">${p.ppm == null ? "" : p.ppm.toFixed(1)}</td><td class="muted sm">${p.contam ? I18N.t("tree.contam") : ""}</td><td class="sm">${c && c.vis.length ? `<span aria-hidden="true">◆</span> ${EH(c.vis[0].name)}${c.vis.length > 1 ? " +" + (c.vis.length - 1) : ""}` : ""}</td></tr>`; }).join("")}</table>`;
+              { const hids = Q("#mt-pk").querySelectorAll("tr[data-hid]"), cn = Q("#mt-cnt"); let show = false;
+                const sync = () => { hids.forEach(r => { r.hidden = !show; }); cn.innerHTML = hids.length ? `<div class="sm">${I18N.t(show ? "cont.cnt.shown" : "cont.cnt", { n: hids.length })} · <button type="button" id="mt-cshow">${I18N.t(show ? "cont.hide" : "cont.show")}</button></div>` : ""; const bt = Q("#mt-cshow"); if (bt) bt.onclick = () => { show = !show; sync(); }; };
+                sync(); }
               Q("#mt-pk").querySelectorAll("tr[data-mz]").forEach(r => { r.onclick = () => open({ mz: +r.dataset.mz, parent: n.formula || "", polarity: f && f.polarity, ion: j.ion }); });
             };
           });

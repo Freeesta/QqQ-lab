@@ -189,6 +189,7 @@ function uiSave(now = false) {
     if (!E.files.length) return;
     NB.session = E.files.filter(f => !f.gone).map(f => ({ file: f.file, label: f.label, time: f.time, type: f.type, conc: f.conc ?? null, cunit: f.cunit ?? null }));
     NB.ui = {
+      contEx: window.LISTE ? LISTE.exclExport() : undefined,
       tab: E.tab, cur: E.cur, browse: E._forced ? E._prev : E.browse, fold: E.fold, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined })),
       panels: E.panels.map(p => ({
         type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, kind: p.kind, smooth: p.smooth, tol: p.tol,
@@ -317,6 +318,7 @@ Q("#ffold").onclick = () => { setFold(true); uiSave(); };
 Q("#funfold").onclick = () => { setFold(false); uiSave(); };
 function restoreUi() {
   const u = NB.ui;
+  if (u && u.contEx && window.LISTE) LISTE.exclImport(u.contEx);                 // the contaminant exclusions travel with the session
   if (!u || !u.panels || !u.panels.length) return false;
   const names = new Set(E.files.map(f => f.file));
   if (!u.files.every(f => names.has(f.file))) return false;
@@ -428,7 +430,7 @@ function renderFileList() {
     const prList = hasPr ? [...new Set(f.precursors)].sort((a, b) => a - b) : [];
     return `<div class="fl ${f.k === E.cur ? "cur" : ""}" data-tip="${EH(f.label)}" data-k="${f.k}" draggable="true" style="flex-wrap:wrap">
       <input type="checkbox" data-k="${f.k}" ${f.vis ? "checked" : ""} title="${I18N.t("files.showHide")}">
-      <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b><span style="display:inline-flex;align-items:center;gap:4px">${polSign(f)}${window.HR ? HR.badge(f) : ""}<small>${sub(f)}</small>${hasPr ? `<span class="pr-tog" data-prk="${f.k}" title="${I18N.t("files.showHidePrec")}" style="cursor:pointer;padding:0 2px;user-select:none;font-size:10px;color:var(--muted)">${prOpen ? "▾" : "▸"}</span>` : ""}</span></div>
+      <i style="background:${f.color}"></i><div class="fi"><b class="nm" data-k="${f.k}">${EH(f.label)}</b><span style="display:inline-flex;align-items:center;gap:4px">${polSign(f)}<small>${sub(f)}</small>${hasPr ? `<span class="pr-tog" data-prk="${f.k}" title="${I18N.t("files.showHidePrec")}" style="cursor:pointer;padding:0 2px;user-select:none;font-size:10px;color:var(--muted)">${prOpen ? "▾" : "▸"}</span>` : ""}</span></div>
       ${hasPr ? `<div class="pr-container" style="padding-left:22px;width:100%;box-sizing:border-box;margin-top:2px;${prOpen ? "" : "display:none;"}">` +
         prList.map(pr => `<div class="fl pr" style="padding-left:0;min-height:0;margin-bottom:2px;border-bottom:none"><input type="checkbox" data-pr="${pr}" ${ms2PairOf(pr) ? "checked" : ""} title="${I18N.t("files.addPair.title")}"><div class="fi"><b class="pn" data-pg="${pr}" title="${I18N.t("files.precGo.title")}"><span style="font-style:italic">m/z</span> ${EH(pr)}</b></div></div>`).join("") +
         '</div>' : ""}
@@ -722,13 +724,22 @@ function menu(ev, items) {
       d.textContent = it.label;
     }
     if (it.tip) d.title = it.tip;
-    if (it.dim) d.className = "dim"; else d.onclick = () => { m.hidden = true; it.fn(); };
+    d.setAttribute("role", "menuitem");
+    if (it.dim) d.className = "dim"; else { d.tabIndex = -1; d.onclick = () => { m.hidden = true; it.fn(); }; }
     m.appendChild(d);
   });
-  m.hidden = false;
+  m.hidden = false; m.setAttribute("role", "menu");
+  if (!m._kb) { m._kb = true; m.addEventListener("keydown", e => {                 // keyboard: arrows move, Enter/Space choose, Esc closes
+    const its = [...m.querySelectorAll('div[role=menuitem]:not(.dim)')], i = its.indexOf(document.activeElement);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (its.length) its[(i + (e.key === "ArrowDown" ? 1 : -1) + its.length) % its.length].focus(); }
+    else if (e.key === "Enter" || e.key === " ") { if (i >= 0) { e.preventDefault(); its[i].click(); } }
+    else if (e.key === "Escape") { e.preventDefault(); m.hidden = true; if (m._ret && m._ret.focus) m._ret.focus(); }
+  }); }
+  m._ret = ev.kbd ? document.activeElement : null;
   const off = document.documentElement.classList.contains("touch") ? 16 : 0;      // with a finger the menu opens beside it: lifting the finger must not click an item
   m.style.left = Math.min(ev.clientX + off, innerWidth - 270) + "px";
   m.style.top = Math.max(4, Math.min(ev.clientY + off, innerHeight - m.offsetHeight - 8)) + "px";
+  if (ev.kbd) { const f = m.querySelector('div[role=menuitem]:not(.dim)'); if (f) f.focus(); }
 }
 document.addEventListener("click", () => { Q("#ctx").hidden = true; });
 document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });      // the Correzione menu closes when the click is elsewhere
@@ -2378,6 +2389,8 @@ async function drawSpec(p) {
   };
   const cont = hrp && window.LISTE ? LISTE.forSpec(data[0].d.mz, data[0].d.y, files[0] && files[0].polarity, UIP.hrPpm) : null;       // known contaminants: only in the box that opens on a peak (high resolution only)
   p._a.cont = cont;
+  const cst = x => { if (!cont) return () => null; const c = x.cs = x.cs || new Map(); return j => { let r = c.get(j); if (r === undefined) { r = cont.state(x.d.mz[j]); c.set(j, r); } return r; }; };     // contaminant state of a peak (HR only): compatible entries, hidden or not
+  const hidOf = x => { const f = cst(x), t1 = 0.01 * Math.max(...x.d.y, 1e-9); return j => !p.showHid && x.d.y[j] >= t1 && !!(f(j) && f(j).hid); };
   p._a.hov = px => {                                       // peak nearest to the mouse
     const b = p._a.snap(px); if (!b) return null;
     const rf = p.meas && p.meas.ref != null ? `<div>Δ<i>m/z</i> <b>${Math.abs(b.m - p.meas.ref).toFixed(hrp ? DECP : 1)}</b> <span class="sm">da ${p.meas.ref.toFixed(hrp ? DECP : 1)}</span>${hrp ? ` <span class="sm">(${((b.m - p.meas.ref) * 1000).toFixed(1)} mDa)</span>` : ""}</div>` : "";
@@ -2400,19 +2413,22 @@ async function drawSpec(p) {
       flush(curX);
       g.stroke(); if (on) { g.save(); g.lineTo(X(Math.min(x1 + 0.5, pm[pm.length - 1])), Y(0)); g.lineTo(X(Math.max(x0 - 0.5, pm[0])), Y(0)); g.closePath(); g.globalAlpha = 0.12; g.fillStyle = color; g.fill(); g.restore(); }
       g.beginPath();
-    } else x.d.mz.forEach((m, j) => { if (m < x0 || m > x1) return; g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); }); g.stroke();
+    } else { const hid = cont ? hidOf(x) : null, dim = []; x.d.mz.forEach((m, j) => { if (m < x0 || m > x1) return; if (hid && hid(j)) { dim.push(j); return; } g.moveTo(X(m), Y(0)); g.lineTo(X(m), Y(x.d.y[j])); }); g.stroke();
+      if (dim.length) { g.save(); g.strokeStyle = css("--line"); g.globalAlpha = 1; g.beginPath(); dim.forEach(j => { g.moveTo(X(x.d.mz[j]), Y(0)); g.lineTo(X(x.d.mz[j]), Y(x.d.y[j])); }); g.stroke(); g.restore(); } }
     g.fillStyle = color;                                          // a small triangle on every cut bar
     x.d.mz.forEach((m, j) => { if (m < x0 || m > x1 || x.d.y[j] <= ymax) return; g.beginPath(); g.moveTo(X(m) - 4, M.t + 7); g.lineTo(X(m) + 4, M.t + 7); g.lineTo(X(m), M.t); g.closePath(); g.fill(); });
   });
   g.restore();
   const d0 = data[0].d, pk = [];
   const top0 = Math.max(...d0.y, 1e-9), thr = (p.thr ?? 5) / 100 * top0, NL = p.nlab ?? 10, DEC = DECP;       // labels: only the peaks above the threshold, at most NL
-  d0.mz.forEach((m, j) => { if (m >= x0 && m <= x1 && d0.y[j] >= thr && d0.y[j] <= ymax) pk.push([m, d0.y[j]]); });
+  const hid0 = cont ? hidOf(data[0]) : null;
+  d0.mz.forEach((m, j) => { if (m >= x0 && m <= x1 && d0.y[j] >= thr && d0.y[j] <= ymax && !(hid0 && hid0(j))) pk.push([m, d0.y[j]]); });
   pk.sort((a, b) => b[1] - a[1]); const used = [];
   g.fillStyle = css("--ink"); g.textAlign = "center"; g.font = fpx(12);
   const lbls = []; p._a.lbls = lbls;                      // clickable labels: hover draws a small box, right click opens the menu
   for (const [m, y] of pk.slice(0, 40)) { const px = X(m); if (used.some(u => Math.abs(u - px) < 26) || used.length >= NL) continue; used.push(px); const t = m.toFixed(DEC), w = g.measureText(t).width; g.fillText(t, px, Y(y) - 4); lbls.push({ m, x: px - w / 2 - 3, y: Y(y) - 4 - 12 * fz(), w: w + 6, h: 3 + 12 * fz(), tip: I18N.t("tip.peakLabel", { mz: m.toFixed(DEC) }) + (cont ? cont.tip(m) : "") }); }
   g.font = fpx(12);
+  contMarks(p, g, X, Y, W, data, cst, hidOf, x0, x1, ymax);
   drawMeas(p, g, X, Y, W);                                 // ruler: reference and measured differences (before the annotations: a label hides the dashed line under it)
   for (const a of p.anns) {                                        // the point is the top of the nearest observed peak
     let ay = 0, bd = 0.7; d0.mz.forEach((m, j) => { const dd = Math.abs(m - a.x); if (dd < bd) { bd = dd; ay = d0.y[j]; } });
@@ -2454,6 +2470,62 @@ async function drawSpec(p) {
     const color = x.multi ? PAL[(x.idx + 3) % PAL.length] : x.f.color;
     return `<span><i style="background:${color}"></i>${EH(lab)}${legPol(x.f)}${x.multi ? ` (prec. ${x.prec})` : ""}</span>`;
   }).join("") : "") + isoNote;
+  contLegend(p);
+}
+
+// Known contaminants on a high-resolution spectrum: a small diamond over the peaks whose m/z is COMPATIBLE with an entry of the lists (a sign, not a verdict).
+// A peak whose entries are all excluded is dimmed (drawn in draw()) and counted; "Show" draws it again with an empty diamond. Click on the diamond: exclude / include.
+function contMarks(p, g, X, Y, W, data, cst, hidOf, x0, x1, ymax) {
+  const a = p._a; a.cmarks = []; a.chid = 0; a.cvis = 0;
+  if (!a.cont) return;
+  const d = data[0].d, f = cst(data[0]), top = Math.max(...d.y, 1e-9), list = [];
+  d.mz.forEach((m, j) => { if (d.y[j] < 0.01 * top) return; const s = f(j); if (!s || !s.all.length) return; if (s.hid) a.chid++; else a.cvis++; if (m >= x0 && m <= x1 && d.y[j] <= ymax && (!s.hid || p.showHid)) list.push({ m, j, y: d.y[j], s }); });
+  list.sort((u, v) => v.y - u.y);
+  g.save(); g.lineWidth = 1.4;
+  for (const r of list.slice(0, 80)) {
+    const cx = X(r.m), cy = Math.max(M.t + 6, Y(r.y) - 24), off = r.s.hid, sz = 5;
+    g.beginPath(); g.moveTo(cx, cy - sz); g.lineTo(cx + sz, cy); g.lineTo(cx, cy + sz); g.lineTo(cx - sz, cy); g.closePath();
+    g.strokeStyle = css("--ink"); g.fillStyle = off ? css("--panel") : css("--warn"); g.fill(); g.stroke();
+    a.cmarks.push({ x: cx, y: cy, m: r.m, s: r.s });
+  }
+  g.restore();
+}
+function contMenu(p, e, mk) {
+  const L = window.LISTE, all = mk.s.all, seen = new Set(), items = [];
+  const ms = all.filter(x => { const k = x.list + ":" + x.id + ":" + (x.series ? x.series.n : ""); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 4);
+  ms.forEach((x, i) => {
+    if (i) items.push("-");
+    items.push({ label: x.name + (x.adduct ? " " + x.adduct : ""), dim: true });
+    if (L.isExcluded(x)) {
+      const ex = L.exclItems().filter(q => q.key === L.keyFor(q.kind, x));
+      ex.forEach(q => items.push({ label: I18N.t(q.kind === "entry" ? "cont.in.one" : q.kind === "cls" ? "cont.in.cls" : "cont.in.list", { n: q.kind === "entry" ? x.name : q.kind === "cls" ? (x.cls || "") : x.listName }), fn: () => L.exclSet(q.kind, q.key, false) }));
+    } else {
+      items.push({ label: I18N.t("cont.ex.one"), fn: () => L.exclSet("entry", L.keyFor("entry", x), true) });
+      if (x.clsKey) items.push({ label: I18N.t("cont.ex.cls", { n: x.cls || x.clsKey }), fn: () => L.exclSet("cls", L.keyFor("cls", x), true) });
+      if (!x.listBuiltin) items.push({ label: I18N.t("cont.ex.list", { n: x.listName }), fn: () => L.exclSet("list", x.list, true) });
+    }
+  });
+  menu(e, items);
+}
+// legend: button (keyboard) listing the marked peaks, and the counter of the hidden ones with "Show"
+function contLegend(p) {
+  const a = p._a; if (!a || !a.cont || !p.leg2) return;
+  const n = a.chid || 0, c = a.cmarks.length;
+  let h = "";
+  if (a.cvis || c) h += `<button type="button" class="cont-lb" aria-label="${EH(I18N.t("cont.lb.aria", { n: a.cvis }))}">◆ ${I18N.t("cont.lb", { n: a.cvis })}</button>`;
+  if (n) h += `<span class="cont-cnt" role="status">${I18N.t(p.showHid ? "cont.cnt.shown" : "cont.cnt", { n })} · <button type="button" class="cont-show">${I18N.t(p.showHid ? "cont.hide" : "cont.show")}</button></span>`;
+  if (!h) return;
+  p.leg2.insertAdjacentHTML("beforeend", h);
+  const b = p.leg2.querySelector(".cont-show"); if (b) b.onclick = () => { p.showHid = !p.showHid; draw(p); };
+  const l = p.leg2.querySelector(".cont-lb");
+  if (l) l.onclick = e => {
+    e.stopPropagation();
+    const L = window.LISTE, f = a.cont, d = a.data[0].d, top = Math.max(...d.y, 1e-9), rows = [];
+    d.mz.forEach((m, j) => { if (d.y[j] < 0.01 * top) return; const s = f.state(m); if (s.all.length && !s.hid) rows.push({ m, y: d.y[j], s }); });
+    rows.sort((u, v) => v.y - u.y);
+    const b = l.getBoundingClientRect(), ev = { preventDefault() {}, clientX: b.left, clientY: b.bottom, kbd: e.detail === 0 };
+    menu(ev, rows.length ? rows.slice(0, 15).map(r => ({ label: `m/z ${r.m.toFixed(a.dec ?? 4)} · ${r.s.vis[0].name}`, fn: () => setTimeout(() => contMenu(p, ev, { s: r.s }), 0) })) : [{ label: I18N.t("cont.none"), dim: true }]);
+  };
 }
 
 // ------------------------------------------------------------------ mouse
@@ -2523,6 +2595,10 @@ function attach(p) {
     if (p.type === "map" && window.MAPPA) MAPPA.move(p, px, py);
     if (lh) { p.tip.hidden = false; p.tip.innerHTML = lh.tip; p.vl.hidden = true; const tw = p.tip.offsetWidth; let l = cv.offsetLeft + px + 14; if (l + tw > p.el.clientWidth - 4) l = cv.offsetLeft + px - tw - 14; p.tip.style.left = Math.max(2, l) + "px"; p.tip.style.top = cv.offsetTop + py + 14 + "px"; }
   };
+  cv.addEventListener("click", e => {                                     // click on the diamond of a contaminant sign: exclude / include
+    const mk = (p._a && p._a.cmarks || []).find(c => Math.abs(rect(e) - c.x) <= 9 && Math.abs(recty(e) - c.y) <= 9);
+    if (mk) { e.stopPropagation(); contMenu(p, e, mk); }
+  });
   const lb = document.createElement("div"); lb.className = "lbbox"; lb.hidden = true; p.el.appendChild(lb);   // box around the label under the mouse
   const zr = document.createElement("div"); zr.className = "zr"; zr.hidden = true; p.el.appendChild(zr);   // area being zoomed (box)
   const zl = document.createElement("div"); zl.className = "zl"; zl.hidden = true; p.el.appendChild(zl);
