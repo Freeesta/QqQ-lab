@@ -864,6 +864,8 @@ I18N.add("it", {
   "touch.fit.title": "Torna a vedere tutto il grafico (Backspace)",
   "touch.undo": "Annulla",
   "touch.undo.title": "Annulla l'ultima azione (Ctrl/Cmd+Z)",
+  "touch.bar.hide": "Nascondi la barra dei tasti",
+  "touch.bar.show": "Mostra la barra dei tasti",
   "touch.grip.title": "Trascina per cambiare l'altezza del grafico",
   "lock.on.title": "Asse delle intensità bloccato: clic per sbloccare",
   "lock.off.title": "Blocca l'asse delle intensità: così vedi crescere e calare i picchi fra una scansione e l'altra",
