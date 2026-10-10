@@ -37,7 +37,7 @@ try:
         def routing():
             assert MDAM.name in pg.inner_text("#mlist") and "MRM, 2 transizioni" in pg.inner_text("#mlist"), pg.inner_text("#mlist")
             assert "riquadro 2" in pg.inner_text("#up") and MDAM.name not in pg.inner_text("#flist")
-            pg.set_input_files("#pickdam", [str(tmp / "B_FullMass-t0.mzML")]); pg.wait_for_timeout(800)
+            pg.set_input_files("#pickdam", [str(tmp / "B_FullMass-t0.mzML")]); pg.wait_for_function("document.querySelector('#up').innerText.includes('riquadro 1') && document.querySelectorAll('#mlist table').length===1 && document.querySelectorAll('#flist table').length===1", timeout=20000)
             assert "riquadro 1" in pg.inner_text("#up")
             assert pg.locator("#mlist table").count() == 1 and pg.locator("#flist table").count() == 1
         step("a .dam dropped in box 1 goes to box 2 (and the other way round), method table", routing)

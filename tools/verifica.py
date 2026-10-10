@@ -3,6 +3,7 @@
     python3 tools/verifica.py                 # everything: JS syntax, pytest, every e2e that can run here
     python3 tools/verifica.py --rapida        # JS syntax + pytest + the e2e smoke test (e2e3): ~2 minutes
     python3 tools/verifica.py --solo e2e6,e2e18
+    python3 tools/verifica.py --ultimi-falliti   # only the e2e that were FAIL in the previous run (.verifica/ultimo.md)
     python3 tools/verifica.py --setup         # first install what is missing (pytest, playwright + chromium), then check
 
 Data, in this order: MZLAB_MZML (or legacy QQQ_MZML); the PRIVATE data repository "mzlab-dati" or "QqQ-lab-dati" (Freeesta/mzlab-dati or Freeesta/QqQ-lab-dati: mzML/ + dam/, real lab
@@ -273,6 +274,15 @@ def changed_tests(files: set[str] | None = None) -> tuple[set[str] | None, str]:
     return tests | ({"e2e3"} if any(f.startswith("mzlab/") for f in files) else set()), "e2e: " + ", ".join(sorted(tests))
 
 
+def last_failed() -> set[str]:
+    """Names of the e2e that were FAIL in the previous run, read from .verifica/ultimo.md (the lines «- FAIL e2e6 (50 s): ...»)."""
+    try:
+        text = (OUT / "ultimo.md").read_text(encoding="utf-8")
+    except OSError:
+        return set()
+    return {m.group(1) for m in re.finditer(r"^- FAIL +(e2e\w*)", text, re.M) if (E2E / f"{m.group(1)}.py").exists()}
+
+
 def e2e(results, only, timeout, kind, jobs: int = 1) -> None:
     names = sorted(p.stem for p in E2E.glob("e2e*.py") if p.stem not in NOT_TESTS)
     if only:
@@ -323,7 +333,9 @@ def main() -> None:
     ap.add_argument("--fumo", action="store_true", help="solo gli e2e di fumo (SMOKE), senza sintassi JS e pytest: è il giro del job «browser» della CI")
     ap.add_argument("--setup", action="store_true", help="installa pytest, playwright e chromium se mancano")
     ap.add_argument("--timeout", type=int, default=600, help="secondi per ogni e2e (predefinito 600)")
-    ap.add_argument("--paralleli", type=int, default=3, help="e2e eseguiti insieme (predefinito 3; 1 = uno alla volta, come prima)")
+    ap.add_argument("--paralleli", type=int, default=max(1, min(6, (os.cpu_count() or 2) - 1)),
+                    help="e2e eseguiti insieme (predefinito: CPU - 1, al massimo 6; 1 = uno alla volta)")
+    ap.add_argument("--ultimi-falliti", action="store_true", help="rilancia solo gli e2e che erano FAIL nel giro precedente (.verifica/ultimo.md)")
     ap.add_argument("--cambiati", action="store_true", help="solo gli e2e che riguardano i file cambiati rispetto a origin/main (vedi AREE); con file del nucleo li fa tutti")
     ap.add_argument("--tutto", action="store_true", help="stampa anche le righe OK (altrimenti solo FAIL/SKIP e il conteggio)")
     a = ap.parse_args()
@@ -335,7 +347,7 @@ def main() -> None:
         setup()
     results: list = []
     t0 = time.time()
-    if not a.fumo:
+    if not a.fumo and not a.ultimi_falliti:
         js_syntax(results)
         i18n(results)
         pytest(results, 1200)
@@ -343,18 +355,25 @@ def main() -> None:
             prova_hr(results)
     if not a.senza_e2e:
         only = {s.strip().removesuffix(".py") for s in a.solo.split(",") if s.strip()} or (set(SMOKE) if a.rapida or a.fumo else set())
+        if a.ultimi_falliti and not only:
+            only = last_failed()
+            if not only:
+                results.append(("e2e", "INFO", 0, ["nessun e2e FAIL nel giro precedente (.verifica/ultimo.md)"]))
         run = True
         if a.cambiati and not only:
             sel, why = changed_tests()
             results.append(("e2e scelti da --cambiati", "INFO", 0, [why]))
             run, only = sel != {"-"}, (sel if sel not in (None, {"-"}) else set())
-        if run:
+        if run and not (a.ultimi_falliti and not only):
             e2e(results, only, a.timeout, "", a.paralleli)
     fails = [r for r in results if r[1] == "FAIL"]
     lines = [f"# Verifica QqQ lab ({time.strftime('%Y-%m-%d %H:%M')}, {time.time() - t0:.0f} s, browser {browser_name()}): "
              + ("TUTTO OK" if not fails else f"{len(fails)} FAIL"), ""]
     for name, st, dt, notes in results:
         lines.append(f"- {st:4} {name}" + (f" ({dt:.0f} s)" if dt else "") + (": " + " | ".join(notes) if notes and (st != "OK" or name.startswith("prova_hr")) else ""))
+    timed = sorted((r for r in results if r[0].startswith("e2e") and r[1] in ("OK", "FAIL") and r[2]), key=lambda r: -r[2])[:5]
+    if timed:
+        lines += ["", "I 5 e2e più lenti: " + ", ".join(f"{r[0]} {r[2]:.0f} s" for r in timed)]
     lines += ["", "Log completi: .verifica/log/<nome>.log (leggili solo per i FAIL)."]
     text = "\n".join(lines)
     (OUT / "ultimo.md").write_text(text + "\n", encoding="utf-8")

@@ -21,7 +21,7 @@ try:
             assert pg.locator("#xic-rows .xrw").count() == 2 and pg.locator("#xic-add").is_enabled(), "two rows to start with"
             t = pg.inner_text("#xicdlg"); assert "oppure" in t and "neutra" in t  and "cifra decimale" not in t and "m/z o formula" not in t, t
             pg.fill("#xic-mz", "194.04"); assert "193.8 - 194.8" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "194.04", pg.inner_text("#xic-sum")
-            pg.fill("#xic-mz", "C14H13F4N3O2S"); pg.wait_for_timeout(1300)
+            pg.fill("#xic-mz", "C14H13F4N3O2S"); hold(pg, 1300)
             assert "363.8 - 364.8" in pg.inner_text("#xic-sum") and pg.input_value("#xic-mz") == "C14H13F4N3O2S", pg.inner_text("#xic-sum")
             pg.select_option("#xic-ad", "[M+Na]+"); pg.wait_for_timeout(600)
             assert "385.8 - 386.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")
@@ -31,7 +31,7 @@ try:
         step("XIC window: one m/z value, oppure, neutral formula, unit window around the nominal mass", window_)
         def chrom_menu():
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom')"); c = pt(pg, ci, 12.0)
-            pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_timeout(300)
+            pg.mouse.click(c["px"], c["py"], button="right"); pg.wait_for_function("document.querySelectorAll('#ctx div').length>0", timeout=5000)
             items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); print([i[0] for i in items])
             assert not any(i[0] == "Ripristina zoom" for i in items) and any(i[0] == "Estrai uno ione (XIC)…" for i in items), items          # no zoom yet: no such entry
             pg.locator("#ctx div", has_text="Estrai uno ione").first.click(); pg.wait_for_timeout(300)

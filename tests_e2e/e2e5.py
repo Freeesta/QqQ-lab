@@ -13,7 +13,7 @@ try:
         pg.wait_for_timeout(1000); pg.click("text=Carica dati"); ready(pg)
         def addion(t, ok=True):                       # t: neutral formula (the adduct comes from the selector)
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic')||null)")
-            pg.fill("#xic-mz", t); pg.wait_for_timeout(1300)
+            pg.fill("#xic-mz", t); hold(pg, 1300)
             if ok: pg.click("#xic-go"); ready(pg)
         def addwin(v):                                # write ONE m/z value: the unit window [n-0.2, n+0.8] is built around its nominal mass
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic')||null)")
@@ -43,9 +43,9 @@ try:
             pg.evaluate("openXic(E.panels.find(p=>p.type==='xic'))")
             t = pg.inner_text("#xicdlg"); assert "oppure" in t and "neutra" in t and "Extracted Ion Chromatogram" in t and "1 Da" in t, t
             assert not pg.query_selector("#xic-lo") and not pg.query_selector("#xic-hi") and "compromesso" not in t and "0.7 Da" not in t, t
-            pg.fill("#xic-mz", ""); pg.wait_for_timeout(700)      # (the window opens with the last ion: clear it, then nothing is written)
+            pg.fill("#xic-mz", ""); hold(pg, 700)      # (the window opens with the last ion: clear it, then nothing is written)
             pg.click("#xic-go"); err = pg.inner_text("#xic-err"); assert "Scrivi un valore di m/z" in err, err      # nothing written
-            pg.fill("#xic-mz", "C2H6O"); pg.wait_for_timeout(1300); assert "46.8 - 47.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")      # one box: an m/z or a formula
+            pg.fill("#xic-mz", "C2H6O"); hold(pg, 1300); assert "46.8 - 47.8" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum")      # one box: an m/z or a formula
             pg.click("#xic-no")
         step("XIC window layout: new text, one m/z value, oppure, neutral formula; no from/to fields", xicdlg_layout)
         def blank():

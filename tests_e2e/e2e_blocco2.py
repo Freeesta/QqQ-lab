@@ -41,9 +41,9 @@ try:
         step("2.4: scan line on the row of the x axis title", below)
         def tabs():
             assert pg.evaluate("document.querySelectorAll('#dtabs .qi, #flst .qi').length") == 0, "no icons in tabs / file list"
-            b = pg.locator("#dtabs [data-t=ms2]"); b.hover(); pg.wait_for_timeout(900)
+            b = pg.locator("#dtabs [data-t=ms2]"); b.hover(); hold(pg, 900)
             assert pg.evaluate("document.querySelector('#qtip').hidden"), "not yet at 0.9 s"
-            pg.wait_for_timeout(800); t = pg.inner_text("#qtip"); print(t[:120].replace("\n", " | "))
+            hold(pg, 800); t = pg.inner_text("#qtip"); print(t[:120].replace("\n", " | "))
             assert not pg.evaluate("document.querySelector('#qtip').hidden") and "Q1" in t and "Q3" in t, t
             assert pg.evaluate("TIP_DELAY") == 1250
         step("2.3/2.5: no icons, tab label = Q1 -> q2 -> Q3 after TIP_DELAY (1250 ms)", tabs)

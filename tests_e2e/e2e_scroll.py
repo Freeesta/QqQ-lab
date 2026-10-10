@@ -54,7 +54,7 @@ try:
             pg.keyboard.press("Shift+ArrowLeft"); pg.wait_for_timeout(500); assert st()["si"] == a0["si"]
         step("Maiusc + arrow = 5 scans", shift5)
         def held():
-            a0 = st(); pg.keyboard.down("ArrowRight"); pg.wait_for_timeout(1350); pg.keyboard.up("ArrowRight"); pg.wait_for_timeout(300)
+            a0 = st(); pg.keyboard.down("ArrowRight"); hold(pg, 1350); pg.keyboard.up("ArrowRight"); hold(pg, 300)
             n = st()["si"] - a0["si"]; assert 8 <= n <= 18, n                        # ~1 s of repeat at ~15 scans/s after a short delay (+ the first step)
             a1 = st(); pg.wait_for_timeout(500); assert st()["si"] == a1["si"], "must stop when the key goes up"
         step("held key: ~15 scans/s, stops when released", held)

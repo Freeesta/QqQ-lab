@@ -21,6 +21,53 @@ _Page.wait_for_function = _wff
 _TRACK = ("(()=>{if(window.__qqF!==undefined)return;window.__qqF=0;window.__qqT=Date.now();const f=window.fetch;"
           "window.fetch=function(...a){window.__qqF++;window.__qqT=Date.now();const done=()=>{window.__qqF--;window.__qqT=Date.now()};"
           "return f.apply(this,a).then(r=>{done();return r},e=>{done();throw e})}})()")
+# Short timers pending (<= 0.4 s: debounces, redraws, toasts) and the time of the last DOM change are tracked as well: pg.wait_for_timeout(ms) below returns
+# as soon as the page has been quiet for a moment (no fetch, no pending short timer, no DOM change) instead of sleeping for the whole `ms`.
+_TRACK2 = ("(()=>{if(window.__qqP!==undefined)return;window.__qqP=0;const ids=new Map(),st=window.setTimeout,ct=window.clearTimeout;"
+           "window.setTimeout=function(f,d,...a){d=+d||0;if(d>400||typeof f!=='function')return st.call(this,f,d,...a);window.__qqP++;window.__qqT=Date.now();"
+           "const id=st.call(this,function(...b){if(ids.delete(id)){window.__qqP--;window.__qqT=Date.now()}return f.apply(this,b)},d,...a);ids.set(id,1);return id};"
+           "window.clearTimeout=function(id){if(ids.delete(id)){window.__qqP--;window.__qqT=Date.now()}return ct.call(this,id)};"
+           "new MutationObserver(()=>{window.__qqT=Date.now()}).observe(document,{subtree:true,childList:true,attributes:true,characterData:true})})()")
+_TRACK = _TRACK + ";" + _TRACK2
+_QUIET = ("(idle)=>{const k=document.getElementById('kframe');if(k&&k.getBoundingClientRect().width>0)return false;"
+          "return document.getAnimations().length===0&&(window.__qqF||0)===0&&(window.__qqP||0)===0&&Date.now()-(window.__qqT||0)>=idle}")
+_real_wft = _Page.wait_for_timeout
+_STAT = [0, 0]          # milliseconds asked for and really waited by the quiet pauses (MZLAB_E2E_STATS=1 prints them at the end)
+import atexit
+atexit.register(lambda: print("PAUSE STATS asked %.1f s, waited %.1f s" % (_STAT[0] / 1000, _STAT[1] / 1000)) if get_env("E2E_STATS") else None)
+def _quiet_wft(self, ms):
+    """Pause of at most `ms`: it ends earlier when the page has been quiet for max(100 ms, ms/10). Pauses of 150 ms or less stay real (the polling loops use them).
+    MZLAB_E2E_PAUSE=exact brings back the fixed pauses (to tell a real bug from a missing wait); hold(pg, ms) is a pause that is always real."""
+    if ms <= 150 or get_env("E2E_PAUSE") == "exact": return _real_wft(self, ms)
+    import time
+    idle, t0 = max(100, ms // 10), time.time()
+    _STAT[0] += ms
+    try:
+        _real_wft(self, 60)
+        while (time.time() - t0) * 1000 < ms:
+            try:
+                if self.evaluate(_QUIET, idle): return
+            except Exception:
+                return _real_wft(self, max(0, ms - int((time.time() - t0) * 1000)))
+            _real_wft(self, 40)
+    finally:
+        _STAT[1] += (time.time() - t0) * 1000
+        if get_env("E2E_STATS") == "2" and (time.time() - t0) * 1000 > ms * 0.8:
+            try: print("SLOW PAUSE", ms, self.evaluate("[window.__qqF, window.__qqP, Date.now() - window.__qqT]"))
+            except Exception: pass
+_Page.wait_for_timeout = _quiet_wft
+# Files given to the start screen (#pick): the call returns when all of them are in the list (the tests used to sleep and hope), as stage() does.
+_real_sif = _Page.set_input_files
+def _sif(self, selector, files, **k):
+    _real_sif(self, selector, files, **k)
+    n = sum(1 for f in files if str(f).lower().endswith(".mzml")) if isinstance(files, (list, tuple)) else 0       # a .dam goes to the other box
+    if selector == "#pick" and n:
+        try: self.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length>={n}", timeout=20000)
+        except TimeoutError: pass
+_Page.set_input_files = _sif
+def hold(pg, ms):
+    """A pause that is really `ms` long (something that only time can bring, with nothing in the page to wait for)."""
+    _real_wft(pg, ms)
 from playwright.sync_api import Browser as _Br, BrowserContext as _Ctx
 _np, _nc = _Br.new_page, _Br.new_context
 def _new_page(self, *a, **k):

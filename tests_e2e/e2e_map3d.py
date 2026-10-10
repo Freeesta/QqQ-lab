@@ -41,7 +41,7 @@ try:
             pg.screenshot(path=SH + "m3d_c.png", full_page=True)
         step("back to 2D keeps the difference", back)
         def saved():
-            pg.evaluate("E.panels.find(q=>q.type==='map').view='3d';uiSave()"); pg.wait_for_timeout(800)
+            pg.evaluate("E.panels.find(q=>q.type==='map').view='3d';uiSave()"); hold(pg, 800)
             assert '"view":"3d"' in pg.evaluate("JSON.stringify(NB.ui.panels||NB.ui)")
         step("view saved in the notebook", saved)
         def surf():

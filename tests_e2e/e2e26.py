@@ -41,9 +41,9 @@ try:
                 assert pg.evaluate("!document.querySelector('.pnl.max')"), (i, pg.evaluate("[!!document.querySelector('dialog[open]'), !!document.querySelector('#helppop:not([hidden])'), !!document.querySelector('#ctx:not([hidden])')]"))
         step("full screen on every panel (incl. XIC added later), Esc leaves it", fs)
         def tip():
-            btn = pg.locator(".pnl .fsb").first; btn.hover(); pg.wait_for_timeout(1000)
+            btn = pg.locator(".pnl .fsb").first; btn.hover(); hold(pg, 1000)
             assert pg.evaluate("document.querySelector('#qtip').hidden"), "too early"
-            pg.wait_for_timeout(1100)
+            hold(pg, 1100)
             assert not pg.evaluate("document.querySelector('#qtip').hidden") and "Schermo intero" in pg.inner_text("#qtip")
             pg.mouse.move(5, 5); pg.wait_for_timeout(200); assert pg.evaluate("document.querySelector('#qtip').hidden")
         step("tooltip after ~1.7 s, not before, gone when the pointer leaves", tip)
