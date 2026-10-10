@@ -1,0 +1,33 @@
+[package]
+name = "mzlab-desktop"
+description = "mzLab desktop: the same web app in a Tauri window, with a native engine (memory-mapped files) behind the mzlab:// protocol"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+build = "build.rs"
+
+[lib]
+name = "mzlab_desktop"
+
+[[bin]]
+name = "mzlab"
+path = "src/main.rs"
+required-features = ["app"]
+
+[features]
+# The window (Tauri). Off by default so that `cargo test` of the workspace needs no webview library.
+app = ["dep:serde", "dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-build"]
+
+[dependencies]
+mzlab-core = { path = "../mzlab-core" }
+memmap2 = "0.9"
+tauri = { version = "2", optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
+tauri-plugin-dialog = { version = "2", optional = true }
+
+[build-dependencies]
+tauri-build = { version = "2", optional = true }
+
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
