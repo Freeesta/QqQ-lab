@@ -34,7 +34,11 @@ try:
             dd = Path(tempfile.mkdtemp()); fl = make_demo(dd)
             pg.set_input_files("#tp-in", [f["path"] for f in fl])
             pg.wait_for_function("document.querySelector('#tp-files table') && document.querySelectorAll('#tp-files tr').length >= 9", timeout=240000)
-            assert pg.inner_text("#pm-mode").strip() == "Unit resolution" and pg.input_value("#tp-tol") == "0.35" and pg.input_value("#tp-rtt") == "0.25"
+            assert pg.evaluate("document.querySelector('.pm-bar') === null") and pg.evaluate("document.querySelectorAll('#tp-minecard button').length") == 1 and pg.evaluate("document.querySelector('#tp-go svg') !== null")
+            assert pg.evaluate("[...document.querySelectorAll('#tp-files tr')].slice(1).filter(t => !t.hidden).length") == 6 and pg.get_attribute("#tp-more", "aria-expanded") == "false"
+            assert pg.inner_text("#tp-fsum").strip() != "" and pg.evaluate("document.getElementById('tp-disc').offsetParent !== null") and pg.get_attribute("#tp-disc-h", "title")
+            pg.click("#tp-more"); assert pg.evaluate("[...document.querySelectorAll('#tp-files tr')].slice(1).every(t => !t.hidden)") and pg.get_attribute("#tp-more", "aria-expanded") == "true"
+            assert pg.input_value("#tp-tol") == "0.35" and pg.input_value("#tp-rtt") == "0.25"
             pg.fill("#tp-mol", "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O")
             pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('241.0641')", timeout=60000)
             assert "C10H12N2O3S" in pg.inner_text("#tp-prev")
@@ -49,8 +53,8 @@ try:
             for need in ("hydroxylation", "loss of propene", "dehydrogenation"): assert need in t, need
             pg.click('.vt[data-v="map"]'); pg.wait_for_selector(".mnode"); assert pg.evaluate("document.querySelectorAll('.mnode').length") >= 4
             pg.click('.vt[data-v="kin"]'); pg.wait_for_selector("#tp-c-all"); assert pg.evaluate("document.getElementById('tp-c-all').width") > 0
-            pg.click('.vt[data-v="film"]'); pg.wait_for_selector(".frow"); pg.click("#tp-play"); pg.wait_for_timeout(2200)
-            assert "t = 5" in pg.inner_text("#tp-tl") or "t = 10" in pg.inner_text("#tp-tl"), pg.inner_text("#tp-tl")
+            pg.click('.vt[data-v="film"]'); pg.wait_for_selector(".frow"); pg.click("#tp-play")
+            pg.wait_for_function("/t = (5|10) min/.test(document.getElementById('tp-tl').textContent)", timeout=8000)
             pg.click('.vt[data-v="gems"]'); pg.click(".gem:has-text('hydroxylation')"); pg.wait_for_selector("#tp-c-xic", timeout=60000); pg.wait_for_timeout(500)
             d = pg.inner_text("#tp-det")
             assert "In words" in d and "Level 3" in d and "257.1" in d, d[:700]
@@ -69,7 +73,8 @@ try:
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
             pg.set_input_files("#tp-in", [f["path"] for f in fs] + [str(mf)])
             pg.wait_for_function("document.querySelectorAll('#tp-files tr').length >= 8", timeout=300000)
-            t = pg.inner_text("#tp-files"); assert "LC-HRMS" in t and "MSn (infusion)" in t, t
+            t = pg.evaluate("document.getElementById('tp-files').textContent"); assert "LC-HRMS" in t and "MSn (infusion)" in t, t
+            assert pg.evaluate("document.getElementById('tp-disc').offsetParent === null")          # HR: the unexpected-ions box is hidden
             pg.fill("#tp-mol", "Cn1cnc2c1c(=O)n(C)c(=O)n2C"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('195.0877')", timeout=60000)
             pg.click("#tp-go"); pg.wait_for_selector("#hr-t tr.clk", timeout=300000)
             tab = pg.inner_text("#hr-t")
