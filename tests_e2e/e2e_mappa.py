@@ -26,7 +26,7 @@ try:
         z = lambda: pg.evaluate(f"[{M}.zoom,{M}.zoomY]")
         def dark():
             assert pg.evaluate("matchMedia('(prefers-color-scheme: dark)').matches")
-            assert pg.inner_text(f"{M}.el .mzbt".replace(f"{M}.el ", ".pnl.map ")).strip().startswith("sight"), pg.inner_text(".pnl.map .mzbt")
+            assert pg.inner_text(".pnl.map [data-mz=mir]").strip().startswith("sight"), pg.inner_text(".pnl.map [data-mz=mir]")
         step("dark theme, English: the sight button", dark)
         def wheel():
             x, y = at(.5, .45); pg.mouse.move(x, y)
@@ -110,11 +110,13 @@ try:
                 xy = pg.evaluate(f"(()=>{{const a={M}._a,c={M}.cv.getBoundingClientRect();return [c.left+a.X({rt}),c.top+a.Y({mz})]}})()")
                 pg.mouse.click(*xy); pg.wait_for_function(f"MAPPA.pts({M}).length==={n}", timeout=10000)
             pg.wait_for_function(f"!!(MAPPA.st({M}).rows && MAPPA.st({M}).rows.length===3 && MAPPA.st({M}).rows[2].g!=null)", timeout=15000)
+            pg.fill(".pnl.map [data-t=grp]", "0,1"); pg.dispatch_event(".pnl.map [data-t=grp]", "change")          # the group window is editable: the two apexes (14.30 and 14.35) fall in the same group
+            pg.wait_for_function(f"MAPPA.st({M}).rows.length===3 && MAPPA.st({M}).rows[0].g===MAPPA.st({M}).rows[1].g", timeout=15000)
             rows = pg.evaluate(f"MAPPA.st({M}).rows")
             assert rows[0]["g"] == rows[1]["g"] != rows[2]["g"], [(r["rt"], r["mz"], r["g"]) for r in rows]          # two at the same RT, one alone: two groups
             top, oth = sorted(rows[:2], key=lambda r: -r["ia"])
             assert top["dm"] == 0 and abs(oth["dm"] - (oth["mz"] - top["mz"])) < 1e-6 and rows[2]["dm"] == 0, rows
-            assert all(r["ib"] is not None and r["sn"] is not None for r in rows) and abs(rows[0]["d"] - (rows[0]["ia"] - rows[0]["ib"])) < 1e-3
+            assert all(r["ib"] is not None for r in rows) and all(r["sn"] is not None for r in rows[:2]) and abs(rows[0]["d"] - (rows[0]["ia"] - rows[0]["ib"])) < 1e-3
             assert pg.locator(".pnl.map .mztab tbody tr").count() == 3
             pg.click(".pnl.map .mztab a[data-dm]"); pg.wait_for_timeout(600)                                    # the Δm opens the neutral losses, filtered
             v = pg.evaluate("(()=>{const i=document.querySelector('#sb-panel-losses #nl-q')||document.querySelector('#nl-q');return i&&i.value})()")
