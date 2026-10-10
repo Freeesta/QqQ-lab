@@ -78,7 +78,7 @@ try:
             assert len(big) > 3_000_000, len(big)
             pg.click("#np-set"); pg.click("#uipset button >> text=Librerie"); pg.wait_for_timeout(400)
             pg.set_input_files("#lib-file", {"name": "grande.msp", "mimeType": "text/plain", "buffer": big.encode()}); pg.wait_for_timeout(6000)
-            t = pg.inner_text("#lib-list"); assert "grande" in t and "5.001" in t.replace(" ", "").replace("\u202f", "").replace(".", ".") or "5001" in t.replace(".", ""), t
+            t = pg.inner_text("#lib-list"); assert "grande" in t and "5001" in t.replace(".", "").replace("\u202f", ""), t
             assert "MB" in t, t
             pg.reload(); pg.wait_for_timeout(2500)
             pg.click("#np-set"); pg.click("#uipset button >> text=Librerie"); pg.wait_for_timeout(1000)
