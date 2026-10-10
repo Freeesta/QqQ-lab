@@ -224,6 +224,7 @@
   "lib.plot.shared": "Etichetta in alto a destra nel grafico a specchio; {n} = numero di picchi in comune.",
   "lib.results": "Messaggio dopo la ricerca; {n} = risultati, {ms} = millisecondi.",
   "lib.space": "Riga in fondo alla finestra delle librerie; {mb} = megabyte usati dal sito.",
+  "lib.dirNone": "Messaggio dopo «Ricarica dalla cartella» quando non ci sono librerie nuove; {name} = nome della cartella.",
   "dda.mixed": "Seguito di dda.none; {n} = numero di MS2 che isolano anche questo ione.",
   "dda.near.line": "Riga nel riquadro del triangolino; {min} = finestra in minuti, {prec} = m/z del precursore.",
   "dda.kid.title": "Titolo del riquadro su un triangolino; {i} = numero d'ordine, {n} = totale.",
