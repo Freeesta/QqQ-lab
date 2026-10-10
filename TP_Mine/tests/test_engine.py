@@ -50,11 +50,13 @@ def test_demo_pipeline(demo_summary):
     assert s["offset"]["applied"] and abs(s["offset"]["offset"] - 0.31) < 0.05
     assert abs(s["decay"]["k_per_min"] - 0.05) < 0.005
     strong = {r["name"] for r in s["rows"] if r["kind"] == "candidate" and r["label"] == "forte"}
-    assert strong == {"hydroxylation", "loss of propene (N-deisopropylation)", "dehydrogenation"}
+    assert strong == {"hydroxylation @ 7.40 min", "loss of propene (N-deisopropylation)", "dehydrogenation"}
     weak = {r["name"]: r for r in s["rows"] if r["label"] == "debole"}
     assert "dihydroxylation" in weak            # the contaminant present in the blank is rejected
-    oh = next(r for r in s["rows"] if r["name"] == "hydroxylation")
-    assert abs(oh["ref_rt"] - 7.4) < 0.1          # not the interference of the same mass at RT 4.1
+    oh = next(r for r in s["rows"] if r["name"] == "hydroxylation @ 7.40 min")
+    assert abs(oh["ref_rt"] - 7.4) < 0.1
+    interf = next(r for r in s["rows"] if r["name"].startswith("hydroxylation @ 4.1"))      # the interference of the same mass is its own row, not strong
+    assert interf["label"] != "forte" and interf["id"] != oh["id"]
     d = ex.detail(oh["id"])
     assert d["level"] == 3 and d["ms2"]["shifted"] == 1
     assert any(abs(t["Q3_consigliato"] - 215.0) < 0.15 for t in d["transitions"])

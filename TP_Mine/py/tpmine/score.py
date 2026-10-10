@@ -2,6 +2,8 @@
 """Score of a candidate: independent criteria, each with its reason (no hidden numbers), and the Schymanski confidence level."""
 from __future__ import annotations
 
+import math
+
 import numpy as np
 
 R_CL, R_BR = 0.2423 / 0.7577, 0.4931 / 0.5069       # (M+2)/M of one Cl and one Br
@@ -11,10 +13,22 @@ DEFAULT_THRESHOLDS = {
     "peak": {"snr_min": 3.0, "min_points": 5, "smooth_points": 3},
     "blank": {"ratio_max": 0.20},
     "t0": {"ratio_max": 0.20},
-    "growth": {"rising_fraction_min": 0.75},
+    "growth": {"spearman_min": 0.8, "rise_min": 2.0},
+    "isomer": {"area_frac_min": 0.10, "valley_max": 0.5, "max_peaks": 4},
     "halogen": {"tolerance": 0.40},
     "labels": {"strong": 75, "possible": 50},
 }
+
+
+def spearman(x, y) -> float | None:
+    """Spearman rank correlation (average ranks for ties); None when one of the series is constant."""
+    def rank(v):
+        _, inv, cnt = np.unique(np.asarray(v, float), return_inverse=True, return_counts=True)
+        return (np.cumsum(cnt) - cnt + (cnt + 1) / 2.0)[inv]
+    rx, ry = rank(x), rank(y)
+    if rx.std() == 0 or ry.std() == 0:
+        return None
+    return float(np.corrcoef(rx, ry)[0, 1])
 
 
 def halogen_expectation(formula: dict | None):
@@ -56,11 +70,14 @@ def score_candidate(rows: list[dict], thr: dict, halogen_expected=None, halogen_
     if len(timed) >= 3 and ok:
         a = np.array([r["area"] if r["detected"] else 0.0 for r in timed])
         imax = int(np.argmax(a))
-        steps = np.diff(a[:imax + 1])
-        frac = float((steps > 0).mean()) if len(steps) else 0.0
-        good = imax > 0 and frac >= thr["growth"]["rising_fraction_min"]
+        g = thr["growth"]
+        t_up, a_up = np.array([r["time"] for r in timed[:imax + 1]], float), a[:imax + 1]
+        rho = (1.0 if a_up[-1] > a_up[0] else 0.0) if len(a_up) == 2 else spearman(t_up, a_up) if len(a_up) > 2 else None
+        rise = float(a[imax] / a[:imax].min()) if imax > 0 and a[:imax].min() > 0 else math.inf
+        good = imax > 0 and rho is not None and rho >= g["spearman_min"] and rise >= g["rise_min"]
         crit.append(_crit("grows over time", "pass" if good else "fail",
-                          f"maximum at {timed[imax]['time']:g} min; {frac:.0%} of the steps up to it rise (minimum {thr['growth']['rising_fraction_min']:.0%})"))
+                          f"maximum at {timed[imax]['time']:g} min; Spearman rho = " + (f"{rho:.2f}" if rho is not None else "n/a") + f" up to it (minimum {g['spearman_min']:g}), "
+                          + ("rise from nothing" if math.isinf(rise) else f"rise x{rise:.1f}") + f" (minimum x{g['rise_min']:g})"))
     else:
         crit.append(_crit("grows over time", "n/a", "at least three samples with a time and a peak are required"))
     if halogen_expected is not None:
