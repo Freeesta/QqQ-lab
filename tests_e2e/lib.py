@@ -60,11 +60,32 @@ if BROWSER != "chromium":
     from playwright.sync_api import Playwright as _PW
     _PW.chromium = property(lambda self: getattr(self, BROWSER))
 FILES = ["B_FullMass-t0", "B_FullMass-t15", "B_FullMass-t60", "B_MS2-t15", "B_MRM-t0"]
-# Paths are relative to this folder: code = parent of tests_e2e, mzML = ../esempio_conversione/mzml (or $MZLAB_MZML / $QQQ_MZML)
+# Paths are relative to this folder: code = parent of tests_e2e, mzML = mzlab-dati/mzML (or $MZLAB_MZML / $QQQ_MZML)
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-MZ = Path(get_env("MZML", ROOT.parent / "esempio_conversione" / "mzml"))
-DAM = Path(get_env("DAM", ROOT.parent / "QqQ" / "Metodi inquinanti" / "Lab_inq_FullMass_pos_max480.dam"))   # a lab method (not in git)
+def _find_mz():
+    env = get_env("MZML")
+    if env and Path(env).exists(): return Path(env)
+    for base in (ROOT.parent, ROOT.parent.parent, Path.home(), Path("/workspace"), Path("/workspaces"), Path("/repos"), Path("/tmp")):
+        for name in ("mzlab-dati", "QqQ-lab-dati"):
+            for sub in ("mzML", "Data/mzML"):
+                c = base / name / sub
+                if (c / "B_FullMass-t0.mzML").exists(): return c
+    return ROOT.parent / "esempio_conversione" / "mzml"
+
+def _find_dam():
+    env = get_env("DAM")
+    if env and Path(env).exists(): return Path(env)
+    name = "Lab_inq_FullMass_pos_max480.dam"
+    for base in (ROOT.parent, ROOT.parent.parent, Path.home(), Path("/workspace"), Path("/workspaces"), Path("/repos"), Path("/tmp")):
+        for rname in ("mzlab-dati", "QqQ-lab-dati"):
+            for sub in ("dam", "Data/dam", "Data/dam - Metodi"):
+                c = base / rname / sub / name
+                if c.exists(): return c
+    return ROOT.parent / "QqQ" / "Metodi inquinanti" / name
+
+MZ = _find_mz()
+DAM = _find_dam()
 SH = str(HERE / "shots") + "/"
 os.makedirs(SH, exist_ok=True)
 def mz(f): return str(MZ / f"{f}.mzML")

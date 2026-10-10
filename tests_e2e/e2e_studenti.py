@@ -21,7 +21,7 @@ try:
         pg = r.page(p); pg.set_viewport_size({"width": 1280, "height": 720}); pg.wait_for_timeout(500)
         pg.set_input_files("#pick", [mz(f) for f in SET]); pg.wait_for_timeout(2500)
         def table():
-            rows = pg.evaluate("[...document.querySelectorAll('#flist tr')].map(tr=>tr.classList.contains('grp')?'GRP '+tr.textContent.trim():tr.children[1].textContent.replace(/\s*[+−±?]$/, '').trim())")
+            rows = pg.evaluate(r"[...document.querySelectorAll('#flist tr')].map(tr=>tr.classList.contains('grp')?'GRP '+tr.textContent.trim():tr.children[1].textContent.replace(/\s*[+−±?]$/, '').trim())")
             gi = [i for i, t in enumerate(rows) if t.startswith("GRP")]; assert len(gi) == 3 and "Full Scan" in rows[gi[0]] and "MS2" in rows[gi[1]] and "MRM" in rows[gi[2]], rows
             full = rows[gi[0] + 1:gi[1]]; assert [x.replace(".mzML", "").split("-t")[-1] for x in full] == ["0", "5", "10", "15", "30 (2)", "45", "60"], full
             mrm = rows[gi[2] + 1:]; assert mrm == ["B_MRM-STD_0_6ppm.mzML", "B_MRM-STD_7_2ppm.mzML", "B_MRM-STD_18ppm.mzML", "B_MRM-t0.mzML", "B_MRM-t15.mzML", "B_MRM-t60.mzML"], mrm
@@ -120,13 +120,15 @@ try:
         def mrm():
             pg.click("#dtabs >> text=MRM"); pg.wait_for_timeout(5000)
             z = pg.evaluate("E.panels.filter(p=>p.tab==='mrm').map(p=>p.zoom)"); print("   MRM zoom:", z)
-            assert z and all(x and abs((x[1] - x[0]) - 3) < 0.3 for x in z), z
+            assert z and all(x is None for x in z), "MRM starts with full chromatogram without auto-zoom"
+            vis = pg.evaluate("tabFiles('mrm').map(f=>f.vis)")
+            assert vis[0] is True and not any(vis[1:]), vis
             pg.screenshot(path=SH + "studenti_mrm.png")
             c = pg.evaluate("E.files.filter(f=>f.kind==='mrm').map(f=>[f.label,f.type,f.conc,f.color])"); print("   MRM colours:", c)
             std = sorted([x for x in c if x[1] == "standard"], key=lambda x: x[2]); smp = [x for x in c if x[1] == "sample"]
             L = lambda h: sum(int(h[i:i + 2], 16) * w for i, w in zip((1, 3, 5), (.3, .59, .11)))
             assert [L(x[3]) for x in std] == sorted([L(x[3]) for x in std], reverse=True), std; assert not {x[3] for x in std} & {x[3] for x in smp}
-        step("B-15 MRM first view zoomed on the peak; B-16 standards light to dark, not like the samples", mrm)
+        step("B-15 MRM first view without auto-zoom; B-16 standards light to dark, not like the samples", mrm)
         def smoothing():
             P = "E.panels.find(p=>p.tab==='mrm')"
             c = pg.evaluate(f"(()=>{{const p={P},r=p.cv.getBoundingClientRect(),a=p._a,s=a.sr[0],j=s.y.indexOf(Math.max(...s.y));return {{l:r.left,t:r.top,x:r.left+a.X(s.x[j]-0.3),x2:r.left+a.X(s.x[j]+0.3),y:r.top+60}}}})()")

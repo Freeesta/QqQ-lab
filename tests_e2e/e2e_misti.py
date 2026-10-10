@@ -50,7 +50,7 @@ try:
         step("MS2 tab: precursors grouped and sorted by number of scans", ms2tab)
         def mrmtab():
             pg.evaluate("setTab('mrm',true)"); pg.wait_for_timeout(3000)
-            assert pg.evaluate("tabFiles('mrm').length") == 1 and pg.evaluate("E.panels.filter(p=>p.tab==='mrm').length") >= 2
+            assert pg.evaluate("tabFiles('mrm').length") == 1 and pg.evaluate("E.panels.filter(p=>p.tab==='mrm').length") >= 1
         step("MRM tab gets the MRM part of the MRM + EPI file", mrmtab)
         def reload():
             pg.evaluate("uiSave(true)"); pg.wait_for_timeout(1500); pg.reload(); pg.wait_for_timeout(6000)

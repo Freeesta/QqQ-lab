@@ -33,7 +33,7 @@ try:
             for bad in ("Dimensione del testo dell", "Vale per menu", "tutorial", "Installare", "Numera", "suggerimenti"):
                 assert bad.lower() not in t.lower(), bad
             assert pg.locator("#uipset input[type=checkbox]").count() == 2 and pg.locator("#uip-merge").count() == 1 and pg.locator("#uip-tog").count() == 1      # the merge of the centroids and «Mostra tutti gli esperimenti insieme» (off by default)
-            assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["Per tempo (predefinito)", "Accessibili", "Alto contrasto", "Arcobaleno"]
+            assert [o.strip() for o in pg.locator("#uip-pal option").all_inner_texts()] == ["Per tempo (predefinito)", "Accessibili", "Alto contrasto", "Arcobaleno", "Bianco e nero"]
             assert pg.input_value("#uip-pal") == "time"
             pg.select_option("#uip-th", "dark"); pg.wait_for_timeout(400)
             pg.select_option("#uip-th", "auto"); pg.wait_for_timeout(300)

@@ -3,7 +3,7 @@ import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 def flst_own(pg):
     """text of the file list without the greyed rows (and heading) of the other tabs"""
-    return pg.evaluate("[...document.querySelectorAll('#flst > *')].filter(e=>!e.classList.contains('ghost')&&!e.classList.contains('sep')&&!e.closest('.ghost')).map(e=>e.innerText).join('\\n')")
+    return pg.evaluate("[...document.querySelectorAll('#flst .fgh:not(.sep), #flst .fl:not(.ghost)')].map(e=>e.innerText).join('\\n')")
 steps = []
 def step(name, fn):
     try: fn(); steps.append((name, "ok"))

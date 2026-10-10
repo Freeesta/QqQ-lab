@@ -28,8 +28,11 @@ try:
         step("MS2 tab: one chromatogram+spectrum per precursor", t3)
         def t4():
             pg.click("#dtabs [data-t=mrm]"); ready(pg)
-            m = pg.evaluate("E.panels.filter(p=>p.tab==='mrm').map(p=>p.title||'')"); assert len(m) >= 2, m
-            assert any("Quantificatore" in x for x in m) and any("Qualificatore" in x for x in m), m
+            m = pg.evaluate("E.panels.filter(p=>p.tab==='mrm')"); assert len(m) >= 1, len(m)
+            trs = pg.evaluate("E.panels.find(p=>p.tab==='mrm')?.tr || []")
+            cal = pg.evaluate("[CAL.quant, CAL.qual]")
+            assert cal[0] and cal[1], cal
+            assert cal[0] in trs and cal[1] in trs, (cal, trs)
         step("MRM tab: Quantificatore and Qualificatore panels", t4)
         def t5():
             pg.click("#ovbtn"); pg.wait_for_timeout(500)
