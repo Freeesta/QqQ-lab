@@ -2067,7 +2067,7 @@ I18N.add("it", {
   "tour.continua": "Continua",
   "tour.fine_cap1_testo": "Hai visto le basi. Continui con gli strumenti (8 passi) o ti fermi qui?",
   "tour.invito.testo": "Prima volta qui? Un giro guidato degli strumenti, circa 3 minuti.",
-  "tour.invito.si": "Inizia il giro",
+  "tour.invito.si": "Inizia il tour",
   "tour.invito.no": "Non ora",
   "tour.impost.titolo": "Tour guidato",
   "tour.impost.rifai": "Rifai il tour",
