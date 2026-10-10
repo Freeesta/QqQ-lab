@@ -207,3 +207,11 @@ def test_precursor_is_the_centre_of_the_isolation_window(app_hr):
     code, r = get(app_hr, "/api/scan", k=k, sid=sid)
     s = sc[sid]
     assert code == 200 and abs(r["prec"] - sum(s.iso) / 2) < 1e-3
+
+
+def test_resolution_from_the_thermo_raw_conversion():
+    # an mzML written from a Thermo .raw by mzLab has the resolving power in a userParam, not in MS:1000800
+    from mzlab.reader.mzml import _resolution
+    assert _resolution('<userParam name="opentfraw.resolution" value="35000"/>', "") == 35000.0
+    assert _resolution("", '<cvParam accession="MS:1000800" name="mass resolving power" value="60000"/>') == 60000.0
+    assert _resolution("", "") is None

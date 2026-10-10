@@ -61,6 +61,7 @@
     ? import(new URL("rust-bridge.js", SRC).href).then(m => { const b = m.createBridge({ workerUrl: new URL("rust-worker.js", SRC), notify: notice }); b.start(); window.MZLAB_RUST = b; return b; })
         .catch(e => { console.debug("[mzLab] Rust engine not available", e); return null; })
     : Promise.resolve(null);
+  window.MZLAB_RUST_READY = rustReady;                                       // the page waits for it to decide whether a Thermo .raw can be read
   const RUST_ROUTES = /^(\.\/)?api\/(chrom|xic|spectra)\b/;
 
   const realFetch = window.fetch.bind(window);

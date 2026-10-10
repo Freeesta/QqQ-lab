@@ -73,7 +73,17 @@ export function createBridge({ workerUrl, notify }) {
       slots[k].opening = open(k, slots[k]);
     }
   };
-  api.crash = () => rpc({ op: "crash" });
+  // Thermo .raw -> Blob of mzML, made in the worker; rejects with an Error whose `json` is { error, error_key, params } like the API errors
+  api.convertRaw = async file => {
+    const r = await rpc({ op: "raw2mzml", name: base(file.name), blob: file });
+    if (r.dead || r.error) {
+      let e = { error_key: "err.file.raw", params: { detail: "" } };
+      try { const j = JSON.parse(r.error); if (j.error_key) e = j; } catch (_) { /* the worker was lost */ }
+      throw Object.assign(new Error(e.error_key), { json: { error: e.error_key, ...e } });
+    }
+    return new Blob(r.parts, { type: "application/xml" });
+  };
+  api.crash =() => rpc({ op: "crash" });
 
   const num = (q, n, d) => { const v = q.get(n); return v === null || v === "" ? d : Number(v); };
   const empty = (q, ...names) => names.every(n => !q.get(n));

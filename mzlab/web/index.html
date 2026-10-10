@@ -337,6 +337,7 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); }   // a
  <div class="card" id="loaded" hidden></div>
  <div class="card req"><h3 data-i18n="load.step1.title">1. Carica i file dei dati (.mzML)</h3>
   <div id="drop" data-i18n-html="load.drop"><b>Trascina qui i file .mzML</b><br>oppure <u>clicca per sceglierli dal computer</u></div>
+  <div class="muted sm" id="dropraw" hidden data-i18n="load.dropRaw">Con il motore Rust puoi caricare anche i file Thermo .raw: vengono letti direttamente nel browser e convertiti in .mzML.</div>
   <div class="sm" id="demo" style="margin:10px 0 6px;text-align:center"><div class="muted" style="margin-bottom:8px;border-top:1px solid var(--line);padding-top:6px" data-i18n="load.or">oppure</div><button id="demobtn" class="sec" aria-expanded="false" aria-controls="demochoice" data-i18n-title="load.demo.title" title="Scegli quali file di esempio aprire: si scarica solo ciò che scegli"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M6 1.5h4M6.8 1.5v4.6L3 13a1.2 1.2 0 0 0 1.1 1.7h7.8A1.2 1.2 0 0 0 13 13L9.2 6.1V1.5"/><path d="M4.6 10.5h6.8"/></svg><span data-i18n="load.demo.button">Prova con i file di esempio &#9662;</span></button><div id="demochoice" hidden style="margin-top:8px;display:none;gap:6px;justify-content:center;flex-wrap:wrap"><button type="button" class="sec" data-demo="full" data-i18n-title="load.demo.full.title" title="5 file Full Scan: 0, 5, 10, 15 e 30 minuti di irraggiamento">Full Scan <span class="muted" data-i18n="load.demo.full.size">5 file · 28 MB</span></button><button type="button" class="sec" data-demo="ms2" data-i18n-title="load.demo.ms2.title" title="2 file MS2 (ioni prodotto): 15 e 60 minuti">MS2 <span class="muted" data-i18n="load.demo.ms2.size">2 file · 10 MB</span></button><button type="button" class="sec" data-demo="mrm" data-i18n-title="load.demo.mrm.title" title="4 standard MRM a concentrazione crescente (0,6; 2,4; 7,2 e 18 ppm)">MRM <span class="muted" data-i18n="load.demo.mrm.size">4 file · 2 MB</span></button><button type="button" class="sec" data-demo="hrms" data-i18n-title="load.demo.hrms.title" title="4 file ad alta risoluzione (Orbitrap, DDA): serie temporale di un inquinante degradato su TiO2 (0, 5, 10 e 30 min)">HRMS <span class="muted" data-i18n="load.demo.hrms.size">4 file · 28 MB</span></button></div></div>
   <details id="wiffhelp" class="sm"><summary data-i18n="load.wiff.summary">Hai i file .wiff dello strumento? Convertili prima in .mzML</summary>
    <ol class="muted">
@@ -344,7 +345,7 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); }   // a
     <li data-i18n-html="load.wiff.step2">Apri <b>MSConvert</b> e aggiungi i file <code>.wiff</code>: ognuno deve stare nella stessa cartella del suo <code>.wiff.scan</code>.</li>
     <li data-i18n-html="load.wiff.step3">Imposta <b>Output format: mzML</b>, <b>Binary encoding: 64-bit</b>, <b>zlib compression</b> attivo, <b>Numpress</b> disattivato; poi <b>Start</b>.</li>
     <li data-i18n-html="load.wiff.step4">Trascina qui i file <code>.mzML</code> ottenuti.</li></ol></details>
-  <input type="file" id="pick" multiple accept=".mzML,.mzml,.dam" hidden>
+  <input type="file" id="pick" multiple accept=".mzML,.mzml,.raw,.dam" hidden>
   <div id="up"></div><div id="flist"></div></div>
  <div class="card"><h3><span data-i18n="load.step2.title">2. Metodo di acquisizione</span> <span class="tag opt" data-i18n="load.optional">facoltativo</span></h3>
   <div id="dropdam" data-i18n-html="load.dam.drop"><b>Trascina qui il metodo .dam</b><br>oppure <u>clicca per sceglierlo dal computer</u></div>
@@ -491,8 +492,16 @@ const DEMO_SETS={full:[0,5,10,15,30].map(t=>`FullScan_t${t}.mzML`),ms2:[15,60].m
     fs.push(new File(parts,n))}
    b.textContent=I18N.t("load.demo.opening");await upload(fs,"data")}catch(e){fail(new Error(I18N.t("load.demo.error",{message:e.message})))}finally{b.disabled=false;b.innerHTML=lab}})})();
 // files of the instruments are not read by the program (no reader of proprietary formats): a message with the recipe instead of a generic error
+(()=>{const p=window.MZLAB_RUST_READY;if(p)p.then(b=>{const d=$("#dropraw");if(b&&d&&b.convertRaw)d.hidden=false})})();   // the .raw note only where the Rust engine can read it
 function ricetta(name){const n=name.toLowerCase();return /\.raw$/.test(n)?"load.recipe.raw":/\.wiff2?$/.test(n)?"load.recipe.wiff":/\.wiff\.scan$/.test(n)?"load.recipe.wiffScan":/\.d$/.test(n)?"load.recipe.d":null}
-async function upload(files,into){const box=$("#up");fail();
+// a Thermo .raw is read only by the Rust engine (?motore=rust): it makes the mzML in the worker and the file goes on as an mzML; without the engine the recipe is shown
+async function rawToMzml(files,box){const rb=window.MZLAB_RUST_READY?await window.MZLAB_RUST_READY:null;if(!rb||rb.disabled||!rb.convertRaw||!files.some(f=>/\.raw$/i.test(f.name)))return files;
+  const out=[];for(const f of files){if(!/\.raw$/i.test(f.name)){out.push(f);continue}
+    const row=document.createElement("div");row.innerHTML=`${esc(f.name)} <span class="muted">${sz(f.size)} · ${I18N.t("load.raw.converting")}</span>`;box.appendChild(row);
+    try{out.push(new File([await rb.convertRaw(f)],f.name.replace(/\.raw$/i,".mzML")));row.remove()}
+    catch(e){row.innerHTML=`<span class="fail">${esc(f.name)}: ${esc(e.json?I18N.err(e.json).message:e.message)}</span>`}}
+  return out}
+async function upload(files,into){const box=$("#up");fail();files=await rawToMzml(files,box);
   files=files.filter(f=>{const r=ricetta(f.name);if(!r)return true;const n=document.createElement("div");n.className="note recipe";n.innerHTML=`${I18N.t(r,{name:esc(f.name)})} <button type="button" class="sec" data-x="1">${I18N.t("common.close")}</button>`;n.querySelector("button").onclick=()=>n.remove();box.appendChild(n);return false});
   for(const f of files){const isDam=/\.dam$/i.test(f.name);
     if(into&&isDam!==(into==="dam")){const n=document.createElement("div");n.className="note";n.textContent=I18N.t(isDam?"load.note.movedToDam":"load.note.movedToData",{name:f.name});box.appendChild(n);setTimeout(()=>n.remove(),6000)}
