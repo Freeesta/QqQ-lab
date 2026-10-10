@@ -14,7 +14,7 @@ import numpy as np
 from mzlab.chem import elements as E
 from mzlab.reader.mzml import Run
 
-from . import chem, esperti, mrm
+from . import chem, mappa, mrm
 from .hr import kinetics
 from .peaks import find_peak, find_peaks
 from .score import DEFAULT_THRESHOLDS, M2_SHIFT, confidence, halogen_expectation, score_candidate
@@ -343,8 +343,8 @@ class Experiment:
 
     def discover(self):
         """Ions that rise in time, are absent at t0 / in the blank, and do not correspond to any candidate: 'unexpected ions'.
-        One RT x m/z map per file (the grid of esperti.build_grid, an XIC window at every column); the local maxima of treated - max(t0, blank)
-        with S/N and ratio (esperti.find_points) are the only ions that go through the criteria."""
+        One RT x m/z map per file (the grid of mappa.build_grid, an XIC window at every column); the local maxima of treated - max(t0, blank)
+        with S/N and ratio (mappa.find_points) are the only ions that go through the criteria."""
         tabs = [self._table(x) for x in self.full]
         treated = [k for k, x in enumerate(self.full) if x.type == "sample" and x.time]
         refs = [k for k, x in enumerate(self.full) if x.type in ("blank", "control") or (x.type == "sample" and x.time == 0)]
@@ -361,11 +361,11 @@ class Experiment:
         self.progress("Searching for unexpected ions...", 0.7)
         ref = np.zeros((nrt, nmz), np.float32)
         for k in refs:
-            np.maximum(ref, esperti.build_grid(tabs[k], rt0, drt, nrt, lo, dmz, nmz, win), out=ref)
+            np.maximum(ref, mappa.build_grid(tabs[k], rt0, drt, nrt, lo, dmz, nmz, win), out=ref)
         top = np.zeros((nrt, nmz), np.float32)           # max over the treated files: max(A_k - ref) = max(A_k) - ref
         for k in treated:
-            np.maximum(top, esperti.build_grid(tabs[k], rt0, drt, nrt, lo, dmz, nmz, win), out=top)
-        pts = esperti.find_points(top - ref, top, rt0, rt0 + nrt * drt, lo, dmz,
+            np.maximum(top, mappa.build_grid(tabs[k], rt0, drt, nrt, lo, dmz, nmz, win), out=top)
+        pts = mappa.find_points(top - ref, top, rt0, rt0 + nrt * drt, lo, dmz,
                                   {"min_sn": 5.0, "min_ratio": 3.0, "min_width": 1.5 * drt, "max_points": 4 * int(self.s["max_unexpected"])})
         del ref, top
         known = [c["mz_x"] for c in self.entries]
