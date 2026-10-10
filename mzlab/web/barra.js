@@ -113,7 +113,7 @@ const BARRA = (() => {
       if (["file", "calc", "losses", "adducts", "lists"].includes(tabId)) {
         return I18N.t(`sidebar.tab.${tabId}`);
       }
-      if (["hdr", "lst", "fil", "cmp", "iso", "pks", "com", "idn", "tre"].includes(tabId)) {
+      if (["hdr", "lst", "fil", "cmp", "iso", "idn"].includes(tabId)) {
         return I18N.t(`sidebar.sec.${tabId}`);
       }
     }
@@ -176,7 +176,7 @@ const BARRA = (() => {
       hr: document.querySelector("#hrinfo")
     };
 
-    const isHrTab = ["hdr", "lst", "fil", "cmp", "iso", "pks", "com", "idn", "tre"].includes(tabId);
+    const isHrTab = ["hdr", "lst", "fil", "cmp", "iso", "idn"].includes(tabId);
 
     // Hide all panels
     Object.values(panels).forEach(p => { if (p) p.hidden = true; });
