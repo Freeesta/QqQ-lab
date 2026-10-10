@@ -88,7 +88,7 @@ jobs:
       - name: The page of the program (downloads Pyodide from jsDelivr) and the desktop folder
         run: python tools/build_site.py && python crates/mzlab-desktop/prepare.py
       - name: Tauri CLI
-        run: cargo install tauri-cli --version "^2" --locked
+        run: cargo install tauri-cli --version "^2" --locked --force
       - name: Installer
         working-directory: crates/mzlab-desktop
         run: cargo tauri build --features app ${{ matrix.args }}
