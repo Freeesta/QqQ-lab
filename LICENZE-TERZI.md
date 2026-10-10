@@ -8,6 +8,7 @@ mzLab (codice del programma, logo e icone) è sotto licenza MIT (`LICENSE`). Il 
 | OpenChemLib JS (Zakodium / Actelion / cheminfo) | 9.25.1 | BSD-3-Clause | `mzlab/web/vendor/openchemlib.js` (testo: `vendor/openchemlib.LICENSE`). Sorgente: https://github.com/cheminfo/openchemlib-js |
 | Pyodide (Python in WebAssembly) | 314.0.7 | MPL-2.0 (Python: PSF License) | Scaricato da `tools/build_site.py` da https://cdn.jsdelivr.net/pyodide/ e messo nel sito in `static/pyodide/`. Sorgente e licenza: https://github.com/pyodide/pyodide (MPL-2.0: https://www.mozilla.org/MPL/2.0/) |
 | NumPy | 2.4 (quello incluso in Pyodide) | BSD-3-Clause | Dentro Pyodide. https://numpy.org/doc/stable/license.html |
+| OpenTFRaw e OpenMassSpec-core (Nathan Riley / Sigilweaver; lettore dei file Thermo .raw) | 2.0.0 e 2.0.1 (`=2.0.0` in `Cargo.toml`, versioni in `Cargo.lock`) | Apache-2.0 (nessun file NOTICE; con le loro dipendenze serde e thiserror, MIT o Apache-2.0) | Compilato dentro `mzlab_wasm.wasm` (`crates/mzlab-core/src/raw.rs`), costruito da `pages.yml`, solo con `?motore=rust`. Sorgente e licenza: https://github.com/Sigilweaver/OpenTFRaw |
 | Masse isotopiche degli elementi | - | BSD-3-Clause (da OpenChemLib) | `mzlab/web/elements.js` (generato da `tools/genera_elementi.py`) |
 | Pesi atomici medi | - | Apache-2.0 (da Ketcher) | stesso file |
 | Abbondanze isotopiche naturali | - | dati IUPAC (fatti pubblici, senza copyright) | scritte in `tools/genera_elementi.py` |

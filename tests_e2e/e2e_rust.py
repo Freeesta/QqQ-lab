@@ -72,6 +72,16 @@ try:
             r = pg.evaluate(GET, "api/spectra?k=0&i0=0&i1=2&level=1&filt=x"); assert r["eng"] is None       # a filter is left to Python
             r = pg.evaluate(GET, "api/chrom?k=0&kind=bpc&level=1"); assert r["eng"] is None
         step("what Rust cannot answer exactly goes to Python", other_routes)
+        def thermo_raw():
+            import os
+            raws = [p for d in [os.environ.get("MZLAB_DATI"), str(ROOT.parent / "mzlab-dati")] if d for p in __import__("glob").glob(os.path.join(d, "HRMS", "*", "*.raw"))]
+            if not raws: print("   (skipped: no .raw in the data repository)"); return
+            assert pg.is_visible("#dropraw"), "the .raw note is not shown"
+            n0 = len(pg.query_selector_all("#flist input[data-k=use]"))
+            pg.set_input_files("#pick", raws[0])
+            pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length > {n0}", timeout=240000)
+            assert pg.evaluate("ST.files.some(f => /\\.mzML$/.test(f.name) && f.name.startsWith(%r))" % os.path.splitext(os.path.basename(raws[0]))[0])
+        step("a Thermo .raw is read by the engine and listed as an mzML", thermo_raw)
         def die_once():
             pg.evaluate("window.MZLAB_RUST.crash()")
             pg.wait_for_function("window.MZLAB_RUST.stats.restarts === 1", timeout=30000)

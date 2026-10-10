@@ -5,6 +5,7 @@ pub mod entropy;
 pub mod error;
 pub mod mzml;
 pub mod peaks;
+pub mod raw;
 
 pub use error::{Error, Result};
 

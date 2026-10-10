@@ -40,6 +40,15 @@ def _cv(header: str, accession: str):
     return m.group(1) if m else None
 
 
+def _resolution(h: str, hs: str):
+    """Mass resolving power of a scan: MS:1000800, or the userParam an mzML written from a Thermo .raw by mzLab carries."""
+    r = _float(_cv(hs, "MS:1000800"))
+    if r is None:
+        m = _RX_OTF_RES.search(h)
+        r = _float(m.group(1)) if m else None
+    return r
+
+
 def _float(s):
     try:
         return float(s)
@@ -47,6 +56,7 @@ def _float(s):
         return None
 
 
+_RX_OTF_RES = re.compile(r'<userParam name="opentfraw.resolution" value="([^"]*)"')      # resolving power in an mzML written from a Thermo .raw by mzlab (OpenTFRaw)
 _RX_PCV = re.compile(r'accession="(MS:1000(?:827|828|829|744|041|045|042))"[^>]*?value="([^"]*)"')
 
 
@@ -360,7 +370,7 @@ class Run:
                 level=lvl_i, rt=rt, polarity=pol,
                 tic=_float(_cv(h, "MS:1000285")) or 0.0, precursor=prec,
                 collision_energy=ce, filter=filt,
-                profile='accession="MS:1000128"' in h, iso=iso, act=act, res=_float(_cv(hs, "MS:1000800")), pint=pint,
+                profile='accession="MS:1000128"' in h, iso=iso, act=act, res=_resolution(h, hs), pint=pint,
                 an=self._analyzer(filt, mi.group(1) if mi else None),
                 path=path, precursors=precs, charge=imm["charge"] if imm else None))
             if m:
