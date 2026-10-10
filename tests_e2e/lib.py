@@ -159,9 +159,11 @@ class Run:
                 urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=1).read(); break
             except Exception:
                 time.sleep(0.1)
-    def page(s, p):
+    def page(s, p, tour=False):
         s.b = p.chromium.launch()
         pg = s.b.new_page(viewport={"width": 1500, "height": 2200})
+        if not tour:
+            pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
         pg.on("pageerror", lambda e: s.errs.append(("pageerror", str(e))))
         pg.on("console", lambda m: s.errs.append(("console." + m.type, m.text)) if m.type in ("error", "warning") else None)
         pg.on("requestfailed", lambda r: s.errs.append(("reqfail", r.url, r.failure)))
