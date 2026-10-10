@@ -189,6 +189,7 @@ function uiSave(now = false) {
     if (!E.files.length) return;
     NB.session = E.files.filter(f => !f.gone).map(f => ({ file: f.file, label: f.label, time: f.time, type: f.type, conc: f.conc ?? null, cunit: f.cunit ?? null }));
     NB.ui = {
+      contEx: window.LISTE ? LISTE.exclExport() : undefined,
       tab: E.tab, cur: E.cur, browse: E._forced ? E._prev : E.browse, fold: E.fold, files: E.files.map(f => ({ file: f.file, label: f.label, vis: f.vis, color: f.colorSet ? f.color : undefined, gone: f.gone || undefined })),
       panels: E.panels.map(p => ({
         type: p.type, tab: p.tab, title: p.title, x: p.x, y: p.y, w: p.w, h: p.h, full: !!p.full, kind: p.kind, smooth: p.smooth, tol: p.tol,
@@ -317,6 +318,7 @@ Q("#ffold").onclick = () => { setFold(true); uiSave(); };
 Q("#funfold").onclick = () => { setFold(false); uiSave(); };
 function restoreUi() {
   const u = NB.ui;
+  if (u && u.contEx && window.LISTE) LISTE.exclImport(u.contEx);                 // the contaminant exclusions travel with the session
   if (!u || !u.panels || !u.panels.length) return false;
   const names = new Set(E.files.map(f => f.file));
   if (!u.files.every(f => names.has(f.file))) return false;
@@ -722,13 +724,22 @@ function menu(ev, items) {
       d.textContent = it.label;
     }
     if (it.tip) d.title = it.tip;
-    if (it.dim) d.className = "dim"; else d.onclick = () => { m.hidden = true; it.fn(); };
+    d.setAttribute("role", "menuitem");
+    if (it.dim) d.className = "dim"; else { d.tabIndex = -1; d.onclick = () => { m.hidden = true; it.fn(); }; }
     m.appendChild(d);
   });
-  m.hidden = false;
+  m.hidden = false; m.setAttribute("role", "menu");
+  if (!m._kb) { m._kb = true; m.addEventListener("keydown", e => {                 // keyboard: arrows move, Enter/Space choose, Esc closes
+    const its = [...m.querySelectorAll('div[role=menuitem]:not(.dim)')], i = its.indexOf(document.activeElement);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (its.length) its[(i + (e.key === "ArrowDown" ? 1 : -1) + its.length) % its.length].focus(); }
+    else if (e.key === "Enter" || e.key === " ") { if (i >= 0) { e.preventDefault(); its[i].click(); } }
+    else if (e.key === "Escape") { e.preventDefault(); m.hidden = true; if (m._ret && m._ret.focus) m._ret.focus(); }
+  }); }
+  m._ret = ev.kbd ? document.activeElement : null;
   const off = document.documentElement.classList.contains("touch") ? 16 : 0;      // with a finger the menu opens beside it: lifting the finger must not click an item
   m.style.left = Math.min(ev.clientX + off, innerWidth - 270) + "px";
   m.style.top = Math.max(4, Math.min(ev.clientY + off, innerHeight - m.offsetHeight - 8)) + "px";
+  if (ev.kbd) { const f = m.querySelector('div[role=menuitem]:not(.dim)'); if (f) f.focus(); }
 }
 document.addEventListener("click", () => { Q("#ctx").hidden = true; });
 document.addEventListener("click", e => { document.querySelectorAll(".corrm:not([hidden])").forEach(m => { if (!m.parentNode.contains(e.target)) m.hidden = true; }); });      // the Correzione menu closes when the click is elsewhere
@@ -2508,11 +2519,12 @@ function contLegend(p) {
   const b = p.leg2.querySelector(".cont-show"); if (b) b.onclick = () => { p.showHid = !p.showHid; draw(p); };
   const l = p.leg2.querySelector(".cont-lb");
   if (l) l.onclick = e => {
+    e.stopPropagation();
     const L = window.LISTE, f = a.cont, d = a.data[0].d, top = Math.max(...d.y, 1e-9), rows = [];
     d.mz.forEach((m, j) => { if (d.y[j] < 0.01 * top) return; const s = f.state(m); if (s.all.length && !s.hid) rows.push({ m, y: d.y[j], s }); });
     rows.sort((u, v) => v.y - u.y);
-    const b = l.getBoundingClientRect(), ev = { preventDefault() {}, clientX: b.left, clientY: b.bottom };
-    menu(ev, rows.length ? rows.slice(0, 15).map(r => ({ label: `m/z ${r.m.toFixed(a.dec ?? 4)} · ${r.s.vis[0].name}`, fn: () => contMenu(p, ev, { s: r.s }) })) : [{ label: I18N.t("cont.none"), dim: true }]);
+    const b = l.getBoundingClientRect(), ev = { preventDefault() {}, clientX: b.left, clientY: b.bottom, kbd: e.detail === 0 };
+    menu(ev, rows.length ? rows.slice(0, 15).map(r => ({ label: `m/z ${r.m.toFixed(a.dec ?? 4)} · ${r.s.vis[0].name}`, fn: () => setTimeout(() => contMenu(p, ev, { s: r.s }), 0) })) : [{ label: I18N.t("cont.none"), dim: true }]);
   };
 }
 
