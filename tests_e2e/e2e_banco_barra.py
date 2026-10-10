@@ -102,7 +102,7 @@ for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), "/home/user/
     if c and glob.glob(c + "/HRMS/*/*direct-infusion_MSn.mzML"): DATI = c; break
 if DATI:
     MSN = glob.glob(DATI + "/HRMS/*/*direct-infusion_MSn.mzML")[0]
-    TIO = [glob.glob(DATI + f"/HRMS/*/TIM_TiO2_t0{n}min.mzML")[0] for n in ("10", "20", "45")]
+    TIO = [glob.glob(DATI + f"/HRMS/*/*_TiO2_t0{n}min.mzML")[0] for n in ("10", "20", "45")]
     r = Run(port=8980, wd="/tmp/wd_msnbarra")
     try:
         with sync_playwright() as p:
