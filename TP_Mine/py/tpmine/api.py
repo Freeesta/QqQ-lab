@@ -110,6 +110,31 @@ def msn_tree() -> str:
     return _out(_hr.msn_tree())
 
 
+def frag_tree() -> str:
+    """Fragmentation tree of the parent (fragtree.py), the same JSON for LR (supposed, from the MS2 of the parent) and HR (MSn tree)."""
+    from . import fragtree
+    if _hr is not None:
+        return _out(fragtree.hr(_hr))
+    if _ex is None:
+        raise ValueError("no experiment in memory: run the analysis first")
+    return _out(fragtree.lr(_ex))
+
+
+def frag_tree_compare(cid: int) -> str:
+    """Nodes of the parent tree found in the MS2 of one product (fragtree.compare_*): {marks: {node id: {state: same|shifted, delta}}, n_same, n_shifted}."""
+    from . import fragtree
+    if _hr is not None:
+        return _out(fragtree.compare_hr(fragtree.hr(_hr), _hr.detail(int(cid)).get("localization")))
+    if _ex is None:
+        raise ValueError("no experiment in memory: run the analysis first")
+    e = next((x for x in _ex.entries if x["id"] == int(cid)), None)
+    if e is None:
+        raise ValueError("candidate not found")
+    p = _ex.entries[0]
+    dm = e["neutral_mass"] - p["neutral_mass"] if e.get("neutral_mass") and p.get("neutral_mass") else None
+    return _out(fragtree.compare_lr(fragtree.lr(_ex), _ex.ms2(e), dm))
+
+
 def inclusion_csv(n: int = 50) -> str:
     if _hr is None:
         raise ValueError("no high-resolution experiment in memory")
