@@ -174,7 +174,9 @@ document.addEventListener("DOMContentLoaded", () => {
       for (let j = 0; j < Hp; j += step) for (let i = 0; i < Wp; i += step) {
         const q = q0 + ((i + step / 2) / Wp) * (q1 - q0), a = a1 - ((j + step / 2) / Hp) * (a1 - a0);
         const sx = QUAD.stableX(a, q), sy = QUAD.stableY(a, q);
-        const c = sx && sy ? [43, 92, 138, 125] : sx ? [194, 65, 12, 30] : sy ? [4, 120, 87, 30] : [0, 0, 0, 0];
+        // «solo x» and «solo y» are hatched (/ and \\), «stable in both» is solid: the regions differ by more than the colour
+        const bandX = Math.floor((i + j) / (step * 3)) % 2 === 0, bandY = Math.floor((i - j + Wp) / (step * 3)) % 2 === 0;
+        const c = sx && sy ? [43, 92, 138, 125] : sx ? [194, 65, 12, bandX ? 95 : 0] : sy ? [4, 120, 87, bandY ? 95 : 0] : [0, 0, 0, 0];
         for (let jj = 0; jj < step && j + jj < Hp; jj++) for (let ii = 0; ii < step && i + ii < Wp; ii++) { const k = 4 * ((j + jj) * Wp + i + ii); px[k] = c[0]; px[k + 1] = c[1]; px[k + 2] = c[2]; px[k + 3] = c[3]; }
       }
       tc.putImageData(id, 0, 0);
@@ -195,7 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const pts = [[v.ms - 1, "#9b978c"], [v.ms + 1, "#9b978c"], [v.mi, col(4)], [v.ms, "#24231f"]];
       pts.forEach(([m, c]) => { const q = qset * v.ms / m, a = k * q; if (q < q0 || q > q1) return; ax.ctx.fillStyle = c; ax.ctx.beginPath(); ax.ctx.arc(ax.X(q), ax.Y(a), m === v.mi ? 5.5 : 4, 0, 7); ax.ctx.fill(); });
       TP.label(ax, zoom ? 0.705 : 0.706, zoom ? 0.2365 : 0.237, "vertice (0,706; 0,237)", "#24231f", "center", "bottom", -8);
-      TP.legend(ax, [["stabile x e y", "rgba(43,92,138,.6)"], ["solo x", "rgba(194,65,12,.4)"], ["solo y", "rgba(4,120,87,.4)"]]);
+      TP.legend(ax, [["stabile x e y", "rgba(43,92,138,.6)"], ["solo x (a righe /)", "rgba(194,65,12,.7)", TP.DASH[1]], ["solo y (a righe \\)", "rgba(4,120,87,.7)", TP.DASH[2]]]);
       // trajectories of a bunch of ions of m/z = mi
       const qi = qset * v.ms / v.mi, ai = k * qi;
       const vz = Math.sqrt(2 * v.ez * QUAD.E / (v.mi * QUAD.AMU)), ncyc = Math.round(f * Lrod / vz);
