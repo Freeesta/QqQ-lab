@@ -91,6 +91,9 @@ def pack_mzfinder(static: Path) -> None:
     dst.mkdir()
     js = [f.name for f in sorted((src / "js").glob("*.js"))]
     files = [f.name for f in sorted((src / "files").glob("*"))] if (src / "files").is_dir() else []
+    data = [f.name for f in sorted((src / "data").glob("*.csv"))] if (src / "data").is_dir() else []      # curated lists, read by the scripts through QTOOLS.ctx.files
+    for n in data:
+        shutil.copy2(src / "data" / n, dst / n)
     for n in js:
         shutil.copy2(src / "js" / n, dst / n)
     for n in files:
@@ -99,7 +102,7 @@ def pack_mzfinder(static: Path) -> None:
         for f in sorted((src / "py").rglob("*")):
             if f.is_file() and "__pycache__" not in f.parts and f.suffix != ".pyc":
                 z.write(f, f.relative_to(src / "py").as_posix())
-    (dst / "indice.json").write_text(json.dumps({"js": js, "files": files, "py": "tpmine.zip"}, indent=1), encoding="utf-8")
+    (dst / "indice.json").write_text(json.dumps({"js": js, "files": files + data, "py": "tpmine.zip"}, indent=1), encoding="utf-8")
 
 
 def main() -> None:

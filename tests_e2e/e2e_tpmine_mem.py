@@ -39,7 +39,7 @@ try:
         pg.set_input_files("#tp-in", files)
         pg.wait_for_function("document.querySelectorAll('#tp-files tr').length >= 15", timeout=1200000)
         print(f"files loaded in {time.time() - t0:.0f} s; wasm memory after loading: {pg.evaluate('window.TPMINE_MEM()')['wasm'] / GB:.2f} GB")
-        pg.fill("#tp-mol", truth["parent"]["smiles"]); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('317.1642')", timeout=60000)
+        pg.fill("#tp-smi", truth["parent"]["smiles"]); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('317.1642')", timeout=60000)
         t0 = time.time()
         pg.click("#tp-go")
         while not pg.evaluate("!!document.querySelector('#hr-t tr.clk')"):
