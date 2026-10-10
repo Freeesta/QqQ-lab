@@ -295,6 +295,7 @@ let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
 // a quadrupole (helix), a reflectron TOF (packet leaves, turns in the mirror, arrives separated), an Orbitrap (orbits round the spindle and swings along it).
 let ldIonRaf = 0;
 function ldIon(on, mode) {
+  if (on && ldIonRaf && !mode) return;                            // already turning (first paint, then engine start and data loading): keep the same analyser
   const cv = document.getElementById("ldion"), bars = document.querySelector("#loading .ms");
   cancelAnimationFrame(ldIonRaf); ldIonRaf = 0;
   cv.style.display = on ? "block" : "none"; if (bars) bars.style.display = on ? "none" : "";
@@ -387,7 +388,7 @@ function ldNext() {
   let n = 3; clearInterval(ldDotTimer);
   ldDotTimer = setInterval(() => { n = (n + 1) % 4; [...dots.children].forEach((d, i) => { d.style.visibility = i < n ? "visible" : "hidden"; }); }, 450);
 }
-if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); }   // at once, on the first paint
+if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); ldIon(true); }   // at once, on the first paint
 </script>
 <div id="calcdlg" class="card" hidden role="dialog" data-i18n-aria-label="header.calc.long" aria-label="Calcolatrice m/z"><div class="top" style="display:flex"><h3 style="margin:0;flex:1" data-i18n="header.calc.long">Calcolatrice m/z</h3><button class="x" id="calcx" data-i18n-title="common.close" title="Chiudi">&times;</button></div>
  <input id="calcin" data-i18n-placeholder="calc.ph" placeholder="Numero o formula" autocomplete="off" data-i18n-title="calc.in.title" title="Un conto: numeri e + − × ÷ ( ), anche con la virgola. Una formula bruta: anche con parentesi (C9H10N2O) e in minuscolo (c9h10n2o). «Ans» = l'ultimo risultato. Invio = risultato, Esc = azzera.">
