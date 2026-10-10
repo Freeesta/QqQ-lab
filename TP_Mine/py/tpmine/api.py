@@ -65,11 +65,11 @@ def default_transformations() -> str:
 
 
 def demo() -> str:
-    """Writes the synthetic bentazone files in DATA and returns what the UI needs to fill the form."""
+    """Writes the synthetic test files in DATA and returns what the UI needs to fill the form."""
     DATA.mkdir(parents=True, exist_ok=True)
     files = make_demo(DATA)
     return _out({"files": [{"name": f["name"], "time": f["time"], "type": f["type"]} for f in files],
-                 "parent": {"name": "Bentazone", "neutral": "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O", "adduct": "[M+H]+"}})
+                 "parent": {"name": "Parent", "neutral": "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O", "adduct": "[M+H]+"}})
 
 
 def is_hr(files: list[dict]) -> bool:

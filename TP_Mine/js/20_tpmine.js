@@ -5,7 +5,7 @@
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const fmtA = v => v >= 1e6 ? (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + "M" : v >= 1e3 ? (v / 1e3).toFixed(v >= 1e4 ? 0 : 1) + "k" : String(Math.round(v));
   const TYPES = { sample: "sample", blank: "blank", standard: "standard", control: "control" };
-  const KINDS = { full: "Full scan", ms2: "MS2", mrm: "MRM", hr: "LC-HRMS", msn: "MSn (infusione)", empty: "empty", error: "error" };
+  const KINDS = { full: "Full scan", ms2: "MS2", mrm: "MRM", hr: "LC-HRMS", msn: "MSn (infusion)", empty: "empty", error: "error" };
   const LAB = { forte: "strong", possibile: "possible", debole: "weak", progenitore: "parent" };
 
   const CSS = `

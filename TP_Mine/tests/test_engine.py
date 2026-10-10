@@ -9,11 +9,11 @@ from tpmine import api, chem, mrm
 from tpmine.demo import make_demo
 from tpmine.engine import Experiment, guess_sample
 
-BENTA = "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O"
+PARENT_SMILES = "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O"
 
 
 def test_smiles_formulas():
-    cases = {BENTA: "C10H12N2O3S", "CC(C)N(C(=O)COc1nnc(s1)C(F)(F)F)c1ccc(F)cc1": "C14H13F4N3O2S", "Cn1cnc2c1c(=O)n(C)c(=O)n2C": "C8H10N4O2",
+    cases = {PARENT_SMILES: "C10H12N2O3S", "CC(C)N(C(=O)COc1nnc(s1)C(F)(F)F)c1ccc(F)cc1": "C14H13F4N3O2S", "Cn1cnc2c1c(=O)n(C)c(=O)n2C": "C8H10N4O2",
              "NC(=O)N1c2ccccc2C=Cc2ccccc12": "C15H12N2O", "c1ccccc1": "C6H6", "[O-][N+](=O)N=C1NCCN1Cc1ccc(Cl)nc1": "C9H10ClN5O2"}
     for smi, f in cases.items():
         assert fmt(chem.smiles_formula(smi)) == f, smi
@@ -41,11 +41,11 @@ def test_guess_sample():
 @pytest.fixture(scope="module")
 def demo_summary(tmp_path_factory):
     files = make_demo(tmp_path_factory.mktemp("d"))
-    ex = Experiment(files, {"name": "Bentazone", "neutral": BENTA})
+    ex = Experiment(files, {"name": "Parent", "neutral": PARENT_SMILES})
     return ex, ex.run()
 
 
-def test_bentazone_pipeline(demo_summary):
+def test_demo_pipeline(demo_summary):
     ex, s = demo_summary
     assert s["offset"]["applied"] and abs(s["offset"]["offset"] - 0.31) < 0.05
     assert abs(s["decay"]["k_per_min"] - 0.05) < 0.005
@@ -67,7 +67,7 @@ def test_api_roundtrip(tmp_path):
     out = json.loads(api.run(json.dumps(d["files"]), json.dumps(d["parent"]), "{}", ""))
     assert out["rows"][0]["label"] in ("forte", "progenitore")
     assert json.loads(api.detail(out["rows"][0]["id"]))["criteria"] is not None
-    assert json.loads(api.formula_info(BENTA))["formula"] == "C10H12N2O3S"
+    assert json.loads(api.formula_info(PARENT_SMILES))["formula"] == "C10H12N2O3S"
     assert chem.parse_transformations(api.default_transformations())
 
 
