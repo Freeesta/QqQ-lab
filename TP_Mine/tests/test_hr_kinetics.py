@@ -38,8 +38,8 @@ def test_fit_recovers_the_chain_and_aicc_prefers_the_right_generation():
     second = K.chain_curve(T, np.array([0.2, 0.04, 0.02]))
     g1 = K.generation(T, first * (1 + 0.03 * rng.standard_normal(len(T))) * 1e6)
     g2 = K.generation(T, second * (1 + 0.03 * rng.standard_normal(len(T))) * 1e6)
-    assert g2["verdict"] == "seconda" and g2["delta"] < -2
-    assert g1["verdict"] in ("prima", "non decidibile") and g1["delta"] > -2
+    assert g2["verdict"] == "second" and g2["delta"] < -2
+    assert g1["verdict"] in ("first", "undecidable") and g1["delta"] > -2
     f = K.fit_chain(T, second * 1e6, 3, 0.02)
     assert f["sse"] < 5e-3 and len(f["rates"]) == 3 and len(f["curve"]) == len(T)
     assert K.aicc(0.1, 12, 3) > K.aicc(0.1, 12, 2) and math.isfinite(K.aicc(0.0, 6, 3))
@@ -48,10 +48,10 @@ def test_fit_recovers_the_chain_and_aicc_prefers_the_right_generation():
 def test_descriptors_and_classes():
     early = K.chain_curve(T, np.array([0.2, 0.003]))
     d = K.descriptors(T, early * 1e7)
-    assert d["ok"] and d["tmax"] <= 20 and d["class"][0] == "precoce" and "persistente" in d["class"] and d["unimodal"]
+    assert d["ok"] and d["tmax"] <= 20 and d["class"][0] == "early" and "persistent" in d["class"] and d["unimodal"]
     late = K.chain_curve(T, np.array([0.03, 0.03, 0.1]))
     dl = K.descriptors(T, late * 1e7)
-    assert dl["class"] == ["tardivo"] and dl["residual_fraction"] < 0.5 and dl["onset"] > 5
+    assert dl["class"] == ["late"] and dl["residual_fraction"] < 0.5 and dl["onset"] > 5
     noisy = np.array([1, 5, 1, 6, 1, 5, 1, 6, 1, 5, 1, 6.0])
     assert not K.descriptors(T, noisy)["unimodal"]
     assert not K.descriptors(T, np.zeros(len(T)))["ok"]
@@ -63,7 +63,7 @@ def test_parent_saturation():
     t = [-1, 0, 2, 5, 10, 15, 20, 30, 45, 60]
     sat = [5e9, 4.8e9, 5.2e9, 5.0e9, 4.9e9, 5.1e9, 5.0e9, 8e7, 7e7, 6e7]            # constant (saturated) then a 60-fold drop
     r = K.parent_saturation(t, sat)
-    assert r["saturated"] and r["plateau"][0] <= 0 and r["plateau"][1] >= 15 and r["drop"] > 50 and "saturazione" in r["note"]
+    assert r["saturated"] and r["plateau"][0] <= 0 and r["plateau"][1] >= 15 and r["drop"] > 50 and "saturation" in r["note"]
     decay = [5e9 * math.exp(-0.15 * x) for x in [0, 0, 2, 5, 10, 15, 20, 30, 45, 60]]
     assert not K.parent_saturation(t, decay)["saturated"]
     assert not K.parent_saturation(t, [5e9] * 10)["saturated"]                     # constant forever: no drop

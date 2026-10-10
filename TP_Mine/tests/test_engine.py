@@ -24,8 +24,8 @@ def test_smiles_formulas():
 
 def test_candidates():
     c = chem.generate(chem.neutral_formula("C10H12N2O3S"), "[M+H]+", chem.default_transformations(), 2, 0.35)
-    assert c[0]["name"] == "progenitore" and abs(c[0]["mz"] - 241.0641) < 1e-3
-    oh = next(x for x in c if x["name"] == "idrossilazione")
+    assert c[0]["name"] == "parent" and abs(c[0]["mz"] - 241.0641) < 1e-3
+    oh = next(x for x in c if x["name"] == "hydroxylation")
     assert abs(oh["mz"] - 257.0590) < 2e-3 and oh["formula"] == "C10H12N2O4S"
     assert all(min(abs(a["mz"] - b["mz"]) for b in c if b is not a) > 0.35 for a in c)         # unit resolution: one row per trace
 
@@ -50,10 +50,10 @@ def test_bentazone_pipeline(demo_summary):
     assert s["offset"]["applied"] and abs(s["offset"]["offset"] - 0.31) < 0.05
     assert abs(s["decay"]["k_per_min"] - 0.05) < 0.005
     strong = {r["name"] for r in s["rows"] if r["kind"] == "candidate" and r["label"] == "forte"}
-    assert strong == {"idrossilazione", "perdita di propene (N-deisopropilazione)", "deidrogenazione"}
+    assert strong == {"hydroxylation", "loss of propene (N-deisopropylation)", "dehydrogenation"}
     weak = {r["name"]: r for r in s["rows"] if r["label"] == "debole"}
-    assert "diidrossilazione" in weak            # the contaminant present in the blank is rejected
-    oh = next(r for r in s["rows"] if r["name"] == "idrossilazione")
+    assert "dihydroxylation" in weak            # the contaminant present in the blank is rejected
+    oh = next(r for r in s["rows"] if r["name"] == "hydroxylation")
     assert abs(oh["ref_rt"] - 7.4) < 0.1          # not the interference of the same mass at RT 4.1
     d = ex.detail(oh["id"])
     assert d["level"] == 3 and d["ms2"]["shifted"] == 1

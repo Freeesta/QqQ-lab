@@ -91,7 +91,7 @@ def build_tree(run, ion, smiles: str | None = None, *, prec_ppm: float = 5.0, fr
         else:
             skipped += 1
     if skipped:
-        tree.warnings.append(f"{skipped} scansioni MSn senza cammino nel filter string: ignorate")
+        tree.warnings.append(f"{skipped} MSn scans without a path in the filter string: ignored")
     keys = sorted(groups, key=lambda k: (len(k), k))
     by_nominal: dict = defaultdict(list)
     for k in keys:
@@ -158,14 +158,14 @@ def build_tree(run, ion, smiles: str | None = None, *, prec_ppm: float = 5.0, fr
         pm, pr = (par["mz"], par["rel"]) if par is not None and len(par["mz"]) else (np.zeros(0), np.zeros(0))
         sel = np.flatnonzero(np.abs(pm - nominal) <= 0.5) if len(pm) else np.zeros(0, int)
         if par is None or len(sel) == 0:
-            node["note"] = "precursore non trovato nello spettro del genitore"
+            node["note"] = "precursor not found in the parent spectrum"
             info[k] = {"key": k, "formula": None, "prec_mz": None, "mz": mz, "rel": rel}
             continue
         prec = float(pm[sel[np.argmax(pr[sel])]])
         cands = sp.candidates(prec, prec_ppm, 0.0, within=par["formula"])
         if len(cands) == 0:
             node["prec_mz"] = prec
-            node["note"] = "nessuna formula per il precursore (sottoformula del genitore)"
+            node["note"] = "no formula for the precursor (subformula of the parent)"
             info[k] = {"key": k, "formula": None, "prec_mz": prec, "mz": mz, "rel": rel}
             continue
         c0 = int(cands[0])

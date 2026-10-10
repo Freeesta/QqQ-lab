@@ -19,12 +19,12 @@ def v(f):
 
 def test_transformation_table_and_derive():
     names = [n for n, _ in TABLE]
-    assert "idrossilazione" in names and "perdita di C4H8" in names and "perdita di CO" in names
+    assert "hydroxylation" in names and "loss of C4H8" in names and "loss of CO" in names
     assert len({tuple(x.tolist()) for _, x in TABLE}) == len(TABLE)                       # no duplicates
-    assert NW.derive(v("C8H11N4O3") - v(PARENT), TABLE) == "idrossilazione"
-    assert NW.derive(v("C8H9N4O2") - v(PARENT), TABLE) == "deidrogenazione"
-    assert NW.derive(v("C8H9N4O3") - v(PARENT), TABLE) == "ossidazione a carbonile"
-    assert NW.derive(v("C8H11N4O4") - v(PARENT), TABLE, max_steps=1) == "diidrossilazione"
+    assert NW.derive(v("C8H11N4O3") - v(PARENT), TABLE) == "hydroxylation"
+    assert NW.derive(v("C8H9N4O2") - v(PARENT), TABLE) == "dehydrogenation"
+    assert NW.derive(v("C8H9N4O3") - v(PARENT), TABLE) == "oxidation to carbonyl"
+    assert NW.derive(v("C8H11N4O4") - v(PARENT), TABLE, max_steps=1) == "dihydroxylation"
     two = NW.derive(v("C8H9N4O4") - v(PARENT), TABLE)                                      # +O2 -H2: two steps
     assert two and " + " in two and NW.derive(v("C8H9N4O4") - v(PARENT), TABLE, max_steps=1) is None
     assert NW.derive(v(PARENT) - v(PARENT), TABLE) is None
@@ -35,12 +35,12 @@ def test_transformation_table_and_derive():
 
 def test_cleavage_is_a_derivation():
     pv = v(PARENT)
-    assert NW.derivation_name(v("C5H8N3"), pv, ELS, TABLE) == "scissione (sottostruttura del progenitore)"
-    assert NW.derivation_name(v("C8H11N4O3"), pv, ELS, TABLE) == "idrossilazione"                       # a transformation comes first
+    assert NW.derivation_name(v("C5H8N3"), pv, ELS, TABLE) == "cleavage (substructure of the parent)"
+    assert NW.derivation_name(v("C8H11N4O3"), pv, ELS, TABLE) == "hydroxylation"                       # a transformation comes first
     assert NW.derivation_name(v("C9H5N2"), pv, ELS, TABLE) is None                                        # more carbon than the parent
     assert NW.derivation_name(v("C5H20N3"), pv, ELS, TABLE) is None                                       # far more hydrogen than the parent
     assert NW.derivation_name(pv, pv, ELS, TABLE) is None
-    assert NW.derivation_name(v("C5H8N3O3"), pv, ELS, TABLE).startswith("scissione e ossidazione (+1 O")           # a part with one more oxygen than the parent has
+    assert NW.derivation_name(v("C5H8N3O3"), pv, ELS, TABLE).startswith("cleavage and oxidation (+1 O")           # a part with one more oxygen than the parent has
     assert NW.derivation_name(v("C5H8N3O9"), pv, ELS, TABLE) is None
 
 
@@ -64,24 +64,24 @@ def test_expected_and_observed_isotopes():
 
 
 def test_kinetic_coherence():
-    good = {"ok": True, "times": list(range(6)), "unimodal": True, "absent_in_reference": True, "class": ["precoce"], "class_text": "precoce"}
+    good = {"ok": True, "times": list(range(6)), "unimodal": True, "absent_in_reference": True, "class": ["early"], "class_text": "early"}
     assert NW.kinetic_coherence(good)[0] == 1.0
     assert NW.kinetic_coherence({**good, "absent_in_reference": False})[0] == 0.0
     assert NW.kinetic_coherence({**good, "times": [0, 1, 2]})[0] == 0.5
-    assert NW.kinetic_coherence({**good, "unimodal": False, "class": ["precoce"]})[0] == 0.0
-    assert NW.kinetic_coherence({**good, "unimodal": False, "class": ["tardivo", "persistente"]})[0] == 1.0
+    assert NW.kinetic_coherence({**good, "unimodal": False, "class": ["early"]})[0] == 0.0
+    assert NW.kinetic_coherence({**good, "unimodal": False, "class": ["late", "persistent"]})[0] == 1.0
     assert NW.kinetic_coherence(None)[0] == 0.5 and NW.kinetic_coherence({"ok": False})[0] == 0.5
     # coverage: 11 treated samples, the product in all of them / in 6 (more than half: full score) / in 3 / in 1
     t = list(range(-1, 12))
     prof = lambda n: [0, 0] + [1.0] * n + [0] * (11 - n)
     full = lambda n: {**good, "times": t, "profile": prof(n)}
     assert [round(NW.kinetic_coherence(full(n))[0], 2) for n in (11, 6, 3, 1)] == [1.0, 1.0, 0.73, 0.51]
-    assert "presente in 3 campioni trattati su 11" in NW.kinetic_coherence(full(3))[1]
+    assert "present in 3 of 11 treated samples" in NW.kinetic_coherence(full(3))[1]
 
 
 def cand(**kw):
-    c = {"id": 1, "mz": 211.0, "rt": 4.0, "formula": "C8H11N4O3", "n_formulas": 1, "ppm": 0.5, "derivation": "idrossilazione", "area_max": 1e7,
-         "kinetics": {"ok": True, "times": list(range(6)), "unimodal": True, "absent_in_reference": True, "class": ["precoce"], "class_text": "precoce", "tmax": 10.0},
+    c = {"id": 1, "mz": 211.0, "rt": 4.0, "formula": "C8H11N4O3", "n_formulas": 1, "ppm": 0.5, "derivation": "hydroxylation", "area_max": 1e7,
+         "kinetics": {"ok": True, "times": list(range(6)), "unimodal": True, "absent_in_reference": True, "class": ["early"], "class_text": "early", "tmax": 10.0},
          "ms2": {"n_scans": 8, "modcos": 0.8, "n_matched": 9}, "isotopes": {"status": "pass", "text": "ok"}, "time_step": 5.0,
          "localization": {"ok": True, "region_atoms": [1, 2], "n_atoms": 14, "margin": 1.2, "region": "anello A (2/9)", "fraction_explained": 0.8, "evidence": [1, 2, 3, 4, 5]}}
     c.update(kw)
@@ -151,7 +151,7 @@ def test_predecessors():
     cands = [mk("a", "C8H11N4O3", 5.0), mk("b", "C8H11N4O4", 20.0), mk("c", "C8H9N4O3", 10.0), mk("d", "C8H11N4O4", 2.0), mk("e", "C20H11N4O2", 5.0), mk("f", None, 5.0)]
     res = NW.predecessors(cands, ELS, pf, TABLE)
     by = {r["id"]: r for r in res}
-    assert by["a"]["predecessor"] == "progenitore" and by["a"]["transformation"] == "idrossilazione"
+    assert by["a"]["predecessor"] == "progenitore" and by["a"]["transformation"] == "hydroxylation"
     assert by["b"]["predecessor"] in ("a", "progenitore") and by["b"]["kinetic"] is not None
     assert by["e"]["predecessor"] is None and by["f"]["predecessor"] is None
     assert by["d"]["predecessor"] != "a"                                                 # 'a' peaks at 5 min, this product at 2 min: more than one step too late

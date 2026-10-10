@@ -94,19 +94,19 @@ def fit_chain(times, y, n_rates: int, k_parent_min: float = 0.0) -> dict:
 
 def generation(times, y, k_parent_min: float = 0.02, margin: float = 2.0) -> dict:
     """First or second generation? AICc of A->B-> against A->I->B-> (the intermediate is unseen). A hint: with a parent that cannot be followed
-    and 6-12 points the two are often not separable, then 'non decidibile'."""
+    and 6-12 points the two are often not separable, then 'undecidable'."""
     first = fit_chain(times, y, 2)
     second = fit_chain(times, y, 3, k_parent_min)
     d = second["aicc"] - first["aicc"]
-    verdict = "seconda" if d < -margin else "prima" if d > margin else "non decidibile"
+    verdict = "second" if d < -margin else "first" if d > margin else "undecidable"
     return {"verdict": verdict, "aicc_first": first["aicc"], "aicc_second": second["aicc"], "delta": float(d), "first": first, "second": second}
 
 
 # ---------------------------------------------------------------------------------------------------------------------- descriptors
 def descriptors(times, y, onset_frac: float = 0.10, persistent: float = 0.5) -> dict:
     """Robust descriptors of a profile (areas vs time, time of the treatment in minutes): onset (first time above 10 % of the maximum), tmax, fraction
-    left at the last time, unimodal fit and its residual, and the class in Italian: 'precoce' (tmax <= 20 min or onset <= 5 min) or 'tardivo',
-    plus 'persistente' when at least half of the maximum is still there at the last time."""
+    left at the last time, unimodal fit and its residual, and the class: 'early' (tmax <= 20 min or onset <= 5 min) or 'late',
+    plus 'persistent' when at least half of the maximum is still there at the last time."""
     t = np.asarray(times, float)
     y = np.asarray(y, float)
     ok = t >= 0
@@ -121,11 +121,11 @@ def descriptors(times, y, onset_frac: float = 0.10, persistent: float = 0.5) -> 
     last = float(yn[-1])
     uni = ionfamily._isotonic_up_down(yn)
     resid = float(np.sqrt(np.mean((yn - uni) ** 2)))
-    klass = ["precoce" if (tmax <= 20 or onset <= 5) else "tardivo"]
+    klass = ["early" if (tmax <= 20 or onset <= 5) else "late"]
     if last >= persistent:
-        klass.append("persistente")
+        klass.append("persistent")
     return {"ok": True, "onset": onset, "tmax": tmax, "residual_fraction": last, "unimodal": bool(resid < 0.15), "unimodal_residual": resid, "class": klass,
-            "class_text": " e ".join(klass), "profile": yn.tolist(), "times": t.tolist()}
+            "class_text": " and ".join(klass), "profile": yn.tolist(), "times": t.tolist()}
 
 
 def not_in_reference(times, y, ref_max: float, ratio: float = 5.0) -> bool:
@@ -150,7 +150,7 @@ def parent_saturation(times, areas, flat: float = 0.25, drop: float = 10.0, min_
                 tail = a[j:]
                 if len(tail) and med / max(tail.min(), 1e-300) > drop:
                     return {"saturated": True, "plateau": [float(t[i]), float(t[j - 1])], "level": float(med), "drop": float(med / max(tail.min(), 1e-300)),
-                            "note": "risposta non lineare (saturazione ESI): k del progenitore non stimabile"}
+                            "note": "non-linear response (ESI saturation): parent k cannot be estimated"}
                 break
     return {"saturated": False, "note": ""}
 

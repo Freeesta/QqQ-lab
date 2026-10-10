@@ -97,14 +97,14 @@ def parse_smiles(smiles: str) -> Mol:
     while pos < len(s):
         m = _ATOM.match(s, pos)
         if not m:
-            raise ValueError(f"SMILES non riconosciuto vicino a «{s[pos:pos + 6]}»")
+            raise ValueError(f"SMILES not recognised near «{s[pos:pos + 6]}»")
         pos = m.end()
         br, org, tok = m.groups()
         if br or org:
             if br:
                 mm = _BRACKET.match(br)
                 if not mm:
-                    raise ValueError(f"atomo tra parentesi non riconosciuto: [{br}]")
+                    raise ValueError(f"bracket atom not recognised: [{br}]")
                 el = mm.group(1)
                 h = 0 if mm.group(2) is None else (int(mm.group(2)) if mm.group(2) else 1)
                 atoms.append({"el": el.capitalize(), "arom": el.islower(), "h": h})
@@ -119,7 +119,7 @@ def parse_smiles(smiles: str) -> Mol:
         elif tok == ")":
             prev = stack.pop()
         elif tok == ".":
-            raise ValueError("lo SMILES contiene più molecole separate (sale o miscela): serve una sola molecola")
+            raise ValueError("the SMILES contains several separate molecules (salt or mixture): a single molecule is required")
         elif tok in ("=", "#", "-", ":"):
             order, explicit = {"=": 2.0, "#": 3.0, "-": 1.0, ":": 1.5}[tok], True
         elif tok in ("/", "\\"):
@@ -132,12 +132,12 @@ def parse_smiles(smiles: str) -> Mol:
                 rings[tok] = (prev, order, explicit)
             order, explicit = 1.0, False
     if rings:
-        raise ValueError("anello non chiuso nello SMILES")
+        raise ValueError("unclosed ring in the SMILES")
     if len(atoms) > MAX_ATOMS:
-        raise ValueError(f"la localizzazione accetta al più {MAX_ATOMS} atomi pesanti (lo SMILES ne ha {len(atoms)})")
+        raise ValueError(f"localisation accepts at most {MAX_ATOMS} heavy atoms (the SMILES has {len(atoms)})")
     for el in {a["el"] for a in atoms}:
         if el not in E.MASS or el not in VALENCE:
-            raise ValueError(f"elemento non supportato: {el}")
+            raise ValueError(f"element not supported: {el}")
     for b in bonds:                                           # aromatic bond: both atoms aromatic and no explicit bond symbol
         if b[2] == 1.0 and not b[3] and atoms[b[0]]["arom"] and atoms[b[1]]["arom"]:
             b[2] = 1.5
@@ -203,7 +203,7 @@ def substructures(mol: Mol, max_cuts: int = 4, max_states: int = 400_000) -> "Su
                     nxt.append(st)
                     best.setdefault(comp, depth)
                     if len(seen) > max_states:
-                        raise ValueError("troppe sottostrutture: riduci i tagli o la molecola")
+                        raise ValueError("too many substructures: reduce the cuts or the molecule")
         frontier = nxt
     masks = np.array(list(best.keys()), dtype=np.uint64)
     cuts = np.array(list(best.values()), dtype=np.int64)

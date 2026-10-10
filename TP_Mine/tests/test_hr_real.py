@@ -401,8 +401,8 @@ def test_kinetics_generation_saturation_and_sessions(series_features):
         i = s[np.argmax(al.area[s][:, tr].max(1))]
         verdict[tid] = (K.generation(times[tr], al.area[i][tr])["verdict"], K.descriptors(times, al.area[i])["class"][0])
     print("\ngeneration of the late aliphatic series:", verdict)
-    assert sum(v[0] == "seconda" for v in verdict.values()) >= len(verdict) - 1
-    assert all(verdict[t][1] == "tardivo" for t in cfg["late_ids"])
+    assert sum(v[0] == "second" for v in verdict.values()) >= len(verdict) - 1
+    assert all(verdict[t][1] == "late" for t in cfg["late_ids"])
 
 
 # ---------------------------------------------------------------------------------------------------------------------- WP11: derivations and isotopes

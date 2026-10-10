@@ -166,17 +166,17 @@ def localize(tp_formula, ref_formula, mz, rel, lib: FragmentLibrary, space: F.Fo
     delta = tp_vec - ref_vec
     out = {"ok": False, "type": None, "delta": F.fmt(np.abs(delta), els), "delta_sign": "-" if delta.sum() < 0 else "+", "evidence": [], "n_sites": 0, "note": ""}
     if subs is None:
-        out["note"] = "serve la struttura (SMILES) del progenitore"
+        out["note"] = "the structure (SMILES) of the parent is required"
         return out
     R, names, kind = candidate_sites(delta, els, subs)
     out["type"], out["n_sites"] = kind, int(len(R))
     if len(R) == 0:
-        out["note"] = {"other": "tipo di modifica non previsto dal modello dei siti"}.get(kind, "nessun sito candidato nel grafo")
+        out["note"] = {"other": "modification type not covered by the site model"}.get(kind, "no candidate site in the graph")
         return out
     ev = classify_fragments(tp_vec, mz, rel, lib, space, delta, min_rel=min_rel, precursor_mz=tp_mz, prefer_library=prefer_library)
     out["evidence"] = ev
     if not ev:
-        out["note"] = "nessun frammento con relazione nota con la libreria: la regione non è determinabile"
+        out["note"] = "no fragment with a known relation to the library: the region cannot be determined"
         return out
     LL = site_log_likelihood(R, ev, lib, eps)
     best = float(LL.max())

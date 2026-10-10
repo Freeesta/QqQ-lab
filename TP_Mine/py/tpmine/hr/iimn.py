@@ -194,25 +194,25 @@ def collapse(fam: dict) -> dict:
                 if not na_on_x:
                     continue                                                   # undecided: neither evidence nor explanation
             if rel["of"] == "x":                                              # Y derives from X: evidence for X
-                evidence.append({"kind": rel["role"], "name": rel["name"], "mz": m["mz"], "r": m["r"], "text": f"{rel['name']} a {m['delta']:+.4f} (r={m['r']:.2f})"})
+                evidence.append({"kind": rel["role"], "name": rel["name"], "mz": m["mz"], "r": m["r"], "text": f"{rel['name']} at {m['delta']:+.4f} (r={m['r']:.2f})"})
             elif (m["height"] >= 1.5 * fam["height"]) if rel["role"] == "isotope" else (m["height"] >= 2.0 * fam["height"]):
                 explained.append((m, rel))                          # an isotopologue, adduct or in-source fragment is weaker than the ion it comes from
         if m["dimer_of_x"]:
-            evidence.append({"kind": "dimer", "name": "[2M+H]+", "mz": m["mz"], "r": m["r"], "text": f"[2M+H]+ a {m['mz']:.4f} (r={m['r']:.2f})"})
+            evidence.append({"kind": "dimer", "name": "[2M+H]+", "mz": m["mz"], "r": m["r"], "text": f"[2M+H]+ at {m['mz']:.4f} (r={m['r']:.2f})"})
         if m["x_is_dimer_of_y"]:
             explained.append((m, {"role": "dimer", "name": "[2M+H]+", "of": "y"}))
     out["evidence"] = evidence
     if ambiguous:
         first = ambiguous[0]
         lo = min(x, first["mz"])
-        out["ambiguous"] = {"readings": [f"[M+NH4]+ di un [M+H]+ a m/z {lo:.4f}", "[M+H]+ di un frammento che ha perso NH3"], "decided": "ammonio" if na_on_x else None,
-                            "note": "coppia [M+Na]+ presente" if na_on_x else "decide la coppia [M+Na]+/[M+H]+ sulla stessa massa neutra, oppure la MS2 (perdita di 17,0265 come picco base)"}
+        out["ambiguous"] = {"readings": [f"[M+NH4]+ of an [M+H]+ at m/z {lo:.4f}", "[M+H]+ of a fragment that lost NH3"], "decided": "ammonium" if na_on_x else None,
+                            "note": "[M+Na]+ pair present" if na_on_x else "decided by the [M+Na]+/[M+H]+ pair on the same neutral mass, or by the MS2 (loss of 17.0265 as base peak)"}
     if explained:
         m, rel = max(explained, key=lambda t: t[0]["height"])
         out.update(role=rel["role"], role_name=rel["name"], explained_by=m["mz"], representative_mz=m["mz"], neutral_mass=m["mz"] - PROTON)
-        out["explained_text"] = {"adduct": f"{rel['name']} di un ione a m/z {m['mz']:.4f}", "isotope": f"isotopologo ({rel['name']}) dell'ione a m/z {m['mz']:.4f}",
-                                 "loss": (f"frammento {rel['name']} dell'albero MSn: in sorgente dall'ione a m/z {m['mz']:.4f}" if rel.get("library")
-                                          else f"frammento in sorgente (perdita di {rel['name']}) dell'ione a m/z {m['mz']:.4f}"), "dimer": f"monomero del dimero a m/z {m['mz']:.4f}"}[rel["role"]]
+        out["explained_text"] = {"adduct": f"{rel['name']} of an ion at m/z {m['mz']:.4f}", "isotope": f"isotopologue ({rel['name']}) of the ion at m/z {m['mz']:.4f}",
+                                 "loss": (f"{rel['name']} fragment of the MSn tree: in-source from the ion at m/z {m['mz']:.4f}" if rel.get("library")
+                                          else f"in-source fragment (loss of {rel['name']}) of the ion at m/z {m['mz']:.4f}"), "dimer": f"monomer of the dimer at m/z {m['mz']:.4f}"}[rel["role"]]
     return out
 
 

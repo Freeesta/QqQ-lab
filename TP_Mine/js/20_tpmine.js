@@ -4,9 +4,9 @@
   const ctx = () => QTOOLS.ctx;
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const fmtA = v => v >= 1e6 ? (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + "M" : v >= 1e3 ? (v / 1e3).toFixed(v >= 1e4 ? 0 : 1) + "k" : String(Math.round(v));
-  const TYPES = { sample: "campione", blank: "bianco", standard: "standard", control: "controllo" };
-  const KINDS = { full: "Full scan", ms2: "MS2", mrm: "MRM", hr: "LC-HRMS", msn: "MSn (infusione)", empty: "vuoto", error: "errore" };
-  const LAB = { forte: "forte", possibile: "possibile", debole: "debole", progenitore: "progenitore" };
+  const TYPES = { sample: "sample", blank: "blank", standard: "standard", control: "control" };
+  const KINDS = { full: "Full scan", ms2: "MS2", mrm: "MRM", hr: "LC-HRMS", msn: "MSn (infusione)", empty: "empty", error: "error" };
+  const LAB = { forte: "strong", possibile: "possible", debole: "weak", progenitore: "parent" };
 
   const CSS = `
 .tp{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:14px;align-items:start;padding:12px 16px}
@@ -25,6 +25,19 @@
 .tp .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:1300px){.tp .cols{grid-template-columns:1fr}}
 .tp .err{color:var(--bad)}.tp details>summary{cursor:pointer;color:var(--muted);font-size:12px}.tp textarea{font:12px ui-monospace,monospace;min-height:150px}
 .tp .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px}.tp .kv b{color:var(--muted);font-weight:600}
+.tp-wrap{padding:0}
+.pm-bar{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:12px 20px;color:#fff;background:linear-gradient(110deg,#101b2e 0%,#1f3a5f 45%,#3b2a73 100%);border-bottom:2px solid transparent;border-image:linear-gradient(90deg,#f4c95d,#fff3c4,#d99a1d) 1;box-shadow:0 6px 24px rgba(16,27,46,.35);position:relative;overflow:hidden}
+.pm-bar::after{content:"";position:absolute;top:0;left:-40%;width:30%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.12),transparent);animation:tpShine 6s ease-in-out infinite}
+.pm-brand{display:flex;align-items:center;gap:12px}.pm-ico{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;color:#ffd27a;background:rgba(255,255,255,.08);border:1px solid rgba(255,210,122,.55);box-shadow:0 0 14px rgba(255,210,122,.35)}
+.pm-name{font-size:20px;font-weight:800;letter-spacing:.3px;line-height:1.1}.pm-tag{font-size:12px;opacity:.8}
+.pm-crown{display:inline-block;vertical-align:middle;margin-left:8px;font-size:10px;font-weight:800;letter-spacing:1.4px;padding:2px 9px;border-radius:10px;color:#3a2a00;background:linear-gradient(135deg,#ffe29a,#f4c95d 55%,#d99a1d);box-shadow:0 0 10px rgba(244,201,93,.6)}
+.pm-steps{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:12px}.pm-sep{opacity:.45}
+.pm-step{display:inline-flex;align-items:center;gap:6px;padding:3px 11px 3px 4px;border-radius:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);opacity:.75}
+.pm-step i{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;font-style:normal;font-weight:700;font-size:11px;background:rgba(255,255,255,.2)}
+.pm-step.ok{opacity:1;border-color:rgba(125,255,181,.7)}.pm-step.ok i{background:#7dffb5;color:#06361f}
+.pm-chips{display:flex;gap:8px}.pm-chip{font-size:11px;font-weight:700;padding:3px 11px;border-radius:12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25)}.pm-chip.hr{background:rgba(212,181,255,.2);border-color:#d4b5ff;color:#ecdcff}.pm-chip.lr{background:rgba(125,255,181,.15);border-color:#7dffb5;color:#c8ffe0}
+#qt-nav-tab,nav button[data-v="tpmine"]{background:linear-gradient(135deg,#ffe29a,#f4c95d 55%,#d99a1d)!important;color:#3a2a00!important;border-color:#d99a1d!important;font-weight:700}
+@media(prefers-reduced-motion:reduce){.pm-bar::after{animation:none}}
 .hero{background:linear-gradient(135deg,#17324d,#2b5c8a 55%,#4b2c83);color:#fff;border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 6px 22px rgba(43,92,138,.35);animation:tpIn .5s ease}
 .hero button{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.35)}.hero button:hover{background:rgba(255,255,255,.25)}
 .tp #tp-files th{position:static}.tp .hero-i{font-size:40px;line-height:1}.hero-t{display:flex;gap:12px;align-items:center}.hero h2{margin:0;font-size:22px}.hero-s{opacity:.85;font-size:12px}.hero-i{filter:drop-shadow(0 0 8px #ffd27a);color:#ffd27a;animation:tpGlow 2.4s ease-in-out infinite}
@@ -56,7 +69,7 @@
     if (ready) return ready;
     ready = (async () => {
       const c = ctx(), base = c.base;
-      const [qq, tpz] = [await fetch(base + "mzlab.zip").then(r => { if (!r.ok) throw new Error("il motore di calcolo nel browser non c'è (usa il sito, non il programma locale)"); return r.arrayBuffer(); }), c.pyZip];
+      const [qq, tpz] = [await fetch(base + "mzlab.zip").then(r => { if (!r.ok) throw new Error("the in-browser compute engine is missing (use the website, not the local program)"); return r.arrayBuffer(); }), c.pyZip];
       const url = URL.createObjectURL(new Blob([c.files["tpmine-worker.js"]], { type: "text/javascript" }));
       worker = new Worker(url, { type: "module" });
       worker.onmessage = ev => {
@@ -137,26 +150,37 @@
   // ---------------------------------------------------------------- the tab
   function open(sec) {
     if (!document.getElementById("tp-css")) { const st = document.createElement("style"); st.id = "tp-css"; st.textContent = CSS; document.head.appendChild(st); }
-    sec.innerHTML = `<div class="tp">
-<div id="tp-left">
- <div class="card"><h3>1 · File</h3>
-  <div class="row"><button id="tp-page" title="Usa gli mzML già aperti nella scheda Dati (memoria del browser)">Usa i file di Dati</button><button id="tp-pick">Scegli mzML...</button><button id="tp-demo" title="Esperimento sintetico di bentazone: serve per provare il programma">Prova: bentazone</button></div>
-  <input type="file" id="tp-in" accept=".mzML,.mzml" multiple hidden>
-  <div id="tp-files" class="mut">Nessun file. Il tempo e il tipo si leggono dal nome (t15, blank, STD) e si possono correggere.</div></div>
- <div class="card"><h3>2 · Progenitore</h3><div id="tp-struct"></div>
-  <div class="row"><input type="text" id="tp-name" placeholder="Nome (facoltativo)"></div>
-  <div class="row"><input type="text" id="tp-mol" placeholder="Formula bruta neutra (C10H12N2O3S) oppure SMILES" spellcheck="false"></div>
-  <div class="row"><label class="mut">Addotto</label><select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option></select><span class="mut" id="tp-prev"></span></div></div>
- <div class="card"><h3>3 · Impostazioni</h3>
-  <div class="row"><label class="mut grow">Finestra XIC ±Da</label><input type="number" id="tp-tol" value="0.35" step="0.05" min="0.05" style="width:70px"></div>
-  <div class="row"><label class="mut grow">Tolleranza RT ±min</label><input type="number" id="tp-rtt" value="0.25" step="0.05" min="0.05" style="width:70px"></div>
-  <div class="row"><label class="mut grow">Trasformazioni combinate (passi)</label><input type="number" id="tp-steps" value="2" min="1" max="3" style="width:70px"></div>
-  <div class="row"><label class="mut grow">Ignora RT prima di (min)</label><input type="number" id="tp-rtmin" value="0.5" step="0.1" min="0" style="width:70px"></div>
-  <div class="row"><label><input type="checkbox" id="tp-disc" checked> Cerca anche ioni non previsti</label></div>
-  <details><summary>Elenco delle trasformazioni (nome;variazione)</summary><textarea id="tp-tr" spellcheck="false"></textarea></details></div>
- <div class="card" id="tp-minecard"><div class="mine"><span class="pick">⛏</span><span class="rock r1">◆</span><span class="rock r2">◇</span><span class="rock r3">◆</span></div><button id="tp-go" class="imp" style="width:100%">⛏ Scava</button><div class="bar"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" style="margin-top:4px"></div></div>
+    sec.innerHTML = `<div class="tp-wrap">
+<div class="pm-bar">
+ <div class="pm-brand"><span class="pm-ico">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 26) : "⛏"}</span>
+  <div><div class="pm-name">mzFinder <span class="pm-crown">★ PREMIUM</span></div><div class="pm-tag">Automated transformation-product discovery</div></div></div>
+ <div class="pm-steps" aria-label="Workflow">
+  <span class="pm-step" id="pm-s1"><i>1</i> Files</span><span class="pm-sep">›</span>
+  <span class="pm-step" id="pm-s2"><i>2</i> Parent</span><span class="pm-sep">›</span>
+  <span class="pm-step" id="pm-s3"><i>3</i> Settings</span><span class="pm-sep">›</span>
+  <span class="pm-step" id="pm-s4"><i>4</i> Dig</span></div>
+ <div class="pm-chips"><span class="pm-chip" id="pm-mode">No data</span><span class="pm-chip" id="pm-count">0 files</span></div>
 </div>
-<div id="tp-right"><div class="card mut" id="tp-empty">Carica i file, scrivi il progenitore e premi <b>Scava</b>: mzFinder calibra l'm/z sul progenitore, genera i candidati, estrae gli XIC, cerca i picchi che crescono nel tempo e mancano nel bianco, controlla gli isotopi, confronta gli ioni prodotto con quelli del progenitore e assegna un livello di confidenza (Schymanski, per quanto permette la risoluzione unitaria).</div></div></div>`;
+<div class="tp">
+<div id="tp-left">
+ <div class="card"><h3>1 · Files</h3>
+  <div class="row"><button id="tp-page" title="Reload the mzML files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick">Choose mzML...</button></div>
+  <input type="file" id="tp-in" accept=".mzML,.mzml" multiple hidden>
+  <div id="tp-files" class="mut"></div></div>
+ <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div>
+  <div class="row"><input type="text" id="tp-name" placeholder="Name (optional)"></div>
+  <div class="row"><input type="text" id="tp-mol" placeholder="Neutral molecular formula (C10H12N2O3S) or SMILES" spellcheck="false"></div>
+  <div class="row"><label class="mut">Adduct</label><select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option></select><span class="mut" id="tp-prev"></span></div></div>
+ <div class="card"><h3>3 · Settings</h3>
+  <div class="row"><label class="mut grow" id="tp-tol-l">XIC window ±Da</label><input type="number" id="tp-tol" value="0.35" step="0.05" min="0.05" style="width:70px"></div>
+  <div class="row"><label class="mut grow">RT tolerance ±min</label><input type="number" id="tp-rtt" value="0.25" step="0.05" min="0.05" style="width:70px"></div>
+  <div class="row"><label class="mut grow">Combined transformations (steps)</label><input type="number" id="tp-steps" value="2" min="1" max="3" style="width:70px"></div>
+  <div class="row"><label class="mut grow">Ignore RT before (min)</label><input type="number" id="tp-rtmin" value="0.5" step="0.1" min="0" style="width:70px"></div>
+  <div class="row"><label><input type="checkbox" id="tp-disc" checked> Also look for unexpected ions</label></div>
+  <details><summary>List of transformations (name;change)</summary><textarea id="tp-tr" spellcheck="false"></textarea></details></div>
+ <div class="card" id="tp-minecard"><div class="mine"><span class="pick">⛏</span><span class="rock r1">◆</span><span class="rock r2">◇</span><span class="rock r3">◆</span></div><button id="tp-go" class="imp" style="width:100%">⛏ Dig</button><div class="bar"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" style="margin-top:4px"></div></div>
+</div>
+<div id="tp-right"><div class="card mut" id="tp-empty">Load the files, enter the parent and press <b>Dig</b>: mzFinder calibrates the m/z on the parent, generates the candidates, extracts the XICs, looks for peaks that grow over time and are missing from the blank, checks the isotopes, compares the product ions with those of the parent and assigns a confidence level (Schymanski, as far as the resolution allows).</div></div></div></div>`;
     const $ = s => sec.querySelector(s);
     const st = { files: [], summary: null, sel: null, view: "gems", took: 0, filter: { forte: true, possibile: true, unexp: true, debole: false } };
     const msg = (t, err) => { $("#tp-msg").textContent = t || ""; $("#tp-msg").className = "mut" + (err ? " err" : ""); };
@@ -164,15 +188,15 @@
 
     // ---- files
     const renderFiles = () => {
-      if (!st.files.length) { $("#tp-files").innerHTML = "Nessun file. Il tempo e il tipo si leggono dal nome (t15, blank, STD) e si possono correggere."; return; }
-      $("#tp-files").innerHTML = `<table><tr><th>File</th><th>Tipo di dato</th><th>Campione</th><th>t (min)</th></tr>` + st.files.map((f, i) => `<tr><td title="${esc(f.name)}">${esc(f.name.replace(/\.mzml$/i, ""))}</td><td>${KINDS[f.kind] || f.kind}${f.error ? ` <span class="err" title="${esc(f.error)}">!</span>` : ""}</td>
-        <td>${f.kind === "full" || f.kind === "mrm" || f.kind === "hr" ? `<select data-i="${i}" data-k="type">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}"${f.type === k ? " selected" : ""}>${v}</option>`).join("")}</select>` : (f.kind === "ms2" ? "frammenti" : "-")}</td>
+      modeUI(); if (!st.files.length) { $("#tp-files").innerHTML = ""; return; }
+      $("#tp-files").innerHTML = `<table><tr><th>File</th><th>Data type</th><th>Sample</th><th>t (min)</th></tr>` + st.files.map((f, i) => `<tr><td title="${esc(f.name)}">${esc(f.name.replace(/\.mzml$/i, ""))}</td><td>${KINDS[f.kind] || f.kind}${f.error ? ` <span class="err" title="${esc(f.error)}">!</span>` : ""}</td>
+        <td>${f.kind === "full" || f.kind === "mrm" || f.kind === "hr" ? `<select data-i="${i}" data-k="type">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}"${f.type === k ? " selected" : ""}>${v}</option>`).join("")}</select>` : (f.kind === "ms2" ? "fragments" : "-")}</td>
         <td>${f.kind === "full" || f.kind === "ms2" || f.kind === "mrm" || f.kind === "hr" ? `<input type="number" data-i="${i}" data-k="time" value="${f.time ?? ""}" style="width:60px" step="any">` : ""}</td></tr>`).join("") + "</table>";
       $("#tp-files").querySelectorAll("[data-k]").forEach(el => el.onchange = () => { const f = st.files[+el.dataset.i]; f[el.dataset.k] = el.dataset.k === "time" ? (el.value === "" ? null : +el.value) : el.value; });
     };
     const BIG = 50 << 20;                   // as in the main program: above this a file is mounted from its Blob, not copied (13 HR files = 1 GB)
-    async function addFiles(list) {         // list: [{name, buf}] or [{name, file}] (File/Blob: read only if small)
-      msg("Leggo i file...");
+    async function addFiles(list, only) {         // list: [{name, buf}] or [{name, file}] (File/Blob: read only if small)
+      msg("Reading files...");
       try {
         await startWorker();
         for (const f of list) {
@@ -183,27 +207,44 @@
         const hint = (() => { try { return Object.fromEntries((window.E && E.files || []).map(x => [String(x.file || x.name || "").split(/[\\/]/).pop(), x])); } catch (_) { return {}; } })();
         st.files = st.files.filter(f => !info.some(i => i.name === f.name));
         for (const i of info) { if (i.hr_kind === "hr" || i.hr_kind === "msn") i.kind = i.hr_kind; const h = hint[i.name]; if (h && h.time != null) i.time = h.time; if (h && ["sample", "blank", "standard", "control"].includes(h.type)) i.type = h.type; st.files.push(i); }
+        if (only) st.files = st.files.filter(f => f.kind === "full" || f.kind === "hr");   // automatic start: only the Full Scan / HRMS series
         st.files.sort((a, b) => (a.kind > b.kind ? 1 : a.kind < b.kind ? -1 : (a.time ?? -1) - (b.time ?? -1)));
         renderFiles(); msg("");
       } catch (e) { msg(String(e.message || e), true); }
     }
     $("#tp-page").onclick = async () => {
-      msg("Cerco i file nella memoria del browser...");
+      await loadFromData(false); };
+    // default: the Full Scan / HRMS files already loaded in the Data tab (browser memory) are taken at once
+    async function loadFromData(quiet) {
+      msg("Looking for the files in browser memory...");
       const f = await idbFiles();
-      if (!f.length) return msg("Nessun mzML nella scheda Dati di questo browser: aprili lì oppure usa «Scegli mzML...».", true);
-      await addFiles(f.map(x => x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: x.buf.slice ? x.buf.slice(0) : x.buf }));
-    };
+      if (!f.length) return msg(quiet ? "" : "No mzML in the Data tab of this browser: open them there or use “Choose mzML...”.", !quiet);
+      await addFiles(f.map(x => x.buf instanceof Blob ? { name: x.name, file: x.buf } : { name: x.name, buf: x.buf.slice ? x.buf.slice(0) : x.buf }), quiet);
+    }
     $("#tp-pick").onclick = () => $("#tp-in").click();
     $("#tp-in").onchange = async ev => { const fs = [...ev.target.files]; ev.target.value = ""; await addFiles(fs.map(f => ({ name: f.name, file: f }))); };
-    $("#tp-demo").onclick = async () => {
-      msg("Preparo l'esperimento sintetico di bentazone...");
-      try {
-        const d = await call("demo");
-        st.files = []; const info = await call("classify", d.files.map(f => f.name));
-        info.forEach((i, k) => { i.time = d.files[k].time; i.type = d.files[k].type; st.files.push(i); });
-        $("#tp-name").value = d.parent.name; $("#tp-mol").value = d.parent.neutral; $("#tp-add").value = d.parent.adduct; preview(); renderFiles(); msg("Dati sintetici: nei laboratori non ci sono mzML di bentazone.");
-      } catch (e) { msg(String(e.message || e), true); }
-    };
+    // mode: high resolution -> XIC window in ppm (default 5) and RT tolerance from the chromatographic method; unit resolution -> Da and 0.25 min
+    let curMode = "";
+    function modeUI() {
+      const hr = st.files.some(f => f.kind === "hr"), m = !st.files.length ? "" : hr ? "hr" : "lr";
+      const t = $("#tp-tol"), r = $("#tp-rtt");
+      if (m !== curMode) {
+        curMode = m;
+        if (m === "hr") {
+          $("#tp-tol-l").textContent = "XIC window ±ppm"; t.value = 5; t.step = 1; t.min = 1;
+          const span = Math.max(0, ...st.files.filter(f => f.kind === "hr").map(f => f.rt_max || 0));
+          r.value = span ? Math.max(0.05, Math.round(span * 0.005 / 0.05) * 0.05).toFixed(2) : "0.10";      // 0.5 % of the gradient length (20 min: 0.10)
+          r.title = "From the chromatographic method (0.5 % of the run length)";
+        } else { $("#tp-tol-l").textContent = "XIC window ±Da"; t.value = 0.35; t.step = 0.05; t.min = 0.05; r.value = 0.25; r.title = ""; }
+      }
+      const n = st.files.length;
+      $("#pm-mode").textContent = m === "hr" ? "HRMS" : m === "lr" ? "Unit resolution" : "No data"; $("#pm-mode").className = "pm-chip " + m;
+      $("#pm-count").textContent = n + (n === 1 ? " file" : " files");
+      $("#pm-s1").classList.toggle("ok", n > 0); $("#pm-s2").classList.toggle("ok", !!$("#tp-mol").value.trim()); $("#pm-s3").classList.toggle("ok", n > 0);
+    }
+    $("#tp-mol").addEventListener("input", modeUI);
+    setTimeout(() => loadFromData(true), 0);
+    sec.addEventListener("tpshow", () => { if (!st.files.length) loadFromData(true); });
 
     // ---- parent preview
     let pvT = 0;
@@ -233,30 +274,30 @@
     $("#tp-go").onclick = async () => {
       const mol = $("#tp-mol").value.trim();
       const hrMode = st.files.some(f => f.kind === "hr");
-      if (!hrMode && !st.files.some(f => f.kind === "full")) return msg("Servono file di full scan (MS1) del campione.", true);
-      if (!mol) return msg("Scrivi la formula bruta neutra o lo SMILES del progenitore.", true);
-      $("#tp-go").disabled = true; $("#tp-bar").style.width = "2%"; msg("Scavo..."); $("#tp-minecard").classList.add("mining"); const t0 = performance.now();
+      if (!hrMode && !st.files.some(f => f.kind === "full")) return msg("Full-scan (MS1) sample files are needed.", true);
+      if (!mol) return msg("Enter the neutral molecular formula or the SMILES of the parent.", true);
+      $("#tp-go").disabled = true; $("#tp-bar").style.width = "2%"; msg("Digging..."); $("#tp-minecard").classList.add("mining"); const t0 = performance.now();
       try {
         const files = st.files.filter(f => f.kind !== "error" && f.kind !== "empty").map(f => ({ name: f.name, type: f.type, time: f.time, kind: f.kind }));
         const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, discover: $("#tp-disc").checked };
         const parent = { name: $("#tp-name").value.trim(), neutral: mol, adduct: $("#tp-add").value };
         if (hrMode) {          // high resolution: its own engine and view (21_tpmine_hr.js)
-          if (parent.adduct !== "[M+H]+") throw new Error("L'alta risoluzione usa lo ione [M+H]+: scegli quell'addotto.");
+          if (parent.adduct !== "[M+H]+") throw new Error("High resolution uses the [M+H]+ ion: choose that adduct.");
           if (/^[A-Za-z0-9()]+$/.test(mol) === false) parent.smiles = mol;
-          const hs = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), "{}", ""));
+          const hs = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify({ ppm_prec: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value }), ""));
           st.took = performance.now() - t0; st.summary = null; st.det = {};
           window.TPHR.render($("#tp-right"), hs, { esc, fmtA, chart, hue, call, callRaw, toast, dl });
-          $("#tp-bar").style.width = "100%"; msg("Fatto."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
+          $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
           $("#tp-go").disabled = false; $("#tp-minecard").classList.remove("mining"); return;
         }
         st.summary = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
-        st.took = performance.now() - t0; st.sel = null; st.det = {}; render(); $("#tp-bar").style.width = "100%"; msg("Fatto."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
+        st.took = performance.now() - t0; st.sel = null; st.det = {}; render(); $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
       } catch (e) { msg(String(e.message || e), true); $("#tp-bar").style.width = "0"; }
       $("#tp-go").disabled = false; $("#tp-minecard").classList.remove("mining");
     };
 
     // ---- results
-    const VIEWS = [["tab", "Tabella"], ["gems", "💎 Gemme"], ["map", "🕸 Mappa di reazione"], ["kin", "📈 Cinetiche"], ["film", "🎬 Film"]];
+    const VIEWS = [["tab", "Table"], ["gems", "💎 Gems"], ["map", "🕸 Reaction map"], ["kin", "📈 Kinetics"], ["film", "🎬 Film"]];
     function countUp(el) {
       const to = +el.dataset.count, dec = +(el.dataset.dec || 0), t0 = performance.now(), D = 900;
       const step = t => { const k = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - k, 3); el.textContent = (to * e).toFixed(dec); if (k < 1) requestAnimationFrame(step); };
@@ -282,22 +323,22 @@
       const cnt = k => s.rows.filter(r => (k === "unexp" ? r.kind === "unexpected" && good(r) : r.kind === "candidate" && r.label === k)).length;
       const nF = cnt("forte"), nP = cnt("possibile"), nU = cnt("unexp");
       R.innerHTML = `<div class="hero"><div class="hero-t"><span class="hero-i">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 44) : "⛏"}</span>
-        <div><h2>${nF ? "Filone trovato!" : nP ? "Qualche pepita..." : "Filone povero"}</h2><div class="hero-s">${esc(s.parent.formula || "progenitore")} · ${esc(s.parent.adduct)} <i>m/z</i> ${s.parent.mz}${par && par.ref_rt ? ` · RT ${par.ref_rt} min` : ""} · scavato in ${(st.took / 1000).toFixed(1)} s</div></div></div>
-        <div class="stats"><div class="stat g"><b data-count="${nF}">0</b><span>TP forti 💎</span></div><div class="stat a"><b data-count="${nP}">0</b><span>TP possibili</span></div>
-        <div class="stat v"><b data-count="${nU}">0</b><span>ioni non previsti</span></div>
-        <div class="stat"><b data-count="${s.decay && s.decay.half_life_min != null ? s.decay.half_life_min : 0}" data-dec="1">0</b><span>t½ progenitore (min)</span></div>
-        <div class="stat"><b data-count="${s.offset ? Math.abs(s.offset.offset) : 0}" data-dec="2">0</b><span>offset <i>m/z</i> corretto (Da)</span></div>
-        <div class="stat"><b data-count="${s.rows.length}">0</b><span>ioni analizzati</span></div></div>
-        <div class="row" style="margin-top:10px"><button id="tp-x-xlsx">Excel (.xlsx)</button><button id="tp-x-csv">CSV</button><button id="tp-x-json">JSON</button><button id="tp-x-txt" title="Copia un riassunto in italiano da incollare nella relazione">📋 Copia il riassunto</button></div></div>
+        <div><h2>${nF ? "Vein found!" : nP ? "A few nuggets..." : "Poor vein"}</h2><div class="hero-s">${esc(s.parent.formula || "parent")} · ${esc(s.parent.adduct)} <i>m/z</i> ${s.parent.mz}${par && par.ref_rt ? ` · RT ${par.ref_rt} min` : ""} · dug in ${(st.took / 1000).toFixed(1)} s</div></div></div>
+        <div class="stats"><div class="stat g"><b data-count="${nF}">0</b><span>Strong TPs 💎</span></div><div class="stat a"><b data-count="${nP}">0</b><span>Possible TPs</span></div>
+        <div class="stat v"><b data-count="${nU}">0</b><span>unexpected ions</span></div>
+        <div class="stat"><b data-count="${s.decay && s.decay.half_life_min != null ? s.decay.half_life_min : 0}" data-dec="1">0</b><span>parent t½ (min)</span></div>
+        <div class="stat"><b data-count="${s.offset ? Math.abs(s.offset.offset) : 0}" data-dec="2">0</b><span>corrected <i>m/z</i> offset (Da)</span></div>
+        <div class="stat"><b data-count="${s.rows.length}">0</b><span>ions analysed</span></div></div>
+        <div class="row" style="margin-top:10px"><button id="tp-x-xlsx">Excel (.xlsx)</button><button id="tp-x-csv">CSV</button><button id="tp-x-json">JSON</button><button id="tp-x-txt" title="Copy a summary to paste into the report">📋 Copy summary</button></div></div>
         <div class="vtabs">${VIEWS.map(([k, n]) => `<button class="vt${st.view === k ? " on" : ""}" data-v="${k}">${n}</button>`).join("")}</div>
         <div id="tp-view"></div>${mrmCard(s.mrm)}<div id="tp-det"></div>`;
       R.querySelectorAll(".stat b").forEach(countUp);
       R.querySelectorAll(".vt").forEach(b => b.onclick = () => { st.view = b.dataset.v; R.querySelectorAll(".vt").forEach(x => x.classList.toggle("on", x === b)); view(); });
       $("#tp-x-xlsx").onclick = () => exportAll("xlsx"); $("#tp-x-csv").onclick = () => exportAll("csv"); $("#tp-x-json").onclick = () => exportAll("json");
-      $("#tp-x-txt").onclick = async () => { try { await navigator.clipboard.writeText(summaryText()); toast("Riassunto copiato negli appunti"); } catch (_) { dl("riassunto_TPMine.txt", summaryText(), "text/plain"); } };
+      $("#tp-x-txt").onclick = async () => { try { await navigator.clipboard.writeText(summaryText()); toast("Summary copied to the clipboard"); } catch (_) { dl("summary_mzFinder.txt", summaryText(), "text/plain"); } };
       view();
       const cc = $("#tp-c-cal");
-      if (cc) { const c = JSON.parse(cc.dataset.cal); chart(cc, [{ x: [0, c.hi], y: [c.intercept, c.slope * c.hi + c.intercept], color: "#2b5c8a" }, { x: c.points.map(p => p.conc), y: c.points.map(p => p.area), color: "#b42318", dots: true, w: 0 }], { xlabel: "concentrazione (mg/L)", x0: 0 }); }
+      if (cc) { const c = JSON.parse(cc.dataset.cal); chart(cc, [{ x: [0, c.hi], y: [c.intercept, c.slope * c.hi + c.intercept], color: "#2b5c8a" }, { x: c.points.map(p => p.conc), y: c.points.map(p => p.area), color: "#b42318", dots: true, w: 0 }], { xlabel: "concentration (mg/L)", x0: 0 }); }
       if (nF) confetti();
     }
 
@@ -306,20 +347,20 @@
       const list = s.rows.filter(r => r.label !== "progenitore" && good(r));
       if (st.view === "tab") {
         const f = st.filter;
-        V.innerHTML = `<div class="card"><div class="row"><label><input type="checkbox" data-f="forte" ${f.forte ? "checked" : ""}> forti</label><label><input type="checkbox" data-f="possibile" ${f.possibile ? "checked" : ""}> possibili</label><label><input type="checkbox" data-f="unexp" ${f.unexp ? "checked" : ""}> non previsti</label><label><input type="checkbox" data-f="debole" ${f.debole ? "checked" : ""}> deboli</label><span class="mut">↑ ↓ per scorrere</span></div><div class="tbl"><table id="tp-t"></table></div></div>`;
+        V.innerHTML = `<div class="card"><div class="row"><label><input type="checkbox" data-f="forte" ${f.forte ? "checked" : ""}> strong</label><label><input type="checkbox" data-f="possibile" ${f.possibile ? "checked" : ""}> possible</label><label><input type="checkbox" data-f="unexp" ${f.unexp ? "checked" : ""}> unexpected</label><label><input type="checkbox" data-f="debole" ${f.debole ? "checked" : ""}> weak</label><span class="mut">↑ ↓ to scroll</span></div><div class="tbl"><table id="tp-t"></table></div></div>`;
         V.querySelectorAll("[data-f]").forEach(el => el.onchange = () => { f[el.dataset.f] = el.checked; rows(); });
         rows();
       } else if (st.view === "gems") {
-        V.innerHTML = list.length ? `<div class="gems">${list.map((r, i) => gem(r, i)).join("")}</div>` : `<div class="card mut">Nessuna gemma: nessun candidato supera i criteri.</div>`;
+        V.innerHTML = list.length ? `<div class="gems">${list.map((r, i) => gem(r, i)).join("")}</div>` : `<div class="card mut">No gems: no candidate passes the criteria.</div>`;
         V.querySelectorAll(".gem").forEach(g => g.onclick = () => show(+g.dataset.id));
       } else if (st.view === "map") {
-        V.innerHTML = `<div class="card"><div class="mut">Ogni nodo è un ione che supera i criteri: il raggio segue l'area massima, il colore la fiducia (verde forte, ambra possibile, viola non previsto). Le linee mostrano la trasformazione (Δ formula). Clic su un nodo per il dettaglio.</div><div id="tp-map"></div></div>`;
+        V.innerHTML = `<div class="card"><div class="mut">Each node is an ion that passes the criteria: the radius follows the maximum area, the colour the confidence (green strong, amber possible, purple unexpected). Lines show the transformation (Δ formula). Click a node for details.</div><div id="tp-map"></div></div>`;
         mapView($("#tp-map"));
       } else if (st.view === "kin") {
-        V.innerHTML = `<div class="card"><h3>Tutte le cinetiche, ciascuna al proprio massimo (100 %)</h3><canvas id="tp-c-all" style="height:320px"></canvas><div class="row" id="tp-leg-all"></div></div>`;
+        V.innerHTML = `<div class="card"><h3>All kinetics, each at its own maximum (100 %)</h3><canvas id="tp-c-all" style="height:320px"></canvas><div class="row" id="tp-leg-all"></div></div>`;
         const top = list.filter(r => r.kind === "candidate").slice(0, 8), par = s.rows.find(r => r.label === "progenitore");
         const ser = [par, ...top].map((r, i) => { const k = r.kinetics, mx = Math.max(...k.map(p => p.area)) || 1; return { x: k.map(p => p.time), y: k.map(p => 100 * p.area / mx), color: i ? hue(i - 1, top.length) : "#555", dash: i ? [] : [6, 4], w: i ? 2 : 2.4, label: r.name, dots: !!i }; });
-        chart($("#tp-c-all"), ser, { xlabel: "tempo (min)" });
+        chart($("#tp-c-all"), ser, { xlabel: "time (min)" });
         $("#tp-leg-all").innerHTML = ser.map(t => `<span class="mut"><span style="display:inline-block;width:14px;border-top:2px ${t.dash.length ? "dashed" : "solid"} ${t.color};vertical-align:middle"></span> ${esc(shortN(t.label, 34))}</span>`).join("");
       } else if (st.view === "film") {
         filmView(V);
@@ -331,9 +372,9 @@
       const pts = k.map((p, j) => [(j / Math.max(1, k.length - 1) * (w - 6) + 3), (h - 4 - p.area / mx * (h - 10))]);
       const line = pts.map(p => p.join(",")).join(" "), area = `3,${h - 3} ${line} ${w - 3},${h - 3}`;
       return `<div class="gem ${r.label}" data-id="${r.id}" style="animation-delay:${Math.min(i, 12) * 60}ms"><div class="gem-h"><b>${esc(shortN(r.name, 34))}</b>${r.level ? `<span class="lv lv${r.level}">${r.level}</span>` : ""}</div>
-        <div class="mut">${esc(r.formula || "")} · <i>m/z</i> ${r.mz.toFixed(1)} · RT ${r.ref_rt ?? "?"}${r.insource ? " · frammento in sorgente" + (r.isf ? " (P " + Math.round(100 * r.isf.probs.isf) + "%" + (r.isf.doubtful ? ", dubbio" : "") + ")" : "?") : (r.isf && r.isf.doubtful ? " · origine dubbia (P ISF " + Math.round(100 * r.isf.probs.isf) + "%)" : "")}</div>
+        <div class="mut">${esc(r.formula || "")} · <i>m/z</i> ${r.mz.toFixed(1)} · RT ${r.ref_rt ?? "?"}${r.insource ? " · in-source fragment" + (r.isf ? " (P " + Math.round(100 * r.isf.probs.isf) + "%" + (r.isf.doubtful ? ", doubtful" : "") + ")" : "?") : (r.isf && r.isf.doubtful ? " · doubtful origin (P ISF " + Math.round(100 * r.isf.probs.isf) + "%)" : "")}</div>
         <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}"><polygon points="${area}" fill="${col(r)}" opacity=".15"/><polyline points="${line}" fill="none" stroke="${col(r)}" stroke-width="2"/>${pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.3" fill="${col(r)}"/>`).join("")}</svg>
-        <div class="mut">max a ${r.tmax ?? "?"} min · area ${fmtA(r.max_area)}${r.kind === "candidate" ? ` · ${esc(r.delta)}` : ` · Δ<i>m/z</i> ${r.delta_mz >= 0 ? "+" : ""}${r.delta_mz}`}</div></div>`;
+        <div class="mut">max at ${r.tmax ?? "?"} min · area ${fmtA(r.max_area)}${r.kind === "candidate" ? ` · ${esc(r.delta)}` : ` · Δ<i>m/z</i> ${r.delta_mz >= 0 ? "+" : ""}${r.delta_mz}`}</div></div>`;
     }
 
     function mapView(host) {
@@ -356,7 +397,7 @@
       }
       const nodes = [par, ...cand, ...unx].map(r => { const [x, y] = node(r), rad = 9 + 15 * Math.log10(1 + r.max_area) / Math.log10(1 + maxA);
         return `<g class="mnode" data-id="${r.id}" transform="translate(${x},${y})"><circle r="${rad.toFixed(1)}" fill="${col(r)}" fill-opacity=".85" stroke="#fff" stroke-width="2"><title>${esc(r.name)}</title></circle>${r.level ? `<text y="4" font-size="11" fill="#fff" font-weight="700" text-anchor="middle">${r.level}</text>` : ""}<text y="${(rad + 13).toFixed(0)}" font-size="11" text-anchor="middle" fill="currentColor">${esc(shortN(r.name, 24))}</text><text y="${(rad + 25).toFixed(0)}" font-size="10" text-anchor="middle" fill="#687080">${r.mz.toFixed(1)}</text></g>`; }).join("");
-      host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-height:${H}px">${[["progenitore", 0], ["1 passo", 1], ["2 passi", 2], ["3 passi / non previsti", 3]].map(([t, i]) => `<text x="${colX[i]}" y="14" font-size="11" fill="#687080" text-anchor="middle" font-weight="700">${t}</text>`).join("")}${edges}${nodes}</svg>`;
+      host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-height:${H}px">${[["parent", 0], ["1 step", 1], ["2 steps", 2], ["3 steps / unexpected", 3]].map(([t, i]) => `<text x="${colX[i]}" y="14" font-size="11" fill="#687080" text-anchor="middle" font-weight="700">${t}</text>`).join("")}${edges}${nodes}</svg>`;
       host.querySelectorAll(".mnode").forEach(g => g.onclick = () => show(+g.dataset.id));
     }
 
@@ -364,19 +405,19 @@
     const stopFilm = () => { if (filmT) { clearInterval(filmT); filmT = null; } };
     function filmView(V) {
       const s = st.summary, par = s.rows.find(r => r.label === "progenitore"), items = [par, ...s.rows.filter(r => r.kind === "candidate" && good(r)).slice(0, 12)], times = s.times;
-      V.innerHTML = `<div class="card"><div class="row"><button id="tp-play">▶ Avvia il film</button><input type="range" id="tp-sl" min="0" max="${times.length - 1}" value="0" class="grow"><b id="tp-tl">t = ${times[0]} min</b></div>
-        <div class="mut">Ogni barra è l'area del picco, in % del suo massimo: il progenitore cala, i prodotti di trasformazione salgono (e poi, a volte, scendono).</div>
+      V.innerHTML = `<div class="card"><div class="row"><button id="tp-play">▶ Start the film</button><input type="range" id="tp-sl" min="0" max="${times.length - 1}" value="0" class="grow"><b id="tp-tl">t = ${times[0]} min</b></div>
+        <div class="mut">Each bar is the peak area, in % of its maximum: the parent decreases, the transformation products rise (and then, sometimes, fall).</div>
         <div id="tp-film">${items.map(r => `<div class="frow" data-id="${r.id}"><span class="fl" title="${esc(r.name)}">${esc(shortN(r.name, 30))}</span><span class="ft"><i style="background:${col(r)}"></i></span><span class="fv"></span></div>`).join("")}</div></div>`;
       const set = i => {
         $("#tp-sl").value = i; $("#tp-tl").textContent = `t = ${times[i]} min`;
         V.querySelectorAll(".frow").forEach(row => { const r = items.find(x => x.id === +row.dataset.id), mx = Math.max(...r.kinetics.map(p => p.area)) || 1, k = r.kinetics.find(p => p.time === times[i]), v = k ? 100 * k.area / mx : 0;
           row.querySelector("i").style.width = v.toFixed(1) + "%"; row.querySelector(".fv").textContent = k && k.area ? fmtA(k.area) : "-"; });
       };
-      $("#tp-sl").oninput = e => { stopFilm(); $("#tp-play").textContent = "▶ Avvia il film"; set(+e.target.value); };
+      $("#tp-sl").oninput = e => { stopFilm(); $("#tp-play").textContent = "▶ Start the film"; set(+e.target.value); };
       $("#tp-play").onclick = () => {
-        if (filmT) { stopFilm(); $("#tp-play").textContent = "▶ Avvia il film"; return; }
-        let i = 0; $("#tp-play").textContent = "⏸ Pausa"; set(0);
-        filmT = setInterval(() => { i++; if (i >= times.length) { stopFilm(); $("#tp-play").textContent = "↺ Rivedi"; return; } set(i); }, 900);
+        if (filmT) { stopFilm(); $("#tp-play").textContent = "▶ Start the film"; return; }
+        let i = 0; $("#tp-play").textContent = "⏸ Pause"; set(0);
+        filmT = setInterval(() => { i++; if (i >= times.length) { stopFilm(); $("#tp-play").textContent = "↺ Replay"; return; } set(i); }, 900);
       };
       V.querySelectorAll(".frow").forEach(r => r.onclick = () => show(+r.dataset.id));
       set(0);
@@ -384,29 +425,29 @@
 
     function summaryText() {
       const s = st.summary, par = s.rows.find(r => r.label === "progenitore"), L = [];
-      L.push(`Ricerca dei prodotti di trasformazione di ${s.parent.formula || "progenitore"} (${s.parent.adduct}, m/z ${s.parent.mz}${par && par.ref_rt ? `, RT ${par.ref_rt} min` : ""}).`);
-      if (s.decay) L.push(`Il progenitore decade con cinetica del primo ordine: k = ${s.decay.k_per_min} min^-1, t1/2 = ${s.decay.half_life_min} min (R2 = ${s.decay.r2}).`);
-      if (s.offset) L.push(`Offset di m/z misurato sul progenitore: ${s.offset.offset >= 0 ? "+" : ""}${s.offset.offset} Da${s.offset.applied ? " (corretto)" : ""}.`);
+      L.push(`Search for transformation products of ${s.parent.formula || "parent"} (${s.parent.adduct}, m/z ${s.parent.mz}${par && par.ref_rt ? `, RT ${par.ref_rt} min` : ""}).`);
+      if (s.decay) L.push(`The parent decays with first-order kinetics: k = ${s.decay.k_per_min} min^-1, t1/2 = ${s.decay.half_life_min} min (R2 = ${s.decay.r2}).`);
+      if (s.offset) L.push(`m/z offset measured on the parent: ${s.offset.offset >= 0 ? "+" : ""}${s.offset.offset} Da${s.offset.applied ? " (corrected)" : ""}.`);
       const top = s.rows.filter(r => r.label !== "progenitore" && good(r) && !(r.insource && !(r.isf && r.isf.doubtful)));
-      L.push(`Candidati che crescono nel tempo e mancano nel bianco: ${top.filter(r => r.kind === "candidate").length}; ioni non previsti: ${top.filter(r => r.kind === "unexpected").length}.`);
-      for (const r of top.slice(0, 15)) L.push(`- ${r.name}${r.formula ? ` (${r.formula}${r.delta ? ", " + r.delta : ""})` : ""}: m/z ${r.mz.toFixed(1)}, RT ${r.ref_rt} min, massimo a ${r.tmax} min, area ${fmtA(r.max_area)}, giudizio ${r.label}${r.level ? `, livello di confidenza ${r.level}` : ""}.`);
-      L.push("Risoluzione unitaria: ogni riga è un candidato, non un'identificazione; i livelli 2 e 1 richiedono spettro di libreria o standard.");
+      L.push(`Candidates that grow over time and are absent from the blank: ${top.filter(r => r.kind === "candidate").length}; unexpected ions: ${top.filter(r => r.kind === "unexpected").length}.`);
+      for (const r of top.slice(0, 15)) L.push(`- ${r.name}${r.formula ? ` (${r.formula}${r.delta ? ", " + r.delta : ""})` : ""}: m/z ${r.mz.toFixed(1)}, RT ${r.ref_rt} min, maximum at ${r.tmax} min, area ${fmtA(r.max_area)}, verdict ${LAB[r.label] || r.label}${r.level ? `, confidence level ${r.level}` : ""}.`);
+      L.push("Unit resolution: each row is a candidate, not an identification; levels 2 and 1 require a library spectrum or a standard.");
       return L.join("\n");
     }
 
     function mrmCard(m) {
       if (!m) return "";
       const q = m.quantifier, qual = m.transitions.slice(1).map(t => t.name), c = m.calibration;
-      const body = m.rows.map(r => { const i = r.ion[q]; return `<tr><td>${esc(r.label)}</td><td>${TYPES[r.type] || r.type}</td><td class="n">${r.time ?? ""}</td><td class="n">${r.conc ?? ""}</td><td class="n">${i.detected ? fmtA(i.area) : "-"}</td><td class="n">${i.rt != null ? i.rt.toFixed(2) : ""}</td><td class="n">${i.snr ? i.snr.toFixed(0) : ""}</td>${qual.map(n => `<td class="n">${r.ion[n].detected ? fmtA(r.ion[n].area) : "-"}</td><td class="n">${r.ratios[n] != null ? r.ratios[n].toFixed(2) : ""}</td>`).join("")}<td>${r.ratio_ok == null ? "" : r.ratio_ok ? "✓" : "<span class='err'>fuori</span>"}</td><td class="n">${r.quant != null ? (+r.quant.toPrecision(3)) : ""}</td><td>${r.in_range == null ? "" : r.in_range ? "" : "<span class='err' title='fuori dall&apos;intervallo dei punti di taratura'>fuori retta</span>"}</td></tr>`; }).join("");
-      return `<div class="card"><h3>MRM: integrazione automatica</h3><div class="cols"><div><div class="mut">Quantificatore ${esc(q)}${qual.length ? ` · qualificatore ${qual.map(esc).join(", ")}` : ""} · RT di riferimento ${m.ref_rt ? m.ref_rt.toFixed(2) : "?"} min · rapporto ionico degli standard ${Object.values(m.ratio_ref).map(v => v == null ? "-" : v.toFixed(2)).join(", ")} (±${Math.round(m.ratio_tol * 100)} %)</div>
-        <div class="tbl" style="max-height:300px"><table><tr><th>File</th><th>Tipo</th><th>t</th><th>conc. (mg/L)</th><th>Area quant.</th><th>RT</th><th>S/N</th>${qual.map(n => `<th>Area qual.</th><th>Qual/Quant</th>`).join("")}<th>Rapporto</th><th>Calcolata (mg/L)</th><th></th></tr>${body}</table></div></div>
-        <div>${c ? `<div class="mut">Retta: area = ${c.slope.toPrecision(4)} · conc ${c.intercept >= 0 ? "+" : "−"} ${Math.abs(c.intercept).toPrecision(3)} · pesi ${c.weighting} · R² (non pesato) ${c.r2.toFixed(4)} · ${c.points.length} punti, ${c.lo}–${c.hi} mg/L</div><canvas id="tp-c-cal" data-cal='${esc(JSON.stringify(c))}'></canvas>` : `<div class="mut">Servono almeno tre standard con la concentrazione nel nome (per es. STD_0_6ppm) per la retta di taratura.</div>`}</div></div></div>`;
+      const body = m.rows.map(r => { const i = r.ion[q]; return `<tr><td>${esc(r.label)}</td><td>${TYPES[r.type] || r.type}</td><td class="n">${r.time ?? ""}</td><td class="n">${r.conc ?? ""}</td><td class="n">${i.detected ? fmtA(i.area) : "-"}</td><td class="n">${i.rt != null ? i.rt.toFixed(2) : ""}</td><td class="n">${i.snr ? i.snr.toFixed(0) : ""}</td>${qual.map(n => `<td class="n">${r.ion[n].detected ? fmtA(r.ion[n].area) : "-"}</td><td class="n">${r.ratios[n] != null ? r.ratios[n].toFixed(2) : ""}</td>`).join("")}<td>${r.ratio_ok == null ? "" : r.ratio_ok ? "✓" : "<span class='err'>out</span>"}</td><td class="n">${r.quant != null ? (+r.quant.toPrecision(3)) : ""}</td><td>${r.in_range == null ? "" : r.in_range ? "" : "<span class='err' title='outside the range of the calibration points'>off line</span>"}</td></tr>`; }).join("");
+      return `<div class="card"><h3>MRM: automatic integration</h3><div class="cols"><div><div class="mut">Quantifier ${esc(q)}${qual.length ? ` · qualifier ${qual.map(esc).join(", ")}` : ""} · reference RT ${m.ref_rt ? m.ref_rt.toFixed(2) : "?"} min · ion ratio of the standards ${Object.values(m.ratio_ref).map(v => v == null ? "-" : v.toFixed(2)).join(", ")} (±${Math.round(m.ratio_tol * 100)} %)</div>
+        <div class="tbl" style="max-height:300px"><table><tr><th>File</th><th>Type</th><th>t</th><th>conc. (mg/L)</th><th>Quant. area</th><th>RT</th><th>S/N</th>${qual.map(n => `<th>Qual. area</th><th>Qual/Quant</th>`).join("")}<th>Ratio</th><th>Calculated (mg/L)</th><th></th></tr>${body}</table></div></div>
+        <div>${c ? `<div class="mut">Line: area = ${c.slope.toPrecision(4)} · conc ${c.intercept >= 0 ? "+" : "−"} ${Math.abs(c.intercept).toPrecision(3)} · weights ${c.weighting} · R² (unweighted) ${c.r2.toFixed(4)} · ${c.points.length} points, ${c.lo}–${c.hi} mg/L</div><canvas id="tp-c-cal" data-cal='${esc(JSON.stringify(c))}'></canvas>` : `<div class="mut">At least three standards with the concentration in the name (e.g. STD_0_6ppm) are needed for the calibration line.</div>`}</div></div></div>`;
     }
     function rows() {
       if (!$("#tp-t")) return;
       const s = st.summary, f = st.filter;
       const keep = s.rows.filter(r => r.label === "progenitore" || (r.kind === "unexpected" ? f.unexp && (r.label === "forte" || r.label === "possibile") : f[r.label]));
-      $("#tp-t").innerHTML = `<tr><th>#</th><th>Liv.</th><th>Punti</th><th>Candidato</th><th>Formula</th><th><i>m/z</i></th><th>RT</th><th>t max</th><th>Area max</th><th>Cinetica</th></tr>` + keep.map(r => `<tr class="clk${r.id === st.sel ? " sel" : ""}" data-id="${r.id}">
+      $("#tp-t").innerHTML = `<tr><th>#</th><th>Lvl</th><th>Score</th><th>Candidate</th><th>Formula</th><th><i>m/z</i></th><th>RT</th><th>t max</th><th>Max area</th><th>Kinetics</th></tr>` + keep.map(r => `<tr class="clk${r.id === st.sel ? " sel" : ""}" data-id="${r.id}">
         <td>${r.id >= 100000 ? "n" + (r.id - 100000) : r.id}</td><td>${r.level ? `<span class="lv lv${r.level}" title="${esc(r.level_text)}">${r.level}</span>` : ""}</td>
         <td>${r.score == null ? "" : `<span class="badge b-${r.label}">${r.score} ${LAB[r.label]}</span>`}</td><td>${esc(r.name)}${r.alternatives.length ? ` <span class="mut" title="${esc(r.alternatives.join("\n"))}">+${r.alternatives.length}</span>` : ""}</td>
         <td>${esc(r.formula)}</td><td class="n">${r.mz.toFixed(2)}</td><td class="n">${r.ref_rt ?? ""}</td><td class="n">${r.tmax ?? ""}</td><td class="n">${fmtA(r.max_area)}</td><td>${spark(r.kinetics)}</td></tr>`).join("");
@@ -417,34 +458,34 @@
       const bl = d.rows.filter(r => r.type === "blank" || r.type === "control"), drt = par && par.ref_rt && d.ref_rt ? d.ref_rt - par.ref_rt : null;
       const P = [];
       const row = st.summary.rows.find(r => r.id === d.id);
-      P.push(`<b>${esc(d.name)}</b> ${d.delta ? `(${esc(d.delta)}) ` : ""}ha <i>m/z</i> ${d.mz}${row && row.delta_mz != null ? `, cioè ${row.delta_mz >= 0 ? "+" : ""}${row.delta_mz} rispetto al progenitore` : ""}.`);
-      if (first && mx) P.push(`Compare a ${first.time} min e raggiunge il massimo a ${mx.time} min${mx.time === first.time ? "" : ""}; ${bl.length ? (bl.every(b => !b.detected) ? "nel bianco non c'è." : "nel bianco si vede qualcosa: attenzione.") : "non c'è un bianco per escludere un contaminante."}`);
-      if (drt != null) P.push(`Esce ${Math.abs(drt).toFixed(2)} min ${drt < 0 ? "prima" : "dopo"} del progenitore${drt < -0.3 ? ": più polare, come ci si aspetta da un'ossidazione" : drt > 0.3 ? ": meno polare del progenitore, è insolito per un'ossidazione" : ", quasi insieme"}.`);
-      if (d.ms2 && d.ms2.scans) { const sh = d.ms2.fragments.filter(f => f.note); P.push(`Ho ${d.ms2.scans} scansioni MS2 (precursore ${d.ms2.precursor}): ${d.ms2.fragments.slice(0, 3).map(f => f.mz).join(", ")}${sh.length ? `; ${sh.length} frammenti si spiegano col progenitore (${sh.map(f => f.note.startsWith("condiviso") ? "condiviso" : "spostato di Δ").join(", ")})` : "; nessun frammento coincide con quelli del progenitore"}.`); }
-      else P.push("Nessun MS2 con questo precursore: per salire di livello serve un Product Ion Scan sul picco.");
+      P.push(`<b>${esc(d.name)}</b> ${d.delta ? `(${esc(d.delta)}) ` : ""}has <i>m/z</i> ${d.mz}${row && row.delta_mz != null ? `, i.e. ${row.delta_mz >= 0 ? "+" : ""}${row.delta_mz} relative to the parent` : ""}.`);
+      if (first && mx) P.push(`Appears at ${first.time} min and peaks at ${mx.time} min${mx.time === first.time ? "" : ""}; ${bl.length ? (bl.every(b => !b.detected) ? "it is absent from the blank." : "something shows in the blank: be careful.") : "there is no blank to rule out a contaminant."}`);
+      if (drt != null) P.push(`Elutes ${Math.abs(drt).toFixed(2)} min ${drt < 0 ? "before" : "after"} the parent${drt < -0.3 ? ": more polar, as expected for an oxidation" : drt > 0.3 ? ": less polar than the parent, unusual for an oxidation" : ", almost together"}.`);
+      if (d.ms2 && d.ms2.scans) { const sh = d.ms2.fragments.filter(f => f.note); P.push(`${d.ms2.scans} MS2 scans (precursor ${d.ms2.precursor}): ${d.ms2.fragments.slice(0, 3).map(f => f.mz).join(", ")}${sh.length ? `; ${sh.length} fragments are explained by the parent (${sh.map(f => f.note.startsWith("shared") || f.note.startsWith("condiviso") ? "shared" : "shifted by Δ").join(", ")})` : "; no fragment matches those of the parent"}.`); }
+      else P.push("No MS2 with this precursor: a Product Ion Scan on the peak is needed to raise the level.");
       P.push(d.level_text ? esc(d.level_text) : "");
       return P.filter(Boolean).map(p => `<p style="margin:4px 0">${p}</p>`).join("");
     }
     async function getDetail(id) { return st.det[id] || (st.det[id] = await call("detail", id)); }
     async function show(id) {
       st.sel = id; rows();
-      const D = $("#tp-det"); D.innerHTML = `<div class="card mut">Calcolo...</div>`;
+      const D = $("#tp-det"); D.innerHTML = `<div class="card mut">Computing...</div>`;
       let d; try { d = await getDetail(id); } catch (e) { D.innerHTML = `<div class="card err">${esc(e.message || e)}</div>`; return; }
       const par = st.summary.rows.find(r => r.label === "progenitore"), drt = par && par.ref_rt && d.ref_rt ? (d.ref_rt - par.ref_rt) : null;
       const kin = d.rows.filter(r => r.type === "sample" && r.time != null).sort((a, b) => a.time - b.time);
-      D.innerHTML = `<div class="card words"><h3>In parole</h3>${words(d, par)}</div><div class="card"><h3>${esc(d.name)} ${d.level ? `<span class="lv lv${d.level}">${d.level}</span>` : ""}</h3>
+      D.innerHTML = `<div class="card words"><h3>In words</h3>${words(d, par)}</div><div class="card"><h3>${esc(d.name)} ${d.level ? `<span class="lv lv${d.level}">${d.level}</span>` : ""}</h3>
         <div class="kv"><b>Formula</b><span>${esc(d.formula || "-")} ${d.delta ? `<span class="mut">(${esc(d.delta)})</span>` : ""}</span>
-        <b><i>m/z</i></b><span>${d.mz} calcolato · ${d.mz_extracted} estratto${d.mz_observed ? ` · ${d.mz_observed.toFixed(2)} osservato` : ""}</span>
-        <b>RT</b><span>${d.ref_rt ? d.ref_rt.toFixed(2) + " min" : "-"}${drt != null ? ` (${drt >= 0 ? "+" : ""}${drt.toFixed(2)} rispetto al progenitore; i TP più polari escono prima)` : ""}</span>
-        ${d.level_text ? `<b>Confidenza</b><span>${esc(d.level_text)}</span>` : ""}${d.alternatives.length ? `<b>Stessa massa</b><span>${d.alternatives.map(esc).join("; ")}</span>` : ""}</div></div>
-        <div class="cols"><div class="card"><h3>Criteri</h3><ul class="crit" style="margin:0;padding-left:18px">${d.criteria.map(c => `<li class="${c.status}"><b>${c.status === "pass" ? "✓" : c.status === "fail" ? "✗" : "–"} ${esc(c.name)}</b> <span class="mut">${esc(c.text)}</span></li>`).join("") || "<li class='mut'>progenitore</li>"}</ul></div>
-        <div class="card"><h3>Cinetica (area del picco)</h3><canvas id="tp-c-kin"></canvas></div></div>
-        <div class="card"><h3>XIC di tutti i campioni <span class="mut">(finestra ±${st.summary.settings.tol_da} Da attorno a ${d.mz_extracted})</span></h3><canvas id="tp-c-xic" style="height:260px"></canvas><div class="row" id="tp-leg"></div></div>
-        <div class="cols"><div class="card"><h3>Aree</h3><table><tr><th>Campione</th><th>t</th><th>Area</th><th>Altezza</th><th>S/N</th><th>RT</th></tr>${d.rows.map(r => `<tr><td>${esc(r.label)}</td><td class="n">${r.time ?? ""}</td><td class="n">${r.detected ? fmtA(r.area) : "<span class='mut'>-</span>"}</td><td class="n">${r.detected ? fmtA(r.height) : ""}</td><td class="n">${r.snr ? r.snr.toFixed(1) : ""}</td><td class="n">${r.apex_rt != null && r.detected ? r.apex_rt.toFixed(2) : ""}</td></tr>`).join("")}</table></div>
-        <div class="card"><h3>Ioni prodotto (MS2)</h3>${d.ms2.scans ? `<div class="mut">${d.ms2.scans} scansioni, precursore ${d.ms2.precursor}, CE ${d.ms2.collision_energy ?? "?"}</div><table><tr><th><i>m/z</i></th><th>%</th><th>perdita</th><th>nota</th></tr>${d.ms2.fragments.map(f => `<tr><td class="n">${f.mz}</td><td class="n">${f.rel}</td><td class="n">${f.loss ?? ""}</td><td>${esc(f.note || "")}</td></tr>`).join("")}</table>` : `<div class="mut">Nessuna scansione MS2 con questo precursore dentro il picco.</div>`}
-        ${d.transitions.length ? `<h3 style="margin-top:8px">Transizioni MRM suggerite</h3><table><tr><th>Q1</th><th>Q3</th><th>CE</th><th>RT</th></tr>${d.transitions.map(t => `<tr><td class="n">${t.Q1}</td><td class="n">${t.Q3_consigliato}</td><td class="n">${t.CE}</td><td class="n">${t.RT_attesa_min}</td></tr>`).join("")}</table>` : ""}</div></div>`;
+        <b><i>m/z</i></b><span>${d.mz} calculated · ${d.mz_extracted} extracted${d.mz_observed ? ` · ${d.mz_observed.toFixed(2)} observed` : ""}</span>
+        <b>RT</b><span>${d.ref_rt ? d.ref_rt.toFixed(2) + " min" : "-"}${drt != null ? ` (${drt >= 0 ? "+" : ""}${drt.toFixed(2)} relative to the parent; more polar TPs elute earlier)` : ""}</span>
+        ${d.level_text ? `<b>Confidence</b><span>${esc(d.level_text)}</span>` : ""}${d.alternatives.length ? `<b>Same mass</b><span>${d.alternatives.map(esc).join("; ")}</span>` : ""}</div></div>
+        <div class="cols"><div class="card"><h3>Criteria</h3><ul class="crit" style="margin:0;padding-left:18px">${d.criteria.map(c => `<li class="${c.status}"><b>${c.status === "pass" ? "✓" : c.status === "fail" ? "✗" : "–"} ${esc(c.name)}</b> <span class="mut">${esc(c.text)}</span></li>`).join("") || "<li class='mut'>parent</li>"}</ul></div>
+        <div class="card"><h3>Kinetics (peak area)</h3><canvas id="tp-c-kin"></canvas></div></div>
+        <div class="card"><h3>XIC of all samples <span class="mut">(window ±${st.summary.settings.tol_da} Da around ${d.mz_extracted})</span></h3><canvas id="tp-c-xic" style="height:260px"></canvas><div class="row" id="tp-leg"></div></div>
+        <div class="cols"><div class="card"><h3>Areas</h3><table><tr><th>Sample</th><th>t</th><th>Area</th><th>Height</th><th>S/N</th><th>RT</th></tr>${d.rows.map(r => `<tr><td>${esc(r.label)}</td><td class="n">${r.time ?? ""}</td><td class="n">${r.detected ? fmtA(r.area) : "<span class='mut'>-</span>"}</td><td class="n">${r.detected ? fmtA(r.height) : ""}</td><td class="n">${r.snr ? r.snr.toFixed(1) : ""}</td><td class="n">${r.apex_rt != null && r.detected ? r.apex_rt.toFixed(2) : ""}</td></tr>`).join("")}</table></div>
+        <div class="card"><h3>Product ions (MS2)</h3>${d.ms2.scans ? `<div class="mut">${d.ms2.scans} scans, precursor ${d.ms2.precursor}, CE ${d.ms2.collision_energy ?? "?"}</div><table><tr><th><i>m/z</i></th><th>%</th><th>loss</th><th>note</th></tr>${d.ms2.fragments.map(f => `<tr><td class="n">${f.mz}</td><td class="n">${f.rel}</td><td class="n">${f.loss ?? ""}</td><td>${esc(f.note || "")}</td></tr>`).join("")}</table>` : `<div class="mut">No MS2 scan with this precursor inside the peak.</div>`}
+        ${d.transitions.length ? `<h3 style="margin-top:8px">Suggested MRM transitions</h3><table><tr><th>Q1</th><th>Q3</th><th>CE</th><th>RT</th></tr>${d.transitions.map(t => `<tr><td class="n">${t.Q1}</td><td class="n">${t.Q3_consigliato}</td><td class="n">${t.CE}</td><td class="n">${t.RT_attesa_min}</td></tr>`).join("")}</table>` : ""}</div></div>`;
       D.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      chart($("#tp-c-kin"), [{ x: kin.map(r => r.time), y: kin.map(r => r.detected ? r.area : 0), color: "#2b5c8a", dots: true }], { xlabel: "tempo (min)" });
+      chart($("#tp-c-kin"), [{ x: kin.map(r => r.time), y: kin.map(r => r.detected ? r.area : 0), color: "#2b5c8a", dots: true }], { xlabel: "time (min)" });
       const n = d.traces.length;
       const tr = d.traces.map((t, i) => ({ x: t.rt, y: t.y, color: t.type === "blank" ? "#888" : hue(i, n), dash: t.type === "blank" ? [4, 3] : [], w: 1.3, label: t.label }));
       const pk = d.traces.map(t => t.peak).filter(Boolean), c = d.ref_rt || 0;
@@ -460,35 +501,35 @@
 
     // ---- export
     async function exportAll(kind) {
-      const s = st.summary; msg("Preparo l'esportazione...");
+      const s = st.summary; msg("Preparing the export...");
       try {
         const top = s.rows.filter(r => r.label === "forte" || r.label === "possibile");
         const det = []; for (const r of top) det.push(await getDetail(r.id));
-        const times = s.times, name = (st.summary.parent.formula || "progenitore") + "_TPMine";
-        const head = ["#", "Candidato", "Formula", "Variazione", "m/z", "RT (min)", "Livello", "Punteggio", "Giudizio", "t max (min)", "Area max", ...times.map(t => "Area t" + t)];
+        const times = s.times, name = (st.summary.parent.formula || "parent") + "_mzFinder";
+        const head = ["#", "Candidate", "Formula", "Change", "m/z", "RT (min)", "Level", "Score", "Verdict", "t max (min)", "Max area", ...times.map(t => "Area t" + t)];
         const line = r => [r.id, r.name, r.formula, r.delta, r.mz, r.ref_rt, r.level ?? "", r.score ?? "", r.label, r.tmax ?? "", Math.round(r.max_area), ...times.map(t => { const k = r.kinetics.find(p => p.time === t); return k ? Math.round(k.area) : ""; })];
         const trans = det.flatMap(d => d.transitions);
-        if (kind === "json") return dl(name + ".json", JSON.stringify({ riepilogo: s, dettagli: det }, null, 1), "application/json");
+        if (kind === "json") return dl(name + ".json", JSON.stringify({ summary: s, details: det }, null, 1), "application/json");
         if (kind === "csv") return dl(name + ".csv", "sep=;\n" + [head, ...s.rows.map(line)].map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
-        const sheets = [{ name: "Classifica", head, rows: s.rows.map(line), widths: [6, 38, 16, 14, 10, 9, 8, 9, 11, 10, 12, ...times.map(() => 11)] },
-          { name: "Criteri", head: ["#", "Candidato", "Criterio", "Esito", "Dettaglio"], rows: det.flatMap(d => d.criteria.map(c => [d.id, d.name, c.name, c.status, c.text])), widths: [6, 38, 28, 8, 70] },
-          { name: "MS2", head: ["#", "Candidato", "m/z prodotto", "% rel.", "Perdita", "Nota"], rows: det.flatMap(d => d.ms2.fragments.map(f => [d.id, d.name, f.mz, f.rel, f.loss ?? "", f.note || ""])), widths: [6, 38, 12, 9, 9, 50] },
-          { name: "Transizioni MRM", head: ["Candidato", "Formula", "Q1", "Q3 osservato", "Q3 consigliato", "CE", "RT attesa", "Finestra RT", "% rel.", "Scansioni MS2", "Nota"], rows: trans.map(t => [t.compound, t.formula, t.Q1, t.Q3_osservato, t.Q3_consigliato, t.CE, t.RT_attesa_min, t.finestra_RT_min, t["intensita_rel_%"], t.scansioni_ms2, t.nota]), widths: [34, 16, 8, 12, 14, 7, 10, 11, 8, 12, 40] },
+        const sheets = [{ name: "Ranking", head, rows: s.rows.map(line), widths: [6, 38, 16, 14, 10, 9, 8, 9, 11, 10, 12, ...times.map(() => 11)] },
+          { name: "Criteria", head: ["#", "Candidate", "Criterion", "Outcome", "Detail"], rows: det.flatMap(d => d.criteria.map(c => [d.id, d.name, c.name, c.status, c.text])), widths: [6, 38, 28, 8, 70] },
+          { name: "MS2", head: ["#", "Candidate", "Product m/z", "% rel.", "Loss", "Note"], rows: det.flatMap(d => d.ms2.fragments.map(f => [d.id, d.name, f.mz, f.rel, f.loss ?? "", f.note || ""])), widths: [6, 38, 12, 9, 9, 50] },
+          { name: "MRM transitions", head: ["Candidate", "Formula", "Q1", "Q3 observed", "Q3 suggested", "CE", "Expected RT", "RT window", "% rel.", "MS2 scans", "Note"], rows: trans.map(t => [t.compound, t.formula, t.Q1, t.Q3_osservato, t.Q3_consigliato, t.CE, t.RT_attesa_min, t.finestra_RT_min, t["intensita_rel_%"], t.scansioni_ms2, t.nota]), widths: [34, 16, 8, 12, 14, 7, 10, 11, 8, 12, 40] },
           ...(s.mrm ? [mrmSheet(s.mrm)] : []),
-          { name: "Informazioni", head: ["Voce", "Valore"], rows: [["Progenitore", s.parent.formula], ["Massa neutra", s.parent.neutral], ["Addotto", s.parent.adduct], ["m/z progenitore", s.parent.mz], ["Offset m/z (Da)", s.offset ? s.offset.offset : ""], ["k (1/min)", s.decay ? s.decay.k_per_min : ""], ["t1/2 (min)", s.decay ? s.decay.half_life_min : ""], ...Object.entries(s.settings).map(([k, v]) => [k, String(v)]), ...s.files.map(f => ["File", `${f.name} (${f.kind}, ${f.type}, t=${f.time ?? ""})`]), ["Nota", "Risoluzione unitaria: ogni riga è un candidato, non un'identificazione. I livelli 2 e 1 richiedono spettro di libreria o standard."]], widths: [22, 90] }];
+          { name: "Information", head: ["Item", "Value"], rows: [["Parent", s.parent.formula], ["Neutral mass", s.parent.neutral], ["Adduct", s.parent.adduct], ["Parent m/z", s.parent.mz], ["m/z offset (Da)", s.offset ? s.offset.offset : ""], ["k (1/min)", s.decay ? s.decay.k_per_min : ""], ["t1/2 (min)", s.decay ? s.decay.half_life_min : ""], ...Object.entries(s.settings).map(([k, v]) => [k, String(v)]), ...s.files.map(f => ["File", `${f.name} (${f.kind}, ${f.type}, t=${f.time ?? ""})`]), ["Note", "Unit resolution: each row is a candidate, not an identification. Levels 2 and 1 require a library spectrum or a standard."]], widths: [22, 90] }];
         dlx(name + ".xlsx", sheets);
       } catch (e) { msg(String(e.message || e), true); return; }
       msg("");
     }
     function mrmSheet(m) {
       const q = m.quantifier, qual = m.transitions.slice(1).map(t => t.name);
-      return { name: "MRM", head: ["File", "Tipo", "t (min)", "Conc. nominale (mg/L)", "Area " + q, "RT", "S/N", ...qual.flatMap(n => ["Area " + n, "Qual/Quant " + n]), "Rapporto ionico", "Conc. calcolata (mg/L)", "Nota"],
-        rows: m.rows.map(r => [r.file, r.type, r.time ?? "", r.conc ?? "", Math.round(r.ion[q].area), r.ion[q].rt ?? "", Math.round(r.ion[q].snr), ...qual.flatMap(n => [Math.round(r.ion[n].area), r.ratios[n] ?? ""]), r.ratio_ok == null ? "" : r.ratio_ok ? "ok" : "fuori", r.quant ?? "", r.in_range === false ? "fuori dall'intervallo di taratura" : ""]),
+      return { name: "MRM", head: ["File", "Type", "t (min)", "Nominal conc. (mg/L)", "Area " + q, "RT", "S/N", ...qual.flatMap(n => ["Area " + n, "Qual/Quant " + n]), "Ion ratio", "Calculated conc. (mg/L)", "Note"],
+        rows: m.rows.map(r => [r.file, r.type, r.time ?? "", r.conc ?? "", Math.round(r.ion[q].area), r.ion[q].rt ?? "", Math.round(r.ion[q].snr), ...qual.flatMap(n => [Math.round(r.ion[n].area), r.ratios[n] ?? ""]), r.ratio_ok == null ? "" : r.ratio_ok ? "ok" : "out", r.quant ?? "", r.in_range === false ? "outside the calibration range" : ""]),
         widths: [34, 10, 8, 14, 12, 8, 8, ...qual.flatMap(() => [12, 12]), 12, 16, 34] };
     }
     const dl = (n, text, type) => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = n; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
   }
 
-  QTOOLS.register({ id: "tpmine", nav: true, name: "mzFinder", desc: "Ricerca automatica dei prodotti di trasformazione (solo per il docente)", open,
+  QTOOLS.register({ id: "tpmine", nav: true, name: "mzFinder", desc: "Automatic search for transformation products", open,
     icon: (typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 16) : "⛏" });
 })();

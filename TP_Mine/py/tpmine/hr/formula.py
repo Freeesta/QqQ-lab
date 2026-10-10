@@ -22,7 +22,7 @@ def element_order(*formulas: dict) -> list[str]:
         present |= set(f)
     for el in present:
         if el not in VALENCE or el not in E.MASS:
-            raise ValueError(f"elemento non supportato nella modalità alta risoluzione: {el}")
+            raise ValueError(f"element not supported in high-resolution mode: {el}")
     return [e for e in ("C", "H", "N", "O", "S", "P", "F", "Cl", "Br", "I") if e in present]
 
 

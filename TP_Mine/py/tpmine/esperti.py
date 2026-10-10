@@ -168,22 +168,22 @@ def relation(m: dict, n: dict, hr: bool, ppm: float, losses: list[tuple[str, flo
     if abs(dm - iso) <= tol and n.get("ia"):
         ratio, exp = (m.get("ia") or 0) / n["ia"], _expected_m1(n["mz"])
         if 0.2 * exp <= ratio <= 4 * exp:
-            return {"role": "isotopo", "of": n, "proof": f"Δ m/z {dm:+.4f}" + (f" ({ppm_of(dm - iso)})" if hr else "") + f"; M+1/M osservato {ratio:.2f}, atteso ≈ {exp:.2f}"}
+            return {"role": "isotopo", "of": n, "proof": f"Δ m/z {dm:+.4f}" + (f" ({ppm_of(dm - iso)})" if hr else "") + f"; M+1/M observed {ratio:.2f}, expected ≈ {exp:.2f}"}
     # adducts and dimer
     for name, d in ADDUCTS.items():
         if abs(dm - d) <= tol:
             return {"role": "addotto", "of": n, "proof": f"Δ m/z {dm:+.4f} = {name} ({d:.4f})" + (f", {ppm_of(dm - d)}" if hr else "")}
     dimer = 2 * n["mz"] - PROTON
     if abs(m["mz"] - dimer) <= tol * 2:
-        return {"role": "addotto", "of": n, "proof": f"m/z {m['mz']:.4f} = [2M+H]+ di {n['mz']:.4f} (atteso {dimer:.4f})"}
+        return {"role": "addotto", "of": n, "proof": f"m/z {m['mz']:.4f} = [2M+H]+ of {n['mz']:.4f} (expected {dimer:.4f})"}
     # in-source fragment: n - m is a neutral loss of the table (co-elution is already required by the group)
     if dm < 0:
         for f, mass in losses:
             if abs(-dm - mass) <= tol:
                 if rsd_ok is not None and not rsd_ok[0]:
                     continue
-                extra = f"; rapporto delle aree costante (RSD {rsd_ok[1] * 100:.0f} %)" if rsd_ok and rsd_ok[1] is not None else ""
-                return {"role": "frammento", "of": n, "loss": f, "proof": f"perdita di {f} ({mass:.4f}): Δ m/z {dm:+.4f}" + (f", {ppm_of(dm + mass)}" if hr else "") + extra}
+                extra = f"; constant area ratio (RSD {rsd_ok[1] * 100:.0f} %)" if rsd_ok and rsd_ok[1] is not None else ""
+                return {"role": "frammento", "of": n, "loss": f, "proof": f"loss of {f} ({mass:.4f}): Δ m/z {dm:+.4f}" + (f", {ppm_of(dm + mass)}" if hr else "") + extra}
     return None
 
 
@@ -198,15 +198,15 @@ def area_ratio_rsd(sa: list[float], sb: list[float]) -> float | None:
 
 
 def assign_roles(group: list[dict], hr: bool, ppm: float, losses: list[tuple[str, float]], th: dict | None = None) -> None:
-    """Writes role / of / proof on every member of ONE group (modifies the dicts). Roles: ione principale | isotopo di n | addotto di n |
-    frammento in sorgente di n | isolato (a group of one). Members are tried against the others from the most intense to the least."""
+    """Writes role / of / proof on every member of ONE group (modifies the dicts). Roles: main ion | isotope of n | adduct of n |
+    in-source fragment of n | isolated (a group of one). Members are tried against the others from the most intense to the least."""
     th = soglie(th)
     if len(group) == 1:
-        group[0].update(role="isolato", of=None, proof="")
+        group[0].update(role="isolated", of=None, proof="")
         return
     order = sorted(group, key=lambda p: -(p.get("ia") or 0))
     top = order[0]
-    top.update(role="ione principale", of=None, proof="")
+    top.update(role="main ion", of=None, proof="")
     for m in order[1:]:
         found = None
         for n in order:
@@ -220,10 +220,10 @@ def assign_roles(group: list[dict], hr: bool, ppm: float, losses: list[tuple[str
             if found:
                 break
         if found:
-            lab = {"isotopo": "isotopo di", "addotto": "addotto di", "frammento": "possibile frammento in sorgente di"}[found["role"]]
+            lab = {"isotopo": "isotope of", "addotto": "adduct of", "frammento": "possible in-source fragment of"}[found["role"]]
             m.update(role=f"{lab} {found['of']['n']}", of=found["of"]["n"], proof=found["proof"], loss=found.get("loss"))
         else:
-            m.update(role="ione principale", of=None, proof="co-eluisce ma nessuna relazione trovata")
+            m.update(role="main ion", of=None, proof="co-elutes but no relation found")
 
 
 def subformula_proof(parent_forms: list[str], frag_forms: list[str], loss: str) -> str:
@@ -253,22 +253,22 @@ def subformula_proof(parent_forms: list[str], frag_forms: list[str], loss: str) 
 
 # ---------------------------------------------------------------------------------------------------------------- 4. time course
 def trend_shape(times: list[float], areas: list[float]) -> str:
-    """«cresce» | «cresce e poi cala» | «cala» | «costante» from the areas over the time of the experiment (steps of 20 % of the maximum)."""
+    """«rises» | «rises then falls» | «falls» | «constant» from the areas over the time of the experiment (steps of 20 % of the maximum)."""
     pairs = sorted((t, a) for t, a in zip(times, areas) if t is not None and a is not None)
     if len(pairs) < 3:
         return ""
     a = np.array([p[1] for p in pairs], float)
     mx = a.max()
     if mx <= 0 or (mx - a.min()) / mx < 0.2:
-        return "costante"
+        return "constant"
     a = a / mx
     i = int(a.argmax())
     rise, fall = a[i] - a[0], a[i] - a[-1]
     if i == 0 or (rise < 0.2 and fall >= 0.2):
-        return "cala"
+        return "falls"
     if i == len(a) - 1 or (fall < 0.2 and rise >= 0.2):
-        return "cresce"
-    return "cresce e poi cala" if rise >= 0.2 and fall >= 0.2 else "costante"
+        return "rises"
+    return "rises then falls" if rise >= 0.2 and fall >= 0.2 else "constant"
 
 
 def window_area(rt, y, centre: float, half: float = 0.15) -> float:
@@ -281,8 +281,8 @@ def window_area(rt, y, centre: float, half: float = 0.15) -> float:
     return float(np.trapz(yy, rt[w])) if hasattr(np, "trapz") else float(np.trapezoid(yy, rt[w]))
 
 
-_W_ROLE = {"ione principale": 1.0, "isolato": 0.6}
-_W_TREND = {"cresce e poi cala": 1.0, "cresce": 0.9, "cala": 0.5, "costante": 0.1, "": 0.5}
+_W_ROLE = {"main ion": 1.0, "isolated": 0.6}
+_W_TREND = {"rises then falls": 1.0, "rises": 0.9, "falls": 0.5, "constant": 0.1, "": 0.5}
 
 
 def priority(row: dict) -> float:

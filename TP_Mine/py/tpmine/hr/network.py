@@ -25,17 +25,17 @@ COVERAGE_FLOOR = 0.4                  # ... and one present in a single sample w
 LEVELS = {5: "5", 4: "4", 3: "3", "2b": "2b"}
 LEVEL_ORDER = {"2b": 0, 3: 1, 4: 2, 5: 3, None: 4}
 LEVEL_TEXT = {
-    5: "Livello 5: massa di interesse. Compare con il trattamento e supera i filtri; nient'altro.",
-    4: "Livello 4: formula unica entro 3 ppm, derivabile dal progenitore, isotopi coerenti.",
-    3: "Livello 3: candidato tentativo. In più, la MS2 è legata a quella del progenitore e la modifica è localizzata a livello di gruppo.",
-    "2b": "Livello 2b: ipotesi probabile. In più, sito determinato con margine, RT e cinetica coerenti con la modifica. Senza standard né spettro di libreria non si va oltre.",
+    5: "Level 5: mass of interest. Appears with the treatment and passes the filters; nothing more.",
+    4: "Level 4: unique formula within 3 ppm, derivable from the parent, consistent isotopes.",
+    3: "Level 3: tentative candidate. In addition, the MS2 is linked to that of the parent and the modification is localised at group level.",
+    "2b": "Level 2b: probable hypothesis. In addition, site determined with margin, RT and kinetics consistent with the modification. Without a standard or a library spectrum it goes no further.",
 }
 CANDIDATE_KEYS = ("id", "mz", "rt", "formula", "n_formulas", "ppm", "area_max", "kinetics", "ms2", "localization", "iimn", "isotopes", "derivation")
 
 # neutral changes besides the user's transformation list (names in Italian): ordered (name, delta as signed formula text)
-HR_TRANSFORMATIONS = [("idrossilazione", "+O"), ("deidrogenazione", "-H2"), ("ossidazione a carbonile", "+O-H2"), ("perdita di C4H8", "-C4H8"),
-                      ("perdita di C2H2", "-C2H2"), ("perdita di CO", "-CO"), ("idratazione", "+H2O"),
-                      ("disidratazione", "-H2O"), ("demetilazione", "-CH2"), ("diidrossilazione", "+O2"), ("trisidrossilazione", "+O3")]
+HR_TRANSFORMATIONS = [("hydroxylation", "+O"), ("dehydrogenation", "-H2"), ("oxidation to carbonyl", "+O-H2"), ("loss of C4H8", "-C4H8"),
+                      ("loss of C2H2", "-C2H2"), ("loss of CO", "-CO"), ("hydration", "+H2O"),
+                      ("dehydration", "-H2O"), ("demethylation", "-CH2"), ("dihydroxylation", "+O2"), ("trihydroxylation", "+O3")]
 NATURAL = {"C13": 0.0107, "N15": 0.00364, "S33": 0.0075, "H2": 0.000115, "O17": 0.00038}
 
 
@@ -90,8 +90,8 @@ def derivation_name(tp_vec: np.ndarray, parent_vec: np.ndarray, els: list[str], 
     if not (np.all(tp_vec[rest] <= parent_vec[rest]) and np.any(tp_vec[rest] < parent_vec[rest]) and tp_vec[iH] <= parent_vec[iH] + h_slack):
         return None
     if tp_vec[iO] <= parent_vec[iO]:
-        return "scissione (sottostruttura del progenitore)"
-    return f"scissione e ossidazione (+{int(tp_vec[iO] - parent_vec[iO])} O rispetto al progenitore)" if tp_vec[iO] - parent_vec[iO] <= 3 else None
+        return "cleavage (substructure of the parent)"
+    return f"cleavage and oxidation (+{int(tp_vec[iO] - parent_vec[iO])} O relative to the parent)" if tp_vec[iO] - parent_vec[iO] <= 3 else None
 
 
 # ---------------------------------------------------------------------------------------------------------------------- isotopes
@@ -136,7 +136,7 @@ def isotopes_coherent(observed: dict, expected: dict, tol_rel: float = 0.5) -> t
     detected cannot contradict: n/a."""
     m1o, m1e = observed.get("m1"), expected["m1"]
     if m1o is None:
-        return "n/a", "M+1 non rilevato (troppo debole)"
+        return "n/a", "M+1 not detected (too weak)"
     ok1 = abs(m1o - m1e) <= tol_rel * m1e
     txt = f"(M+1)/M = {m1o:.3f}, atteso {m1e:.3f}"
     if expected["has_s"] and observed.get("m2") is not None:
@@ -153,20 +153,20 @@ def kinetic_coherence(kin: dict | None) -> tuple[float, str]:
     seen in two or three samples only is a weak case, in the measured series a third of the candidates are like that and one real product of 17);
     0.5 when it cannot be decided (fewer than four treated samples); 0 when it is present before the treatment or noisy."""
     if not kin or not kin.get("ok"):
-        return 0.5, "profilo non valutabile"
+        return 0.5, "profile not assessable"
     n = len(kin.get("times", []))
     if n < 4:
-        return 0.5, "meno di quattro campioni: non decidibile"
+        return 0.5, "fewer than four samples: undecidable"
     if not kin.get("absent_in_reference", True):
-        return 0.0, "presente nel buio/t0"
-    if kin.get("unimodal") or kin.get("class") and "persistente" in kin["class"]:
+        return 0.0, "present in dark/t0"
+    if kin.get("unimodal") or kin.get("class") and "persistent" in kin["class"]:
         text = f"{kin.get('class_text', '')}: sale e poi scende o si accumula"
         if kin.get("profile") is None:
             return 1.0, text
         t, y = np.asarray(kin["times"], float), np.asarray(kin["profile"], float)
         n_tr, n_in = int((t > 0).sum()), int(((t > 0) & (y > 0)).sum())
         cov = min(1.0, n_in / max(4.0, COVERAGE_FRACTION * n_tr))
-        return COVERAGE_FLOOR + (1 - COVERAGE_FLOOR) * cov, f"{text}; presente in {n_in} campioni trattati su {n_tr}"
+        return COVERAGE_FLOOR + (1 - COVERAGE_FLOOR) * cov, f"{text}; present in {n_in} of {n_tr} treated samples"
     return 0.0, "profilo irregolare"
 
 
@@ -186,10 +186,10 @@ def components(c: dict, log_area_norm: float) -> dict:
     uniq = c.get("formula") is not None and c.get("n_formulas", 0) == 1
     s_form = 1.0 if (uniq and c.get("derivation")) else 0.5 if uniq else 0.0
     return {"ms2": s_ms2, "loc": s_loc, "kin": s_kin, "form": s_form, "int": float(np.clip(log_area_norm, 0, 1)),
-            "text": {"ms2": (f"coseno modificato {cos:.2f} con il progenitore ({n_ms2} picchi)" if cos is not None and n_ms2 >= MIN_MATCHED else "nessuna MS2 legata al progenitore"),
-                     "loc": (f"regione di {len(loc['region_atoms'])} atomi su {n_atoms}, margine {loc['margin']:.2f}" if s_loc else "regione non determinata"),
+            "text": {"ms2": (f"modified cosine {cos:.2f} with the parent ({n_ms2} peaks)" if cos is not None and n_ms2 >= MIN_MATCHED else "no MS2 linked to the parent"),
+                     "loc": (f"region of {len(loc['region_atoms'])} atoms out of {n_atoms}, margin {loc['margin']:.2f}" if s_loc else "region not determined"),
                      "kin": kin_text,
-                     "form": ("formula unica e derivabile" if s_form == 1 else "formula unica, non derivabile" if s_form else "formula non univoca"),
+                     "form": ("unique and derivable formula" if s_form == 1 else "unique formula, not derivable" if s_form else "non-unique formula"),
                      "int": "area massima normalizzata sui candidati"}}
 
 
@@ -214,41 +214,41 @@ def confidence(c: dict, parent_rt: float | None = None, groups_of_region: int | 
     MS2 related to the parent's (modified cosine >= 0.6 or >= 4 pieces of evidence) and a region localised to the level of a group. 2b: also a site
     determined with a margin (region within two groups, >= 60 % of the MS2 intensity explained), a retention time coherent with the modification
     (more polar elutes earlier) and a kinetics coherent with the predecessor. Never 2a or 1."""
-    crit = [_crit("compare con il trattamento", "pass", "supera i filtri (fold, isotopologhi, formula possibile, profilo)")]
+    crit = [_crit("appears with the treatment", "pass", "passes the filters (fold, isotopologues, feasible formula, profile)")]
     f_ok = c.get("formula") is not None and c.get("n_formulas", 0) == 1
-    crit.append(_crit("formula unica entro 3 ppm", "pass" if f_ok else "fail", (f"{c['formula']} ({c.get('ppm', 0):+.1f} ppm)" if c.get("formula") else "nessuna formula") + ("" if f_ok or not c.get("n_formulas") else f"; {c['n_formulas']} formule possibili")))
+    crit.append(_crit("unique formula within 3 ppm", "pass" if f_ok else "fail", (f"{c['formula']} ({c.get('ppm', 0):+.1f} ppm)" if c.get("formula") else "no formula") + ("" if f_ok or not c.get("n_formulas") else f"; {c['n_formulas']} possible formulas")))
     iso = c.get("isotopes") or {}
-    crit.append(_crit("isotopi coerenti", iso.get("status", "n/a"), iso.get("text", "non valutati")))
+    crit.append(_crit("consistent isotopes", iso.get("status", "n/a"), iso.get("text", "not assessed")))
     der = c.get("derivation")
-    crit.append(_crit("derivabile dal progenitore", "pass" if der else "fail", der or "nessuna trasformazione nota né sottostruttura"))
+    crit.append(_crit("derivable from the parent", "pass" if der else "fail", der or "no known transformation or substructure"))
     ms2 = c.get("ms2") or {}
     loc = c.get("localization") or {}
     n_ev = len(loc.get("evidence", [])) if loc else 0
     related = (ms2.get("modcos") is not None and ms2.get("n_matched", 0) >= MIN_MATCHED and ms2["modcos"] >= COS_RELATED) or n_ev >= 4
     if ms2.get("n_scans"):
-        crit.append(_crit("MS2 legata al progenitore", "pass" if related else "fail",
-                          f"coseno modificato {ms2['modcos']:.2f} ({ms2.get('n_matched', 0)} picchi)" + (f"; {n_ev} frammenti spostati/non spostati" if n_ev else "") if ms2.get("modcos") is not None else f"{n_ev} frammenti spostati/non spostati"))
+        crit.append(_crit("MS2 linked to the parent", "pass" if related else "fail",
+                          f"modified cosine {ms2['modcos']:.2f} ({ms2.get('n_matched', 0)} peaks)" + (f"; {n_ev} shifted/unshifted fragments" if n_ev else "") if ms2.get("modcos") is not None else f"{n_ev} shifted/unshifted fragments"))
     else:
-        crit.append(_crit("MS2 legata al progenitore", "n/a", "nessuna MS2 DDA per questo ione"))
+        crit.append(_crit("MS2 linked to the parent", "n/a", "no DDA MS2 for this ion"))
     has_loc = bool(loc.get("ok"))
     n_groups = groups_of_region
-    crit.append(_crit("regione localizzata (gruppo)", "pass" if has_loc else ("fail" if ms2.get("n_scans") else "n/a"), loc.get("region", "non localizzata") if has_loc else loc.get("note", "serve la MS2")))
+    crit.append(_crit("localised region (group)", "pass" if has_loc else ("fail" if ms2.get("n_scans") else "n/a"), loc.get("region", "not localised") if has_loc else loc.get("note", "MS2 required")))
     determined = has_loc and loc.get("margin", 0.0) >= LOC_MARGIN and (n_groups is None or n_groups <= 2) and loc.get("fraction_explained", 0.0) >= 0.6
-    crit.append(_crit("sito determinato con margine", "pass" if determined else ("fail" if has_loc else "n/a"),
-                      (f"regione {loc['region']}, margine {loc['margin']:.2f}, {100 * loc['fraction_explained']:.0f}% dell'intensità spiegata" if has_loc else "nessuna localizzazione")))
+    crit.append(_crit("site determined with margin", "pass" if determined else ("fail" if has_loc else "n/a"),
+                      (f"region {loc['region']}, margin {loc['margin']:.2f}, {100 * loc['fraction_explained']:.0f}% of the intensity explained" if has_loc else "no localisation")))
     rt_ok = _rt_coherent(c, parent_rt)
-    crit.append(_crit("RT coerente con la modifica", rt_ok[0], rt_ok[1]))
+    crit.append(_crit("RT consistent with the modification", rt_ok[0], rt_ok[1]))
     kin = c.get("kinetics")
     pk = c.get("predecessor_kinetics")
     k_ok = "n/a" if pk is None or not kin or not kin.get("ok") else ("pass" if pk <= kin["tmax"] + c.get("time_step", 5.0) else "fail")
-    crit.append(_crit("cinetica coerente con il predecessore", k_ok, "nessun predecessore con cinetica" if k_ok == "n/a" else f"predecessore: massimo a {pk:g} min, questo a {kin['tmax']:g} min"))
+    crit.append(_crit("kinetics consistent with the predecessor", k_ok, "no predecessor with kinetics" if k_ok == "n/a" else f"predecessor: maximum at {pk:g} min, this one at {kin['tmax']:g} min"))
     st = {x["name"]: x["status"] for x in crit}
     level = 5
-    if st["formula unica entro 3 ppm"] == "pass" and st["isotopi coerenti"] != "fail" and st["derivabile dal progenitore"] == "pass":
+    if st["unique formula within 3 ppm"] == "pass" and st["consistent isotopes"] != "fail" and st["derivable from the parent"] == "pass":
         level = 4
-        if st["MS2 legata al progenitore"] == "pass" and st["regione localizzata (gruppo)"] == "pass":
+        if st["MS2 linked to the parent"] == "pass" and st["localised region (group)"] == "pass":
             level = 3
-            if st["sito determinato con margine"] == "pass" and st["RT coerente con la modifica"] != "fail" and st["cinetica coerente con il predecessore"] != "fail":
+            if st["site determined with margin"] == "pass" and st["RT consistent with the modification"] != "fail" and st["kinetics consistent with the predecessor"] != "fail":
                 level = "2b"
     return {"level": level, "text": LEVEL_TEXT[level], "criteria": crit}
 
@@ -258,11 +258,11 @@ def _rt_coherent(c: dict, parent_rt: float | None) -> tuple[str, str]:
     der = (c.get("derivation") or "")
     rt, prt = c.get("rt"), parent_rt
     if rt is None or prt is None:
-        return "n/a", "RT del progenitore non nota"
-    polar = any(w in der for w in ("idrossil", "ossidazione", "idratazione", "perdita", "demetil"))
+        return "n/a", "RT of the parent unknown"
+    polar = any(w in der for w in ("hydroxyl", "oxidation", "hydration", "loss", "demethyl"))
     if not polar:
-        return "n/a", "nessuna previsione per questa modifica"
-    return ("pass", f"RT {rt:.2f} prima del progenitore ({prt:.2f})") if rt < prt else ("fail", f"RT {rt:.2f} dopo il progenitore ({prt:.2f}), atteso prima")
+        return "n/a", "no prediction for this modification"
+    return ("pass", f"RT {rt:.2f} before the parent ({prt:.2f})") if rt < prt else ("fail", f"RT {rt:.2f} after the parent ({prt:.2f}), expected before")
 
 
 # ---------------------------------------------------------------------------------------------------------------------- network

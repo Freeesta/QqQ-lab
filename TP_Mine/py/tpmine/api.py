@@ -106,13 +106,13 @@ def detail(cid: int) -> str:
 
 def msn_tree() -> str:
     if _hr is None:
-        raise ValueError("nessun esperimento ad alta risoluzione in memoria")
+        raise ValueError("no high-resolution experiment in memory")
     return _out(_hr.msn_tree())
 
 
 def inclusion_csv(n: int = 50) -> str:
     if _hr is None:
-        raise ValueError("nessun esperimento ad alta risoluzione in memoria")
+        raise ValueError("no high-resolution experiment in memory")
     return _hr.inclusion_csv(int(n))
 
 
@@ -126,7 +126,7 @@ def isf_classify(mzs_json: str, formula_p: str = "") -> str:
     plus `sheets` (for the front end's dlx). Not part of the student UI of the public repo: it is the private verdict (probabilities)."""
     from . import isf
     if _ex is None:
-        raise ValueError("nessun esperimento in memoria: esegui prima l'analisi")
+        raise ValueError("no experiment in memory: run the analysis first")
     samples = [{"label": x.label, "time": x.time, "table": _ex._table(x), "key": x.path}
                for x in _ex.full if x.type != "blank"]
     res = isf.classify_ions(samples, float(_ex.entries[0]["mz_x"]), [float(v) for v in json.loads(mzs_json)], formula_p or (chem.fmt(_ex.neutral) if _ex.neutral else None))

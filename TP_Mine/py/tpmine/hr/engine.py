@@ -47,7 +47,7 @@ def classify(run: Run) -> str:
 def ion_formula(neutral: dict, adduct: str = "[M+H]+") -> dict:
     """Ion formula of the neutral parent for the adducts the path knows ([M+H]+: one hydrogen more)."""
     if adduct != "[M+H]+":
-        raise ValueError("l'alta risoluzione usa lo ione [M+H]+")
+        raise ValueError("high resolution uses the [M+H]+ ion")
     return chem.add(neutral, {"H": 1})
 
 
@@ -60,7 +60,7 @@ class ExperimentHR:
         # --- parent
         text = parent.get("smiles") or parent.get("neutral")
         if not text:
-            raise ValueError("serve la formula bruta neutra o lo SMILES del progenitore")
+            raise ValueError("the neutral molecular formula or the SMILES of the parent is required")
         self.smiles = parent.get("smiles") or (parent["neutral"] if not _is_formula(parent["neutral"]) else None)
         self.neutral = chem.neutral_formula(text)
         self.ion = ion_formula(self.neutral, parent.get("adduct") or "[M+H]+")
@@ -103,19 +103,19 @@ class ExperimentHR:
         self.lc = [x for x in self.files if x["kind"] == "hr" and x["type"] in ("sample", "blank", "control")]
         self.msn_file = next((x for x in self.files if x["kind"] == "msn"), None)
         if not self.lc:
-            raise ValueError("servono file LC-HRMS (alta risoluzione): nessuno trovato")
+            raise ValueError("LC-HRMS (high-resolution) files are required: none found")
         self.lc.sort(key=lambda x: (x["time"] is None, x["time"] if x["time"] is not None else 0.0))
         ref = [x for x in self.lc if (x["time"] is not None and x["time"] <= 0) or x["type"] in ("blank", "control")]
         if not ref:
-            self.warnings.append("nessun file di riferimento (buio, t0 o bianco): non si può dire che cosa compare con il trattamento")
+            self.warnings.append("no reference file (dark, t0 or blank): cannot tell what appears with the treatment")
         if not [x for x in self.lc if x["time"] is not None and x["time"] > 0]:
-            raise ValueError("servono campioni trattati (tempo > 0)")
+            raise ValueError("treated samples are required (time > 0)")
 
     def _tree(self):
         if self.msn_file is None:
-            self.warnings.append("nessun file MSn dello standard: niente albero dei frammenti, niente localizzazione")
+            self.warnings.append("no MSn file of the standard: no fragment tree, no localisation")
             return
-        self.progress("Albero MSn del progenitore...", 0.03)
+        self.progress("MSn tree of the parent...", 0.03)
         r = Run(self.msn_file["path"])
         t = time.perf_counter()
         self.tree = msn.build_tree(r, self.ion, self.smiles)
@@ -168,7 +168,7 @@ class ExperimentHR:
         self.al = FT.align(self.feats)
         self.sess_factors = KN.session_factors(self.al.area, self.sessions)
         if self.sess_factors["applied"]:
-            self.warnings.append("le sessioni di misura differiscono: le aree sono state riportate alla sessione di riferimento")
+            self.warnings.append("measurement sessions differ: areas were rescaled to the reference session")
         self.funnel = FL.run_filters(self.al, self.feats, self.times, types, self.ion, fold=self.s["fold"], min_treated=self.s["min_treated"], rt_min=self.s["rt_min"],
                                      min_height=self.s["min_height"], flat_min_present=self.s["flat_min_present"],
                                      isf_masses=self.isf_masses, parent_rt=self.parent_rt_hint)
@@ -333,7 +333,7 @@ class ExperimentHR:
     # ------------------------------------------------------------------ network, scoring, ranking
     def _network(self):
         t0 = time.perf_counter()
-        self.progress("Famiglie IIMN dei migliori candidati...", 0.7)
+        self.progress("IIMN families of the best candidates...", 0.7)
         cands = self.cands
         w = self.s["weights"]
         for k, c in enumerate(cands):
@@ -350,7 +350,7 @@ class ExperimentHR:
             if c.get("hidden"):
                 c["isf_coincident"] = True
         # predecessors among the best candidates
-        self.progress("Rete dei prodotti...", 0.85)
+        self.progress("Product network...", 0.85)
         top = [k for k in sorted(range(len(cands)), key=lambda k: -cands[k]["priority"]["score"])[:300] if cands[k].get("formula")]
         sub = [cands[k] for k in top]
         cos = {}
@@ -407,7 +407,7 @@ class ExperimentHR:
         if (c.get("iimn") or {}).get("role", "ion") != "ion":
             flags.append(c["iimn"]["explained_text"])
         if c.get("isf_coincident"):
-            flags.append("possibile TP coeluente con un ISF")
+            flags.append("possible TP co-eluting with an ISF")
         return {"id": c["id"], "mz": round(c["mz"], 4), "rt": round(c["rt"], 2), "formula": c.get("formula"), "ppm": None if c.get("ppm") is None else round(c["ppm"], 1),
                 "n_formulas": c.get("n_formulas"), "delta": c.get("delta"), "derivation": c.get("derivation"), "area_max": c["area_max"],
                 "tmax": kin.get("tmax"), "class": kin.get("class_text"), "onset": kin.get("onset"),
@@ -448,7 +448,7 @@ class ExperimentHR:
     def detail(self, cid: int) -> dict:
         c = next((x for x in self.cands if x["id"] == cid), None)
         if c is None:
-            raise ValueError("candidato non trovato")
+            raise ValueError("candidate not found")
         kin = c.get("kinetics") or {}
         out = {"id": cid, "row": self._row(c), "criteria": c["confidence"]["criteria"], "level_text": c["confidence"]["text"], "components": c["priority"]["components"],
                "times": [float(t) for t in self.times], "areas": [float(a) for a in c["areas"]], "sessions": self.sessions, "kinetics": {k: v for k, v in kin.items() if k != "profile"},
@@ -473,9 +473,9 @@ class ExperimentHR:
     def inclusion_csv(self, n: int | None = None) -> str:
         """Inclusion list for a second, targeted injection: the best candidates without MS2 (m/z, charge, start and end RT, note)."""
         rows = (self.result or self._summary())["inclusion"][: n or self.s["inclusion"]]
-        lines = ["m/z,carica,inizio_RT_min,fine_RT_min,nota"]
+        lines = ["m/z,charge,RT_start_min,RT_end_min,note"]
         for r in rows:
-            lines.append(f"{r['mz']},1,{r['rt_from']},{r['rt_to']},\"{(r['formula'] or '')} priorità {r['score']}\"")
+            lines.append(f"{r['mz']},1,{r['rt_from']},{r['rt_to']},\"{(r['formula'] or '')} priority {r['score']}\"")
         return "\n".join(lines)
 
 

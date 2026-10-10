@@ -63,7 +63,7 @@ def test_json_and_sheets(series):
     json.dumps(res)
     assert res["items"][0]["isf_ness"] >= res["items"][-1]["isf_ness"]
     sh = isf.to_sheets(res)
-    assert sh[0]["name"] == "Candidati" and all(len(r) == len(sh[0]["head"]) for r in sh[0]["rows"])
+    assert sh[0]["name"] == "Candidates" and all(len(r) == len(sh[0]["head"]) for r in sh[0]["rows"])
     assert all(len(r) == len(sh[1]["head"]) for r in sh[1]["rows"])
 
 

@@ -87,7 +87,7 @@ def test_ammonium_or_ammonia_is_ambiguous_until_sodium_decides():
     assert c["role"] == "ion"                                         # neither reading explains X away until something decides
     t2 = table([(M, 3.0, 0.05, 2e8), (NH4, 3.0, 0.05, 5e7), (NA, 3.0, 0.05, 2e7)])
     c2 = iimn.collapse(iimn.family(iimn.window_profiles(t2, 2.7, 3.3), M, 3.0))
-    assert c2["ambiguous"]["decided"] == "ammonio" and {"[M+NH4]+", "[M+Na]+"} <= {e["name"] for e in c2["evidence"]}
+    assert c2["ambiguous"]["decided"] == "ammonium" and {"[M+NH4]+", "[M+Na]+"} <= {e["name"] for e in c2["evidence"]}
 
 
 def test_chunks_cover_every_candidate_with_its_margin():

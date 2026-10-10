@@ -51,14 +51,14 @@ def smiles_formula(smiles: str) -> dict:
     while pos < len(s):
         m = _ATOM.match(s, pos)
         if not m:
-            raise ValueError(f"SMILES non riconosciuto vicino a «{s[pos:pos + 6]}»")
+            raise ValueError(f"unrecognised SMILES near «{s[pos:pos + 6]}»")
         pos = m.end()
         br, org, tok = m.groups()
         if br or org:
             if br:
                 mm = re.match(r"(?:\d+)?([A-Z][a-z]?|[a-z]{1,2})(?:@+)?(?:H(\d*))?([+-]+\d*)?(?::\d+)?$", br)
                 if not mm:
-                    raise ValueError(f"atomo tra parentesi non riconosciuto: [{br}]")
+                    raise ValueError(f"unrecognised bracket atom: [{br}]")
                 el = mm.group(1)
                 h = 0 if mm.group(2) is None else (int(mm.group(2)) if mm.group(2) else 1)
                 charge = mm.group(3) or ""
@@ -96,7 +96,7 @@ def smiles_formula(smiles: str) -> dict:
                     rings[key] = (prev, order)
                 order = 1.0
     if rings:
-        raise ValueError("anello non chiuso nello SMILES")
+        raise ValueError("unclosed ring in the SMILES")
     f: dict = {}
     for a in atoms:
         f[a["el"]] = f.get(a["el"], 0) + 1
@@ -113,7 +113,7 @@ def smiles_formula(smiles: str) -> dict:
             f["H"] = f.get("H", 0) + h
     for el in f:
         if el not in E.MASS:
-            raise ValueError(f"elemento non supportato: {el}")
+            raise ValueError(f"unsupported element: {el}")
     return f
 
 
@@ -121,34 +121,34 @@ def neutral_formula(text: str) -> dict:
     """The user may type a molecular formula (C10H12N2O3S) or a SMILES. A SMILES contains lower-case atoms, '(' , '=' etc."""
     t = text.strip()
     if not t:
-        raise ValueError("serve una formula bruta neutra o uno SMILES")
+        raise ValueError("a neutral molecular formula or a SMILES is required")
     if re.fullmatch(r"(?:[A-Z][a-z]?\d*)+", t):
         return parse_formula(t)
     return smiles_formula(t)
 
 
 # ---------------------------------------------------------------------------------------------- transformations
-# (name, delta, comment). Editable in the UI (one per line: name;delta). Names in Italian.
+# (name, delta, comment). Editable in the UI (one per line: name;delta). Names in English.
 DEFAULT_TRANSFORMATIONS = [
-    ("idrossilazione", "+O", "un ossigeno in più (OH aromatico o alifatico)"),
-    ("diidrossilazione", "+O2", "due ossigeni in più"),
-    ("deidrogenazione", "-H2", "perdita di H2 (doppio legame, chiusura di anello)"),
-    ("ossidazione a carbonile", "+O-H2", "alcol -> chetone o aldeide"),
-    ("demetilazione", "-CH2", "N- o O-demetilazione"),
-    ("metilazione", "+CH2", ""),
-    ("perdita di propene (N-deisopropilazione)", "-C3H6", "perdita del gruppo isopropile"),
-    ("decarbossilazione", "-CO2", ""),
-    ("carbossilazione", "+CO2", ""),
-    ("idratazione", "+H2O", "addizione di acqua, idrolisi senza rottura"),
-    ("disidratazione", "-H2O", ""),
-    ("perdita di SO2", "-SO2", "estrusione di SO2 (solfonammidi, solfoni)"),
-    ("perdita di CO", "-CO", ""),
-    ("deamminazione ossidativa", "-NH+O-H2", ""),
-    ("declorurazione riduttiva", "-Cl+H", ""),
-    ("declorurazione idrolitica", "-Cl+OH", ""),
-    ("debromurazione riduttiva", "-Br+H", ""),
-    ("defluorurazione idrolitica", "-F+OH", ""),
-    ("idrolisi ammide", "+H2O", "taglio del legame ammidico/estere (stessa massa dell'idratazione)"),
+    ("hydroxylation", "+O", "one extra oxygen (aromatic or aliphatic OH)"),
+    ("dihydroxylation", "+O2", "two extra oxygens"),
+    ("dehydrogenation", "-H2", "loss of H2 (double bond, ring closure)"),
+    ("oxidation to carbonyl", "+O-H2", "alcohol -> ketone or aldehyde"),
+    ("demethylation", "-CH2", "N- or O-demethylation"),
+    ("methylation", "+CH2", ""),
+    ("loss of propene (N-deisopropylation)", "-C3H6", "loss of the isopropyl group"),
+    ("decarboxylation", "-CO2", ""),
+    ("carboxylation", "+CO2", ""),
+    ("hydration", "+H2O", "addition of water, hydrolysis without cleavage"),
+    ("dehydration", "-H2O", ""),
+    ("loss of SO2", "-SO2", "SO2 extrusion (sulfonamides, sulfones)"),
+    ("loss of CO", "-CO", ""),
+    ("oxidative deamination", "-NH+O-H2", ""),
+    ("reductive dechlorination", "-Cl+H", ""),
+    ("hydrolytic dechlorination", "-Cl+OH", ""),
+    ("reductive debromination", "-Br+H", ""),
+    ("hydrolytic defluorination", "-F+OH", ""),
+    ("amide hydrolysis", "+H2O", "cleavage of the amide/ester bond (same mass as hydration)"),
 ]
 
 
@@ -161,7 +161,7 @@ def parse_transformations(text: str) -> list[dict]:
             continue
         parts = [p.strip() for p in ln.split(";")]
         if len(parts) < 2 or not parts[1]:
-            raise ValueError(f"riga non valida (serve «nome;variazione»): {ln}")
+            raise ValueError(f"invalid line (expected «name;change»): {ln}")
         rows.append({"name": parts[0], "delta": parse_delta(parts[1]), "comment": parts[2] if len(parts) > 2 else ""})
     return rows
 
@@ -203,7 +203,7 @@ def generate(neutral: dict, adduct: str, transformations: list[dict], max_steps:
         mz = ion_mz(m, adduct)
         if mz < min_mz:
             continue
-        out.append({"name": "progenitore" if not v["steps"] else " + ".join(v["steps"]),
+        out.append({"name": "parent" if not v["steps"] else " + ".join(v["steps"]),
                     "alternatives": [" + ".join(a) for a in v.get("alts", [])], "delta": fmt_delta(v["delta"]) if v["delta"] else "",
                     "delta_dict": v["delta"], "formula": fmt(f), "neutral_mass": m, "mz": mz, "adduct": adduct,
                     "steps": len(v["steps"]), "formula_dict": f})

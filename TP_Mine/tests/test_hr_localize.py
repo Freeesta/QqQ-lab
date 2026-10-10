@@ -132,7 +132,7 @@ def test_localize_refuses_what_it_cannot_do(world):
     r = LZ.localize("C9H13N4O2", ION, np.array([110.07]), np.array([100.0]), lib, space)
     assert not r["ok"] and r["type"] == "other" and r["note"]
     r = LZ.localize("C8H11N4O3", ION, np.array([110.07]), np.array([100.0]), lib, F.FormulaSpace(F.vec("C8H11N4O3", els), els))
-    assert not r["ok"] and "libreria" in r["note"]
+    assert not r["ok"] and "library" in r["note"]
     nolib = iimn.FragmentLibrary(els, None)
     assert not LZ.localize("C8H11N4O3", ION, np.array([110.07]), np.array([100.0]), nolib, F.FormulaSpace(F.vec("C8H11N4O3", els), els))["ok"]
 

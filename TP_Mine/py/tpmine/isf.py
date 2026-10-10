@@ -29,16 +29,29 @@ except Exception:  # noqa: BLE001 -- not calibrated yet: calibrate() builds it
 
 FEATURES = ["pearson_w", "apex_z", "fwhm_log", "cv_ratio", "const_logp", "const_cv", "kin_sp", "shift_logp", "has_peak"]
 TEXT = {
-    "pearson_w": "profilo cromatografico (correlazione nella finestra del picco)",
-    "apex_z": "apice rispetto al progenitore",
-    "fwhm_log": "larghezza del picco rispetto al progenitore",
-    "cv_ratio": "costanza del rapporto F/P dentro il picco",
-    "const_logp": "costanza del rapporto F/P fra i campioni",
-    "const_cv": "variazione del rapporto F/P fra i campioni",
-    "kin_sp": "cinetica fra i campioni rispetto al progenitore",
-    "shift_logp": "specificità dell'allineamento (traslazioni casuali)",
-    "has_peak": "lo ione ha un picco proprio",
+    "pearson_w": "chromatographic profile (correlation within the peak window)",
+    "apex_z": "apex relative to the parent",
+    "fwhm_log": "peak width relative to the parent",
+    "cv_ratio": "constancy of the F/P ratio within the peak",
+    "const_logp": "constancy of the F/P ratio across samples",
+    "const_cv": "variation of the F/P ratio across samples",
+    "kin_sp": "kinetics across samples relative to the parent",
+    "shift_logp": "specificity of the alignment (random shifts)",
+    "has_peak": "the ion has a peak of its own",
 }
+
+
+def _english(msg) -> str:
+    """English text of a message {key, params} from the web catalog (plain placeholders only)."""
+    import json
+    from pathlib import Path
+    if not isinstance(msg, dict):
+        return str(msg)
+    lines = (Path(__file__).resolve().parents[3] / "mzlab" / "web" / "lang" / "en.js").read_text(encoding="utf-8").strip().splitlines()
+    text = json.loads("{" + "\n".join(lines[1:-1]) + "}").get(msg["key"], msg["key"])
+    for name, value in (msg.get("params") or {}).items():
+        text = text.replace("{" + name + "}", str(value))
+    return text
 
 
 def _f(v, default=float("nan")):
@@ -125,21 +138,21 @@ def _split_inherited(rep: dict, formula_p: str | None):
         w["isf"] = 1.0
         if ok_f:
             w["isf"] = 3.0
-            notes.append("perdita neutra nota: %s" % ", ".join(sorted({r["label"] for r in ok_f})[:3]))
+            notes.append("known neutral loss: %s" % ", ".join(sorted({r["label"] for r in ok_f})[:3]))
         elif frag and formula_p:
             w["isf"] = 0.3
-            notes.append("la perdita neutra non è compatibile con la formula del progenitore")
+            notes.append("the neutral loss is not compatible with the parent formula")
         elif not frag:
             w["isf"] = 0.7
-            notes.append("nessuna perdita neutra della tabella spiega Δm")
+            notes.append("no neutral loss in the table explains Δm")
         # isotope of a fragment: a lighter ion 1 or 2 Da below with the same profile and a plausible M+1 / M+2 ratio
         for nb in rep.get("neighbors", []):
             if _f(nb.get("pearson"), 0) > 0.9 and _f(nb.get("area_ratio"), 9) <= 0.9:
                 w["isotope"] = 2.5
-                notes.append("possibile isotopo M+%d dello ione a m/z %.1f" % (nb["delta"], nb["mz"]))
+                notes.append("possible M+%d isotope of the ion at m/z %.1f" % (nb["delta"], nb["mz"]))
                 break
     else:
-        notes.append("più pesante del progenitore: non può essere un frammento in sorgente")
+        notes.append("heavier than the parent: cannot be an in-source fragment")
         if "isotope" in kinds:
             w["isotope"] = 5.0
         if kinds & {"adduct", "dimer"}:
@@ -166,12 +179,12 @@ def classify_report(rep: dict, formula_p: str | None = None, fam: dict | None = 
         v = 1.0 if ms2["x_in_p"] else -0.5
         if ms2.get("modified_cosine") is not None and math.isfinite(ms2["modified_cosine"]):
             v += 2.0 * (ms2["modified_cosine"] - 0.5)
-        extra.append(("ms2", v, "MS2: %s tra i prodotti del progenitore%s" % ("presente" if ms2["x_in_p"] else "assente",
-                      (", cosseno modificato %.2f" % ms2["modified_cosine"]) if ms2.get("modified_cosine") is not None and math.isfinite(ms2["modified_cosine"]) else "")))
+        extra.append(("ms2", v, "MS2: %s among the products of the parent%s" % ("present" if ms2["x_in_p"] else "absent",
+                      (", modified cosine %.2f" % ms2["modified_cosine"]) if ms2.get("modified_cosine") is not None and math.isfinite(ms2["modified_cosine"]) else "")))
     if ramp:
         rr = F.source_ramp(ramp["dp"], ramp["f"], ramp["p"])
         if rr.get("spearman") is not None and math.isfinite(rr["spearman"]):
-            extra.append(("ramp", 3.0 * rr["spearman"], "rampa del DP: Spearman %.2f del rapporto F/(F+P) con il DP" % rr["spearman"]))
+            extra.append(("ramp", 3.0 * rr["spearman"], "DP ramp: Spearman %.2f of the F/(F+P) ratio with the DP" % rr["spearman"]))
     for _, v, _ in extra:
         logit += v
     p_inh = _sigmoid(logit)
@@ -185,22 +198,22 @@ def classify_report(rep: dict, formula_p: str | None = None, fam: dict | None = 
     pr, rf, rc, kin = (rep.get(k) or {} for k in ("profile", "ratio", "ratio_constancy", "kinetics"))
     def val(name):
         if name == "pearson_w":
-            return "r = %.2f" % feat["pearson_w"] if math.isfinite(feat["pearson_w"]) else "n/d"
+            return "r = %.2f" % feat["pearson_w"] if math.isfinite(feat["pearson_w"]) else "n/a"
         if name == "apex_z":
-            return ("Δapice %+.1f ± %.1f s" % (pr["apex_diff_s"], pr["apex_diff_sigma_s"])) if pr.get("x_has_peak") and pr.get("apex_diff_s") is not None else "nessun picco proprio"
+            return ("Δapex %+.1f ± %.1f s" % (pr["apex_diff_s"], pr["apex_diff_sigma_s"])) if pr.get("x_has_peak") and pr.get("apex_diff_s") is not None else "no peak of its own"
         if name == "fwhm_log":
-            return "FWHM X/P = %.2f" % pr["fwhm_ratio"] if pr.get("fwhm_ratio") is not None else "n/d"
+            return "FWHM X/P = %.2f" % pr["fwhm_ratio"] if pr.get("fwhm_ratio") is not None else "n/a"
         if name == "cv_ratio":
-            return "CV (MAD) = %.0f%%" % (100 * rf["cv_ratio_mad"]) if rf.get("ok") and rf.get("cv_ratio_mad") is not None else "n/d"
+            return "CV (MAD) = %.0f%%" % (100 * rf["cv_ratio_mad"]) if rf.get("ok") and rf.get("cv_ratio_mad") is not None else "n/a"
         if name == "const_logp":
-            return "p (Cochran) = %.2g su %d campioni" % (rc["p"], rc["k"]) if rc.get("p") is not None else "meno di 2 campioni"
+            return "p (Cochran) = %.2g over %d samples" % (rc["p"], rc["k"]) if rc.get("p") is not None else "fewer than 2 samples"
         if name == "const_cv":
-            return "CV fra campioni = %.0f%%" % (100 * rc["cv"]) if rc.get("cv") is not None else "n/d"
+            return "CV across samples = %.0f%%" % (100 * rc["cv"]) if rc.get("cv") is not None else "n/a"
         if name == "kin_sp":
-            return "ρ = %.2f" % kin["spearman_parent"] if kin.get("spearman_parent") is not None else "meno di 3 campioni con tempo"
+            return "ρ = %.2f" % kin["spearman_parent"] if kin.get("spearman_parent") is not None else "fewer than 3 samples with a time"
         if name == "shift_logp":
-            return "p traslazioni = %.2g" % pr["p_shift"] if pr.get("p_shift") is not None else "n/d"
-        return "sì" if feat["has_peak"] else "no"
+            return "p shifts = %.2g" % pr["p_shift"] if pr.get("p_shift") is not None else "n/a"
+        return "yes" if feat["has_peak"] else "no"
     for k, c in contrib.items():
         if abs(c) < 0.05 and not math.isfinite(feat.get(k, float("nan"))):
             continue
@@ -212,37 +225,36 @@ def classify_report(rep: dict, formula_p: str | None = None, fam: dict | None = 
     # doubtful cases and their reasons
     reasons = []
     if 0.25 <= p_inh <= 0.75:
-        reasons.append("probabilità intermedia (%.0f%% di essere ereditato dal progenitore)" % (100 * p_inh))
+        reasons.append("intermediate probability (%.0f%% of being inherited from the parent)" % (100 * p_inh))
     prof_good = math.isfinite(feat["pearson_w"]) and feat["pearson_w"] >= 0.9
     if prof_good and math.isfinite(feat["const_logp"]) and feat["const_logp"] < -2:
-        reasons.append("profilo identico a quello del progenitore ma rapporto F/P non costante fra i campioni: possibile miscela con un "
-                       "prodotto isobarico che co-eluisce, oppure saturazione del progenitore (guarda le famiglie MCR)")
+        reasons.append("profile identical to that of the parent but F/P ratio not constant across samples: possible mixture with a "
+                       "co-eluting isobaric product, or saturation of the parent (see the MCR families)")
     if not pr.get("reliable", False):
-        reasons.append("misura poco affidabile (poche scansioni, picco assente o ione debole)")
+        reasons.append("unreliable measurement (few scans, missing peak or weak ion)")
     for w_ in rep.get("warnings", []):
         if isinstance(w_, dict) and w_.get("key") in ("of.warn.massCoincidence", "of.warn.flatTop"):         # warnings of mzlab.ionfamily are messages {key, params}
-            from mzlab.i18n import italian
-            reasons.append(italian(w_))
+            reasons.append(_english(w_))
     if fam and fam.get("ok"):
         share = fam["ion_share"].get(round(rep["mz"], 1))
         if share and len([s for s in share["components"] if s >= 0.2]) >= 2 and share["parent_component"] is not None and share["components"][share["parent_component"]] < 0.8:
-            reasons.append("l'MCR-ALS divide questo ione fra più componenti (parte del segnale non è del progenitore)")
+            reasons.append("MCR-ALS splits this ion across several components (part of the signal is not from the parent)")
     if heavy and p_inh >= 0.5 and split["other"] > 0.5:
-        reasons.append("più pesante del progenitore e non spiegato da isotopo o addotto noto")
+        reasons.append("heavier than the parent and not explained by a known isotope or adduct")
     doubtful = bool(reasons)
     top = [e for e in ev if abs(e["log_odds"]) >= 0.3][:4]
     isf_ness = 100.0 * probs["isf"]
     lead = max(probs, key=probs.get)
-    names = {"isf": "frammento in sorgente (ISF)", "isotope": "isotopo del progenitore o di un suo frammento", "adduct": "addotto/dimero del progenitore",
-             "other_from_parent": "ione derivato dal progenitore (non classificato)", "tp": "prodotto di trasformazione vero"}
-    expl = "%s: %.0f%% %s. " % ("Dubbio" if doubtful else "Esito", 100 * probs[lead], names[lead])
+    names = {"isf": "in-source fragment (ISF)", "isotope": "isotope of the parent or of one of its fragments", "adduct": "adduct/dimer of the parent",
+             "other_from_parent": "ion derived from the parent (unclassified)", "tp": "true transformation product"}
+    expl = "%s: %.0f%% %s. " % ("Doubt" if doubtful else "Outcome", 100 * probs[lead], names[lead])
     if top:
-        expl += "Prove principali: " + "; ".join("%s (%s) %s" % (e["label"], e["value"] or "", "→ progenitore" if e["toward"] == "parent" else "→ TP vero") for e in top) + ". "
+        expl += "Main evidence: " + "; ".join("%s (%s) %s" % (e["label"], e["value"] or "", "→ parent" if e["toward"] == "parent" else "→ true TP") for e in top) + ". "
     if notes:
-        expl += "Note: " + "; ".join(notes) + ". "
+        expl += "Notes: " + "; ".join(notes) + ". "
     if reasons:
-        expl += "Motivi del dubbio: " + "; ".join(reasons) + ". "
-    expl += "Risoluzione unitaria: è una probabilità, non un'identificazione."
+        expl += "Reasons for the doubt: " + "; ".join(reasons) + ". "
+    expl += "Unit resolution: this is a probability, not an identification."
     return F.to_jsonable({"mz": rep["mz"], "parent_mz": rep["parent_mz"], "probs": probs, "p_inherited": p_inh, "isf_ness": isf_ness,
                           "evidence": ev, "doubtful": doubtful, "reasons": reasons, "explanation": expl, "notes": notes,
                           "warnings": rep.get("warnings", []), "features": feat, "calibrated": MODEL is not None if model is None else True})
@@ -260,7 +272,7 @@ def families(samples, parent_mz: float, ref: int | None = None, k: int | None = 
     rt, P = F.extract_trace(tb, parent_mz, tol)
     det = F.detect_peaks(rt, P)
     if not det["peaks"]:
-        return {"ok": False, "reason": "il progenitore non ha picco nel campione di riferimento"}
+        return {"ok": False, "reason": "the parent has no peak in the reference sample"}
     pk = det["peaks"][0]
     pad = max(2, int(0.3 * pk["n_scans"]))
     lo, hi = max(pk["lo"] - pad, 0), min(pk["hi"] + pad, len(rt) - 1)
@@ -269,7 +281,7 @@ def families(samples, parent_mz: float, ref: int | None = None, k: int | None = 
     i1 = int(np.searchsorted(w.rt, rt[hi], side="right")) - 1
     res = F.deconvolve_window(w, i0, i1, k=k, min_snr=min_snr)
     if not res.get("ok"):
-        return {"ok": False, "reason": "finestra troppo povera per l'MCR-ALS"}
+        return {"ok": False, "reason": "window too sparse for MCR-ALS"}
     S, C, mz = np.array(res["S"]), np.array(res["C"]), np.array(res["mz"])
     rtw = np.array(res["rt"])
     area = np.array([float(np.trapz(c, rtw)) if hasattr(np, "trapz") else float(np.trapezoid(c, rtw)) for c in C])
@@ -304,39 +316,39 @@ def classify_ions(samples, parent_mz: float, mzs, formula_p: str | None = None, 
     for mz in mzs:
         rep = F.origin_report(samples, float(mz), float(parent_mz), ref=ref, formula_p=formula_p, ms2=ms2, top=0)
         if "profile" not in rep:
-            items.append({"mz": float(mz), "error": "; ".join(rep.get("warnings", [])) or "nessun picco", "doubtful": True,
-                          "reasons": ["analisi impossibile"], "probs": {}, "isf_ness": None})
+            items.append({"mz": float(mz), "error": "; ".join(rep.get("warnings", [])) or "no peak", "doubtful": True,
+                          "reasons": ["analysis not possible"], "probs": {}, "isf_ness": None})
             continue
         items.append(classify_report(rep, formula_p, famres, ramp, model))
     items.sort(key=lambda d: -(d.get("isf_ness") or -1))
     return {"items": items, "doubtful": [{"mz": i["mz"], "reason": "; ".join(i["reasons"])} for i in items if i.get("doubtful")],
-            "families": famres, "model": (MODEL or {}).get("meta"), "note": "Risoluzione unitaria: probabilità, non identificazioni."}
+            "families": famres, "model": (MODEL or {}).get("meta"), "note": "Unit resolution: probabilities, not identifications."}
 
 
 def to_sheets(result: dict) -> list[dict]:
     """The result as xlsx sheets for the front end's `dlx(name, sheets)` ({name, head, rows, widths}; numbers stay numbers)."""
-    head = ["m/z", "ISF-ness (0-100)", "P(ISF)", "P(isotopo)", "P(addotto)", "P(altro da P)", "P(TP vero)", "Dubbio", "Motivo / spiegazione"]
+    head = ["m/z", "ISF-ness (0-100)", "P(ISF)", "P(isotope)", "P(adduct)", "P(other from P)", "P(true TP)", "Doubt", "Reason / explanation"]
     rows = []
     for i in result["items"]:
         p = i.get("probs") or {}
         rows.append([i["mz"], i.get("isf_ness"), p.get("isf"), p.get("isotope"), p.get("adduct"), p.get("other_from_parent"), p.get("tp"),
-                     "sì" if i.get("doubtful") else "no", "; ".join(i.get("reasons", [])) or i.get("explanation", "")])
-    sheets = [{"name": "Candidati", "head": head, "rows": rows, "widths": [10, 14, 10, 10, 10, 12, 10, 8, 90]}]
+                     "yes" if i.get("doubtful") else "no", "; ".join(i.get("reasons", [])) or i.get("explanation", "")])
+    sheets = [{"name": "Candidates", "head": head, "rows": rows, "widths": [10, 14, 10, 10, 10, 12, 10, 8, 90]}]
     ev = []
     for i in result["items"]:
         for e in i.get("evidence", []):
-            ev.append([i["mz"], e["label"], e.get("value", ""), e["log_odds"], "progenitore" if e["toward"] == "parent" else "TP vero",
-                       "sì" if e.get("calibrated") else "no (euristico)"])
-    sheets.append({"name": "Prove", "head": ["m/z", "Criterio", "Valore", "Peso (log-odds)", "A favore di", "Tarato"], "rows": ev,
+            ev.append([i["mz"], e["label"], e.get("value", ""), e["log_odds"], "parent" if e["toward"] == "parent" else "true TP",
+                       "yes" if e.get("calibrated") else "no (heuristic)"])
+    sheets.append({"name": "Evidence", "head": ["m/z", "Criterion", "Value", "Weight (log-odds)", "In favour of", "Calibrated"], "rows": ev,
                    "widths": [10, 60, 36, 14, 14, 16]})
     fam = result.get("families")
     if fam and fam.get("ok"):
         fr = []
         for j, c in enumerate(fam["components"]):
-            fr.append([j + 1, "sì" if j == fam["parent_component"] else "no", c["apex_rt"], c["fwhm_s"], c["area_share"],
+            fr.append([j + 1, "yes" if j == fam["parent_component"] else "no", c["apex_rt"], c["fwhm_s"], c["area_share"],
                        ", ".join("%.1f (%.2f)" % (t["mz"], t["rel"]) for t in c["top_ions"])])
-        sheets.append({"name": "Famiglie MCR", "head": ["Componente", "Contiene il progenitore", "Apice RT (min)", "FWHM (s)", "Quota area",
-                                                           "Spettro pulito: m/z (rel.)"], "rows": fr, "widths": [12, 20, 14, 10, 10, 90]})
+        sheets.append({"name": "MCR families", "head": ["Component", "Contains the parent", "RT apex (min)", "FWHM (s)", "Area share",
+                                                           "Clean spectrum: m/z (rel.)"], "rows": fr, "widths": [12, 20, 14, 10, 10, 90]})
     return sheets
 
 

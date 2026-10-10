@@ -91,7 +91,7 @@ class Experiment:
         self.ms2files = [x for x in self.samples if x.kind == "ms2"]
         self.mrmfiles = [x for x in self.samples if x.kind == "mrm"]
         if not self.full:
-            raise ValueError("servono file di full scan (MS1) del campione: nessuno trovato")
+            raise ValueError("full-scan (MS1) files of the sample are required: none found")
         # parent
         self.parent = parent
         self.adduct = parent.get("adduct") or E.DEFAULT_ADDUCT[parent.get("polarity", "positive")]
@@ -102,7 +102,7 @@ class Experiment:
             self.neutral = None
             self.parent_neutral_mass = float(parent["mz"]) - E.ADDUCT_SHIFT[self.adduct]
         else:
-            raise ValueError("serve la formula bruta neutra, lo SMILES o l'm/z dello ione del progenitore")
+            raise ValueError("the neutral molecular formula, the SMILES or the m/z of the parent ion is required")
         self.pol = 1 if self.adduct.endswith("+") else -1
         self.transformations = transformations or chem.default_transformations()
         self.offset = 0.0
@@ -263,11 +263,11 @@ class Experiment:
             hit = self._isotope_of(e, out)
             crit = list(out["criteria"])
             if hit:
-                crit.append({"name": "non è un picco isotopico", "status": "fail",
-                             "text": f"sembra il picco {hit[1]} di m/z {hit[0]['mz']:.4f} ({hit[0]['name']})"})
+                crit.append({"name": "not an isotope peak", "status": "fail",
+                             "text": f"looks like the {hit[1]} peak of m/z {hit[0]['mz']:.4f} ({hit[0]['name']})"})
                 out["score"], out["label"] = min(out["score"], 40), "debole"
             else:
-                crit.append({"name": "non è un picco isotopico", "status": "pass", "text": "nessuno ione più intenso a M-1 o M-2 nello stesso picco"})
+                crit.append({"name": "not an isotope peak", "status": "pass", "text": "no more intense ion at M-1 or M-2 in the same peak"})
             out["criteria"] = crit
             out["isotope_of"] = hit[0]["id"] if hit else None
         self._final[e["id"]] = out
@@ -296,7 +296,7 @@ class Experiment:
 
     # ------------------------------------------------------------------ untargeted search
     def discover(self):
-        """Ions that rise in time, are absent at t0 / in the blank, and do not correspond to any candidate: 'ioni non previsti'."""
+        """Ions that rise in time, are absent at t0 / in the blank, and do not correspond to any candidate: 'unexpected ions'."""
         t = self._table(self.full[0])
         lo, hi = float(t.mz.min()), float(t.mz.max())
         step = self.tol
@@ -308,7 +308,7 @@ class Experiment:
         sk, mp = int(self.thr["peak"].get("smooth_points", 3)), int(self.thr["peak"]["min_points"])
         for i, mz in enumerate(centers):
             if i % 50 == 0:
-                self.progress("Cerco ioni non previsti...", i / len(centers))
+                self.progress("Searching for unexpected ions...", i / len(centers))
             if any(abs(mz - m) <= self.tol for m in known):
                 continue
             hit = False
@@ -326,7 +326,7 @@ class Experiment:
             if not hit:
                 continue
             uid += 1
-            e = {"id": uid, "kind": "unexpected", "name": f"ione non previsto m/z {mz - self.offset:.2f}", "alternatives": [],
+            e = {"id": uid, "kind": "unexpected", "name": f"unexpected ion m/z {mz - self.offset:.2f}", "alternatives": [],
                  "delta": "", "formula": "", "formula_dict": None, "neutral_mass": None, "mz": mz - self.offset, "mz_x": float(mz),
                  "steps": 1, "adduct": self.adduct, "delta_dict": None}
             a = self._analyse_base(e)
@@ -347,7 +347,7 @@ class Experiment:
             obs = self.refine(e)
             if obs is not None:
                 e["mz_x"], e["mz"] = obs, obs - self.offset
-                e["name"] = f"ione non previsto m/z {e['mz']:.1f}"
+                e["name"] = f"unexpected ion m/z {e['mz']:.1f}"
         good = []
         for e in kept:
             a = self.analyse(e)
@@ -426,10 +426,10 @@ class Experiment:
                 f["note"] = ""
                 for pf in par["fragments"]:
                     if abs(pf["mz"] - f["mz"]) <= 0.5:
-                        f["note"], shared = "condiviso col progenitore", shared + 1
+                        f["note"], shared = "shared with the parent", shared + 1
                         break
                     if dm is not None and abs(pf["mz"] + dm - f["mz"]) <= 0.5:
-                        f["note"], shifted = f"frammento del progenitore {pf['mz']:g} + Δ ({dm:+.2f})", shifted + 1
+                        f["note"], shifted = f"parent fragment {pf['mz']:g} + Δ ({dm:+.2f})", shifted + 1
                         break
             res["shared"], res["shifted"] = shared, shifted
         self._ms2cache[key] = res
@@ -445,27 +445,27 @@ class Experiment:
                 rows.append({"compound": e["name"], "formula": e["formula"], "Q1": round(e["mz"], 1), "Q3_osservato": f["mz"],
                              "Q3_consigliato": round(f["mz"] - self.offset, 1), "CE": m.get("collision_energy") or "",
                              "RT_attesa_min": round(a["ref_rt"], 2) if a["ref_rt"] else "", "finestra_RT_min": round(2 * self.rt_tol, 2),
-                             "intensita_rel_%": f["rel"], "scansioni_ms2": m["scans"], "nota": "candidato: da ottimizzare sullo strumento"})
+                             "intensita_rel_%": f["rel"], "scansioni_ms2": m["scans"], "nota": "candidate: to be optimised on the instrument"})
         return rows
 
     # ------------------------------------------------------------------ outputs
     def run(self) -> dict:
-        self.progress("Calibro l'm/z sul progenitore...", 0.02)
+        self.progress("Calibrating m/z on the parent...", 0.02)
         self.calibrate()
-        self.progress("Genero i candidati...", 0.05)
+        self.progress("Generating candidates...", 0.05)
         self.build_candidates()
         n = len(self.entries)
         for i, e in enumerate(self.entries):
             if i % 10 == 0:
-                self.progress("Estraggo gli XIC e cerco i picchi...", 0.05 + 0.6 * i / n)
+                self.progress("Extracting XICs and searching for peaks...", 0.05 + 0.6 * i / n)
             self.analyse(e)
         if self.s.get("discover", True):
             self.discover()
         self.mrm = None
         if self.mrmfiles:
-            self.progress("Integro gli MRM...", 0.93)
+            self.progress("Integrating MRMs...", 0.93)
             self.mrm = mrm.analyse(self.mrmfiles, self.rt_tol)
-        self.progress("Calcolo le tabelle...", 0.97)
+        self.progress("Computing the tables...", 0.97)
         return self.summary()
 
     def level(self, e: dict, a: dict) -> tuple[int | None, str]:

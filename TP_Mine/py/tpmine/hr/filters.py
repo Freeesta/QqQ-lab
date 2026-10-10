@@ -116,30 +116,30 @@ def run_filters(al: Alignment, feats: list[Features], times, types=None, parent_
     4. flat profiles (max / min over the treated < `flat_ratio`) removed, except the masses of the parent's fragments next to the parent (`isf_masses`, `parent_rt`)."""
     ref_c, tr_c = split_columns(times, types)
     if len(tr_c) == 0:
-        raise ValueError("servono campioni trattati (tempo > 0) per cercare ciò che compare con il trattamento")
+        raise ValueError("treated samples (time > 0) are required to look for what appears with the treatment")
     ref = reference_area(al, [feats[k] for k in ref_c], ppm, rt_tol) if len(ref_c) else np.zeros(len(al))
     eps = EPS_FACTOR * min_height
     amax = al.area[:, tr_c].max(1)
     fl = amax / (ref + eps)
     ntr = (al.area[:, tr_c] > 0).sum(1)
-    steps = [{"name": "gruppi", "text": "gruppi (m/z, RT) di tutti i file", "n": int(len(al))}]
+    steps = [{"name": "gruppi", "text": "(m/z, RT) groups from all files", "n": int(len(al))}]
     sel = (fl > fold) & (ntr >= min_treated) & (al.rt > rt_min)
     idx = np.flatnonzero(sel)
-    steps.append({"name": "compare", "text": f"compaiono con il trattamento (> {fold:g} volte il buio/t0, in ≥ {min_treated} campioni)", "n": int(len(idx))})
+    steps.append({"name": "compare", "text": f"appear with the treatment (> {fold:g} times the dark/t0, in ≥ {min_treated} samples)", "n": int(len(idx))})
     iso = isotopologue_mask(al, idx, amax)
     isomask = np.zeros(len(al), bool)
     isomask[idx[iso]] = True
     idx = idx[~iso]
-    steps.append({"name": "isotopologhi", "text": "senza isotopologhi di un segnale più forte", "n": int(len(idx))})
+    steps.append({"name": "isotopologhi", "text": "without isotopologues of a stronger signal", "n": int(len(idx))})
     if parent_ion:
         space, _ = tp_space(parent_ion)
         idx = idx[formula_feasible(al.mz[idx], space, feasible_ppm)]
-        steps.append({"name": "formula", "text": f"con una formula possibile derivata dal progenitore ({feasible_ppm:g} ppm)", "n": int(len(idx))})
+        steps.append({"name": "formula", "text": f"with a feasible formula derived from the parent ({feasible_ppm:g} ppm)", "n": int(len(idx))})
     flat = flat_mask(al.area[idx][:, tr_c], flat_ratio, flat_min_present)
     if isf_masses is not None and len(isf_masses) and parent_rt is not None:
         flat &= ~isf_coincident(al, idx, isf_masses, parent_rt)       # a mass of the parent's fragments beside the parent: a product seen in two samples is not told from noise, it is flagged
     idx = idx[~flat]
-    steps.append({"name": "piatti", "text": f"senza profili piatti (massimo/minimo < {flat_ratio:g})", "n": int(len(idx))})
+    steps.append({"name": "piatti", "text": f"without flat profiles (max/min < {flat_ratio:g})", "n": int(len(idx))})
     return Funnel(idx=idx, steps=steps, fold=fl, reference=ref, n_treated=ntr, isotopologue=isomask)
 
 

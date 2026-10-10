@@ -51,8 +51,8 @@ def test_rows_have_the_requested_fields(exp):
     assert x["level"] in (5, 4, 3, "2b") and x["class"] and x["tmax"] is not None and abs(x["ppm"]) < 3
     assert set(x["components"]) == {"ms2", "loc", "kin", "form", "int"} and x["delta"] == "+O"
     y = next(x for x in exp.result["rows"] if x["formula"] == "C7H9N4O2")
-    assert y["tmax"] < x["tmax"] and "precoce" in y["class"]
-    assert "persistente" in x["class"] or "tardivo" in x["class"]
+    assert y["tmax"] < x["tmax"] and "early" in y["class"]
+    assert "persistent" in x["class"] or "late" in x["class"]
 
 
 def test_detail_and_json(exp):
@@ -67,7 +67,7 @@ def test_tree_and_inclusion_list(exp):
     t = exp.msn_tree()
     assert t and t[0]["formula"] == "C8H11N4O2"
     csv = exp.inclusion_csv(5).splitlines()
-    assert csv[0].startswith("m/z,carica") and len(csv) <= 6
+    assert csv[0].startswith("m/z,charge") and len(csv) <= 6
 
 
 def test_without_msn_file_there_is_no_localisation(series):
@@ -113,7 +113,7 @@ def test_hidden_isf_row_exists_and_is_flagged(hidden):
     rows = [x for x in e.result["rows"] if x["id"] < 0]
     assert len(rows) == 1 and abs(rows[0]["mz"] - LS.ISF_FRAGMENT) < 0.003
     x = rows[0]
-    assert "possibile TP coeluente con un ISF" in x["flags"] and x["formula"] == "C6H8N3O" and x["series"] == [0] * len(e.lc)
+    assert "possible TP co-eluting with an ISF" in x["flags"] and x["formula"] == "C6H8N3O" and x["series"] == [0] * len(e.lc)
     assert x["level"] in (5, 4) and x["tmax"] is None and x["region"] is None and x["ms2_scans"] == 0
     assert any(c["id"] == x["id"] for c in e.ranked)
 
