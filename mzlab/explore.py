@@ -533,6 +533,41 @@ class Item:
             out = (acc / np.maximum(n_scans, 1)[:, None]).astype(np.float32)
         return out
 
+    # ------------------------------------------------------------------ marked points of the map (only measures: never a name or a verdict)
+    def map_snap(self, level: int, rt: float, mz: float, dmz: float = 1.0, drt: float = 0.2, dbins: int = 1) -> dict | None:
+        """The local maximum near a click on the map: the most intense peak within +-drt minutes and +-dbins bins of dmz around (rt, mz).
+        rt = RT of that scan (the apex), mz = the m/z of the peak as the file has it (exact in high resolution)."""
+        t = self._tbl(level)
+        if not len(t.rt) or not len(t.mz):
+            return None
+        lo, hi = (np.floor(mz / dmz) - dbins) * dmz, (np.floor(mz / dmz) + dbins + 1) * dmz
+        a, b = np.searchsorted(t.mz, lo, side="left"), np.searchsorted(t.mz, hi, side="left")
+        if b <= a:
+            return None
+        pos = t.pos[a:b]
+        ok = np.abs(t.rt[pos] - rt) <= drt
+        if not ok.any():
+            return None
+        k = np.flatnonzero(ok)[np.argmax(t.inten[a:b][ok])]
+        return {"rt": float(t.rt[pos[k]]), "mz": float(t.mz[a + k])}
+
+    def map_measure(self, level: int, rt: float, mz: float, tol: float, ref: "Item | None" = None, rt_tol: float = 0.1) -> dict:
+        """Measures of one marked point: intensity at the apex in this file (A) and the local maximum within +-rt_tol in the reference (B)
+        on the XIC mz +- tol; S/N of A = (apex - median of the XIC) / (1.4826 x MAD of the XIC)."""
+        rts, ya = self.xic(mz, tol, level)
+        out = {"ia": 0.0, "ib": None, "sn": None}
+        if len(rts):
+            i = int(np.argmin(np.abs(rts - rt)))
+            out["ia"] = float(ya[i])
+            med = float(np.median(ya))
+            mad = float(np.median(np.abs(ya - med))) * 1.4826
+            out["sn"] = (out["ia"] - med) / mad if mad > 0 else None
+        if ref is not None:
+            rb, yb = ref.xic(mz, tol, level)
+            w = np.abs(rb - rt) <= rt_tol
+            out["ib"] = float(yb[w].max()) if w.any() else 0.0
+        return out
+
     # ------------------------------------------------------------------ spectra
     def _binned(self, rt0, rt1, level=1, precursor=None, prec_tol=0.6, bin_da=0.1, hr=False, raw1=False, filt=None):
         """Mean spectrum in [rt0, rt1] on a fixed bin grid: (bin ids, centroid m/z, mean intensity, n scans).
@@ -704,6 +739,34 @@ class Item:
             keep = sy >= min_rel * sy.max()
             smz, sy = smz[keep], sy[keep]
         return smz, sy, n
+
+
+def diff_tolerant(a: np.ndarray, b: np.ndarray, w: int) -> np.ndarray:
+    """A - B with a tolerance in RT: B is replaced by its local maximum over +-w RT bins (axis 0), so a small drift of the retention time
+    and the lines of the background (present in both) cancel instead of leaving a red/blue pair. w = 0: the plain difference."""
+    a, b = np.asarray(a, dtype=np.float32), np.asarray(b, dtype=np.float32)
+    if w > 0 and b.shape[0] > 1:
+        p = np.pad(b, ((w, w), (0, 0)), mode="edge")
+        b = np.lib.stride_tricks.sliding_window_view(p, 2 * w + 1, axis=0).max(axis=-1)
+    return (a - b).astype(np.float32)
+
+
+def rt_groups(points: list[dict], tol: float = 0.05) -> list[dict]:
+    """Groups of marked points whose apexes are within +-tol minutes (chained: a point joins the group of the previous one when it is close
+    to it). For each point: g = number of the group (1, 2, ... in RT order) and dm = m/z minus the m/z of the most intense point (ia) of its group."""
+    order = sorted(range(len(points)), key=lambda i: points[i]["rt"])
+    gid, g, last = {}, 0, None
+    for i in order:
+        if last is None or points[i]["rt"] - last > tol:
+            g += 1
+        gid[i], last = g, points[i]["rt"]
+    out = [dict(p, g=gid[i]) for i, p in enumerate(points)]
+    for k in set(gid.values()):
+        mem = [p for p in out if p["g"] == k]
+        top = max(mem, key=lambda p: p.get("ia") or 0)
+        for p in mem:
+            p["dm"] = p["mz"] - top["mz"]
+    return out
 
 
 def file_parts(run) -> list[dict]:

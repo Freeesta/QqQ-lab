@@ -65,7 +65,15 @@ window.MAPPA = (() => {
     let t = 0; for (let i = 0; i < m.length; i++) t = norm === "max" ? Math.max(t, m[i]) : t + m[i];
     return t > 0 ? (norm === "max" ? 1 : 1000) / t : 1;
   }
-  const getRegion = (k, lv, r) => memo(`mzr${k}|${lv}|${r.join("|")}`, () => J(`api/map?k=${k}&level=${lv}&rt0=${r[0]}&rt1=${r[1]}&mz0=${r[2]}&mz1=${r[3]}&nrt=${r[4]}&nmz=${r[5]}`).then(j => {
+  // ---------------------------------------------------------------- the difference (extends the one of explore.js): computed by the server in numpy
+  // with a tolerance in RT (the reference is replaced by its local maximum over +-0.1 min: background lines and small drifts cancel); what it shows
+  // (all | increases only | decreases only) and the noise threshold (fraction of the 99.5th percentile) are choices of this browser
+  const diffOpt = () => ({ show: PREF.show || "all", thr: PREF.thr ?? 0.02, rttol: PREF.rttol ?? 0.1 });
+  const diffMap = (k, ref, lv, norm) => memo(`mzd${k}|${ref}|${lv}|${norm}|${diffOpt().rttol}`, () => J(`api/map?k=${k}&level=${lv}&ref=${ref}&norm=${norm}&rttol=${diffOpt().rttol}`).then(j => {
+    const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return new Float32Array(u.buffer);
+  }));
+  const getRegion = (k, lv, r, extra = "") => memo(`mzr${k}|${lv}|${r.join("|")}${extra}`, () => J(`api/map?k=${k}&level=${lv}&rt0=${r[0]}&rt1=${r[1]}&mz0=${r[2]}&mz1=${r[3]}&nrt=${r[4]}&nmz=${r[5]}${extra}`).then(j => {
     const bin = atob(j.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
     return { ...j, m: new Float32Array(u.buffer) };
   }));
@@ -80,14 +88,14 @@ window.MAPPA = (() => {
     const s = st(p); init(p);
     if (!p.zoom && !p.zoomY) { s.reg = null; return false; }
     const { A, B, im, x0, x1, y0, y1, pw, ph, norm } = o;
-    const r = regionGrid(p, A, x0, x1, y0, y1, pw, ph), key = `${A.k}|${B ? B.k : ""}|${A.level}|${norm}|${p.scale}|${r.join("|")}`;
+    const r = regionGrid(p, A, x0, x1, y0, y1, pw, ph), key = `${A.k}|${B ? B.k : ""}|${A.level}|${norm}|${p.scale}|${r.join("|")}|${JSON.stringify(diffOpt())}`;
     if (s.reg && s.reg.key === key && s.reg.off) { g.imageSmoothingEnabled = false; g.drawImage(s.reg.off, M.l, M.t, pw, ph); return true; }
     clearTimeout(s.regT);
     s.regT = setTimeout(async () => {
       try {
-        const [a, b] = await Promise.all([getRegion(A.k, A.level, r), B ? getRegion(B.k, B.level, r) : null]);
-        const fa = normFactor(A.m, norm), fb = B ? normFactor(B.m, norm) : 1, n = a.m.length, v = new Float32Array(n);
-        for (let i = 0; i < n; i++) v[i] = a.m[i] * fa - (b ? b.m[i] * fb : 0);
+        const a = await getRegion(A.k, A.level, r, B ? `&ref=${B.k}&norm=${norm}&rttol=${diffOpt().rttol}` : "");
+        const fa = B ? 1 : normFactor(A.m, norm), n = a.m.length, v = new Float32Array(n);
+        for (let i = 0; i < n; i++) v[i] = a.m[i] * fa;                    // with a reference the server already gives A - B (normalised, tolerance in RT)
         s.reg = { key, v, nrt: a.nrt, nmz: a.nmz, rt0: a.rt0, rt1: a.rt1, mz0: a.mz0, dmz: a.dmz, off: paint(v, a.nrt, a.nmz, im, !!B) };
         draw(p);
       } catch (e) { /* keep the stretched whole map */ }
@@ -119,12 +127,13 @@ window.MAPPA = (() => {
     const r = p.cv.getBoundingClientRect(), d = Math.min(4, devicePixelRatio || 1);
     s.ov.width = Math.round(r.width * d); s.ov.height = Math.round(r.height * d); s.ov.style.width = r.width + "px"; s.ov.style.height = r.height + "px";
     s.ovg = s.ov.getContext("2d"); s.ovg.setTransform(d, 0, 0, d, 0, 0);
-    overlay(p); margins(p);
+    overlay(p); margins(p); table(p);
   }
   function overlay(p) {
     const s = st(p), g = s.ovg, a = p._a; if (!g || !a) return;
     g.clearRect(0, 0, a.W, a.H);
     if (!is2d(p)) return;
+    drawPoints(p, g);
     const pt = point(p), on = mirOn(p);
     if (pt && (on || s.lock) && pt.rt >= a.x0 && pt.rt <= a.x1 && pt.mz >= a.y0 && pt.mz <= a.y1) {
       const x = Math.round(a.X(pt.rt)) + .5, y = Math.round(a.Y(pt.mz)) + .5;
@@ -275,6 +284,8 @@ window.MAPPA = (() => {
     if (k === "m" || k === "M") { done(); s.mir = !mirOn(p); layout(p); draw(p); return; }
     if (k === "l" || k === "L") { done(); if (s.lock) unlock(p); else { const q = point(p) || { rt: (a.x0 + a.x1) / 2, mz: (a.y0 + a.y1) / 2 }; s.lock = { ...q }; overlay(p); margins(p); } return; }
     if (k === "Escape" && s.lock) { done(); unlock(p); return; }
+    if (k === "s" || k === "S") { done(); s.mark = !s.mark; markBtn(p); return; }
+    if (k === "Delete" && s.psel != null) { done(); delPoint(p, s.psel); return; }
     if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(k)) return;
     done();
     const cur = point(p) || { rt: (a.x0 + a.x1) / 2, mz: (a.y0 + a.y1) / 2 }, nx = { ...cur }, dir = k === "ArrowRight" || k === "ArrowUp" ? 1 : -1;
@@ -313,16 +324,155 @@ window.MAPPA = (() => {
     return null;
   }
 
+
+  // ---------------------------------------------------------------- marked points (variant A, for everybody): the student marks, the program MEASURES.
+  // Tool «Segna» (button or S): a click adds a numbered point on the local maximum (+-0.2 min, +-1 bin); Canc removes the chosen one; a point can be
+  // dragged. Saved in the notebook (NB.mappaPunti) for each pair of files. Table under the map: numbers only, never a name or a verdict.
+  const pairKey = p => { const a = p._a; if (!a || !a.f) return null; return `${a.f.file}|${a.ref ? a.ref.file : ""}|${a.f.lv || 1}`; };
+  const pts = p => { const k = pairKey(p); if (!k) return []; NB.mappaPunti = NB.mappaPunti || {}; return NB.mappaPunti[k] || (NB.mappaPunti[k] = []); };
+  const ptsSave = p => { const k = pairKey(p); if (k && NB.mappaPunti && !NB.mappaPunti[k].length) delete NB.mappaPunti[k]; nbSave(); };
+  const ppmOf = f => isHrF(f) ? ((HR.prof(f, f.lv || 1) || {}).tol || 5) : 0;
+  async function addPoint(p, px, py) {
+    const a = p._a, rt = xOf(p, px), mz = a.mzAt(py);
+    let at = null; try { at = await J(`api/mapsnap?k=${a.f.k}&level=${a.f.lv || 1}&rt=${rt}&mz=${mz}&dmz=${a.dmz || 1}`); } catch (e) { /* no snap */ }
+    const q = at && at.rt != null ? at : { rt, mz };
+    const list = pts(p); list.push({ rt: q.rt, mz: q.mz, note: "" }); st(p).psel = list.length - 1;
+    ptsSave(p); overlay(p); table(p);
+  }
+  function nearPoint(p, px, py) {
+    const a = p._a; let best = -1, bd = 81;
+    pts(p).forEach((q, i) => { const d = (a.X(q.rt) - px) ** 2 + (a.Y(q.mz) - py) ** 2; if (d < bd) { bd = d; best = i; } });
+    return best;
+  }
+  // mousedown on a point: drag it (it snaps again where it is dropped); true = explore.js does nothing else
+  function down(p, e, px, py) {
+    if (!is2d(p) || e.button !== 0 || e.shiftKey || e.altKey) return false;
+    const i = nearPoint(p, px, py); if (i < 0) return false;
+    e.preventDefault(); const s = st(p), list = pts(p), r = p.cv.getBoundingClientRect(); s.psel = i; let moved = false;
+    const mv = ev => { moved = true; const x = ev.clientX - r.left, y = ev.clientY - r.top; list[i].rt = xOf(p, x); list[i].mz = p._a.mzAt(y); overlay(p); };
+    const up = async ev => {
+      removeEventListener("mousemove", mv); removeEventListener("mouseup", up);
+      if (moved) { const a = p._a; try { const at = await J(`api/mapsnap?k=${a.f.k}&level=${a.f.lv || 1}&rt=${list[i].rt}&mz=${list[i].mz}&dmz=${a.dmz || 1}`); if (at && at.rt != null) { list[i].rt = at.rt; list[i].mz = at.mz; } } catch (e2) { /* keep where dropped */ } ptsSave(p); }
+      overlay(p); table(p);
+    };
+    addEventListener("mousemove", mv); addEventListener("mouseup", up);
+    return true;
+  }
+  // a click (no drag) on the map: with «Segna» on it adds a point; on a point it chooses it
+  function click(p, px, py) {
+    if (!is2d(p)) return false; const s = st(p), i = nearPoint(p, px, py);
+    if (i >= 0) { s.psel = i; overlay(p); table(p); return true; }
+    if (!s.mark) return false;
+    addPoint(p, px, py); return true;
+  }
+  function delPoint(p, i) { const list = pts(p); if (i == null || i < 0 || i >= list.length) return; list.splice(i, 1); st(p).psel = null; ptsSave(p); overlay(p); table(p); }
+  function drawPoints(p, g) {
+    const a = p._a, s = st(p); g.save(); g.font = fpx(11, "bold "); g.textAlign = "center";
+    pts(p).forEach((q, i) => {
+      if (q.rt < a.x0 || q.rt > a.x1 || q.mz < a.y0 || q.mz > a.y1) return;
+      const x = a.X(q.rt), y = a.Y(q.mz), on = s.psel === i;
+      g.beginPath(); g.arc(x, y, on ? 9 : 7.5, 0, 2 * Math.PI); g.fillStyle = css("--panel"); g.globalAlpha = .9; g.fill(); g.globalAlpha = 1;
+      g.lineWidth = on ? 2.4 : 1.4; g.strokeStyle = on ? css("--accent") : css("--ink"); g.stroke();
+      g.fillStyle = css("--ink"); g.fillText(String(i + 1), x, y + 4);
+    });
+    g.restore();
+  }
+  // ---- the table under the map
+  const COLS = ["n", "rt", "mz", "ia", "ib", "d", "ratio", "sn", "g", "dm", "note"];
+  const COLK = { n: ["mappa.col.n", "mappa.col.n.title"], rt: ["mappa.col.rt", "mappa.col.rt.title"], mz: ["mappa.col.mz", "mappa.col.mz.title"], ia: ["mappa.col.ia", "mappa.col.ia.title"], ib: ["mappa.col.ib", "mappa.col.ib.title"], d: ["mappa.col.d", "mappa.col.d.title"], ratio: ["mappa.col.ratio", "mappa.col.ratio.title"], sn: ["mappa.col.sn", "mappa.col.sn.title"], g: ["mappa.col.g", "mappa.col.g.title"], dm: ["mappa.col.dm", "mappa.col.dm.title"], note: ["mappa.col.note", "mappa.col.note.title"] };     // literal keys: the i18n check finds them
+  let tT = 0;
+  function table(p) {
+    clearTimeout(tT); tT = setTimeout(() => tableNow(p), 30);
+  }
+  async function tableNow(p) {
+    const s = st(p), a = p._a; if (!a || !s.grid) return;
+    let box = s.tab;
+    const list = is2d(p) ? pts(p) : [];
+    if (!list.length) { if (box) { box.remove(); s.tab = null; growTable(p, false); } return; }
+    if (!box) { box = s.tab = document.createElement("div"); box.className = "mztab"; s.grid.after(box); growTable(p, true); }
+    const f = a.f, ref = a.ref, mzq = list.map(q => `${(+q.rt).toFixed(4)},${(+q.mz).toFixed(5)}`).join(";");
+    let rows = [];
+    try { rows = (await J(`api/mappunti?k=${f.k}&level=${f.lv || 1}${ref ? "&ref=" + ref.k : ""}&ppm=${ppmOf(f)}&grp=${PREF.grp ?? 0.05}&pts=${mzq}`)).rows; } catch (e) { rows = list.map(q => ({ rt: q.rt, mz: q.mz })); }
+    rows = rows.map((r, i) => ({ ...r, n: i + 1, note: list[i] ? list[i].note || "" : "" }));
+    s.rows = rows;
+    const so = s.sort || { c: "n", d: 1 }, val = (r, c) => r[c] == null ? -Infinity : r[c];
+    const view = rows.slice().sort((u, v) => typeof val(u, so.c) === "string" ? so.d * String(val(u, so.c)).localeCompare(String(val(v, so.c))) : so.d * (val(u, so.c) - val(v, so.c)));
+    const dec = mzd(p), hr = isHrF(f), num = (v, d) => v == null || !Number.isFinite(v) ? "–" : v.toFixed(d);
+    const head = COLS.map(c => `<th data-c="${c}" title="${T(COLK[c][1])}">${T(COLK[c][0])}${so.c === c ? (so.d > 0 ? " ▲" : " ▼") : ""}</th>`).join("") + "<th></th>";
+    box.innerHTML = `<div class="mzt-bar"><b>${T("mappa.tab.title", { n: rows.length })}</b><label class="muted" title="${T("mappa.tab.grp.title")}">${T("mappa.tab.grp")} ± <input data-t="grp" class="mzf" inputmode="decimal" value="${PREF.grp ?? 0.05}"> min</label>` +
+      `<span class="sp"></span><button data-t="xl" title="${T("mappa.tab.xl.title")}">Excel</button><button data-t="cp" title="${T("mappa.tab.cp.title")}">${T("mappa.tab.cp")}</button><button data-t="clear">${T("mappa.tab.clear")}</button></div>` +
+      `<div class="mzt-sc"><table><thead><tr>${head}</tr></thead><tbody>${view.map(r => `<tr data-i="${r.n - 1}" class="${s.psel === r.n - 1 ? "on" : ""}">` +
+      `<td>${r.n}</td><td>${num(r.rt, 2)}</td><td>${num(r.mz, hr ? 4 : 1)}</td><td>${r.ia == null ? "–" : fmt(r.ia)}</td><td>${r.ib == null ? "–" : fmt(r.ib)}</td><td>${r.d == null ? "–" : fmt(r.d)}</td>` +
+      `<td>${num(r.ratio, 2)}</td><td>${num(r.sn, 1)}</td><td>${r.g ?? "–"}</td><td>${r.dm == null ? "–" : r.dm === 0 ? "0" : `<a href="#" data-dm="${r.dm}">${(r.dm > 0 ? "+" : "") + r.dm.toFixed(hr ? 4 : 1)}</a>`}</td>` +
+      `<td><input data-note="${r.n - 1}" value="${EH(r.note || "")}" placeholder="${T("mappa.tab.note")}"></td><td><button data-xic="${r.n - 1}" title="${T("mappa.tab.xic.title")}">XIC</button></td></tr>`).join("")}</tbody></table></div>`;
+    box.querySelectorAll("th[data-c]").forEach(th => th.onclick = () => { const c = th.dataset.c; s.sort = { c, d: so.c === c ? -so.d : 1 }; tableNow(p); });
+    box.querySelector('[data-t="grp"]').onchange = ev => { const v = parseFloat(String(ev.target.value).replace(",", ".")); if (v > 0) { PREF.grp = v; prefSave(); } tableNow(p); };
+    box.querySelector('[data-t="xl"]').onclick = () => excel(p);
+    box.querySelector('[data-t="cp"]').onclick = () => copyRows(p);
+    box.querySelector('[data-t="clear"]').onclick = async () => { if (await yesno(T("mappa.tab.clear.ask"))) { pts(p).splice(0); ptsSave(p); overlay(p); tableNow(p); } };
+    box.querySelectorAll("tbody tr").forEach(tr => {
+      const i = +tr.dataset.i;
+      tr.onclick = ev => { if (ev.target.closest("input,button,a")) return; const q = pts(p)[i]; if (!q) return; s.psel = i; s.lock = { rt: q.rt, mz: q.mz }; follow(p, s.lock); overlay(p); margins(p); tableNow(p); };
+      tr.ondblclick = ev => { if (ev.target.closest("input,button,a")) return; const q = pts(p)[i]; if (q) spectrumAt(p, q.rt); };
+    });
+    box.querySelectorAll("[data-note]").forEach(inp => inp.onchange = () => { const q = pts(p)[+inp.dataset.note]; if (q) { q.note = inp.value; ptsSave(p); } });
+    box.querySelectorAll("[data-xic]").forEach(b => b.onclick = () => { const q = pts(p)[+b.dataset.xic]; if (q) xicAB(p, q.mz); });
+    box.querySelectorAll("[data-dm]").forEach(l => l.onclick = ev => { ev.preventDefault(); openDm(+l.dataset.dm, isHrF(f)); });
+  }
+  function growTable(p, on) {
+    const s = st(p); if (on === !!s.tgrown || isMax(p)) return;
+    s.tgrown = on; p.h = Math.max(200, p.h + (on ? 1 : -1) * 220); apply(p); if (typeof relayout === "function") relayout(); fitHost(); uiSave();
+  }
+  async function spectrumAt(p, rt) {
+    const f = p._a.f; let r0 = rt - scanStep() / 2, r1 = rt + scanStep() / 2;
+    const n = await nearScan(f.k, rt); if (n) { r0 = n.rt - NEAR; r1 = n.rt + NEAR; }
+    newSpec(p, r0, r1, f.k);
+  }
+  // XIC of A and B overlaid: a new XIC panel with the m/z; the files of the panel are those of the tab, A and B among them
+  function xicAB(p, mz) { xicDirect(mz, p); }
+  // delta m: the sidebar tab of the neutral losses (filtered on |delta m|) or, for the usual adduct differences, the adducts
+  const AD_DIFF = [21.9819, 17.0265, 37.9559];
+  function openDm(dm, hr) {
+    const v = Math.abs(dm), tol = hr ? 0.003 : 0.5, ad = dm > 0 && AD_DIFF.some(x => Math.abs(v - x) <= tol), q = String(+v.toFixed(hr ? 4 : 1));
+    if (window.BARRA && BARRA.isDataView()) BARRA.setTab(ad ? "adducts" : "losses", ad ? {} : { q });
+    else if (window.QQQRef) QQQRef.open(ad ? "ad" : "ls", ad ? {} : { q });
+  }
+  function sheetRows(p) {
+    const s = st(p), hr = isHrF(p._a.f);
+    return (s.rows || []).map(r => [r.n, r.rt != null ? +r.rt.toFixed(3) : "", r.mz != null ? +r.mz.toFixed(hr ? 5 : 2) : "", r.ia ?? "", r.ib ?? "", r.d ?? "", r.ratio != null ? +r.ratio.toFixed(3) : "", r.sn != null ? +r.sn.toFixed(1) : "", r.g ?? "", r.dm != null ? +r.dm.toFixed(hr ? 5 : 2) : "", r.note || ""]);
+  }
+  const headRow = () => COLS.map(c => T(COLK[c][0]));
+  function excel(p) {
+    const a = p._a, f = a.f, meta = [[T("mappa.meta.fileA"), f.label], [T("mappa.meta.fileB"), a.ref ? a.ref.label : "–"], [T("mappa.meta.level"), f.lv === 2 ? "MS2" : "MS1"],
+      [T("mappa.meta.xic"), isHrF(f) ? `± ${ppmOf(f)} ppm` : "[n − 0,2; n + 0,8]"], [T("mappa.meta.rttol"), `± ${diffOpt().rttol} min`], [T("mappa.meta.grp"), `± ${PREF.grp ?? 0.05} min`],
+      [T("mappa.meta.snap"), "± 0,2 min · ± 1 bin"], [T("mappa.meta.date"), new Date().toLocaleString()]];
+    dlx(`${f.label}${a.ref ? "-" + a.ref.label : ""}_punti.xlsx`, [{ name: T("mappa.tab.sheet"), head: headRow(), rows: sheetRows(p), widths: [5, 9, 11, 12, 12, 12, 9, 8, 7, 10, 30] },
+      { name: T("mappa.meta.sheet"), head: [T("mappa.meta.what"), T("mappa.meta.value")], rows: meta, widths: [30, 40] }]);
+  }
+  async function copyRows(p) {
+    const txt = [headRow(), ...sheetRows(p)].map(r => r.join("\t")).join("\n");
+    try { await navigator.clipboard.writeText(txt); nearMsg(T("mappa.tab.copied")); } catch (e) { nearMsg(T("mappa.tab.copyFail")); }
+  }
+
   // ---------------------------------------------------------------- buttons in the controls of the map: «⋯» menu, sight, whole view
   function decorate(p, c) {
     if (p.type !== "map") return;
     const sp = document.createElement("span"); sp.className = "seg mzbt";
-    sp.innerHTML = `<button data-mz="mir" class="${mirOn(p) ? "on" : ""}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button><button data-mz="all" title="${T("mappa.btn.all.title")}">&#10530;</button><button data-mz="menu" title="${T("mappa.btn.menu.title")}" aria-label="${T("mappa.btn.menu.title")}">&#8943;</button>`;
+    const o = diffOpt(), sel = (v, lab) => `<option value="${v}" ${o.show === v ? "selected" : ""}>${lab}</option>`;
+    const dif = p.ref !== "" && p.ref != null ? `<select data-mz="show" title="${T("mappa.show.title")}">${sel("all", T("mappa.show.all"))}${sel("up", T("mappa.show.up"))}${sel("down", T("mappa.show.down"))}</select>` +
+      `<label class="muted" title="${T("mappa.thr.title")}">${T("mappa.thr")} <input data-mz="thr" class="mzf" inputmode="decimal" value="${+(o.thr * 100).toFixed(1)}"> %</label>` : "";
+    sp.innerHTML = `<button data-mz="mark" class="${st(p).mark ? "on" : ""}" title="${T("mappa.btn.mark.title")}">${T("mappa.btn.mark")}</button><button data-mz="mir" class="${mirOn(p) ? "on" : ""}" title="${T("mappa.btn.mir.title")}">${T("mappa.btn.mir")}</button><button data-mz="all" title="${T("mappa.btn.all.title")}">&#10530;</button><button data-mz="menu" title="${T("mappa.btn.menu.title")}" aria-label="${T("mappa.btn.menu.title")}">&#8943;</button>`;
     c.appendChild(sp);
+    if (dif) { const d2 = document.createElement("span"); d2.className = "mzdif"; d2.innerHTML = dif; c.appendChild(d2);
+      d2.querySelector('[data-mz="show"]').onchange = ev => { PREF.show = ev.target.value; prefSave(); draw(p); };
+      d2.querySelector('[data-mz="thr"]').onchange = ev => { const v = parseFloat(String(ev.target.value).replace(",", ".")); if (v >= 0 && v < 100) { PREF.thr = v / 100; prefSave(); } draw(p); }; }
+    sp.querySelector('[data-mz="mark"]').onclick = () => { const s = st(p); s.mark = !s.mark; markBtn(p); };
     sp.querySelector('[data-mz="mir"]').onclick = ev => { const s = st(p); s.mir = !mirOn(p); ev.currentTarget.classList.toggle("on", s.mir); layout(p); draw(p); };
     sp.querySelector('[data-mz="all"]').onclick = () => whole(p);
     sp.querySelector('[data-mz="menu"]').onclick = ev => { ev.stopPropagation(); menuAt(p, ev.currentTarget); };     // the click must not reach the document (it closes #ctx)
   }
 
-  return { init, zoomImg, after, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, peakStep, apexStep, madNoise };
+  function markBtn(p) { const b = p.el.querySelector('[data-mz="mark"]'); if (b) b.classList.toggle("on", !!st(p).mark); p.cv.style.cursor = st(p).mark ? "copy" : ""; }
+
+  return { init, zoomImg, after, down, click, diffOpt, diffMap, pts, delPoint, move, leave, wheel, boxZoom, ctx, decorate, key, whole, prefs: PREF, prefSave, point, st, valueAt, peakStep, apexStep, madNoise };
 })();
