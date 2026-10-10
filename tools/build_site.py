@@ -105,6 +105,22 @@ def pack_mzfinder(static: Path) -> None:
     (dst / "indice.json").write_text(json.dumps({"js": js, "files": files + data, "py": "tpmine.zip"}, indent=1), encoding="utf-8")
 
 
+# Oldest desktop app (crates/mzlab-desktop version) that can run this web part. Raise it ONLY when the web part needs a newer native app
+# (a change in crates/mzlab-desktop/src, shim/ or the mzlab:// routes the page uses): the apps older than that tell the user to download the app again.
+DESKTOP_MIN = "0.1.0"
+COMMIT = ["dev"]
+
+
+def write_manifest(out: Path, commit: str) -> None:
+    """static/manifest.json: path (relative to the site root) -> SHA-256 and size of every file, so that the desktop app downloads only what changed."""
+    files = {}
+    for f in sorted(out.rglob("*")):
+        rel = f.relative_to(out).as_posix()
+        if f.is_file() and rel != "static/manifest.json":
+            files[rel] = {"sha256": hashlib.sha256(f.read_bytes()).hexdigest(), "size": f.stat().st_size}
+    (out / "static" / "manifest.json").write_text(json.dumps({"version": commit, "desktop_min": DESKTOP_MIN, "files": files}, separators=(",", ":")), encoding="utf-8")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pyodide-dir", type=Path)
@@ -142,6 +158,7 @@ def main() -> None:
     ver_match = re.search(r'__version__\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "__init__.py").read_text(encoding="utf-8"))
     ver = ver_match.group(1) if ver_match else "0.1.0"
     (static / "version.js").write_text(f'window.MZLAB_VERSION = "{ver}";\nwindow.MZLAB_COMMIT = "{commit}";\n', encoding="utf-8")
+    COMMIT[0] = commit
     # the Python code (mzlab package)
     with zipfile.ZipFile(static / "mzlab.zip", "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted([*(ROOT / "mzlab").rglob("*.py"), *(ROOT / "mzlab" / "chem").glob("*.json")]):       # the list of known contaminants is data of the package
@@ -168,6 +185,7 @@ def main() -> None:
             h.update(f.relative_to(out).as_posix().encode() + f.read_bytes())
     big = PYODIDE + "-" + hashlib.sha1("".join(f"{f.name}{f.stat().st_size}" for f in sorted((static / "vendor").rglob("*")) if f.is_file()).encode()).hexdigest()[:8]
     (out / "sw.js").write_text(sw.replace("__APP__", h.hexdigest()[:10]).replace("__BIG__", big), encoding="utf-8")
+    write_manifest(out, COMMIT[0])
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
     print(f"site/ ready: {size / 1e6:.1f} MB")
 

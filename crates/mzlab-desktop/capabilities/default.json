@@ -1,7 +1,19 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The main window: the system file dialog, the window title and the events of file drops. No file system access, no network.",
-  "windows": ["main"],
-  "permissions": ["core:default", "core:window:allow-set-title", "dialog:allow-open"]
+  "description": "The main window (the page is served by the mzlab:// protocol, so its origin counts as remote for Tauri): the system file dialog, the window title, the events of file drops and the commands of the program. No file system access; the network is used only by the update commands, on the Rust side.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-title",
+    "dialog:allow-open"
+  ],
+  "remote": {
+    "urls": [
+      "mzlab://localhost/*",
+      "http://mzlab.localhost/*"
+    ]
+  }
 }

@@ -35,8 +35,15 @@ class Quiet(SimpleHTTPRequestHandler):
 page = ThreadingHTTPServer(("127.0.0.1", PAGE_PORT), partial(Quiet, directory=str(DIST)))
 threading.Thread(target=page.serve_forever, daemon=True).start()
 
-FAKE_TAURI = """window.__TAURI__ = { core: { invoke: async (cmd, a) => (cmd === "pick_files" && !a.dam) ? %s : [] },
-  event: { listen: () => {} }, window: { getCurrentWindow: () => ({ setTitle: () => {} }) } };""" % json.dumps(picked)
+FAKE_TAURI = """window.__UPD = { calls: [], listeners: [], check: { state: "available", files: 3, bytes: 2500000, version: "x" } };
+window.__TAURI__ = { core: { invoke: async (cmd, a) => {
+    if (cmd === "pick_files") return a.dam ? [] : %s;
+    window.__UPD.calls.push(cmd);
+    if (cmd === "update_check") return window.__UPD.check;
+    if (cmd === "update_download") { window.__UPD.listeners.forEach(f => f({ payload: { file: 2, files: 3, bytes: 1200000, total: 2500000 } })); return { state: "ready", version: "x" }; }
+    return [];
+  } },
+  event: { listen: async (n, f) => { window.__UPD.listeners.push(f); return () => {}; } }, window: { getCurrentWindow: () => ({ setTitle: () => {} }) } };""" % json.dumps(picked)
 def native(route):                    # mzlab.localhost -> the engine over HTTP (what the window does with the custom protocol)
     u = route.request.url.replace("http://mzlab.localhost", f"http://127.0.0.1:{ENGINE_PORT}")
     try:
@@ -88,6 +95,16 @@ try:
             for a, c in zip(r["j"]["scans"], py["j"]["scans"]):
                 close(a["mz"], c["mz"], 1.1e-3); close(a["y"], c["y"], 0.11, 1e-6)
         step("single scans from the native engine: same values as Python", scans)
+        def update_ui():
+            pg.wait_for_selector("#np-set .upd-dot", state="attached", timeout=20000)      # the silent check (5 s after the start) leaves a dot on the gear
+            pg.click("#np-set"); pg.wait_for_selector("#upd-go", timeout=10000)
+            assert pg.get_attribute("#upd-go", "data-act") == "download", pg.get_attribute("#upd-go", "data-act")
+            msg = pg.inner_text("#upd-msg")
+            assert "3" in msg and "2.5" in msg, msg                                          # files and MB, in any language
+            pg.click("#upd-go"); pg.wait_for_function("document.querySelector('#upd-go').dataset.act === 'restart'", timeout=10000)
+            assert "update_download" in pg.evaluate("window.__UPD.calls"), pg.evaluate("window.__UPD.calls")
+            pg.click("#upd-go"); assert pg.evaluate("window.__UPD.calls").count("update_restart") == 1
+        step("the settings popup checks, downloads with progress and offers the restart (desktop only)", update_ui)
         b.close()
 finally:
     eng.kill(); page.shutdown()

@@ -16,18 +16,21 @@ required-features = ["app"]
 
 [features]
 # The window (Tauri). Off by default so that `cargo test` of the workspace needs no webview library.
-app = ["dep:serde", "dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-build"]
+app = ["dep:tauri", "dep:tauri-plugin-dialog", "dep:tauri-build"]
 
 [dependencies]
 mzlab-core = { path = "../mzlab-core" }
 memmap2 = "0.9"
 tauri = { version = "2", optional = true }
-serde = { version = "1", features = ["derive"], optional = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+# the only network code of the program: HTTPS (rustls) to the published site, for the update of the web part (never in the WASM graph)
+ureq = { version = "2", default-features = false, features = ["tls"] }
 tauri-plugin-dialog = { version = "2", optional = true }
 
 [build-dependencies]
 tauri-build = { version = "2", optional = true }
 
 [dev-dependencies]
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+tempfile = "3"

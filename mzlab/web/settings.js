@@ -67,6 +67,7 @@ function uipOpen(btn) {
     <div class="row hr-only">${I18N.t("settings.lab.label")} <button id="uip-lab" type="button">${I18N.t("settings.lab.button")}</button></div>
     <div class="row hr-only" title="${I18N.t("settings.hrDec.title")}">${I18N.t("settings.hrDec")} <input type="number" id="uip-hdec" min="3" max="5" step="1" value="${UIP.hrDec}" style="width:44px"></div>
     ` : ""}
+    ${window.UPD && UPD.on ? `<div class="row" id="uip-upd"></div>` : ""}
     ${!(window.BANCO && BANCO.on()) ? `
     <div class="uip-tour-sec" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0;margin-top:8px;border-top:1px solid var(--line);padding-top:8px"><span>${I18N.t("tour.impost.titolo")}</span> <button id="uip-tour" type="button">${I18N.t(typeof E !== "undefined" && E.files && E.files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>
     ` : ""}
@@ -94,6 +95,7 @@ function uipOpen(btn) {
     UIP.merge = e.target.checked; uipSave(); CACHE.clear(); SC.m.clear(); SC.n.clear();
     if (typeof redrawAll === "function") redrawAll();
   };
+  if (window.UPD && UPD.on) UPD.mount(d.querySelector("#uip-upd"));         // desktop app: check / download / restart
   const uipTour = d.querySelector("#uip-tour");
   if (uipTour) uipTour.onclick = () => {
     d.remove();
