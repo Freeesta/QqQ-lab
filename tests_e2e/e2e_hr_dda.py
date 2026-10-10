@@ -1,4 +1,4 @@
-"""B5: DDA trio: chromatogram, Full Scan and MS2 side by side, flags on the precursors, triangles, arrows in the MS2 panel."""
+"""B5: DDA trio: chromatogram, Full Scan (MS1) and MS2 one under the other, flags on the precursors, triangles, arrows in the MS2 panel."""
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
 from lib_hr import synth, load
@@ -23,17 +23,16 @@ try:
             c, s1, s2 = pg.evaluate(GEO); print(c, s1, s2)
             assert s2 is not None, "no MS2 panel"
             assert s1[1] == c[1] + c[3], (c, s1)                           # Full Scan touches the chromatogram
-            assert s2[1] == s1[1] and s2[3] == s1[3] and s2[0] > s1[0] and s2[0] >= s1[0] + s1[2], (s1, s2)       # side by side, same height
-            assert abs(s1[2] + 8 + s2[2] - c[2]) <= 2, (c, s1, s2)
+            assert s1[0] == 0 and abs(s1[2] - c[2]) <= 2, (c, s1)          # MS1 has the whole width
+            assert s2[0] == 0 and abs(s2[2] - c[2]) <= 2 and s2[1] >= s1[1] + s1[3], (c, s1, s2)       # MS2 under it, as wide
             assert pg.evaluate("document.querySelector('#dpanels').scrollHeight") > 0
-        step("trio: c on top, s1 under it, s2 to the right with the same y and height", layout)
+        step("trio: c on top, MS1 under it at full width, MS2 under the MS1", layout)
         def narrow():
             pg.set_viewport_size({"width": 900, "height": 2200}); pg.wait_for_timeout(1500)
-            c, s1, s2 = pg.evaluate(GEO); print(c, s1, s2)
-            assert s2[1] >= s1[1] + s1[3] and s2[0] == 0, (s1, s2)           # under the Full Scan
+            c, s1, s2 = pg.evaluate(GEO); assert s2[1] >= s1[1] + s1[3] and s2[0] == 0, (s1, s2)           # under the Full Scan
             pg.set_viewport_size({"width": 1500, "height": 2200}); pg.wait_for_timeout(1500)
-            c, s1, s2 = pg.evaluate(GEO); assert s2[1] == s1[1] and s2[0] > s1[0], (s1, s2)
-        step("narrower than 1100 px the MS2 goes under the Full Scan; wide again, back beside it", narrow)
+            c, s1, s2 = pg.evaluate(GEO); assert s2[1] >= s1[1] + s1[3] and s2[0] == 0, (s1, s2)
+        step("narrow or wide, the MS2 stays under the Full Scan", narrow)
         def tri():
             t = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');c.el.scrollIntoView({block:'center'});const tr=c._a.tri.filter(q=>q.rt>13.5&&q.rt<15)[0];const r=c.cv.getBoundingClientRect();return {x:r.left+tr.px,y:r.top+M.t+4,sid:tr.sid,rt:tr.rt,n:c._a.tri.length}})()"); print(t)
             assert t["n"] > 50 and t["sid"] is not None
@@ -74,16 +73,16 @@ try:
             assert geo[2] > geo[3] - 5, geo                                      # the Full Scan has the whole width again
             pos = pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom'&&p.tab==='full');c.el.scrollIntoView({block:'center'});const r=c.cv.getBoundingClientRect();return {x:r.left+300,y:r.top+150}})()")
             pg.mouse.click(pos["x"], pos["y"], button="right"); pg.wait_for_timeout(400)
-            assert "Mostra le MS2 accanto alla Full Scan" in pg.inner_text("#ctx")
-            pg.click("#ctx >> text=Mostra le MS2 accanto alla Full Scan"); pg.wait_for_timeout(2500)
+            assert "Mostra le MS2 sotto la Full Scan" in pg.inner_text("#ctx")
+            pg.click("#ctx >> text=Mostra le MS2 sotto la Full Scan"); pg.wait_for_timeout(2500)
             c, s1, s2 = pg.evaluate(GEO); print(c, s1, s2)
-            assert s2 is not None and s2[1] == s1[1] and s2[0] > s1[0], (s1, s2)
-        step("close the MS2 panel, then «Mostra le MS2 accanto alla Full Scan» in the right-click menu brings it back", close_and_back)
+            assert s2 is not None and s2[1] >= s1[1] + s1[3] and s2[0] == 0, (s1, s2)
+        step("close the MS2 panel, then «Mostra le MS2 sotto la Full Scan» in the right-click menu brings it back", close_and_back)
         def reload():
             pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k);await DDA.selectMs2(t.s2,D.sid[7])})()"); pg.wait_for_timeout(1500)
             pg.evaluate("uiSave(true)"); pg.wait_for_timeout(1500); pg.reload(); pg.wait_for_timeout(8000)
             c, s1, s2 = pg.evaluate(GEO); sid = pg.evaluate("(()=>{const t=" + TRIO + ";return t.s2.sid})()"); print(c, s1, s2, sid)
-            assert s2 and s1[1] == c[1] + c[3] and s2[1] == s1[1] and sid is not None
+            assert s2 and s1[1] == c[1] + c[3] and s2[1] >= s1[1] + s1[3] and sid is not None
         step("after a reload the trio and the chosen MS2 are back", reload)
     r.close()
     r = Run(port=8896, wd="/tmp/wdhr7")

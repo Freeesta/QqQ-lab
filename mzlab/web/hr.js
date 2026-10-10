@@ -32,24 +32,6 @@ const HR = (() => {
     const r = [f.res1, f.res2].filter(Boolean).map(rtxt); const rr = r.length === 2 && r[0] === r[1] ? [r[0]] : r;
     return [f.instrument, rr.length ? "R " + rr.join(" / ") : "", f.dda ? "DDA" : ""].filter(Boolean).join(" · ");
   }
-  // little pills in the list of the files: «HR» for an Orbitrap / Q-TOF file, «DDA» for a data-dependent acquisition (QqQ files: nothing)
-  const hrbox = document.createElement("style");
-  hrbox.textContent = ".hrb{display:inline-block;margin-left:5px;padding:0 5px;border:1px solid var(--line);border-radius:9px;font-size:10.5px;line-height:15px;color:var(--muted);vertical-align:1px;white-space:nowrap}";
-  document.head.appendChild(hrbox);
-  const badge = f => {
-    if (!f) return "";
-    const hr = !!((f.prof1 && f.prof1.hr) || (f.prof2 && f.prof2.hr)), t = EH(label(f) || f.instrument || "");
-    const pill = (txt, tip) => `<span class="hrb" title="${EH(tip || t || txt)}">${EH(txt)}</span>`;
-    const TIPS = { DDA: I18N.t("hr.tip.DDA"), DIA: I18N.t("hr.tip.DIA"), AIF: I18N.t("hr.tip.AIF"),
-      PRM: I18N.t("hr.tip.PRM"), SIM: "Selected ion monitoring", MSn: I18N.t("hr.tip.MSn") };
-    const acq = (f.acq && f.acq.length ? f.acq.filter(x => x !== "MS1" && x !== "MS2") : f.dda && f.kind !== "mrm" ? ["DDA"] : []);
-    const hrw = hr && f.kind !== "mrm";
-    const lvl = hrw && f.max_level >= 3 ? `MS${f.max_level}` : "";
-    const mode = hrw ? (f.kind === "ms2" ? f.mode2 : f.mode1) : null;
-    const pol = hrw && f.polarity && f.polarity !== "unknown" ? { positive: "+", negative: "\u2212", mixed: "\u00b1" }[f.polarity] : "";
-    return (hr ? pill("HR") : "") + acq.map(x => pill(x, TIPS[x])).join("") + (lvl && !acq.includes("MSn") ? pill(lvl, TIPS.MSn) : "")
-      + (mode ? pill(I18N.t(mode === "profile" ? "hr.mode.profile" : "hr.mode.centroid"), I18N.t(mode === "profile" ? "hr.mode.profile.tip" : "hr.mode.centroid.tip")) : "") + (pol ? pill(pol, I18N.t("hr.pol.tip", { pol: f.polarity })) : "");
-  };
   // a file whose high-resolution reading failed on the server opens as low resolution: say it once
   const told = new Set();
   function notice(files) {
@@ -178,6 +160,6 @@ const HR = (() => {
     if (!t.ion || !q) return null;
     const d = q.dec, w = t.mz * q.tol * 1e-6; return [+(t.mz - w).toFixed(d + 1), +(t.mz + w).toFixed(d + 1)];
   }
-  return { mergeRes, mergeBy, resAt, fwhmFn, isoCurve, isoAsSpectrum, WDEF, LOW, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, badge, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
+  return { mergeRes, mergeBy, resAt, fwhmFn, isoCurve, isoAsSpectrum, WDEF, LOW, prof, isHr, dec, anyHr, tolDa, fmt, ppm, tolText, q, label, notice, isoFine, drawIso, ionTrace, ionText, xicArgs, xicEdges, xicFiles };
 })();
 window.HR = HR;

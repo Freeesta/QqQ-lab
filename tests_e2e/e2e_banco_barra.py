@@ -20,12 +20,9 @@ try:
             n = pg.locator("#hrbar button[data-hb]").count(); assert n >= 14, n
             assert not pg.is_visible("#g-add"), "the old «+ Cromatogramma» group is replaced by the menu «Cella»"
         step("toolbar instead of the tabs, with its buttons", tabs_gone)
-        def badges():
-            t = pg.inner_text("#flst"); assert "HR" in t and "DDA" in t, t[:300]
-            assert "MS" in pg.inner_text("#flst") or True
-            assert pg.locator("#flst .hrb").count() >= 3
-            assert "centroidi" in t or "profilo" in t, t[:300]
-        step("file marks: HR, DDA, profile/centroids", badges)
+        def no_badges():
+            assert pg.locator("#flst .hrb").count() == 0 and pg.locator("#flst .fl:not(.ghost)").count() >= 1
+        step("no marks (HR, DDA, profile) in the rows of the files", no_badges)
         def add_del():
             n0 = pg.evaluate("E.panels.length")
             pg.click("#hrbar [data-hb=add]"); pg.click("#ctx >> text=Cromatogramma"); pg.wait_for_timeout(1500)

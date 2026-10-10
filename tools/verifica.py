@@ -228,7 +228,7 @@ AREE = [
     ("mzlab/web/telefono.js", {"e2e_telefono"}),
     ("mzlab/web/tables.js", {"e2e28", "e2e_perdite", "e2e6"}), ("mzlab/web/elements.js", {"e2e28", "e2e6"}),
     ("mzlab/web/perdite.js", {"e2e_perdite"}), ("mzlab/web/calcola.js", {"e2e_calc"}), ("mzlab/web/cromato.js", {"e2e_cromato"}),
-    ("mzlab/web/hr.js", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_ui"}), ("mzlab/web/dda.js", {"e2e_hr_dda", "e2e_hr_dda2", "e2e_hr_nearest"}),
+    ("mzlab/web/hr.js", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_ui"}), ("mzlab/web/dda.js", {"e2e_hr_dda", "e2e_hr_dda2", "e2e_hr_nearest", "e2e_hr_vista"}), ("mzlab/web/banco.js", {"e2e_hr_vista", "e2e_banco_barra", "e2e_banco_celle"}), ("mzlab/chem/subformulas.py", {"e2e_hr_vista"}),
     ("mzlab/reader/profile.py", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_dda", "e2e_hr_ui"}),
     ("mzlab/web/libreria", {"e2e_libreria"}), ("mzlab/web/touch.js", {"e2e_tocco"}), ("mzlab/web/perf.js", {"e2e_perf"}),
     ("mzlab/web/origine.js", {"e2e_origine"}), ("mzlab/ionfamily.py", {"e2e_origine"}),

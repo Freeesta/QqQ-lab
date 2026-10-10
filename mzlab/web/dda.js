@@ -1,15 +1,14 @@
 "use strict";
-// Data-dependent acquisition (DDA / IDA): the Full Scan and the MS2 scans it triggered, side by side (classic script, loaded after hr.js).
+// Data-dependent acquisition (DDA / IDA): the Full Scan (MS1) and the MS2 scans it triggered, one under the other (classic script, loaded after hr.js).
 //
 // The "trio" is three ordinary panels treated as one block:
 //   c  = chromatogram (TIC, or the XIC of an ion the student follows), full width
-//   s1 = Full Scan (the linked spectrum of c)            \  side by side, under c (the Full Scan on the left, as in Thermo FreeStyle),
-//   s2 = MS2 scan (p.dda = s1.id, p.dock = s1.id)        /  one under the other when the page is narrower than MIN_W
+//   s1 = Full Scan (the linked spectrum of c)            \  both full width, one under the other:
+//   s2 = MS2 scan (p.dda = s1.id, p.dock = s1.id)        /  MS1 above, MS2 below
 // A flag (▼) above every peak of the Full Scan that started an MS2; a click shows that MS2 in s2. The MS2 scans of the file come from /api/dda
 // (one answer per file, kept here), a single scan from /api/scan (never merged into bins). Every entry point is inside try/catch: if something
 // is wrong here the other panels keep working.
 const DDA = (() => {
-  const MIN_W = 1100;                 // px: below this width the MS2 panel goes under the Full Scan
   const NEAR_MIN = 1.0, NEAR_MAX = 5; // Nearby Precursors (Thermo FreeStyle): MS2 scans of the same ion within +-1.0 min, at most 5 (the closest in time)
   const OFF = I18N.t("dda.off");
   const byId = id => E.panels.find(q => q.id === id && q.el) || null;
@@ -36,23 +35,20 @@ const DDA = (() => {
   const avgCache = (k, sids) => memo(`dav|${keyOf(k)}|${sids.join(",")}`, () => J(`api/scanavg?k=${k}&sids=${sids.join(",")}` + HR.q()));
 
   // ---------------------------------------------------------------- layout: the MS2 panel docked to the right of its Full Scan
-  const docked = q => !!(q && q.dock != null && q.el && hostWidth() >= MIN_W && byId(q.dock));
+  const docked = () => false;                                          // no MS2 panel sits beside its Full Scan any more: MS1 has the whole width, the MS2 panels go under it
   const joined = (a, b) => !!(a && b && (a.type === "chrom" || a.type === "xic") && b.type === "spec" && b.link === a.id && b.duo != null && byId(b.duo));        // chromatogram + Full Scan of a trio touch
   const set = (q, o) => { let ch = false; for (const k in o) if (Math.abs((q[k] || 0) - o[k]) > 0.5) { q[k] = o[k]; ch = true; } if (ch) apply(q); return ch; };
   function sync() {
     try {
-      const W = hostWidth(), wide = W >= MIN_W;
+      const W = hostWidth();
       E.panels.forEach(q => { if (q.el) { q.el.classList.toggle("jb", false); q.el.classList.toggle("jt", false); q.el.classList.toggle("dk", false); } });
-      const halved = new Set();
       E.panels.forEach(s2 => {
         if (s2.dock == null || !s2.el) return;
         const s1 = byId(s2.dock); if (!s1) return;
-        if (wide) { const half = Math.floor((W - 8) / 2); set(s1, { x: 0, w: half }); set(s2, { x: half + 8, y: s1.y, w: W - half - 8, h: s1.h }); halved.add(s1); s1._dk = true; }
-        else { set(s1, { x: 0, w: W }); set(s2, { x: 0, w: W }); }
-        s2.el.classList.add("dk"); s1.el.classList.add("jb"); s2.el.classList.toggle("jb", wide);
+        set(s1, { x: 0, w: W }); set(s2, { x: 0, w: W });
+        s2.el.classList.add("dk"); s1.el.classList.add("jb");
         const c = s1.link != null ? byId(s1.link) : null; if (c && c.y + c.h <= s1.y + 1) c.el.classList.add("jt");
       });
-      E.panels.forEach(q => { if (q._dk && !halved.has(q)) { q._dk = false; if (q.full && q.el) set(q, { x: 0, w: W }); } });       // the MS2 panel is gone: the Full Scan has the whole width again
     } catch (e) { console.info("DDA sync", e); }
   }
 
@@ -389,6 +385,6 @@ const DDA = (() => {
   st.textContent = ".pnl.jt{border-bottom-left-radius:0;border-bottom-right-radius:0}.pnl.jb{border-top-left-radius:0;border-top-right-radius:0;border-top-color:transparent}";
   document.head.appendChild(st);
 
-  return { MIN_W, NEAR_MIN, NEAR_MAX, docked, joined, sync, make, ensure, restored, onClose, waiting, selectMs2, step, key, onTri, events, scanData: dataOf, caption, decorate, click, menu, menuShow, listMode, listBlock, openList, follow, average, dots, around, get, ready, preload, ms2Item, list };
+  return { NEAR_MIN, NEAR_MAX, docked, joined, sync, make, ensure, restored, onClose, waiting, selectMs2, step, key, onTri, events, scanData: dataOf, caption, decorate, click, menu, menuShow, listMode, listBlock, openList, follow, average, dots, around, get, ready, preload, ms2Item, list };
 })();
 window.DDA = DDA;
