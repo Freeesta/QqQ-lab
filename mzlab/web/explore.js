@@ -152,12 +152,13 @@ function loading(on, msg) {
   if (on) {
     ldSince = Date.now(); Q("#ldsub").textContent = msg || "";
     clearTimeout(ldSlow); ldSlow = setTimeout(() => { if (!window.qqFailed && !Q("#loading").hidden && !Q("#ldsub").textContent) Q("#ldsub").textContent = I18N.t("load.slow"); }, 20000);
+    ldIon(!!window.qqReady);                                         // data loading: the ions; engine start: the bars
     if (!ldTimer) { ldNext(); ldTimer = setInterval(ldNext, 5000); } L.hidden = false;   // a phrase already turning (first start) is kept
   } else {
     const wait = Math.max(0, 900 - (Date.now() - ldSince));
     clearTimeout(ldSlow); setTimeout(() => {
       L.classList.add("fade-out");
-      setTimeout(() => { L.hidden = true; L.classList.remove("fade-out"); clearInterval(ldTimer); clearInterval(ldDotTimer); ldTimer = null; }, 400);
+      setTimeout(() => { L.hidden = true; L.classList.remove("fade-out"); ldIon(false); clearInterval(ldTimer); clearInterval(ldDotTimer); ldTimer = null; }, 400);
     }, wait);
   }
 }
