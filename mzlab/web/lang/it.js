@@ -1534,6 +1534,8 @@ I18N.add("it", {
   "dda.col.n": "n. MS2",
   "dda.show": "Mostra le MS2 sotto la Full Scan",
   "dda.show.tip": "Apre il pannello con la MS2 sotto la Full Scan: ▼ sui picchi, un clic mostra la sua MS2",
+  "dda.add": "Aggiungi un pannello MS2 accanto",
+  "dda.add.tip": "Affianca un altro pannello MS2 sotto la stessa Full Scan: la prossima scelta (▼ o clic su una barra) va nel pannello attivo",
   "comp.preset.organic": "C H N O (organiche)",
   "comp.preset.halogens": "C H N O S P + alogeni",
   "comp.ion.plus": "ione così com'è (+)",
