@@ -25,7 +25,7 @@ try:
             n = pg.evaluate("E.panels.filter(p=>p.type==='spec').length")
             box = pg.locator(".pnl.chrom canvas").first.bounding_box()
             pg.mouse.dblclick(box["x"] + box["width"] * 0.5, box["y"] + box["height"] * 0.5); pg.wait_for_timeout(2500)
-            v = pg.evaluate("(()=>{const s=E.panels.filter(p=>p.type==='spec').slice(-1)[0];return s&&s._a&&s._a.data&&s._a.data[0]?s._a.data[0].d.mz.length:0})()")
+            v = pg.evaluate("(()=>{const sp=E.panels.filter(p=>p.type==='spec'),s=sp.filter(p=>p.link!=null).slice(-1)[0]||sp.slice(-1)[0];return s&&s._a&&s._a.data&&s._a.data[0]?s._a.data[0].d.mz.length:0})()")
             assert pg.evaluate("E.panels.filter(p=>p.type==='spec').length") > n - 1 and v > 0, v
         step("double click on the chromatogram: a spectrum with peaks (never empty)", dbl)
     r.close()
