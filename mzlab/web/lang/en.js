@@ -157,6 +157,7 @@ I18N.add("en", {
   "bt.reopen": "Reopen BioTransformer",
   "bt.copied": "Copied: {smiles}",
   "load.slow": "The first visit downloads about 15 MB: it may take a minute.",
+  "busy.aria": "Working",
   "load.reading": "Reading the files and preparing the chromatograms...",
   "load.closing": "Closing and loading...",
   "load.err.oldBrowser": "this browser is too old: use a recent version of Chrome, Edge, Firefox or Safari.",

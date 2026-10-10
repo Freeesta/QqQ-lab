@@ -163,6 +163,19 @@ function loading(on, msg) {
   }
 }
 
+// progress bar for any API call (the work runs in the worker) that lasts more than ~1 s; the loading screen already covers file opening
+(() => {
+  const bar = () => document.getElementById("busybar"); let pending = 0, timer = 0; const orig = window.fetch.bind(window);
+  const update = () => { const b = bar(); if (b) b.hidden = !(pending > 0 && !timer && Q("#loading").hidden); };
+  window.fetch = (input, init) => {
+    const url = typeof input === "string" ? input : (input && input.url) || "";
+    if (!/^(\.\/)?api\//.test(url)) return orig(input, init);
+    if (!pending++) timer = setTimeout(() => { timer = 0; update(); }, 1000);
+    const done = () => { if (!--pending) { clearTimeout(timer); timer = 0; } update(); };
+    const p = orig(input, init); p.then(done, done); return p;
+  };
+})();
+
 // ------------------------------------------------------------------ taccuino (salvato accanto ai dati)
 let nbTimer = null, nbLast = "";
 function nbSave(now = false) {

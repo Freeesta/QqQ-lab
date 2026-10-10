@@ -474,9 +474,10 @@ function drawLabels() {
   svg.appendChild(g);                                     // always last: drawn above the structure
   g.textContent = "";
   if (!labelsOn()) return;
+  // the Ketcher canvas stays white in every app theme, so the labels (and the exports) always use the dark-on-white colours
   const text = (x, y, lines, color, size) => lines.forEach((parts, i) => g.appendChild(svgLabel(doc, parts, x, y + i * size * 1.3, size, color)));
-  for (const d of structures()) text(d.cx * sc, d.y * sc + 30, labelParts(d), window.isDark && window.isDark() ? "#e4e7eb" : "#3b3b3b", 13);
-  for (const a of arrowDeltas()) text(a.x * sc, a.y * sc - 12, [a.parts], window.isDark && window.isDark() ? "#7db4e6" : "#2b5c8a", 12);
+  for (const d of structures()) text(d.cx * sc, d.y * sc + 30, labelParts(d), "#3b3b3b", 13);
+  for (const a of arrowDeltas()) text(a.x * sc, a.y * sc - 12, [a.parts], "#2b5c8a", 12);
 }
 // the same labels as Ketcher text objects, only in the copy of the drawing that is exported
 const SUBC = "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089", SUPC = "\u2070\u00b9\u00b2\u00b3\u2074\u2075\u2076\u2077\u2078\u2079";
@@ -732,11 +733,12 @@ const SKEY = "qqq.disegno.riquadri";
 function sideApply(hidden) {
   Q("#v-draw").classList.toggle("noside", hidden);
   const b = Q("#side-toggle"); b.textContent = I18N.t(hidden ? "draw.side.show" : "draw.side.hide");
+  Q(hidden ? "#side-corner" : "#side-row").appendChild(b);   // the button sits above the cards, or in the canvas corner when they are hidden
   try { localStorage.setItem(SKEY, hidden ? "0" : "1"); } catch (_) { /* storage not available */ }
   setTimeout(() => { if (kFit) kFit(); if (K) { try { fitZoom(K, Q("#kframe")); } catch (_) { /* not critical */ } } }, 60);
 }
 Q("#side-toggle").onclick = () => sideApply(!Q("#v-draw").classList.contains("noside"));
-try { if (localStorage.getItem(SKEY) === "0") { Q("#v-draw").classList.add("noside"); Q("#side-toggle").textContent = I18N.t("draw.side.show"); } } catch (_) { /* default: visible */ }
+try { if (localStorage.getItem(SKEY) === "0") { Q("#v-draw").classList.add("noside"); Q("#side-toggle").textContent = I18N.t("draw.side.show"); Q("#side-corner").appendChild(Q("#side-toggle")); } } catch (_) { /* default: visible */ }
 // ------------------------------------------------------------------ trackpad: a two-finger swipe sideways moves the drawing; it must not go back in the page history
 function frameExtras(fr) {
   const d = fr.contentDocument; if (!d) return;
