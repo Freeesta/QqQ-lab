@@ -228,6 +228,21 @@ class Run:
         self.timing["indice"] = round(time.perf_counter() - t0, 3)
         self.n_chromatograms = self._count(b"<chromatogram ")
         self._tables: dict = {}
+        self.sha256 = self._compute_sha256()
+
+    def _compute_sha256(self) -> str:
+        try:
+            import hashlib
+            h = hashlib.sha256()
+            if hasattr(self._mm, "__len__") and hasattr(self._mm, "find") and not hasattr(self._mm, "CACHE"):
+                h.update(self._mm)
+            else:
+                with open(self.path, "rb") as fh:
+                    while chunk := fh.read(1 << 20):
+                        h.update(chunk)
+            return h.hexdigest()
+        except Exception:
+            return ""
 
     def _read_header(self):
         """Instrument configurations (analyzers of each), the default one, and whether the file comes from Thermo (relative collision energy)."""

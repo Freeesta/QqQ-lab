@@ -62,6 +62,24 @@ class App:
         except Exception:  # noqa: BLE001 -- a broken notebook must never stop the program
             self.session = None
 
+    def file_sha256(self, path: Path | str) -> str:
+        p = Path(path)
+        if not p.is_absolute() and self.workdir:
+            p = self.workdir / p
+        if not p.is_file():
+            return ""
+        st = p.stat()
+        cache = self.__dict__.setdefault("_sha256_cache", {})
+        key = (str(p), st.st_mtime, st.st_size)
+        if key not in cache:
+            import hashlib
+            h = hashlib.sha256()
+            with open(p, "rb") as fh:
+                while chunk := fh.read(1 << 20):
+                    h.update(chunk)
+            cache[key] = h.hexdigest()
+        return cache[key]
+
     # ------------------------------------------------------------------ files and start
     def files(self) -> list[dict]:
         if not self.workdir:
@@ -71,7 +89,7 @@ class App:
             if p.suffix.lower() == ".mzml" and p.is_file():
                 label, t, typ = guess_sample(p.name)
                 c = guess_conc(p.name) if typ == "standard" else None
-                out.append({"name": p.name, "size": p.stat().st_size, "time": t, "type": typ, "conc": c[0] if c else None, "cunit": c[1] if c else None, **self._sniff(p)})
+                out.append({"name": p.name, "size": p.stat().st_size, "sha256": self.file_sha256(p), "time": t, "type": typ, "conc": c[0] if c else None, "cunit": c[1] if c else None, **self._sniff(p)})
         return out
 
     def _sniff(self, p: Path) -> dict:
@@ -132,17 +150,22 @@ class App:
         dest = self.workdir / n
         tmp = dest.with_name(dest.name + ".part")
         left = length
+        import hashlib
+        hasher = hashlib.sha256()
         with open(tmp, "wb") as fh:
             while left > 0:
                 chunk = stream.read(min(1 << 20, left))
                 if not chunk:
                     break
                 fh.write(chunk)
+                hasher.update(chunk)
                 left -= len(chunk)
         if left:
             tmp.unlink(missing_ok=True)
             raise UserError("err.upload.interrupted", text="upload interrupted")
         os.replace(tmp, dest)
+        st = dest.stat()
+        self.__dict__.setdefault("_sha256_cache", {})[(str(dest), st.st_mtime, st.st_size)] = hasher.hexdigest()
         return n
 
     def remove_file(self, name: str):
@@ -197,10 +220,22 @@ class App:
             raise UserError("err.session.noFiles", text="add at least one file")
         self.session = Session(samples, self.workdir)
 
+    def _git_commit(self) -> str:
+        cache = self.__dict__.setdefault("_git_commit_val", None)
+        if cache is None:
+            try:
+                import subprocess
+                p = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, cwd=Path(__file__).parent.parent)
+                self._git_commit_val = p.stdout.strip() or "dev"
+            except Exception:
+                self._git_commit_val = "dev"
+        return self._git_commit_val
+
     def session_state(self) -> dict:
         return {"session": self.session.info() if self.session else None, "app": bool(self.workdir),
                 "workdir": str(self.workdir) if self.workdir else None, "files": self.files(), "methods": self.methods(),
-                "version": __import__("mzlab").__version__}
+                "version": __import__("mzlab").__version__,
+                "commit": self._git_commit()}
 
     def perf(self) -> dict:
         """How each open file was read (mode, size, seconds per step): for the ?perf meter of the page."""

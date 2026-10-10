@@ -46,6 +46,7 @@ class Item:
         base = label or Path(path).stem
         self.label = base + (f" · {part['tag']}" if part and not base.endswith(part["tag"]) else "")
         self.run = run or Run(path)
+        self.sha256 = getattr(self.run, "sha256", "")
         self.pol = part.get("pol") if part else None
         self.sc = [s for s in self.run.scans if self._match(s)]
         self._bpc: dict = {}
@@ -126,7 +127,8 @@ class Item:
         t1 = self._tbl(1) if ms1 else None
         t2 = self._tbl(2) if ms2 else None
         pol = sorted({s.polarity for s in self.sc if s.polarity})
-        out = {"file": self.file, "label": self.label, "time": self.time, "type": self.type, "conc": self.conc, "cunit": self.cunit,
+        out = {"file": self.file, "label": self.label, "sha256": getattr(self, "sha256", "") or getattr(r, "sha256", ""),
+                "time": self.time, "type": self.type, "conc": self.conc, "cunit": self.cunit,
                 "scans": len(self.sc), "ms1": len(ms1), "ms2": len(ms2),
                 "rt_min": float(min((s.rt for s in self.sc), default=0.0)),
                 "rt_max": float(max((s.rt for s in self.sc), default=0.0)),
