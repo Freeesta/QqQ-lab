@@ -82,7 +82,7 @@ try:
             assert pg.locator("#np-iso").count() == 0, "the Isotopi button is gone from the header"
         step("Esc closes the calculator; no Isotopi button in the header", closes)
         def xic_dlg():
-            pg.evaluate("openXic(null,{})"); pg.wait_for_timeout(300); pg.fill("#xic-mz", "c14h13f4n3o2s"); pg.wait_for_timeout(1200)
+            pg.evaluate("openXic(null,{})"); pg.wait_for_timeout(300); pg.fill("#xic-mz", "c14h13f4n3o2s"); hold(pg, 1200)
             assert "interpretata come" in pg.inner_text("#xic-sum"), pg.inner_text("#xic-sum"); pg.click("#xic-no")
         step("XIC window too", xic_dlg)
     r.close()

@@ -152,12 +152,12 @@ try:
             pg.evaluate(KQ + ".editor.selection(null)"); pg.wait_for_timeout(500); assert not pg.is_visible("#sel-card")
         step("selection shows its SMILES (also a piece); properties table (logP...)", sel_smiles)
         def props_ion():
-            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1.Oc1ccc([NH3+])cc1')"); pg.wait_for_timeout(1500)
+            pg.evaluate(KQ + ".setMolecule('CC(=O)Nc1ccc(O)cc1.Oc1ccc([NH3+])cc1')"); pg.wait_for_function("document.querySelectorAll('#prop-body tr').length===3", timeout=20000)
             rows = pg.evaluate("[...document.querySelectorAll('#prop-body tr')].slice(1).map(r=>[...r.cells].map(c=>c.textContent))"); print("PROPS:", rows)
             # default: charge excluded -> the ion is computed on its neutral form (4-aminophenol, C6H7NO)
             assert len(rows) == 2 and rows[1][0] == "C6H7NO" and rows[1][1] != "\u2013" and rows[0][1] != "\u2013", rows
             # untick "Escludi la carica": the charged species has no logP
-            pg.evaluate("(()=>{const c=document.querySelector('#prop-neut');c.checked=false;c.dispatchEvent(new Event('change',{bubbles:true}))})()"); pg.wait_for_timeout(1500)
+            pg.evaluate("(()=>{const c=document.querySelector('#prop-neut');c.checked=false;c.dispatchEvent(new Event('change',{bubbles:true}))})()"); pg.wait_for_function("(()=>{const r=document.querySelectorAll('#prop-body tr');return r.length===3&&r[2].cells[1].textContent==='\\u2013'})()", timeout=20000)
             rows = pg.evaluate("[...document.querySelectorAll('#prop-body tr')].slice(1).map(r=>[...r.cells].map(c=>c.textContent))"); print("PROPS (charge kept):", rows)
             assert len(rows) == 2 and rows[1][1] == "\u2013" and rows[0][1] != "\u2013", rows
         step("properties: ions on the neutral form by default, no logP with the charge kept", props_ion)
