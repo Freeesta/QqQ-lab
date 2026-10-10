@@ -1691,7 +1691,7 @@ function zoomTo(p, z0, z1) { const [f0, f1] = p._a.full; p.zoom = clampView(z0, 
 
 // ---- mappa RT-m/z (come "Ion Map" di Xcalibur e il visualizzatore 2D di MZmine): ogni pixel è l'intensità media di uno ione in un istante
 const RAMP = [[0, [250, 250, 246]], [0.12, [214, 234, 236]], [0.4, [120, 190, 205]], [0.7, [22, 120, 160]], [1, [28, 36, 110]]];
-const DIV = [[0, [190, 60, 40]], [0.5, [250, 250, 246]], [1, [30, 90, 190]]];
+const DIV = [[0, [213, 94, 0]], [0.5, [250, 250, 246]], [1, [0, 114, 178]]];       // Okabe-Ito vermilion #D55E00 <-> white <-> blue #0072B2: readable by colour-blind people
 function lut(stops) {
   const out = new Uint8ClampedArray(256 * 4);
   for (let i = 0; i < 256; i++) {
@@ -1714,15 +1714,17 @@ function mapNorm(m, norm) {
   const f = t > 0 ? (norm === "max" ? 1 : 1000) / t : 1, o = new Float32Array(m.length); for (let i = 0; i < m.length; i++) o[i] = m[i] * f; return o;
 }
 function mapImage(p, A, B, scale, norm = "abs") {
-  const key = `${A.k}|${B ? B.k : ""}|${scale}|${norm}`;
-  if (p._img && p._img.key === key && p._img.a === A.m && p._img.b === (B ? B.m : null)) return p._img;
-  const n = A.m.length, v = new Float32Array(n), mA = mapNorm(A.m, norm), mB = B ? mapNorm(B.m, norm) : null;
-  for (let i = 0; i < n; i++) v[i] = mB ? mA[i] - mB[i] : mA[i];
+  const dop = B && window.MAPPA ? MAPPA.diffOpt() : { show: "all", thr: 0.02, rttol: 0 };     // mappa.js: what the difference shows, noise threshold, tolerance in RT
+  const key = `${A.k}|${B ? B.k : ""}|${scale}|${norm}|${JSON.stringify(dop)}`;
+  if (p._img && p._img.key === key && p._img.a === A.m && p._img.b === (B ? B.d || B.m : null)) return p._img;
+  const n = A.m.length, v = new Float32Array(n);
+  if (B && B.d) v.set(B.d);                                              // the difference computed by the server (numpy, with the tolerance in RT)
+  else { const mA = mapNorm(A.m, norm), mB = B ? mapNorm(B.m, norm) : null; for (let i = 0; i < n; i++) v[i] = mB ? mA[i] - mB[i] : mA[i]; }
   const nz = []; for (let i = 0; i < n; i++) { const a = Math.abs(v[i]); if (a > 0) nz.push(a); }
   nz.sort((a, b) => a - b);
   const ref = nz.length ? nz[Math.min(nz.length - 1, Math.floor(nz.length * 0.995))] : 1;        // 99.5° percentile: un solo picco enorme non appiattisce il resto
-  const floor = B ? 0.02 : 0.004;                                                // sotto questa frazione è rumore: resta bianco
-  const T = x => { const r = Math.min(1, Math.abs(x) / ref); if (r < floor) return 0; return scale === "lin" ? r : scale === "log" ? Math.log10(1 + 1000 * r) / 3 : Math.sqrt(r); };
+  const floor = B ? dop.thr : 0.004;                                             // sotto questa frazione è rumore: resta bianco
+  const T = x => { if (B && (dop.show === "up" && x < 0 || dop.show === "down" && x > 0)) return 0; const r = Math.min(1, Math.abs(x) / ref); if (r < floor) return 0; return scale === "lin" ? r : scale === "log" ? Math.log10(1 + 1000 * r) / 3 : Math.sqrt(r); };
   const { nrt, nmz } = A, off = document.createElement("canvas"); off.width = nrt; off.height = nmz;
   const ctx = off.getContext("2d"), im = ctx.createImageData(nrt, nmz), tab = B ? LUT_DIV : LUT_SEQ;
   for (let i = 0; i < nrt; i++) for (let j = 0; j < nmz; j++) {
@@ -1730,7 +1732,7 @@ function mapImage(p, A, B, scale, norm = "abs") {
     im.data[o] = tab[q * 4]; im.data[o + 1] = tab[q * 4 + 1]; im.data[o + 2] = tab[q * 4 + 2]; im.data[o + 3] = 255;
   }
   ctx.putImageData(im, 0, 0);
-  return (p._img = { key, off, v, ref, T, a: A.m, b: B ? B.m : null });
+  return (p._img = { key, off, v, ref, T, a: A.m, b: B ? B.d || B.m : null });
 }
 // ---- 3D view of the same map: a surface (RT on one axis, m/z on the other, intensity as height) drawn with the painter's algorithm on the 2D canvas
 // (no WebGL, so it works with the strict CSP and everywhere). Each cell is the MAXIMUM of the bins it covers, so no peak disappears when the window is
@@ -1805,6 +1807,7 @@ async function drawMap(p) {
   if (!f || f.kind === "mrm") f = sf[0];
   const lv = f.lv, rf = p.ref !== "" && p.ref != null && E.files[+p.ref] && E.files[+p.ref].kind !== "mrm" && E.files[+p.ref].lv === lv && +p.ref !== f.k ? E.files[+p.ref] : null;
   const A = { ...(await getMap(f.k, lv)), k: f.k }, B = rf ? { ...(await getMap(rf.k, lv)), k: rf.k } : null;
+  if (B && window.MAPPA) B.d = await MAPPA.diffMap(f.k, rf.k, lv, p.norm || "abs");       // mappa.js: A - B in numpy, with the tolerance in RT
   const im = mapImage(p, A, B, p.scale, p.norm || "abs");
   const rt0 = A.rt0, rt1 = A.rt1, mzA = A.mz0, mzB = A.mz0 + A.nmz * A.dmz;
   const x0 = p.zoom ? p.zoom[0] : rt0, x1 = p.zoom ? p.zoom[1] : rt1, y0 = p.zoomY ? p.zoomY[0] : mzA, y1 = p.zoomY ? p.zoomY[1] : mzB;
@@ -1812,7 +1815,7 @@ async function drawMap(p) {
   const nTxt = { abs: "", max: I18N.t("map.norm.max"), tic: I18N.t("map.norm.tic") }[p.norm || "abs"], scTxt = I18N.t(`map.sc.${p.scale}`);
   if (p.view === "3d") {
     draw3d(p, g, W, H, A, B, im, f, rf, x0, x1, y0, y1, scTxt);
-    const bar3 = B ? "linear-gradient(90deg,rgb(190,60,40),#fafaf6,rgb(30,90,190))" : "linear-gradient(90deg,#fafaf6,rgb(120,190,205),rgb(22,120,160),rgb(28,36,110))";
+    const bar3 = B ? "linear-gradient(90deg,#D55E00,#fafaf6,#0072B2)" : "linear-gradient(90deg,#fafaf6,rgb(120,190,205),rgb(22,120,160),rgb(28,36,110))";
     p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="cbar" style="background:${bar3}"></span><span class="sm">${I18N.t(B ? "map.leg3d.diff" : "map.leg3d.mean")} ${I18N.t("map.leg3d.scale", { scale: scTxt, norm: nTxt })}</span><span class="sm">${I18N.t("map.leg3d.help")}</span>`;
     if (window.MAPPA) MAPPA.after(p);
     return;
@@ -1833,7 +1836,7 @@ async function drawMap(p) {
     
     return { px, rt, html: I18N.t("map.hov", { rt: rt.toFixed(2), mz: mz.toFixed(mzd(p)), what: I18N.t(B ? "map.hov.diff" : "map.hov.mean"), v: (B && v > 0 ? "+" : "") + fmt(v) }) + `<div class="sm">${I18N.t("map.hov.bin", { lo: (A.mz0 + j * A.dmz).toFixed(0), hi: (A.mz0 + (j + 1) * A.dmz).toFixed(0) })}</div>` };
   };
-  const bar = B ? "linear-gradient(90deg,rgb(190,60,40),#fafaf6,rgb(30,90,190))" : "linear-gradient(90deg,#fafaf6,rgb(120,190,205),rgb(22,120,160),rgb(28,36,110))";
+  const bar = B ? "linear-gradient(90deg,#D55E00,#fafaf6,#0072B2)" : "linear-gradient(90deg,#fafaf6,rgb(120,190,205),rgb(22,120,160),rgb(28,36,110))";
   p.leg.innerHTML = `<span><i style="background:${f.color}"></i>${EH(f.label)}${B ? I18N.t("map.leg.minus", { label: EH(rf.label) }) : ""}</span><span class="cbar" style="background:${bar}"></span><span class="sm">${B ? I18N.t("map.leg2d.diff") : I18N.t("map.leg2d.mean", { scale: scTxt })}${nTxt}</span><span class="sm">${I18N.t(window.MAPPA ? "mappa.leg.help" : "map.leg2d.help")}</span>`;
   if (window.MAPPA) MAPPA.after(p);
 }
@@ -2317,6 +2320,7 @@ function attach(p) {
     if (e.button !== 0 || !p._a) return; const px = rect(e), py = recty(e), a = p._a;
     if (e.shiftKey) { e.preventDefault(); drag = { pan: true, x0: px, y0: py, z: [a.x0, a.x1], zy: a.map ? [a.y0, a.y1] : null }; return; }
     if (a.is3d) { drag = { rot: true, x0: px, y0: py, az: p.az ?? 25, elv: p.elv ?? 38 }; e.preventDefault(); return; }
+    if (p.type === "map" && window.MAPPA && MAPPA.down(p, e, px, py)) return;          // mappa.js: dragging a marked point
     if (yAxisZone(px, py)) { drag = { ya: true, y0: Math.max(M.t, Math.min(a.H - M.b, py)), y: py }; e.preventDefault(); return; }
     if (xAxisZone(px, py)) { drag = { xa: true, x0: px, x: px }; e.preventDefault(); return; }
     const ed = edgeAt(px); drag = ed ? { edge: ed } : onCur(px) && !p.imode ? { cursor: true } : { x0: px, x: px, y0: py, y: py, alt: e.altKey };
@@ -2335,6 +2339,7 @@ function attach(p) {
     const x0 = xd(d.x0), x1 = xd(d.x);
     if (!a || x0 == null) return;
     if (p.type === "map" && !a.is3d && !d.alt && window.MAPPA && (Math.abs(d.x - d.x0) > 4 || Math.abs(d.y - d.y0) > 4)) { MAPPA.boxZoom(p, d.x0, d.y0, d.x, d.y); return; }   // mappa.js: box = zoom
+    if (p.type === "map" && !a.is3d && window.MAPPA && MAPPA.click(p, d.x0, d.y0)) return;       // mappa.js: «Segna» adds a point; a click on a point chooses it
     if (p._pickNoise && p.type !== "spec" && p.type !== "map" && Math.abs(d.x - d.x0) > 4) {          // the noise stretch for S/N of an integration
       const it = p._pickNoise; p._pickNoise = null; p.sel = null; it.noise = [Math.min(x0, x1), Math.max(x0, x1)]; draw(p); uiSave(); showInts(); return;
     }
