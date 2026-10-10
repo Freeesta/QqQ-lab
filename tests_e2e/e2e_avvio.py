@@ -16,7 +16,7 @@ HOLD = """() => new Promise((res, rej) => {
   r.onupgradeneeded = () => { const db = r.result; db.createObjectStore("files"); db.createObjectStore("kv"); };
   r.onsuccess = () => { window.__held = r.result; res(true); }; r.onerror = () => rej(String(r.error));
 })"""
-GONE = "() => new Promise(res => { const r = indexedDB.deleteDatabase('qqq_lab'); r.onsuccess = r.onerror = r.onblocked = () => res(true); })"
+GONE = "() => new Promise(res => { if (window.__held) { window.__held.close(); window.__held = null; } const r = indexedDB.deleteDatabase('qqq_lab'); r.onsuccess = r.onerror = r.onblocked = () => res(true); })"
 
 def title_static():
     html = (ROOT / "mzlab/web/index.html").read_text(encoding="utf-8")
