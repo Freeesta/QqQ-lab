@@ -44,7 +44,7 @@ APP_NAME = re.search(r'APP_NAME\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "web" / "app
 
 # Address of the published site (GitHub Pages): link previews (WhatsApp, Telegram, Slack...) need ABSOLUTE addresses for the page and the picture
 SITE_URL = "https://freeesta.github.io/mzlab/"
-TAGLINE = "Analisi di dati LC-MS/MS direttamente nel browser"
+TAGLINE = "Analisi MS"         # same as the static <title> of index.html and as the catalog key app.title
 DESCRIPTION = "Esplora cromatogrammi, spettri, XIC e MRM dei tuoi file LC-MS/MS nel browser. Nessuna installazione: i dati restano sul tuo computer."
 
 
@@ -181,7 +181,7 @@ def main() -> None:
     for f in sorted(out.rglob("*")):
         if f.is_file() and "pyodide" not in f.parts and "vendor" not in f.parts:
             h.update(f.relative_to(out).as_posix().encode() + f.read_bytes())
-    big = PYODIDE + "-" + hashlib.sha1("".join(f"{f.name}{f.stat().st_size}" for f in sorted((static / "vendor").rglob("*")) if f.is_file()).encode()).hexdigest()[:8]
+    big = PYODIDE + "-" + hashlib.sha1(b"".join(f.name.encode() + f.read_bytes() for f in sorted((static / "vendor").rglob("*")) if f.is_file())).hexdigest()[:8]   # the content, not the size: a same-size change must not be served from the old cache
     (out / "sw.js").write_text(sw.replace("__APP__", h.hexdigest()[:10]).replace("__BIG__", big), encoding="utf-8")
     write_manifest(out, commit)
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
