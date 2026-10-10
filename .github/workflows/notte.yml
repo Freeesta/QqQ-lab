@@ -114,6 +114,10 @@ jobs:
           cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
           wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
           python tools/verifica.py --browser chromium --solo e2e_rust
+      # times and memory of the two engines (skipped without the real data: bench.py needs Full Scan files)
+      - name: Measures
+        continue-on-error: true
+        run: python tools/bench.py --memoria
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash
