@@ -275,5 +275,6 @@
   "err.comp.ion": "{ion} = nome dello ione.",
   "err.tree.formula": "{formula} = testo scritto dall'utente.",
   "err.tree.tooMany": "{n} = numero di percorsi.",
-  "mappa.tab.title": "Titolo della tabella dei punti segnati sotto la mappa; {n} = quanti punti."
+  "mappa.tab.title": "Titolo della tabella dei punti segnati sotto la mappa; {n} = quanti punti.",
+  "mappa.v3.pin": "Etichetta del punto cliccato nella mappa 3D; {rt} = tempo di ritenzione in minuti, {mz} = valore m/z."
 }

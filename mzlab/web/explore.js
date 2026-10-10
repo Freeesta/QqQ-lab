@@ -1738,6 +1738,7 @@ function mapImage(p, A, B, scale, norm = "abs") {
 // (no WebGL, so it works with the strict CSP and everywhere). Each cell is the MAXIMUM of the bins it covers, so no peak disappears when the window is
 // coarser than the data. Colours are the same as the 2D map; for a difference the height is signed and the floor is the zero level.
 function draw3d(p, g, W, H, A, B, im, f, rf, x0, x1, y0, y1, scaleTxt) {
+  if (window.MAPPA && MAPPA.draw3d) return MAPPA.draw3d(p, g, W, H, A, B, im, f, rf, x0, x1, y0, y1, scaleTxt);       // mappa.js: smoothed, shaded surface
   const rt0 = A.rt0, rt1 = A.rt1, mzA = A.mz0, dmz = A.dmz, nrt = A.nrt, nmz = A.nmz;
   const ia = Math.max(0, Math.floor((x0 - rt0) / (rt1 - rt0) * nrt)), ib = Math.min(nrt, Math.max(ia + 1, Math.ceil((x1 - rt0) / (rt1 - rt0) * nrt)));
   const ja = Math.max(0, Math.floor((y0 - mzA) / dmz)), jb = Math.min(nmz, Math.max(ja + 1, Math.ceil((y1 - mzA) / dmz)));
@@ -2327,7 +2328,7 @@ function attach(p) {
   };
   p._up = e => {
     if (!drag) return; const d = drag; drag = null; zr.hidden = true;
-    if (d.rot) { p._rot = false; draw(p); return; }
+    if (d.rot) { p._rot = false; if (window.MAPPA && MAPPA.click3(p, d)) return; draw(p); return; }       // mappa.js: a click without turning = line with RT and m/z
     zl.hidden = true; p._hz = null;
     if (d.pan) { uiSave(); return; }
     if (d.edge) { if (intSnap(p) !== d.edge.snap) pushIh(p, d.edge.snap); uiSave(); return; }
@@ -2399,6 +2400,7 @@ function attach(p) {
       }
       return;
     }
+    if (p.type === "map" && p._a?.is3d && window.MAPPA) { MAPPA.dbl3(p, rect(e), recty(e)); return; }       // mappa.js: spectrum at the RT of the point
     if (p.type === "map" && !p._a?.is3d) {
       if (p.el.classList.contains("max")) { p.zoom = null; p.zoomY = null; p.sel = null; draw(p); return; }
       const x = xd(rect(e)), k = p.k != null ? p.k : (p._a?.f?.k ?? 0), f = E.files[k];
