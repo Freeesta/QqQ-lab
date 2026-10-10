@@ -233,7 +233,7 @@ AREE = [
     ("mzlab/reader/profile.py", {"e2e_hr_base", "e2e_hr_ppm", "e2e_hr_xic", "e2e_hr_dda", "e2e_hr_ui"}),
     ("mzlab/web/libreria", {"e2e_libreria", "e2e_hr_identificazione"}), ("mzlab/web/touch.js", {"e2e_tocco", "e2e_tocco_disegno"}), ("mzlab/web/perf.js", {"e2e_perf"}),
     ("mzlab/web/origine.js", {"e2e_origine"}), ("mzlab/ionfamily.py", {"e2e_origine"}),
-    ("mzlab/web/settings.js", {"e2e_rifiniture", "e2e22", "e2e25", "e2e_lingua"}), ("mzlab/web/lang/", {"e2e_lingua"}), ("mzlab/web/i18n.js", {"e2e_lingua"}),
+    ("mzlab/web/aggiorna.js", {"e2e_rifiniture"}), ("mzlab/web/settings.js", {"e2e_rifiniture", "e2e22", "e2e25", "e2e_lingua"}), ("mzlab/web/lang/", {"e2e_lingua"}), ("mzlab/web/i18n.js", {"e2e_lingua"}),
     ("tools/controlla_i18n.py", set()), ("mzlab/web/spettro.js", {"e2e_spettro", "e2e_assi"}),
     ("mzlab/web/mappa.js", {"e2e_mappa", "e2e_map3d", "e2e_pannelli2"}), ("tests_e2e/e2e_mappa.py", {"e2e_mappa"}),
     ("mzlab/web/scroll.js", {"e2e_scroll", "e2e8"}), ("mzlab/web/xlsx.js", {"e2e6", "e2e8", "e2e15", "e2e18"}),
