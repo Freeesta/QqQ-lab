@@ -118,6 +118,8 @@ const TOUCH = (() => {
     // the browser also sends its own click / double click / menu after a touch: the program already got the mouse events of this layer, so those are not wanted
     // (a click would close the menu a long press has just opened, a double click would run twice, Android would show its own menu)
     ["click", "dblclick"].forEach(t => doc.addEventListener(t, e => { if (e.isTrusted && Date.now() - lastUp < 700 && surfaceOf(e)) { e.stopPropagation(); e.preventDefault(); } }, true));
+    // ... and its compatibility mouse events (mousedown / mouseup / mousemove after a tap) too: the editor would count them as a second click (two bonds from one tap)
+    ["mousedown", "mouseup", "mousemove"].forEach(t => doc.addEventListener(t, e => { if (e.isTrusted && (pts.size || Date.now() - lastUp < 700) && surfaceOf(e)) { e.stopPropagation(); e.preventDefault(); } }, true));
     doc.addEventListener("contextmenu", e => { if (e.isTrusted && Date.now() - lastTouch < 1500 && surfaceOf(e)) { e.stopPropagation(); e.preventDefault(); } }, true);
     return { pts: () => pts.size, state: () => G && (G.kind || G.mode) };
   }
@@ -168,9 +170,13 @@ const TOUCH = (() => {
       B("next", I18N.t("touch.next"), I18N.t("touch.next.title"), ic('<path d="M9 5l7 7-7 7"/>')) +
       B("fit", I18N.t("touch.fit"), I18N.t("touch.fit.title"), ic('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>')) +
       B("undo", I18N.t("touch.undo"), I18N.t("touch.undo.title"), ic('<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/>'));
-    document.body.appendChild(bar);
+    const tg = document.createElement("button"); tg.type = "button"; tg.className = "tg"; tg.dataset.k = "hide";     // fold the bar away to a small round button (and back)
+    const fold = on => { bar.classList.toggle("min", on); const t = I18N.t(on ? "touch.bar.show" : "touch.bar.hide"); tg.title = t; tg.setAttribute("aria-label", t); tg.setAttribute("aria-expanded", String(!on)); tg.innerHTML = ic(on ? '<path d="M5 15l7-7 7 7"/>' : '<path d="M5 9l7 7 7-7"/>'); try { localStorage.setItem("qqq.tocco.barra", on ? "1" : "0"); } catch (_) { /* not saved */ } };
+    tg.addEventListener("click", () => fold(!bar.classList.contains("min")));
+    bar.appendChild(tg); document.body.appendChild(bar);
+    let folded = false; try { folded = localStorage.getItem("qqq.tocco.barra") === "1"; } catch (_) { /* not saved */ } fold(folded);
     const send = (k, o) => { key("keydown", k, o); return () => key("keyup", k, o); };
-    bar.querySelectorAll("button").forEach(b => {
+    bar.querySelectorAll("button:not(.tg)").forEach(b => {
       const k = b.dataset.k, map = { prev: ["ArrowLeft"], next: ["ArrowRight"], play: [" "], fit: ["Backspace"], undo: ["z", { ctrl: true }] };
       let release = null;
       b.addEventListener("pointerdown", e => { e.preventDefault(); if (release) release(); release = send(...map[k]); b.classList.add("on"); try { b.setPointerCapture(e.pointerId); } catch (_) { /* fine */ } });

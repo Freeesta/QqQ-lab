@@ -864,6 +864,8 @@ I18N.add("en", {
   "touch.fit.title": "Back to the whole chart (Backspace)",
   "touch.undo": "Undo",
   "touch.undo.title": "Undo the last action (Ctrl/Cmd+Z)",
+  "touch.bar.hide": "Hide the key bar",
+  "touch.bar.show": "Show the key bar",
   "touch.grip.title": "Drag to change the height of the chart",
   "lock.on.title": "Intensity axis locked: click to unlock",
   "lock.off.title": "Lock the intensity axis: so you see the peaks grow and shrink from one scan to the next",
