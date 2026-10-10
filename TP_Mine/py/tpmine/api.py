@@ -148,3 +148,10 @@ def esperti_analisi(json_in: str) -> str:
     from . import esperti
     q = json.loads(json_in)
     return _out({"rows": esperti.analyse(q["points"], q["files"], bool(q.get("hr")), float(q.get("ppm") or 5.0), q.get("losses") or [], q.get("soglie"))})
+
+
+def esperti_feature(json_in: str) -> str:
+    """Card of one point (esperti.feature): integration edges and area per file, time course class, spectrum peaks of its group. In: {point, files, traces, members, spectrum, hr, ppm}."""
+    from . import esperti
+    q = json.loads(json_in)
+    return _out(esperti.feature(q["point"], q["files"], q.get("traces") or {}, q.get("members"), q.get("spectrum"), bool(q.get("hr")), float(q.get("ppm") or 5.0), float(q.get("half") or 0.3)))

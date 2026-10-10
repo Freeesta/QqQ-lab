@@ -378,3 +378,47 @@ def analyse(points: list[dict], files: list[dict], hr: bool, ppm: float = 5.0, l
         r.pop("series", None)
         r.pop("top", None)
     return rows
+
+
+# ---------------------------------------------------------------------------------------------------------------- 5. the card of one feature
+def peak_bounds(rt, y, centre: float, half: float = 0.3, frac: float = 0.05) -> dict:
+    """Integration edges of the peak nearest to `centre` (+-half min): from the apex outwards until the trace falls below `frac` of the apex
+    (above the lowest point of the window) or stops falling. -> {apex, a, b, h, area} (a, b in minutes; area = intensity x minutes)."""
+    rt, y = np.asarray(rt, float), np.asarray(y, float)
+    w = np.where((rt >= centre - half) & (rt <= centre + half))[0]
+    if w.size < 3:
+        return {"apex": centre, "a": centre, "b": centre, "h": 0.0, "area": 0.0}
+    base = float(y[w].min())
+    yy = y[w] - base
+    i = int(yy.argmax())
+    top = float(yy[i])
+    lo = hi = i
+    while lo > 0 and yy[lo - 1] <= yy[lo] and yy[lo - 1] > frac * top:
+        lo -= 1
+    while hi < len(yy) - 1 and yy[hi + 1] <= yy[hi] and yy[hi + 1] > frac * top:
+        hi += 1
+    xs, ys = rt[w][lo:hi + 1], yy[lo:hi + 1]
+    area = float(np.trapz(ys, xs)) if hasattr(np, "trapz") else float(np.trapezoid(ys, xs)) if len(xs) > 1 else 0.0
+    return {"apex": float(rt[w][i]), "a": float(xs[0]), "b": float(xs[-1]), "h": top, "area": area}
+
+
+def feature(point: dict, files: list[dict], traces: dict, members: list[dict] | None = None, spectrum: dict | None = None,
+            hr: bool = False, ppm: float = 5.0, half: float = 0.3) -> dict:
+    """The card of ONE point (nothing is recomputed for the table). point {rt, mz}; files [{k, time, label}]; traces {k: {rt, y}} (XIC at the point);
+    members [{rt, mz, n}] = the other points of its co-elution group; spectrum {mz, y} at the apex (MS1).
+    -> {files: [{k, label, apex, a, b, h, area}], areas, trend, peaks: [{mz, y, mark}] (spectrum peaks, mark = n of the group member or 0)}"""
+    out = []
+    for f in files:
+        tr = (traces or {}).get(str(f["k"])) or (traces or {}).get(f["k"])
+        pb = peak_bounds(tr["rt"], tr["y"], point["rt"], half) if tr else {"apex": point["rt"], "a": point["rt"], "b": point["rt"], "h": 0.0, "area": 0.0}
+        out.append({"k": f["k"], "label": f.get("label"), **pb})
+    areas = [o["area"] for o in out]
+    res = {"files": out, "areas": areas, "trend": trend_shape([f.get("time") for f in files], areas), "peaks": []}
+    if spectrum and len(spectrum.get("mz") or []):
+        mz, y = np.asarray(spectrum["mz"], float), np.asarray(spectrum["y"], float)
+        mem = [(m["n"], m["mz"]) for m in (members or [])] + [(0, point["mz"])]
+        for x, v in zip(mz, y):
+            tol = x * ppm * 1e-6 + 0.0005 if hr else LR_TOL
+            hit = next((n for n, m in mem if abs(x - m) <= tol), None)
+            res["peaks"].append({"mz": float(x), "y": float(v), "mark": hit})
+    return res
