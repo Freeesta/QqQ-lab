@@ -42,6 +42,11 @@
 .frow{display:grid;grid-template-columns:210px 1fr 60px;gap:8px;align-items:center;padding:3px 0;cursor:pointer;font-size:12px}.frow:hover{background:var(--sel)}
 .ft{display:block;height:14px;background:var(--line);border-radius:7px;overflow:hidden}.ft i{display:block;height:100%;width:0;border-radius:7px;transition:width .8s cubic-bezier(.3,.9,.3,1)}.fv{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
 .struct{text-align:center;margin-bottom:6px}.struct svg{max-width:100%;height:auto}
+.tp-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.tp-hd .tp-title{margin-right:0}#tp-hd-struct{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}#tp-hd-struct svg{height:48px;width:auto;max-width:120px}
+.tp-ac{position:relative}.tp-ac input{width:100%}#tp-sug{position:absolute;left:0;right:0;top:100%;z-index:20;margin:2px 0 0;padding:2px;list-style:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.18);max-height:260px;overflow:auto}
+#tp-sug li{padding:5px 8px;border-radius:4px;cursor:pointer;display:flex;gap:8px;align-items:baseline;font-size:13px}#tp-sug li span{color:var(--muted);font-size:11px;margin-left:auto;white-space:nowrap}#tp-sug li[aria-selected=true],#tp-sug li:hover{background:var(--sel);box-shadow:inset 3px 0 0 var(--accent)}
+#tp-drawbar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:95;display:flex;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--accent);border-radius:20px;padding:6px 12px;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:13px}#tp-drawbar[hidden]{display:none}
+.tp #tp-warn{font-size:12px;color:var(--bad,#b3261e)}
 .words p{font-size:13px}
 
 
@@ -141,7 +146,7 @@
   function open(sec) {
     if (!document.getElementById("tp-css")) { const st = document.createElement("style"); st.id = "tp-css"; st.textContent = CSS; document.head.appendChild(st); }
     sec.innerHTML = `<div class="tp-wrap">
-<h2 class="tp-title">mzFinder</h2><p class="tp-sub">Automated transformation-product discovery</p>
+<div class="tp-hd"><h2 class="tp-title">mzFinder</h2><div id="tp-hd-struct" aria-live="polite"></div></div><p class="tp-sub">Automated transformation-product discovery</p>
 <div class="tp">
 <div id="tp-left">
  <div class="card"><h3>1 · Files</h3>
@@ -149,8 +154,10 @@
   <input type="file" id="tp-in" accept=".mzML,.mzml" multiple hidden>
   <div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
  <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div>
-  <div class="row"><input type="text" id="tp-name" placeholder="Name (optional)"></div>
-  <div class="row"><input type="text" id="tp-mol" placeholder="Neutral molecular formula (C10H12N2O3S) or SMILES" spellcheck="false"></div>
+  <div class="row tp-ac"><input type="text" id="tp-name" placeholder="Name (type 2 letters to search the list)" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false"><ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
+  <div class="row"><input type="text" id="tp-mol" placeholder="Neutral formula (C10H12N2O3S)" aria-label="Neutral molecular formula" spellcheck="false"></div>
+  <div class="row"><input type="text" id="tp-smi" placeholder="SMILES (optional)" aria-label="SMILES" spellcheck="false" style="flex:1"><button id="tp-draw" type="button" title="Draw the molecule in the Draw tab and bring the SMILES back here">Draw</button></div>
+  <div id="tp-warn" role="status"></div>
   <div class="row"><label class="mut">Adduct</label><select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option></select><span class="mut" id="tp-prev"></span></div></div>
  <div class="card"><h3>3 · Settings</h3>
   <div class="row"><label class="mut grow" id="tp-tol-l">XIC window ±Da</label><input type="number" id="tp-tol" value="0.35" step="0.05" min="0.05" style="width:70px"></div>
@@ -233,34 +240,127 @@
     setTimeout(() => loadFromData(true), 0);
     sec.addEventListener("tpshow", () => { if (!st.files.length) loadFromData(true); });
 
-    // ---- parent preview
-    let pvT = 0;
+    // ---- parent: values, preview, structure
+    const FORMULA = /^[A-Za-z0-9()]+$/;
+    const parentVals = () => {          // formula field and SMILES field; a SMILES typed in the formula field still counts as a SMILES
+      let mol = $("#tp-mol").value.trim(), smi = $("#tp-smi").value.trim();
+      if (mol && !FORMULA.test(mol) && !smi) { smi = mol; mol = ""; }
+      return { mol, smi };
+    };
+    let pvT = 0, OCLp = null;
+    const ocl = () => (OCLp = OCLp || import(new URL("vendor/openchemlib.js", ctx().base).href));
+    const smilesInfo = async t => { try { const m = (await ocl()).Molecule.fromSmiles(t); return { mol: m, formula: m.getMolecularFormula().formula }; } catch (_) { return null; } };
     const preview = () => {
       clearTimeout(pvT);
       pvT = setTimeout(async () => {
-        const t = $("#tp-mol").value.trim(); if (!t) { $("#tp-prev").textContent = ""; return; }
-        structure(r_ => r_, t);
-        try { const r = await call("formula_info", t, $("#tp-add").value); $("#tp-prev").innerHTML = r.ok ? `${esc(r.formula)} · M ${r.neutral} · ${esc($("#tp-add").value)} <i>m/z</i> ${r.mz}` : `<span class="err">${esc(r.error)}</span>`; }
-        catch (e) { $("#tp-prev").textContent = ""; }
+        const { mol, smi } = parentVals(), ad = $("#tp-add").value;
+        $("#tp-warn").textContent = "";
+        if (!mol && !smi) { $("#tp-prev").textContent = ""; structure(""); return; }
+        structure(smi);
+        let info = null;
+        if (smi) info = await smilesInfo(smi);
+        let q = mol || (info && info.formula) || smi;       // formula missing: the one computed from the SMILES (OpenChemLib)
+        if (!mol && info && !$("#tp-mol").value.trim()) { $("#tp-mol").value = info.formula; }
+        try {
+          const r = await call("formula_info", q, ad);
+          $("#tp-prev").innerHTML = r.ok ? `${esc(r.formula)} · M ${r.neutral} · ${esc(ad)} <i>m/z</i> ${r.mz}` : `<span class="err">${esc(r.error)}</span>`;
+          if (r.ok && mol && info && info.formula !== r.formula) $("#tp-warn").textContent = `The formula (${r.formula}) does not match the SMILES (${info.formula}).`;
+        } catch (e) { $("#tp-prev").textContent = ""; }
+        header(info ? info.formula : (mol || ""), smi);
       }, 350);
     };
-    let OCLp = null;
-    async function structure(_, t) {          // parent structure drawn with OpenChemLib (already in the site for the Disegno tab)
+    function structure(t) {             // parent structure drawn with OpenChemLib (already in the site for the Disegno tab)
       const el = $("#tp-struct"); if (!el) return;
-      if (!/[a-z()=#\[\]@\/\\]/.test(t)) { el.innerHTML = ""; return; }
-      try {
-        OCLp = OCLp || import(new URL("vendor/openchemlib.js", ctx().base).href);
-        const OCL = await OCLp, svg = OCL.Molecule.fromSmiles(t).toSVG(300, 170);
-        el.innerHTML = `<div class="struct">${svg}</div>`;
-      } catch (_) { el.innerHTML = ""; }
+      if (!t) { el.innerHTML = ""; return; }
+      ocl().then(OCL => { el.innerHTML = `<div class="struct">${OCL.Molecule.fromSmiles(t).toSVG(300, 170)}</div>`; }).catch(() => { el.innerHTML = ""; });
     }
-    $("#tp-mol").oninput = preview; $("#tp-add").onchange = preview;
+    function header(formula, smi) {      // small structure + name + formula next to the title
+      const el = $("#tp-hd-struct"); if (!el) return;
+      const nm = $("#tp-name").value.trim();
+      if (!smi) { el.innerHTML = ""; return; }
+      ocl().then(OCL => { el.innerHTML = OCL.Molecule.fromSmiles(smi).toSVG(120, 48) + `<span>${esc(nm)}${nm && formula ? " · " : ""}${esc(formula)}</span>`; }).catch(() => { el.innerHTML = ""; });
+    }
+    $("#tp-mol").oninput = preview; $("#tp-smi").oninput = preview; $("#tp-add").onchange = preview;
+
+    // ---- name -> formula / SMILES from the curated list data/composti.csv (already loaded with mzFinder; nothing is downloaded here)
+    let LIST = null;
+    const csvRows = txt => {            // minimal CSV reader (quotes, commas, newlines inside quotes)
+      const out = []; let row = [], f = "", q = false;
+      for (let i = 0; i < txt.length; i++) {
+        const c = txt[i];
+        if (q) { if (c === '"') { if (txt[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+        else if (c === '"') q = true; else if (c === ",") { row.push(f); f = ""; }
+        else if (c === "\n") { row.push(f); out.push(row); row = []; f = ""; } else if (c !== "\r") f += c;
+      }
+      if (f || row.length) { row.push(f); out.push(row); }
+      return out;
+    };
+    const getList = () => LIST || (LIST = csvRows(ctx().files["composti.csv"] || "").slice(1).filter(r => r.length >= 5).map(r => {
+      const names = r[0].split(";").map(x => x.trim()).filter(Boolean);
+      return { names, low: names.map(x => x.toLowerCase()), formula: r[1], mass: parseFloat(r[2]), smiles: r[3] };
+    }));
+    const suggest = q => {
+      const w = q.trim().toLowerCase(); if (w.length < 2) return [];
+      const out = [];
+      for (const c of getList()) {
+        let best = 9;
+        c.low.forEach(n => { const i = n.indexOf(w); if (i < 0) return; const sc = n === w ? 0 : i === 0 ? 1 : /[\s\-(,]/.test(n[i - 1]) ? 2 : 3; if (sc < best) best = sc; });
+        if (best < 9) out.push([best, c.names[0].length, c]);
+      }
+      return out.sort((a, b) => a[0] - b[0] || a[1] - b[1]).slice(0, 8).map(x => x[2]);
+    };
+    let sugItems = [], sugI = -1;
+    const sugBox = $("#tp-sug"), nameIn = $("#tp-name");
+    const sugClose = () => { sugBox.hidden = true; sugI = -1; nameIn.setAttribute("aria-expanded", "false"); nameIn.removeAttribute("aria-activedescendant"); };
+    const pick = i => {
+      const it = sugItems[i]; if (!it) return;
+      if (it.link) { window.open(it.link, "_blank", "noopener"); sugClose(); return; }
+      nameIn.value = it.c.names[0]; $("#tp-mol").value = it.c.formula; $("#tp-smi").value = it.c.smiles; sugClose(); preview(); nameIn.focus();
+    };
+    const sugMark = () => { [...sugBox.children].forEach((li, k) => li.setAttribute("aria-selected", k === sugI ? "true" : "false")); if (sugI >= 0) nameIn.setAttribute("aria-activedescendant", "tp-sug-" + sugI); else nameIn.removeAttribute("aria-activedescendant"); };
+    const sugShow = () => {
+      const w = nameIn.value.trim(); if (w.length < 2) return sugClose();
+      sugItems = suggest(w).map(c => ({ c }));
+      sugItems.push({ link: "https://pubchem.ncbi.nlm.nih.gov/#query=" + encodeURIComponent(w), word: w });
+      sugBox.innerHTML = sugItems.map((it, k) => it.link ? `<li role="option" id="tp-sug-${k}" data-k="${k}" class="mut">Search PubChem for "${esc(it.word)}"</li>` : `<li role="option" id="tp-sug-${k}" data-k="${k}">${esc(it.c.names[0])}<span>${esc(it.c.formula)} · ${it.c.mass.toFixed(4)}</span></li>`).join("");
+      sugBox.hidden = false; nameIn.setAttribute("aria-expanded", "true"); sugI = -1; sugMark();
+    };
+    nameIn.addEventListener("input", () => { sugShow(); header($("#tp-mol").value.trim(), parentVals().smi); });
+    nameIn.addEventListener("keydown", e => {
+      if (sugBox.hidden) { if (e.key === "ArrowDown") sugShow(); return; }
+      if (e.key === "ArrowDown") { sugI = (sugI + 1) % sugItems.length; sugMark(); e.preventDefault(); }
+      else if (e.key === "ArrowUp") { sugI = (sugI - 1 + sugItems.length) % sugItems.length; sugMark(); e.preventDefault(); }
+      else if (e.key === "Enter" && sugI >= 0) { pick(sugI); e.preventDefault(); }
+      else if (e.key === "Escape") { sugClose(); e.preventDefault(); }
+    });
+    nameIn.addEventListener("blur", () => setTimeout(sugClose, 150));
+    sugBox.addEventListener("mousedown", e => { const li = e.target.closest("li"); if (li) { e.preventDefault(); pick(+li.dataset.k); } });
+
+    // ---- Draw: the Draw tab (Ketcher) with a small bar to bring the SMILES back
+    const drawBtn = $("#tp-draw");
+    if (window.MZLAB_PHONE) drawBtn.hidden = true;
+    let dbar = document.getElementById("tp-drawbar");
+    if (!dbar) {
+      dbar = document.createElement("div"); dbar.id = "tp-drawbar"; dbar.hidden = true; dbar.setAttribute("role", "region"); dbar.setAttribute("aria-label", "mzFinder: parent structure");
+      dbar.innerHTML = `<span>Drawing the mzFinder parent</span><button type="button" id="tp-draw-use" class="imp">Use this structure</button><button type="button" id="tp-draw-no">Cancel</button>`;
+      document.body.appendChild(dbar);
+    }
+    let drawing = false;
+    const back = () => { drawing = false; dbar.hidden = true; if (typeof setView === "function") setView("tpmine"); };
+    drawBtn.onclick = () => { drawing = true; dbar.hidden = false; setView("draw"); };
+    document.addEventListener("tpview", e => { dbar.hidden = !(drawing && e.detail.view === "draw"); if (e.detail.view !== "draw" && e.detail.view !== "tpmine") drawing = false; });
+    document.getElementById("tp-draw-no").onclick = back;
+    document.getElementById("tp-draw-use").onclick = async () => {
+      let t = ""; try { t = window.TPDraw ? await window.TPDraw.smiles() : ""; } catch (_) { t = ""; }
+      if (!t) { toast("Nothing drawn yet."); return; }
+      $("#tp-smi").value = t; $("#tp-mol").value = ""; preview(); back();
+    };
     startWorker().then(async () => { $("#tp-tr").value = await callRaw("default_transformations"); }).catch(e => msg(String(e.message || e), true));
 
     // ---- run
     const setBusy = b => { const g = $("#tp-go"); g.disabled = b; g.setAttribute("aria-busy", b ? "true" : "false"); $("#tp-go-t").textContent = b ? "Digging..." : "Dig"; };
     $("#tp-go").onclick = async () => {
-      const mol = $("#tp-mol").value.trim();
+      const pv = parentVals(), mol = pv.mol || pv.smi;      // the engine takes the formula, or the SMILES when the formula is missing
       const hrMode = st.files.some(f => f.kind === "hr");
       if (!hrMode && !st.files.some(f => f.kind === "full")) return msg("Full-scan (MS1) sample files are needed.", true);
       if (!mol) return msg("Enter the neutral molecular formula or the SMILES of the parent.", true);
@@ -269,9 +369,9 @@
         const files = st.files.filter(f => f.kind !== "error" && f.kind !== "empty").map(f => ({ name: f.name, type: f.type, time: f.time, kind: f.kind }));
         const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, discover: $("#tp-disc").checked };
         const parent = { name: $("#tp-name").value.trim(), neutral: mol, adduct: $("#tp-add").value };
+        if (pv.smi) parent.smiles = pv.smi;
         if (hrMode) {          // high resolution: its own engine and view (21_tpmine_hr.js)
           if (parent.adduct !== "[M+H]+") throw new Error("High resolution uses the [M+H]+ ion: choose that adduct.");
-          if (/^[A-Za-z0-9()]+$/.test(mol) === false) parent.smiles = mol;
           const hs = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify({ ppm_prec: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value }), ""));
           st.took = performance.now() - t0; st.summary = null; st.det = {};
           window.TPHR.render($("#tp-right"), hs, { esc, fmtA, chart, hue, call, callRaw, toast, dl });

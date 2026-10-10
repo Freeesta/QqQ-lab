@@ -1,0 +1,685 @@
+# Curated names for TP_Mine/data/composti.csv (one compound per line; synonyms separated by ';', the first is the main name).
+# Matched by exact name against PubChemLite (CompoundName or Synonym). Never the experiment compound, its TPs or the method pollutants.
+# Pharmaceuticals
+acetaminophen;paracetamol
+acetylsalicylic acid;aspirin
+ibuprofen|C13H18O2
+naproxen
+diclofenac
+ketoprofen
+indomethacin
+mefenamic acid
+flurbiprofen
+piroxicam
+meloxicam
+celecoxib
+tramadol
+codeine
+morphine
+oxycodone
+fentanyl
+methadone
+caffeine
+theophylline
+paraxanthine
+nicotine
+cotinine
+carbamazepine
+oxcarbazepine
+lamotrigine
+phenytoin
+valproic acid
+levetiracetam
+gabapentin
+pregabalin
+topiramate
+primidone
+phenobarbital
+diazepam
+lorazepam
+oxazepam
+temazepam
+alprazolam
+clonazepam
+zolpidem
+fluoxetine
+sertraline
+paroxetine
+citalopram
+escitalopram
+venlafaxine
+amitriptyline
+nortriptyline
+imipramine
+mirtazapine
+bupropion
+trazodone
+haloperidol
+risperidone
+olanzapine
+quetiapine
+clozapine
+aripiprazole
+lithium carbonate
+atenolol
+metoprolol
+propranolol
+bisoprolol
+nadolol
+sotalol
+carvedilol
+labetalol
+losartan
+valsartan
+irbesartan
+candesartan
+telmisartan
+olmesartan
+enalapril
+lisinopril
+ramipril
+captopril
+amlodipine
+nifedipine
+diltiazem
+verapamil
+furosemide
+hydrochlorothiazide
+chlorthalidone
+spironolactone
+torasemide
+bezafibrate
+gemfibrozil
+fenofibrate
+clofibric acid
+atorvastatin
+simvastatin
+pravastatin
+rosuvastatin
+lovastatin
+fluvastatin
+warfarin
+clopidogrel
+digoxin
+amiodarone
+metformin
+glibenclamide;glyburide
+glimepiride
+gliclazide
+sitagliptin
+pioglitazone
+levothyroxine|C15H11I4NO4
+omeprazole
+lansoprazole
+pantoprazole
+esomeprazole
+ranitidine
+famotidine
+cimetidine
+metoclopramide
+domperidone
+ondansetron
+loperamide
+loratadine
+cetirizine
+fexofenadine
+diphenhydramine
+chlorpheniramine
+montelukast
+salbutamol;albuterol
+terbutaline
+theobromine
+prednisone
+prednisolone
+dexamethasone
+hydrocortisone
+cortisone
+betamethasone
+triamcinolone
+budesonide
+fluticasone
+sildenafil
+tadalafil
+allopurinol
+colchicine
+lidocaine
+bupivacaine|C18H28N2O
+procaine
+benzocaine
+ketamine
+propofol
+dextromethorphan
+ephedrine
+pseudoephedrine
+amphetamine
+methamphetamine
+cocaine
+benzoylecgonine
+MDMA
+tamoxifen
+anastrozole
+letrozole
+methotrexate
+cyclophosphamide
+ifosfamide
+capecitabine
+fluorouracil|C4H3FN2O2
+gemcitabine
+imatinib
+trimethoprim
+sulfamethoxazole
+sulfadiazine
+sulfamethazine;sulfadimidine
+sulfadimethoxine
+sulfapyridine
+sulfathiazole
+sulfamerazine
+sulfanilamide
+sulfisoxazole
+sulfamethizole
+sulfachloropyridazine
+amoxicillin
+ampicillin
+penicillin G
+penicillin V
+cloxacillin
+oxacillin
+cefalexin;cephalexin
+cefazolin
+cefuroxime
+ceftriaxone
+cefotaxime
+tetracycline
+oxytetracycline|C22H24N2O9
+chlortetracycline
+doxycycline
+minocycline
+erythromycin
+azithromycin
+clarithromycin
+roxithromycin
+clindamycin
+lincomycin
+tylosin
+spiramycin
+ciprofloxacin
+norfloxacin
+ofloxacin
+levofloxacin
+moxifloxacin
+enrofloxacin
+danofloxacin
+flumequine
+nalidixic acid
+metronidazole
+chloramphenicol
+florfenicol
+vancomycin
+gentamicin
+streptomycin
+rifampicin
+isoniazid
+ethambutol
+nitrofurantoin
+fluconazole
+ketoconazole
+clotrimazole
+miconazole
+itraconazole
+terbinafine
+acyclovir
+oseltamivir
+lamivudine
+zidovudine
+abacavir
+efavirenz
+nevirapine
+ritonavir
+hydroxychloroquine
+chloroquine
+quinine
+ivermectin
+albendazole
+praziquantel
+estrone
+17beta-estradiol;estradiol
+estriol
+17alpha-ethinylestradiol;ethinylestradiol
+progesterone
+testosterone
+norethindrone
+levonorgestrel
+drospirenone
+diethylstilbestrol
+mestranol
+trenbolone
+nandrolone
+# Pesticides
+atrazine
+simazine
+terbuthylazine
+propazine
+desethylatrazine|C6H10ClN5
+desisopropylatrazine|C5H8ClN5
+cyanazine
+prometryn
+ametryn
+terbutryn
+metribuzin
+diuron
+linuron
+isoproturon
+chlorotoluron
+monuron
+fenuron
+metobromuron
+fluometuron
+tebuthiuron
+carbofuran
+carbaryl
+methiocarb
+aldicarb
+propoxur
+pirimicarb
+oxamyl
+methomyl
+carbendazim
+thiabendazole
+benomyl
+thiophanate-methyl
+imidacloprid
+thiacloprid|C10H9ClN4S
+thiamethoxam
+clothianidin
+acetamiprid|C10H11ClN4
+nitenpyram
+dinotefuran|C7H14N4O3
+fipronil
+glyphosate
+glufosinate
+aminomethylphosphonic acid;AMPA
+2,4-D;2,4-dichlorophenoxyacetic acid
+MCPA
+mecoprop
+dichlorprop
+2,4,5-T
+dicamba
+triclopyr
+picloram
+bentazon|C10H12N2O3S
+metolachlor
+alachlor
+acetochlor
+butachlor
+propachlor
+metazachlor
+dimethenamid
+chlorpyrifos
+diazinon
+malathion
+parathion
+methyl parathion|C8H10NO5PS
+fenitrothion
+dimethoate
+omethoate
+azinphos-methyl
+phosmet
+fenthion
+dichlorvos
+trichlorfon
+profenofos
+tebuconazole
+propiconazole
+difenoconazole
+epoxiconazole
+cyproconazole
+flusilazole
+hexaconazole
+penconazole
+prochloraz
+imazalil
+azoxystrobin
+pyraclostrobin
+trifloxystrobin
+kresoxim-methyl
+boscalid
+carboxin
+metalaxyl
+cyprodinil
+pyrimethanil
+fenhexamid
+iprodione
+vinclozolin
+procymidone
+chlorothalonil
+captan
+folpet
+mancozeb
+thiram
+ziram|C6H12N2S4Zn
+cypermethrin
+permethrin
+deltamethrin
+cyfluthrin
+lambda-cyhalothrin|C23H19ClF3NO3
+fenvalerate
+bifenthrin
+pyrethrin
+DEET;N,N-diethyl-meta-toluamide|C12H17NO
+piperonyl butoxide
+rotenone
+abamectin
+emamectin benzoate
+spinosad
+chlorantraniliprole
+indoxacarb
+tebufenozide
+methoxyfenozide
+diflubenzuron
+hexythiazox
+fenpyroximate
+pyridaben
+tebufenpyrad
+paraquat
+diquat
+trifluralin
+pendimethalin
+oxadiazon
+oxyfluorfen
+flufenacet
+mesotrione
+sulcotrione
+nicosulfuron
+metsulfuron-methyl
+tribenuron-methyl
+chlorsulfuron
+rimsulfuron
+foramsulfuron
+iodosulfuron-methyl
+imazapyr
+imazethapyr
+clomazone
+quinclorac
+propanil
+molinate
+thiobencarb
+terbacil
+bromacil
+hexazinone
+metamitron
+chloridazon
+lenacil
+DDT|C14H9Cl5
+DDE|C14H8Cl4
+lindane|C6H6Cl6
+dieldrin
+aldrin
+endosulfan
+heptachlor
+chlordane
+hexachlorobenzene
+pentachlorophenol
+# Industrial, plasticizers, additives
+bisphenol A
+bisphenol S|C12H10O4S
+bisphenol F
+bisphenol B
+4-nonylphenol
+4-tert-octylphenol
+4-tert-butylphenol
+nonylphenol ethoxylate
+phthalic acid
+dimethyl phthalate
+diethyl phthalate
+dibutyl phthalate
+benzyl butyl phthalate
+bis(2-ethylhexyl) phthalate
+di-n-octyl phthalate|C24H38O4
+diisononyl phthalate
+bis(2-ethylhexyl) adipate
+acetyl tributyl citrate
+triphenyl phosphate
+tributyl phosphate
+tris(2-chloroethyl) phosphate
+tris(1-chloro-2-propyl) phosphate|C9H18Cl3O4P
+tris(1,3-dichloro-2-propyl) phosphate|C9H15Cl6O4P
+tris(2-butoxyethyl) phosphate
+tricresyl phosphate|C21H21O4P
+triethyl phosphate
+tris(2-ethylhexyl) phosphate
+tetrabromobisphenol A
+hexabromocyclododecane|C12H18Br6
+2,2',4,4'-tetrabromodiphenyl ether|C12H6Br4O
+benzotriazole;1H-benzotriazole;2H-benzotriazole
+5-methylbenzotriazole;tolyltriazole|C7H7N3
+1H-benzotriazole
+2-mercaptobenzothiazole
+benzothiazole
+2-hydroxybenzothiazole
+N-cyclohexyl-2-benzothiazolesulfenamide
+1,3-diphenylguanidine
+N-(1,3-dimethylbutyl)-N'-phenyl-p-phenylenediamine
+2-ethylhexyl 4-methoxycinnamate;octinoxate
+oxybenzone;benzophenone-3
+octocrylene
+avobenzone
+4-methylbenzylidene camphor|C18H22O
+homosalate
+2-phenylbenzimidazole-5-sulfonic acid|C13H10N2O3S
+benzophenone
+4-hydroxybenzophenone
+methylparaben;methyl 4-hydroxybenzoate
+ethylparaben
+propylparaben
+butylparaben
+benzylparaben
+triclosan
+triclocarban
+chlorophene|C13H11ClO
+hexachlorophene
+chlorhexidine
+benzalkonium chloride
+cetylpyridinium chloride|C21H38ClN
+didecyldimethylammonium chloride
+butylated hydroxytoluene|C15H24O
+butylated hydroxyanisole|C11H16O2
+2,4-di-tert-butylphenol
+2,6-di-tert-butyl-p-benzoquinone
+irgafos 168
+irganox 1010
+tinuvin P
+bisphenol A diglycidyl ether
+melamine
+cyanuric acid
+caprolactam;azepan-2-one
+dicyclohexylamine
+urea
+formaldehyde
+acrylamide
+aniline
+4-chloroaniline
+3,4-dichloroaniline
+nitrobenzene
+2,4-dinitrotoluene
+2,4,6-trinitrotoluene
+hexahydro-1,3,5-trinitro-1,3,5-triazine;RDX
+nitroglycerin
+phenol
+catechol;pyrocatechol
+hydroquinone
+resorcinol
+benzoic acid
+salicylic acid
+phthalimide
+naphthalene
+phenanthrene
+anthracene
+fluoranthene
+pyrene
+benzo[a]pyrene
+chrysene
+fluorene
+acenaphthene
+1-naphthol
+2-naphthol
+1,4-dioxane
+tetrachloroethylene
+trichloroethylene
+chloroform
+carbon tetrachloride
+vinyl chloride
+styrene
+toluene
+benzene
+xylene
+ethylbenzene
+methyl tert-butyl ether;tert-butyl methyl ether
+N-nitrosodimethylamine
+dimethylformamide|C3H7NO
+N-methyl-2-pyrrolidone;1-methylpyrrolidin-2-one
+dimethyl sulfoxide
+triethanolamine
+diethanolamine
+ethylenediaminetetraacetic acid;EDTA
+nitrilotriacetic acid
+diethylenetriaminepentaacetic acid
+1,2-ethanediol;ethylene glycol
+sodium dodecyl sulfate
+dodecylbenzenesulfonic acid
+linear alkylbenzene sulfonate
+cocamidopropyl betaine
+# PFAS
+perfluorooctanoic acid;PFOA
+perfluorooctanesulfonic acid;PFOS
+perfluorobutanoic acid;PFBA;heptafluorobutyric acid
+perfluoropentanoic acid;PFPeA
+perfluorohexanoic acid;PFHxA
+perfluoroheptanoic acid;PFHpA
+perfluorononanoic acid;PFNA
+perfluorodecanoic acid;PFDA
+perfluoroundecanoic acid;PFUnDA
+perfluorododecanoic acid;PFDoDA
+perfluorobutanesulfonic acid;PFBS
+perfluorohexanesulfonic acid;PFHxS
+perfluoroheptanesulfonic acid;PFHpS
+perfluorodecanesulfonic acid;PFDS;perfluorodecane sulfonic acid
+perfluorooctanesulfonamide;PFOSA
+6:2 fluorotelomer sulfonic acid
+8:2 fluorotelomer sulfonic acid
+GenX;hexafluoropropylene oxide dimer acid
+# Drugs of abuse, food, natural and everyday compounds
+sucralose
+acesulfame
+saccharin
+cyclamate;cyclamic acid
+aspartame
+aspartic acid;L-aspartic acid
+glutamic acid;L-glutamic acid
+glycine
+alanine;L-alanine
+valine;L-valine
+leucine;L-leucine
+isoleucine;L-isoleucine
+proline;L-proline
+phenylalanine;L-phenylalanine
+tyrosine;L-tyrosine
+tryptophan;L-tryptophan
+serine;L-serine
+threonine;L-threonine
+methionine;L-methionine
+cysteine;L-cysteine
+lysine;L-lysine
+arginine;L-arginine
+histidine;L-histidine
+asparagine;L-asparagine
+glutamine;L-glutamine
+citric acid
+lactic acid
+malic acid
+succinic acid
+fumaric acid
+tartaric acid;L-tartaric acid
+ascorbic acid;L-ascorbic acid
+nicotinamide
+nicotinic acid
+riboflavin
+thiamine
+pyridoxine
+biotin
+folic acid
+glucose;D-glucopyranose
+fructose;D-fructopyranose|C6H12O6
+sucrose
+lactose|C12H22O11
+creatine
+carnitine
+choline
+betaine
+adenine
+guanine
+cytosine
+thymine
+uracil
+adenosine
+caffeic acid
+chlorogenic acid
+ferulic acid
+gallic acid
+p-coumaric acid
+vanillin
+quercetin
+kaempferol
+luteolin
+apigenin
+naringenin
+catechin
+epicatechin;(-)-epicatechin
+resveratrol
+curcumin
+genistein
+daidzein
+menthol
+limonene;d-limonene
+linalool
+camphor
+eugenol
+thymol
+carvacrol
+capsaicin
+piperine
+squalene
+cholesterol
+stearic acid
+palmitic acid
+oleic acid
+linoleic acid
+lauric acid
+myristic acid;tetradecanoic acid
+arachidonic acid
+melatonin
+serotonin
+dopamine
+epinephrine
+norepinephrine
+histamine
+tyramine
+phenylethylamine
+cadaverine|C5H14N2
+putrescine|C4H12N2
+spermidine
+spermine
+aflatoxin B1
+ochratoxin A
+zearalenone
+deoxynivalenol
+fumonisin B1
+patulin
+microcystin-LR
+cylindrospermopsin
+saxitoxin
+domoic acid
+geosmin
+2-methylisoborneol
+atropine|C17H23NO3
+scopolamine|C17H21NO4
+strychnine

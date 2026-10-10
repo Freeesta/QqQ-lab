@@ -39,7 +39,7 @@ try:
             assert pg.inner_text("#tp-fsum").strip() != "" and pg.evaluate("document.getElementById('tp-disc').offsetParent !== null") and pg.get_attribute("#tp-disc-h", "title")
             pg.click("#tp-more"); assert pg.evaluate("[...document.querySelectorAll('#tp-files tr')].slice(1).every(t => !t.hidden)") and pg.get_attribute("#tp-more", "aria-expanded") == "true"
             assert pg.input_value("#tp-tol") == "0.35" and pg.input_value("#tp-rtt") == "0.25"
-            pg.fill("#tp-mol", "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O")
+            pg.fill("#tp-smi", "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O")
             pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('241.0641')", timeout=60000)
             assert "C10H12N2O3S" in pg.inner_text("#tp-prev")
             assert "hydroxylation" in pg.input_value("#tp-tr")
@@ -75,7 +75,7 @@ try:
             pg.wait_for_function("document.querySelectorAll('#tp-files tr').length >= 8", timeout=300000)
             t = pg.evaluate("document.getElementById('tp-files').textContent"); assert "LC-HRMS" in t and "MSn (infusion)" in t, t
             assert pg.evaluate("document.getElementById('tp-disc').offsetParent === null")          # HR: the unexpected-ions box is hidden
-            pg.fill("#tp-mol", "Cn1cnc2c1c(=O)n(C)c(=O)n2C"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('195.0877')", timeout=60000)
+            pg.fill("#tp-smi", "Cn1cnc2c1c(=O)n(C)c(=O)n2C"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('195.0877')", timeout=60000)
             pg.click("#tp-go"); pg.wait_for_selector("#hr-t tr.clk", timeout=300000)
             tab = pg.inner_text("#hr-t")
             assert "C8H11N4O3" in tab and "C7H9N4O2" in tab, tab[:600]
@@ -96,6 +96,38 @@ try:
             assert dl2.value.path()
             pg.screenshot(path=str(HERE / "shots" / "tpmine2_hr.png"), full_page=True)
         step("HR mode (synthetic series + MSn): ranking, detail, mirror MS2, Excel, inclusion list", hr)
+        def parent_list():
+            pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-name")
+            reqs = []
+            pg.on("request", lambda r: reqs.append(r.url))
+            pg.fill("#tp-name", ""); pg.fill("#tp-smi", ""); pg.fill("#tp-mol", "")
+            pg.type("#tp-name", "caff", delay=40)
+            pg.wait_for_selector('#tp-sug li[role=option]', timeout=30000)
+            assert "caffeine" in pg.inner_text("#tp-sug").lower() and "C8H10N4O2" in pg.inner_text("#tp-sug")
+            assert pg.get_attribute("#tp-name", "aria-expanded") == "true"
+            pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter")
+            pg.wait_for_function("document.querySelector('#tp-mol').value === 'C8H10N4O2' && document.querySelector('#tp-smi').value.length > 5", timeout=30000)
+            pg.wait_for_function("document.querySelector('#tp-struct svg') && document.querySelector('#tp-hd-struct svg')", timeout=60000)
+            assert pg.evaluate("document.querySelector('#tp-hd-struct svg').getBoundingClientRect().height") <= 48.5
+            assert "caffeine" in pg.inner_text("#tp-hd-struct").lower() and "C8H10N4O2" in pg.inner_text("#tp-hd-struct")
+            assert "195.0877" in pg.inner_text("#tp-prev")
+            # unknown name -> only the PubChem search entry, with the exact word
+            pg.fill("#tp-name", "")
+            pg.type("#tp-name", "zzqxwv", delay=30)
+            pg.wait_for_selector('#tp-sug li', timeout=15000)
+            assert pg.evaluate("document.querySelectorAll('#tp-sug li').length") == 1 and 'Search PubChem for "zzqxwv"' in pg.inner_text("#tp-sug")
+            with pg.expect_popup() as pop:
+                pg.keyboard.press("ArrowDown"); pg.keyboard.press("Enter")
+            assert pop.value.url.startswith("https://pubchem.ncbi.nlm.nih.gov/#query=zzqxwv") or "pubchem.ncbi.nlm.nih.gov" in pop.value.url, pop.value.url
+            pop.value.close()
+            # formula missing: computed from the SMILES; formula and SMILES that disagree -> warning
+            pg.fill("#tp-name", ""); pg.fill("#tp-mol", ""); pg.fill("#tp-smi", "Cn1cnc2c1c(=O)n(C)c(=O)n2C")
+            pg.wait_for_function("document.querySelector('#tp-mol').value === 'C8H10N4O2'", timeout=30000)
+            pg.fill("#tp-mol", "C6H6")
+            pg.wait_for_function("document.querySelector('#tp-warn').textContent.includes('does not match')", timeout=30000)
+            assert pg.evaluate("document.getElementById('tp-draw').offsetParent !== null")
+            assert not any("composti" in u for u in reqs), reqs
+        step("parent: name list, SMILES field, PubChem link, structure in the title", parent_list)
         if MZ.exists() and (MZ / "B_FullMass-t0.mzML").exists():
             def real():
                 pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
@@ -104,14 +136,14 @@ try:
                 names = ["B_FullMass-t0", "B_FullMass-t5", "B_FullMass-t10", "B_FullMass-t15", "B_FullMass-t30 (2)", "B_FullMass-t45", "B_FullMass-t60", "B_MS2-t15", "B_MS2-t45", "B_MS2-t60", "B_MRM-t0", "B_MRM-t5", "B_MRM-t10", "B_MRM-t15", "B_MRM-t30", "B_MRM-t45", "B_MRM-t60", "B_MRM-STD_0_06ppm", "B_MRM-STD_0_6ppm", "B_MRM-STD_2_4ppm", "B_MRM-STD_7_2ppm", "B_MRM-STD_12ppm", "B_MRM-STD_18ppm"]
                 pg.set_input_files("#tp-in", [str(MZ / (n + ".mzML")) for n in names])
                 pg.wait_for_function("document.querySelectorAll('#tp-files tr').length >= 24", timeout=300000)
-                pg.fill("#tp-mol", "CC(C)N(C(=O)COc1nnc(s1)C(F)(F)F)c1ccc(F)cc1"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('364.0737')", timeout=60000)
+                pg.fill("#tp-smi", "CC(C)N(C(=O)COc1nnc(s1)C(F)(F)F)c1ccc(F)cc1"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('364.0737')", timeout=60000)
                 pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=600000); pg.wait_for_timeout(1300)
                 head = pg.inner_text(".hero")
                 assert "t½" in head and "offset" in head
                 vals = pg.evaluate("[...document.querySelectorAll('.stat b')].map(b=>parseFloat(b.textContent))")
                 assert 0.25 <= vals[4] <= 0.35 and 2.0 < vals[3] < 4.0 and vals[0] >= 3, vals
                 m = pg.inner_text("#tp-right")
-                assert "MRM: integrazione automatica" in m and "Retta: area" in m and "364.1>194.1" in m, m[:400]
+                assert "MRM: automatic integration" in m and "Line: area" in m and "364.1>194.1" in m, m[:400]      # the mzFinder text is English only
                 assert pg.evaluate("document.getElementById('tp-c-cal').width") > 0
                 pg.screenshot(path=str(HERE / "shots" / "tpmine2_real.png"), full_page=True)
             step("real B_ series: offset +0.3 Da, decay, strong candidates", real)
