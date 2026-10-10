@@ -5,7 +5,11 @@ same m/z or shifted by the difference of the precursors, heaviest pairs first, e
 rounds = global greedy). numpy only.
 
 Compare HCD with HCD of the same series. The CID spectrum of the direct infusion is a reference for formulas and genealogy, never for this
-similarity (measured: the same parent gives a cosine of 0.52 between HCD and CID)."""
+similarity (measured: the same parent gives a cosine of 0.52 between HCD and CID).
+
+Spectral entropy similarity (Li & Fiehn, Nat. Methods 2023, 2021): intensities as probabilities, spectra of low entropy flattened by the weight
+transform, score = 1 - (2 S_AB - S_A - S_B) / ln 4 with S_AB the entropy of the merged spectrum; unmatched peaks add nothing, so the sum runs
+over the matched pairs only. Same peaks and matching as the modified cosine; `hybrid=True` also pairs peaks shifted by the precursor difference."""
 from __future__ import annotations
 
 import numpy as np
@@ -58,6 +62,50 @@ def modified_cosine(M, W, P, ia, ib, tol: float = TOL_HR, batch: int = 1000):
         S = np.where((np.abs(diff) <= tol) | (np.abs(diff - d) <= tol), W[a][:, :, None] * W[b][:, None, :], 0.0)
         score[s:s + batch], nmat[s:s + batch] = ionfamily.greedy_match(S)
     return score, nmat
+
+
+def entropy_weights(W, low: float = 3.0):
+    """Intensity weights of the entropy similarity, rows of W from `pad` (W is sqrt intensity, so the intensities are W^2). Each row becomes a
+    probability vector p (sum 1); when its entropy S is below `low`, p is flattened as p^(0.25 + 0.25 S) and renormalised (Li & Fiehn 2021)."""
+    p = np.asarray(W, float) ** 2
+    tot = p.sum(1, keepdims=True)
+    p = np.divide(p, tot, out=np.zeros_like(p), where=tot > 0)
+    S = -(p * np.log(np.where(p > 0, p, 1.0))).sum(1, keepdims=True)
+    q = np.where(p > 0, p, 0.0) ** np.where(S < low, 0.25 + 0.25 * S, 1.0)
+    tot = q.sum(1, keepdims=True)
+    return np.divide(q, tot, out=np.zeros_like(q), where=tot > 0)
+
+
+def _xlogx(x):
+    return np.where(x > 0, x * np.log(np.where(x > 0, x, 1.0)), 0.0)
+
+
+def entropy_similarity(M, W, P, ia, ib, tol: float = TOL_HR, hybrid: bool = True, batch: int = 1000):
+    """Spectral entropy similarity (0..1) and number of matched peaks of the pairs (ia[j], ib[j]). A pair of matched peaks with probabilities
+    a and b adds (a+b) ln(a+b) - a ln a - b ln b; the sum over the one-to-one matching (heaviest first, as the modified cosine) is divided by
+    2 ln 2. `hybrid`: peaks at the same m/z or shifted by the difference of the precursors (the pair parent-product); otherwise same m/z only."""
+    ia, ib = np.asarray(ia, int), np.asarray(ib, int)
+    Q = entropy_weights(W)
+    score = np.zeros(len(ia))
+    nmat = np.zeros(len(ia), int)
+    for s in range(0, len(ia), batch):
+        a, b = ia[s:s + batch], ib[s:s + batch]
+        diff = M[b][:, None, :] - M[a][:, :, None]
+        ok = np.abs(diff) <= tol
+        if hybrid:
+            ok |= np.abs(diff - (P[b] - P[a])[:, None, None]) <= tol
+        qa, qb = Q[a][:, :, None], Q[b][:, None, :]
+        f = _xlogx(qa + qb) - _xlogx(qa) - _xlogx(qb)
+        t, n = ionfamily.greedy_match(np.where(ok & (qa > 0) & (qb > 0), f, 0.0))
+        score[s:s + batch], nmat[s:s + batch] = np.minimum(t / (2 * np.log(2)), 1.0), n
+    return score, nmat
+
+
+def entropy_one_against_all(M, W, P, ref: int, others=None, tol: float = TOL_HR, hybrid: bool = True, batch: int = 1000):
+    """Entropy similarity of spectrum `ref` against `others` (default: all, itself excluded). Returns (others, score, n_matched)."""
+    others = np.array([i for i in range(len(M)) if i != ref]) if others is None else np.asarray(others, int)
+    sc, nm = entropy_similarity(M, W, P, np.full(len(others), ref), others, tol, hybrid, batch)
+    return others, sc, nm
 
 
 def plain_cosine(M, W, ia, ib, tol: float = TOL_HR, batch: int = 1000):
