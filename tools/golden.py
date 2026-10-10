@@ -178,23 +178,16 @@ def write_synthetic(out: Path) -> dict[str, Path]:
 def compute(skip_missing: bool = False) -> dict[str, dict]:
     """name -> result for every golden file."""
     res: dict[str, dict] = {}
-    f_fs = EXAMPLES / "FullScan_t10.mzML"
-    if f_fs.exists():
-        res["esempio_FullScan_t10"] = _full(f_fs)
-    elif not skip_missing:
-        raise FileNotFoundError(f"{f_fs} missing")
-
-    f_ms2 = EXAMPLES / "MS2_t15.mzML"
-    if f_ms2.exists():
-        res["esempio_MS2_t15"] = _ms2(f_ms2)
-    elif not skip_missing:
-        raise FileNotFoundError(f"{f_ms2} missing")
-
-    f_mrm = EXAMPLES / "MRM_std_2.4ppm.mzML"
-    if f_mrm.exists():
-        res["esempio_MRM_std_2.4ppm"] = _mrm(f_mrm)
-    elif not skip_missing:
-        raise FileNotFoundError(f"{f_mrm} missing")
+    for stem, fn in [
+        ("FullScan_t10", _full),
+        ("MS2_t15", _ms2),
+        ("MRM_std_2.4ppm", _mrm),
+    ]:
+        p = EXAMPLES / f"{stem}.mzML"
+        if p.exists():
+            res[f"esempio_{stem}"] = fn(p)
+        elif not skip_missing:
+            raise FileNotFoundError(f"{p} missing")
 
     for f in sorted(EXAMPLES.glob("HRMS_*.mzML")):
         res[f"esempio_{f.stem}"] = _hrms(f)
