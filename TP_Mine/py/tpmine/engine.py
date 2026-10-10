@@ -82,7 +82,7 @@ class Sample:
 class Experiment:
     def __init__(self, files: list[dict], parent: dict, settings: dict | None = None, thresholds: dict | None = None,
                  transformations: list[dict] | None = None, progress=None):
-        self.progress = progress or (lambda text, frac=None: None)
+        self.progress = progress or (lambda text, frac=None, phase=None, payload=None: None)
         self.s = {**DEFAULT_SETTINGS, **(settings or {})}
         self.thr = copy.deepcopy(DEFAULT_THRESHOLDS)
         for k, v in (thresholds or {}).items():
@@ -358,7 +358,7 @@ class Experiment:
         dmz = max(self.tol / 2, (hi - lo) / 16000)
         nrt, nmz = max(int(math.ceil((rt1 - rt0) / drt)), 3), int(math.ceil((hi - lo) / dmz)) + 1
         win = max(int(self.tol / dmz), 1)
-        self.progress("Searching for unexpected ions...", 0.7)
+        self.progress("Searching for unexpected ions...", 0.7, "unexpected")
         ref = np.zeros((nrt, nmz), np.float32)
         for k in refs:
             np.maximum(ref, mappa.build_grid(tabs[k], rt0, drt, nrt, lo, dmz, nmz, win), out=ref)
@@ -534,7 +534,7 @@ class Experiment:
             g["win"] = max(min(self.rt_tol, 0.5 * gap), 0.03)
         return groups
 
-    def expand_isomers(self, tick):
+    def expand_isomers(self, tick, found=None):
         """Analyses every candidate; one with several significant peaks (isomers with the same nominal m/z, other RT) becomes one entry per peak:
         name + ' @ RT min', the first keeps the id of the candidate, the others id + 10000 x index."""
         out, n = [], len(self.entries)
@@ -555,7 +555,15 @@ class Experiment:
                     out.append(dict(e, id=e["id"] + 10000 * j, name=f"{e['base_name']} @ {g['rt']:.2f} min", rt_ref=g["rt"], rt_win=g["win"], isomer=j))
         self.entries = out
         for e in self.entries:
-            self.analyse(e)
+            a = self.analyse(e)
+            if found:
+                found(e, a)
+
+    def _announce(self, e: dict, a: dict) -> None:
+        """Live feed: a candidate that has just been evaluated and passes the criteria (the score is the one of the analysis, before the final ranking)."""
+        if e["kind"] == "candidate" and e["steps"] > 0 and a.get("label") in ("forte", "possibile") and a.get("score") is not None:
+            self.progress("", None, "xic", {"kind": "candidate", "id": e["id"], "name": e["name"], "mz": round(e["mz"], 4),
+                                            "rt": round(a["ref_rt"], 2) if a.get("ref_rt") else None, "score": a["score"]})
 
     # ------------------------------------------------------------------ outputs
     def run(self) -> dict:
@@ -567,28 +575,29 @@ class Experiment:
             now = time.perf_counter()
             self.timing[key] = round(now - t, 3)
             t = now
-        self.progress("Calibrating m/z on the parent...", 0.02)
+        self.progress("Calibrating m/z on the parent...", 0.02, "calibration")
         self.calibrate()
         lap("calibration")
-        self.progress("Generating candidates...", 0.05)
+        self.progress("Generating candidates...", 0.05, "candidates")
         self.build_candidates()
         lap("candidates")
-        self.expand_isomers(lambda i, n: self.progress("Extracting XICs and searching for peaks...", 0.05 + 0.6 * i / n))
+        self.progress("Extracting XICs and searching for peaks...", 0.05, "xic")
+        self.expand_isomers(lambda i, n: self.progress("Extracting XICs and searching for peaks...", 0.05 + 0.6 * i / n), self._announce)
         lap("xic")
         if self.s.get("discover", True):
             self.discover()
         lap("unexpected")
         self.mrm = None
         if self.mrmfiles:
-            self.progress("Integrating MRMs...", 0.93)
+            self.progress("Integrating MRMs...", 0.93, "ms2")
             self.mrm = mrm.analyse(self.mrmfiles, self.rt_tol)
         if self.ms2files:
-            self.progress("Looking for MS2 scans...", 0.95)
+            self.progress("Looking for MS2 scans...", 0.95, "ms2")
             for e in self.entries:
                 if e["kind"] != "candidate" or e["steps"]:
                     self.ms2(e)
         lap("ms2")
-        self.progress("Computing the tables...", 0.97)
+        self.progress("Computing the tables...", 0.97, "tables")
         out = self.summary()
         lap("summary")
         self.timing["total"] = round(time.perf_counter() - t0, 3)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import tempfile
+import time
 from pathlib import Path
 
 import numpy as np
@@ -20,7 +21,46 @@ DATA = Path("/tp_data")
 _ex: Experiment | None = None
 _hr: hr_engine.ExperimentHR | None = None
 _kinds: dict = {}         # name -> 'hr' | 'msn' | 'other' (filled by classify)
-_progress = None          # set by the worker: callable(text, frac)
+_progress = None          # set by the worker: callable(text, frac, phase, payload_json)
+
+
+class _Emitter:
+    """Live feed of a run: the engines call it as progress(text, frac, phase=None, payload=None). Text and fraction leave at most every INTERVAL s;
+    a new phase leaves at once; the payloads (dicts) pile up and leave together as a JSON list of at most MAX_BYTES (several messages if more)."""
+    INTERVAL = 0.2
+    MAX_BYTES = 50_000
+
+    def __init__(self, sink):
+        self.sink, self.phase, self.buf, self.last = sink, None, [], 0.0
+
+    def __call__(self, text, frac=None, phase=None, payload=None):
+        now = time.perf_counter()
+        new = phase is not None and phase != self.phase
+        if new:
+            self.flush()                                    # what belongs to the old phase leaves first
+            self.phase = phase
+        if payload is not None:
+            self.buf.append(payload)
+        if new or now - self.last >= self.INTERVAL:
+            self.flush(text, frac)
+
+    def flush(self, text=None, frac=None):
+        self.last = time.perf_counter()
+        if self.sink is None:
+            self.buf.clear(); return
+        chunks, cur, size = [], [], 2
+        for p in self.buf:
+            n = len(json.dumps(p, default=_enc)) + 2
+            if cur and size + n > self.MAX_BYTES:
+                chunks.append(cur); cur, size = [], 2
+            cur.append(p); size += n
+        self.buf = []
+        if cur:
+            chunks.append(cur)
+        for i, c in enumerate(chunks or [None]):
+            if c is None and text is None:
+                return
+            self.sink(text if i == 0 else None, frac if i == 0 else None, self.phase, None if c is None else json.dumps(c, default=_enc))
 
 
 def _enc(o):
@@ -92,12 +132,20 @@ def run(files_json: str, parent_json: str, settings_json: str, transf_text: str)
         for f in files:
             f["kind"] = _kinds[f["name"]]
         _ex = None
-        _hr = hr_engine.ExperimentHR(files, json.loads(parent_json), json.loads(settings_json) or None, progress=_progress)
-        return _out(_hr.run())
+        live = _Emitter(_progress)
+        _hr = hr_engine.ExperimentHR(files, json.loads(parent_json), json.loads(settings_json) or None, progress=live)
+        try:
+            return _out(_hr.run())
+        finally:
+            live.flush()
     _hr = None
     transf = chem.parse_transformations(transf_text) if transf_text.strip() else None
-    _ex = Experiment(files, json.loads(parent_json), json.loads(settings_json), None, transf, progress=_progress)
-    return _out(_ex.run())
+    live = _Emitter(_progress)
+    _ex = Experiment(files, json.loads(parent_json), json.loads(settings_json), None, transf, progress=live)
+    try:
+        return _out(_ex.run())
+    finally:
+        live.flush()
 
 
 def detail(cid: int) -> str:
