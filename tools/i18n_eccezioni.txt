@@ -1,10 +1,10 @@
 # Motivated exceptions for tools/controlla_i18n.py: <file><TAB><text snippet of the string literal>
 mzlab/web/draw.js	esempio-trasformazione.png
 mzlab/web/draw.js	esempio-frammentazione.png
-mzlab/web/index.html	Esempio_FullScan_t
-mzlab/web/index.html	Esempio_MS2_t
-mzlab/web/index.html	Esempio_MRM_std_
-mzlab/web/index.html	Esempio_HRMS_DDA
+mzlab/web/index.html	FullScan_t
+mzlab/web/index.html	MS2_t
+mzlab/web/index.html	MRM_std_
+mzlab/web/index.html	HRMS_DDA
 mzlab/web/index.html	static/esempi/
 mzlab/web/index.html	static/teoria/glossario-dati.js
 mzlab/web/index.html	static/teoria/tema.js

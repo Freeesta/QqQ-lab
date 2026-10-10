@@ -23,6 +23,7 @@ with sync_playwright() as p:
         assert "Esperimento" in pg.inner_text("#flist") and "MS2 (Product Ion)" in pg.inner_text("#flist") and "MRM" in pg.inner_text("#flist") and "Full Scan" in pg.inner_text("#flist") and "EMS" not in pg.inner_text("#flist")
     step("start screen detects the experiment from the content", column)
     pg.click("text=Carica dati"); ready(pg)
+    pg.evaluate("E.files.forEach(f=>f.vis=true); redrawAll()")
     pg.screenshot(path=SH + "121_data.png")
     def side():
         t = flst_own(pg); assert "scan MS1" not in t and "RT 0.5" not in t and "Doppio clic" not in pg.inner_text("#dfiles"), t
@@ -71,7 +72,7 @@ with sync_playwright() as p:
         pg.locator("#fpop [data-all='1']").click(); pg.wait_for_timeout(800); pg.mouse.click(5, 5)
         assert not xp.locator(".rd").is_visible(), "the line under the graph is gone (the info is in the mouse box)"
         assert xp.locator('[data-a=iclr]').is_visible(); xp.locator('[data-a=iclr]').click(); pg.wait_for_timeout(400)
-        assert pg.evaluate(f"E.panels[{xi}].ints.length") == 0 and not xp.locator('[data-a=iclr]').is_visible()
+        assert pg.evaluate("E.panels.find(p=>p.type==='xic').ints.length") == 0 and not xp.locator('[data-a=iclr]').is_visible()
     step("zoom tool, TIC refuses, XIC window da-a, integration of a chosen file", integ)
     def ms2():
         pg.click("#dtabs [data-t=ms2]"); ready(pg)

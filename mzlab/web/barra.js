@@ -13,6 +13,7 @@ const BARRA = (() => {
 
   let _curTab = "file";
   let _pinned = true;
+  let _side = "left";
   let _w = 260;
   let _overlayOpen = false;
   let _mounted = false;
@@ -27,7 +28,8 @@ const BARRA = (() => {
       s = JSON.parse(localStorage.getItem(storageKey()) || "{}");
     } catch (_) {}
     _w = typeof s.w === "number" && s.w >= 220 && s.w <= 560 ? s.w : defaultW();
-    _pinned = typeof s.pinned === "boolean" ? s.pinned : (window.innerWidth >= 900);
+    _pinned = true;
+    _side = s.side === "right" ? "right" : "left";
     _curTab = s.tab || (isHrMode() ? "hdr" : "file");
   }
 
@@ -35,6 +37,7 @@ const BARRA = (() => {
     try {
       const data = {
         tab: _curTab,
+        side: _side,
         pinned: _pinned,
         w: _w
       };
@@ -55,45 +58,67 @@ const BARRA = (() => {
     document.documentElement.style.setProperty("--sb-w", _w + "px");
     const vdata = document.querySelector("#v-data");
     if (vdata) {
-      if (_pinned) {
-        vdata.style.setProperty("--sb-col-w", _w + "px");
-      } else {
-        vdata.style.setProperty("--sb-col-w", "42px");
-      }
+      vdata.style.setProperty("--sb-col-w", _w + "px");
     }
   }
 
-  // Update pinning visual & grid state
-  function applyPin(triggerResize = false) {
+  // Apply dock side (left / right)
+  function applySide(triggerResize = false) {
     const vdata = document.querySelector("#v-data");
-    const pinBtn = document.querySelector("#sidebar-pin");
     if (vdata) {
-      vdata.classList.toggle("sb-unpinned", !_pinned);
-      if (!_pinned) {
-        vdata.classList.toggle("sb-overlay-open", _overlayOpen);
-      } else {
-        vdata.classList.remove("sb-overlay-open");
-      }
+      vdata.classList.toggle("sb-right", _side === "right");
     }
-    if (pinBtn) {
-      pinBtn.classList.toggle("pinned", _pinned);
-      pinBtn.classList.toggle("on", _pinned);
-      pinBtn.title = _pinned
-        ? I18N.t("sidebar.unpin")
-        : I18N.t("sidebar.pin");
-      pinBtn.setAttribute("aria-pressed", _pinned ? "true" : "false");
+    const togBtn = document.querySelector("#sb-side-tog");
+    if (togBtn && typeof I18N !== "undefined") {
+      togBtn.title = I18N.t("side.dockTog.title");
+      togBtn.setAttribute("aria-label", I18N.t("side.dockTog.aria"));
     }
-    applyWidth();
     if (triggerResize && typeof fitWidth === "function" && typeof redrawAll === "function") {
       fitWidth();
       redrawAll();
     }
   }
 
-  // Tab titles
-  const TAB_TITLES = {};
-  ["file", "calc", "losses", "adducts", "lists"].forEach(k => { TAB_TITLES[k] = I18N.t(`sidebar.tab.${k}`); });
-  ["hdr", "lst", "fil", "cmp", "iso", "pks", "com", "idn", "tre"].forEach(k => { TAB_TITLES[k] = I18N.t(`sidebar.sec.${k}`); });
+  function toggleSide() {
+    _side = _side === "left" ? "right" : "left";
+    applySide(true);
+    saveState();
+  }
+
+  function setSide(side) {
+    if (side !== "left" && side !== "right") return;
+    if (_side === side) return;
+    _side = side;
+    applySide(true);
+    saveState();
+  }
+
+  // Update pinning visual & grid state
+  function applyPin(triggerResize = false) {
+    const vdata = document.querySelector("#v-data");
+    if (vdata) {
+      vdata.classList.remove("sb-unpinned");
+      vdata.classList.remove("sb-overlay-open");
+    }
+    applyWidth();
+    applySide(false);
+    if (triggerResize && typeof fitWidth === "function" && typeof redrawAll === "function") {
+      fitWidth();
+      redrawAll();
+    }
+  }
+
+  function getTabTitle(tabId) {
+    if (typeof I18N !== "undefined") {
+      if (["file", "calc", "losses", "adducts", "lists"].includes(tabId)) {
+        return I18N.t(`sidebar.tab.${tabId}`);
+      }
+      if (["hdr", "lst", "fil", "cmp", "iso", "pks", "com", "idn", "tre"].includes(tabId)) {
+        return I18N.t(`sidebar.sec.${tabId}`);
+      }
+    }
+    return tabId;
+  }
 
 
   // Switch tab
@@ -119,7 +144,7 @@ const BARRA = (() => {
     // Update title
     const ttlEl = document.querySelector("#sb-title");
     if (ttlEl) {
-      ttlEl.textContent = TAB_TITLES[tabId] || tabId;
+      ttlEl.textContent = getTabTitle(tabId);
     }
 
     // Toggle actions (e.g. + button for file)
@@ -278,7 +303,12 @@ const BARRA = (() => {
       const aside = document.querySelector("#dfiles");
       if (!aside) return;
       const rect = aside.getBoundingClientRect();
-      const newW = Math.max(220, Math.min(560, Math.round(e.clientX - rect.left)));
+      let newW;
+      if (_side === "right") {
+        newW = Math.max(220, Math.min(560, Math.round(rect.right - e.clientX)));
+      } else {
+        newW = Math.max(220, Math.min(560, Math.round(e.clientX - rect.left)));
+      }
       _w = newW;
       applyWidth();
     };
@@ -385,10 +415,36 @@ const BARRA = (() => {
       };
     });
 
-    // Pin button
-    const pinBtn = document.querySelector("#sidebar-pin");
-    if (pinBtn) {
-      pinBtn.onclick = togglePin;
+    // Sidebar dock side toggle button (left / right)
+    const sideTogBtn = document.querySelector("#sb-side-tog");
+    if (sideTogBtn) {
+      sideTogBtn.onclick = toggleSide;
+    }
+
+    // Drag header to drop on workspace / other side
+    const sbHeader = document.querySelector("#sb-header");
+    if (sbHeader) {
+      sbHeader.setAttribute("draggable", "true");
+      sbHeader.ondragstart = e => {
+        e.dataTransfer.setData("text/plain", "sidebar");
+        e.dataTransfer.effectAllowed = "move";
+      };
+    }
+    const ws = document.querySelector("#v-workspace");
+    if (ws) {
+      ws.ondragover = e => {
+        if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes("text/plain")) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        }
+      };
+      ws.ondrop = e => {
+        const d = e.dataTransfer.getData("text/plain");
+        if (d === "sidebar") {
+          e.preventDefault();
+          toggleSide();
+        }
+      };
     }
 
     // Fold/hide button
@@ -410,9 +466,10 @@ const BARRA = (() => {
     // Dock calculator into sidebar
     dockCalc(true);
 
-    // Initial tab
+    // Initial tab & side
     setTab(_curTab);
     applyPin();
+    applySide(false);
   }
 
   return {
@@ -420,6 +477,8 @@ const BARRA = (() => {
     setTab,
     togglePin,
     setPinned,
+    toggleSide,
+    setSide,
     setWidth,
     closeOverlay,
     dockCalc,
@@ -427,6 +486,7 @@ const BARRA = (() => {
     isDataView,
     get curTab() { return _curTab; },
     get pinned() { return _pinned; },
+    get side() { return _side; },
     get width() { return _w; },
     get overlayOpen() { return _overlayOpen; }
   };
