@@ -31,7 +31,7 @@ try:
             assert pg.evaluate("document.querySelector('#libdlg').open") and "Nessuna libreria" in pg.inner_text("#lib-list")
             pg.set_input_files("#lib-file", {"name": "prova.msp", "mimeType": "text/plain", "buffer": msp.encode()}); pg.wait_for_timeout(2500)
             t = pg.inner_text("#lib-list"); assert "prova" in t and "5" in t, t
-            assert pg.locator("#lib-list tr").count() == 2 and pg.inner_text("#lib-list td.num:nth-child(4)").strip() == "1", pg.inner_text("#lib-list")     # one discarded (no precursor)
+            assert pg.locator("#lib-list tr").count() == 2 and pg.inner_text("#lib-list td.num:nth-child(5)").strip() == "1", pg.inner_text("#lib-list")     # one discarded (no precursor)
             pg.click("#lib-x"); pg.wait_for_timeout(200)
         step("gear → Librerie: a synthetic MSP is read, one spectrum discarded", load)
         def search():
@@ -72,6 +72,7 @@ try:
             pg.click("#lr-x"); pg.click("#np-set"); pg.click("#uipset button >> text=Librerie"); pg.wait_for_timeout(400)
             pg.set_input_files("#lib-file", {"name": "x.lib", "mimeType": "application/octet-stream", "buffer": b"\x00\x01"}); pg.wait_for_timeout(800)
             assert "MSP" in pg.inner_text("#lib-st"), pg.inner_text("#lib-st")
+            pg.click("#lib-x"); pg.wait_for_timeout(200)
         step("a NIST .lib is refused with the hint to export MSP", unsupported)
         def persists():
             big = "\n".join(rec(f"Fill{i}", 150 + i * 0.01, [(50 + j * 3.7, 100 + j) for j in range(60)]) for i in range(5000)) + "\n" + rec("Target", 777.1234, pk)

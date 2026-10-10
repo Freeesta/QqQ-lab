@@ -2558,8 +2558,7 @@ function ctxFor(p, e, x, px, py) {
       draw(p);
     } });
     if (p.iso) items.push({ label: I18N.t("ctx.spec.isoOff"), fn: () => { p.iso = null; draw(p); } });
-    const isHr = p.k != null && E.files[p.k] && window.HR && HR.isHr(E.files[p.k]);
-    if (window.LIB && p.level === 2 && isHr) items.push("-", { label: I18N.t("ctx.libSearch"), fn: () => LIB.searchFrom(p) });
+    if (window.LIB && p.level === 2) items.push("-", { label: I18N.t("ctx.libSearch"), fn: () => LIB.searchFrom(p) });
     const srcP = p.src && E.panels.find(q => q.id === p.src && q.el);
     if (window.DDA) { const q = DDA.menuShow(p); if (q) items.push("-", q); }
     if (p.link) items.push("-", { label: I18N.t("ctx.spec.freeze"), fn: () => { freezeSpec(p); uiSave(); } });
