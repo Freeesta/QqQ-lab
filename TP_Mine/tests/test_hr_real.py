@@ -503,3 +503,21 @@ def test_whole_experiment_isf_coincident_localisation_and_isomers(experiment):
             ks.append((c["id"], e.detail(c["id"]).get("isomers", {}).get("k", 0)))
     print("isomer components of the +O series, by feature:", ks)
     assert any(k >= 2 for _, k in ks)
+
+
+@need
+def test_gap_filling_and_entropy_on_the_real_series(experiment):
+    import numpy as np
+    e, truth, _, rss = experiment
+    tps = {t["id"]: t for t in truth["tps"]}
+    found = {tid: _position(e, t)[1] for tid, t in tps.items()}
+    rows = {tid: e._row(c) for tid, c in found.items() if c is not None}
+    n_filled = sum(len(r["filled"]) for r in rows.values())
+    print(f"\nfilled cells of the reference products: {n_filled}; fill time {e.timing['riempimento']} s")
+    assert n_filled >= 5 and e.timing["riempimento"] <= 60
+    assert not e.filled[:, e.ref_c].any()                                     # reference files are never filled
+    assert all(e.al.area[g, k] > 0 for g, k in zip(*np.nonzero(e.filled)))
+    # a product that was detected in the late files only gets its early samples: its onset does not move later
+    ent = {tid: r["entropy"] for tid, r in rows.items() if r["entropy"] is not None}
+    assert len(ent) >= 12 and all(0.0 <= v <= 1.0 for v in ent.values())
+    assert ent["247"] > 0.6 and ent["315"] > 0.6 and ent["180"] < 0.3         # close to the parent / far from it, as the modified cosine says (0.87 / 0.80 / 0.15)

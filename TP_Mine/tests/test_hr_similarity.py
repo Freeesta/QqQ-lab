@@ -130,3 +130,76 @@ def test_speed_of_a_few_hundred_spectra():
     ia, ib, s, n = SM.all_pairs(M, W, P, threshold=0.3)
     dt = time.perf_counter() - t0
     assert len(ia) > 0 and dt < 60                       # 44 850 pairs; ~50 us per exact pair, most pairs removed by the prefilter
+
+
+# ---------------------------------------------------------------------------------------------------------------------- spectral entropy
+def _entropy_ref(a, b):
+    """The definition, on dicts {key: intensity} of already matched peaks: weight transform, merged spectrum, 1 - (2 S_AB - S_A - S_B) / ln 4."""
+    import math
+
+    def prob(d):
+        t = sum(d.values())
+        p = {k: v / t for k, v in d.items()}
+        s = -sum(v * math.log(v) for v in p.values())
+        if s < 3:
+            p = {k: v ** (0.25 + 0.25 * s) for k, v in p.items()}
+            t = sum(p.values())
+            p = {k: v / t for k, v in p.items()}
+        return p
+
+    pa, pb = prob(a), prob(b)
+    ent = lambda p: -sum(v * math.log(v) for v in p.values() if v > 0)
+    mix = {k: (pa.get(k, 0) + pb.get(k, 0)) / 2 for k in set(pa) | set(pb)}
+    return 1 - (2 * ent(mix) - ent(pa) - ent(pb)) / math.log(4)
+
+
+def _padded(spectra, precursors):
+    """Spectra as (mz, intensity) lists straight into the padded matrices (W = sqrt of the intensities, no unit norm: the entropy only needs ratios)."""
+    return SM.pad([(np.array(m, float), np.sqrt(np.array(i, float))) for m, i in spectra], precursors)
+
+
+def test_entropy_hand_written_values():
+    # identical spectra: 1; no common peak: 0
+    M, W, P = _padded([([100, 200], [1, 1]), ([100, 200], [1, 1]), ([300, 400], [1, 1])], [500, 500, 500])
+    sc, nm = SM.entropy_similarity(M, W, P, [0, 0], [1, 2])
+    assert sc == pytest.approx([1.0, 0.0], abs=1e-9) and list(nm) == [2, 0]
+    # A = {100: 1, 200: 1}, B = {100: 1}: p_A = (.5, .5) -> S = ln 2 < 3, flattened with the exponent 0.25 + 0.25 ln 2: still (.5, .5); p_B = (1)
+    # sim = [1.5 ln 1.5 - .5 ln .5 - 1 ln 1] / (2 ln 2) = 0.6887218755...
+    M, W, P = _padded([([100, 200], [1, 1]), ([100], [5])], [500, 500])
+    sc, nm = SM.entropy_similarity(M, W, P, [0], [1])
+    assert sc[0] == pytest.approx(0.6887218755408671, abs=1e-9) and nm[0] == 1
+    # A = {100: 3, 200: 1}, B = {100: 1, 200: 3}: p = (.75, .25), S = 0.5623351446, exponent 0.3905837862 -> q = (0.6165..., 0.3835...)
+    # literal from the definition (independent routine above): each of the two matched pairs adds -.6165 ln .6165 - .3835 ln .3835, over 2 ln 2
+    M, W, P = _padded([([100, 200], [3, 1]), ([100, 200], [1, 3])], [500, 500])
+    sc, _ = SM.entropy_similarity(M, W, P, [0], [1])
+    assert sc[0] == pytest.approx(_entropy_ref({1: 3, 2: 1}, {1: 1, 2: 3}), abs=1e-9)
+    assert sc[0] == pytest.approx(0.9675440267, abs=1e-9)
+
+
+def test_entropy_matches_the_definition_on_random_pairs():
+    rng = np.random.default_rng(3)
+    for _ in range(20):
+        n = int(rng.integers(3, 12))
+        mz = np.sort(rng.uniform(60, 380, n))
+        ia = rng.uniform(1, 100, n)
+        keep = rng.random(n) < 0.7
+        keep[0] = True
+        ib = rng.uniform(1, 100, n)
+        a = {i: ia[i] for i in range(n)}
+        b = {i: ib[i] for i in range(n) if keep[i]}
+        M, W, P = _padded([(mz, ia), (mz[keep], ib[keep])], [400, 400])
+        sc, nm = SM.entropy_similarity(M, W, P, [0], [1])
+        assert sc[0] == pytest.approx(_entropy_ref(a, b), abs=1e-9) and nm[0] == keep.sum()
+
+
+def test_entropy_hybrid_pairs_shifted_peaks_and_is_symmetric():
+    # the product keeps the fragments of the parent shifted by +15.9949 (precursor 400 -> 415.9949): hybrid sees them, the plain variant does not
+    M, W, P = _padded([([100, 150, 200], [1, 2, 3]), ([115.9949, 165.9949, 215.9949], [1, 2, 3])], [400, 415.9949])
+    assert SM.entropy_similarity(M, W, P, [0], [1], hybrid=True)[0][0] == pytest.approx(1.0, abs=1e-9)
+    assert SM.entropy_similarity(M, W, P, [0], [1], hybrid=False)[0][0] == pytest.approx(0.0, abs=1e-9)
+    M, W, P = _padded([([100, 150, 200], [1, 2, 3]), ([100, 150, 230], [3, 1, 2])], [400, 400])
+    ab = SM.entropy_similarity(M, W, P, [0], [1])[0][0]
+    ba = SM.entropy_similarity(M, W, P, [1], [0])[0][0]
+    assert ab == pytest.approx(ba, abs=1e-9) and 0 < ab < 1
+    _, sc, _ = SM.entropy_one_against_all(M, W, P, 0)
+    assert sc[0] == pytest.approx(ab, abs=1e-9)
