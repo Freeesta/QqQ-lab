@@ -29,25 +29,31 @@ try:
         pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
         pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
         def demo():
-            pg.click("#tp-demo"); pg.wait_for_function("document.querySelector('#tp-files table') && document.querySelectorAll('#tp-files tr').length >= 9", timeout=240000)
+            sys.path[:0] = [str(SRC / "py"), str(ROOT)]
+            from tpmine.demo import make_demo
+            dd = Path(tempfile.mkdtemp()); fl = make_demo(dd)
+            pg.set_input_files("#tp-in", [f["path"] for f in fl])
+            pg.wait_for_function("document.querySelector('#tp-files table') && document.querySelectorAll('#tp-files tr').length >= 9", timeout=240000)
+            assert pg.inner_text("#pm-mode").strip() == "Unit resolution" and pg.input_value("#tp-tol") == "0.35" and pg.input_value("#tp-rtt") == "0.25"
+            pg.fill("#tp-mol", "CC(C)N1C(=O)C2=CC=CC=C2NS1(=O)=O")
             pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('241.0641')", timeout=60000)
             assert "C10H12N2O3S" in pg.inner_text("#tp-prev")
-            assert "idrossilazione" in pg.input_value("#tp-tr")
+            assert "hydroxylation" in pg.input_value("#tp-tr")
             pg.click("#tp-go"); pg.wait_for_selector("#tp-view .gem", timeout=300000)
             assert pg.evaluate("document.querySelectorAll('.gem.forte').length") == 3
             pg.wait_for_timeout(1300)
-            assert pg.inner_text(".stat.g b").strip() == "3" and "Filone trovato" in pg.inner_text(".hero")
+            assert pg.inner_text(".stat.g b").strip() == "3" and "Vein found" in pg.inner_text(".hero")
             assert pg.evaluate("document.querySelector('#tp-struct svg') !== null")          # parent structure drawn from the SMILES (needs vendor/openchemlib.js)
             pg.click('.vt[data-v="tab"]'); pg.wait_for_selector("#tp-t tr.clk")
             t = pg.inner_text("#tp-t")
-            for need in ("idrossilazione", "perdita di propene", "deidrogenazione"): assert need in t, need
+            for need in ("hydroxylation", "loss of propene", "dehydrogenation"): assert need in t, need
             pg.click('.vt[data-v="map"]'); pg.wait_for_selector(".mnode"); assert pg.evaluate("document.querySelectorAll('.mnode').length") >= 4
             pg.click('.vt[data-v="kin"]'); pg.wait_for_selector("#tp-c-all"); assert pg.evaluate("document.getElementById('tp-c-all').width") > 0
             pg.click('.vt[data-v="film"]'); pg.wait_for_selector(".frow"); pg.click("#tp-play"); pg.wait_for_timeout(2200)
             assert "t = 5" in pg.inner_text("#tp-tl") or "t = 10" in pg.inner_text("#tp-tl"), pg.inner_text("#tp-tl")
-            pg.click('.vt[data-v="gems"]'); pg.click(".gem:has-text('idrossilazione')"); pg.wait_for_selector("#tp-c-xic", timeout=60000); pg.wait_for_timeout(500)
+            pg.click('.vt[data-v="gems"]'); pg.click(".gem:has-text('hydroxylation')"); pg.wait_for_selector("#tp-c-xic", timeout=60000); pg.wait_for_timeout(500)
             d = pg.inner_text("#tp-det")
-            assert "In parole" in d and "frammento del progenitore" in d and "Livello 3" in d and "257.1" in d, d[:700]
+            assert "In words" in d and "Level 3" in d and "257.1" in d, d[:700]
             pg.screenshot(path=str(HERE / "shots" / "tpmine2_demo.png"), full_page=True)
         step("LR demo (synthetic): files, formula from SMILES, search, ranking, detail with MS2 and level 3", demo)
         def xl():
@@ -63,19 +69,19 @@ try:
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
             pg.set_input_files("#tp-in", [f["path"] for f in fs] + [str(mf)])
             pg.wait_for_function("document.querySelectorAll('#tp-files tr').length >= 8", timeout=300000)
-            t = pg.inner_text("#tp-files"); assert "LC-HRMS" in t and "MSn (infusione)" in t, t
+            t = pg.inner_text("#tp-files"); assert "LC-HRMS" in t and "MSn (infusion)" in t, t
             pg.fill("#tp-mol", "Cn1cnc2c1c(=O)n(C)c(=O)n2C"); pg.wait_for_function("document.querySelector('#tp-prev').textContent.includes('195.0877')", timeout=60000)
             pg.click("#tp-go"); pg.wait_for_selector("#hr-t tr.clk", timeout=300000)
             tab = pg.inner_text("#hr-t")
             assert "C8H11N4O3" in tab and "C7H9N4O2" in tab, tab[:600]
-            assert "ipotesi, non un'identificazione" in pg.inner_text("#tp-right")
+            assert "hypothesis, not an identification" in pg.inner_text("#tp-right")
             pg.click("#hr-t tr.clk:has-text('C8H11N4O3')"); pg.wait_for_selector("#hr-ms2", timeout=60000); pg.wait_for_timeout(500)
             assert pg.evaluate("document.getElementById('hr-kin').width") > 0 and pg.evaluate("document.getElementById('hr-ms2').width") > 0
-            assert "Criteri" in pg.inner_text("#tp-det") and "Cinetica per sessione" in pg.inner_text("#tp-det")
+            assert "Criteria" in pg.inner_text("#tp-det")
             neg = pg.evaluate("[...document.querySelectorAll('#hr-t tr.clk')].map(t => +t.dataset.id).filter(i => i < 0).length")
             assert neg == 1, neg                                                  # the row hidden under an in-source fragment
             pg.click("#hr-t tr.clk[data-id^='-']"); pg.wait_for_function("document.querySelector('#tp-det').innerText.includes('C6H8N3O')", timeout=60000)
-            assert "possibile TP coeluente con un ISF" in pg.inner_text("#hr-t")
+            assert "co-eluting" in pg.inner_text("#hr-t")
             pg.select_option("#hr-ord", "level"); pg.wait_for_selector("#hr-t tr.clk")
             with pg.expect_download(timeout=60000) as dlc: pg.click("#hr-x-csv")
             assert "C6H8N3O" in Path(dlc.value.path()).read_text(encoding="utf-8")

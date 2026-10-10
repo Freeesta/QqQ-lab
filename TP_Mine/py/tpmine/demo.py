@@ -1,7 +1,7 @@
 # TPMINE-PRIVATE
-"""Synthetic bentazone experiment to try and to test TP Mine (no real bentazone data exist in the lab folder).
+"""Synthetic experiment to test TP Mine (no real data).
 
-Truth built into the data (unit-resolution centroids shifted by +0.30 Da, like the real instrument): bentazone [M+H]+ 241.0641 decays;
+Truth built into the data (unit-resolution centroids shifted by +0.30 Da, like the real instrument): parent [M+H]+ 241.0641 decays;
 hydroxylation (+O, 257.059), N-deisopropylation (-C3H6, 199.017) and dehydrogenation (-H2, 239.048) rise over time; an ion near 273 is a contaminant
 present everywhere (blank included); an ion with the +O mass elutes at another RT in every file. MS2 of the +O ion: 175, 215 (= parent fragment 199 + 16), 239; MS2 of the parent: 133, 199."""
 from __future__ import annotations
@@ -103,13 +103,13 @@ def make_demo(folder) -> list[dict]:
     rng = np.random.default_rng(11)
     files = []
     for t in TIMES:
-        p = folder / f"benta_FullMass-t{t}.mzML"
+        p = folder / f"synth_FullMass-t{t}.mzML"
         write_mzml(p, t, False, rng)
         files.append({"name": p.name, "path": str(p), "time": float(t), "type": "sample"})
-    p = folder / "benta_FullMass-blank.mzML"
+    p = folder / "synth_FullMass-blank.mzML"
     write_mzml(p, None, True, rng)
     files.append({"name": p.name, "path": str(p), "time": None, "type": "blank"})
-    p = folder / "benta_MS2-t15.mzML"
+    p = folder / "synth_MS2-t15.mzML"
     write_mzml(p, 15, False, rng, ms2=True)
     files.append({"name": p.name, "path": str(p), "time": 15.0, "type": "sample"})
     return files

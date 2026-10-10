@@ -36,7 +36,7 @@ try:
         pg.goto(f"http://127.0.0.1:{PORT}/"); pg.wait_for_selector("#drop", timeout=120000)
         def off():
             pg.wait_for_timeout(1500)
-            assert pg.evaluate("window.QTOOLS.list().length") == 0 and not pg.query_selector("#mzf-badge")
+            assert pg.evaluate("window.QTOOLS.list().length") == 0
             for _ in range(5): pg.click('button.hq[data-help="header"]')          # the old trigger does nothing now
             pg.keyboard.press("Escape")
             assert not pg.query_selector("#qt-dlg") and not pg.query_selector('#nav button[data-v="tpmine"]')
@@ -45,8 +45,8 @@ try:
         def turn_on():
             clicks(pg)
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
-            assert pg.inner_text("#mzf-badge").strip() == "mzFinder"
-            assert pg.evaluate("window.QTOOLS.list().map(t=>t.id)") == ["tpmine"]
+            assert not pg.query_selector("#mzf-badge")           # no mark next to the logo
+            assert "tpmine" in pg.evaluate("window.QTOOLS.list().map(t=>t.id)")
             assert "mzFinder" in pg.inner_text('#nav button[data-v="tpmine"]')
             assert pg.evaluate("localStorage.getItem('qqq.mzfinder')") == "1"
             assert [u for u in reqs if u.endswith("/mzfinder/indice.json")]
@@ -54,17 +54,16 @@ try:
             assert not pg.evaluate("document.getElementById('v-draw').offsetParent")
             pg.click('#nav button[data-v="theory"]'); assert pg.evaluate("document.getElementById('v-tpmine').hidden")
             pg.screenshot(path=str(HERE / "shots" / "tpmine1.png")) if (HERE / "shots").exists() else None
-        step("5 clicks on the logo: badge, tab, state saved", turn_on)
+        step("5 clicks on the logo: tab, state saved", turn_on)
         def reload_on():
             pg.reload(); pg.wait_for_selector("#drop", timeout=120000)
             pg.wait_for_selector('#nav button[data-v="tpmine"]', timeout=30000)
-            assert pg.query_selector("#mzf-badge")
         step("after a reload it stays on", reload_on)
         def turn_off():
             pg.click('#nav button[data-v="tpmine"]'); pg.wait_for_selector("#tp-go")
             clicks(pg)
             pg.wait_for_function("!document.querySelector('#nav button[data-v=\"tpmine\"]')")
-            assert not pg.query_selector("#mzf-badge") and not pg.query_selector("#v-tpmine")
+            assert not pg.query_selector("#v-tpmine")
             assert pg.evaluate("localStorage.getItem('qqq.mzfinder')") is None
             assert pg.evaluate("window.QTOOLS.list().length") == 0
             assert pg.evaluate("S.view") == "data"
