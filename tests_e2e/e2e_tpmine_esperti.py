@@ -42,13 +42,13 @@ try:
         def go():
             pg.evaluate("(()=>{const q=E.panels.find(q=>q.type==='map');const fs=tabFiles('full').sort((a,b)=>a.time-b.time);q.k=fs[fs.length-1].k;q.ref=fs[0].k;ctl(q);draw(q)})()")
             ready(pg, timeout=240000); pg.wait_for_function("E.panels.some(q=>q.type==='map'&&q._a&&q._a.ref)", timeout=60000)
-            pg.click("#qt-bar button:has-text('Find points')"); pg.wait_for_selector("#esp-go")
+            pg.click("#qt-bar button:has-text('Find points')"); pg.wait_for_selector("#esp-go"); assert pg.get_attribute("#esp-h", "title") and "any open series" in pg.get_attribute("#esp-h", "title") and pg.evaluate("document.querySelectorAll('#qt-body ol li, .tp ol li').length") >= 4
             pg.click("#esp-go"); pg.wait_for_selector("#esp-out tbody tr", timeout=600000)
             n = pg.evaluate("document.querySelectorAll('#esp-out tbody tr').length"); assert n >= 1, n
             t = pg.inner_text("#esp-out"); assert "Proposed role" in t and "Time course" in t and "Priority" in t, t[:300]
             assert pg.evaluate("document.querySelectorAll('#esp-out tbody svg').length") == n
             tr = pg.evaluate("[...document.querySelectorAll('#esp-out tbody tr')].map(r => r.children[9].textContent)")
-            assert all(x in ("cresce", "cala", "costante", "cresce e poi cala") for x in tr), tr[:5]          # five files: every point has a shape of its time course
+            assert all(x in ("rises", "falls", "constant", "rises then falls") for x in tr), tr[:5]          # five files: every point has a shape of its time course
             print(pg.evaluate("[...document.querySelectorAll('#esp-out tbody tr')].slice(0,12).map(r=>[...r.children].map((c,i)=>i==8?'':c.textContent).join(' | ')).join('\\n')"))
         step("mzFinder on: «Find points» on A − B gives a table with rows, roles and time course", go)
         def thresholds():

@@ -55,7 +55,8 @@
 
   function open(body) {
     const th = load();
-    body.innerHTML = `<div class="tp" style="display:block"><div class="card"><h3>Find points on the difference map</h3>
+    body.innerHTML = `<div class="tp" style="display:block"><div class="card"><h3>Find points on the difference map <i class="tp-q" style="display:inline-grid;place-items:center;width:16px;height:16px;border:1px solid var(--muted);border-radius:50%;font-size:11px;color:var(--muted);cursor:help;font-style:normal;vertical-align:middle" id="esp-h" tabindex="0" role="note" aria-label="About Find points" title="No low-resolution file is needed: it works with any open series, LR or HR. Open the map, choose «difference with» (e.g. t60 − t0), then press Find points: it finds the maxima of A − B, groups them by co-elution, proposes a role (isotope, adduct, loss) and shows the time course of the area in all files.">?</i></h3>
+      <ol class="mut" style="margin:0 0 6px;padding-left:18px"><li>Open the map of a series (LR or HR; no low-resolution file is required).</li><li>Choose «difference with» and a reference file (e.g. t60 − t0).</li><li>Press «Find points»: maxima of A − B are grouped by co-elution.</li><li>Each group gets a proposed role (isotope, adduct, loss) and the time course of its area in all files.</li></ol>
       <p class="mut">Local maxima of the difference A − B of the open map (choose «difference with» in the map panel). Co-elution groups, proposed roles with the numeric proof and time course: they are <b>candidates</b>, not answers.</p>
       <details><summary>Thresholds</summary><div class="kv" id="esp-th">${Object.keys(DEF).map(k => `<b title="${esc(LAB[k][1])}">${esc(LAB[k][0])}</b><input data-k="${k}" type="number" step="any" value="${th[k]}" style="width:90px">`).join("")}</div>
       <div class="row"><button id="esp-def" type="button">Default values</button></div></details>
