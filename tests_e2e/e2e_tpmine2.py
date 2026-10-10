@@ -111,7 +111,7 @@ try:
                 vals = pg.evaluate("[...document.querySelectorAll('.stat b')].map(b=>parseFloat(b.textContent))")
                 assert 0.25 <= vals[4] <= 0.35 and 2.0 < vals[3] < 4.0 and vals[0] >= 3, vals
                 m = pg.inner_text("#tp-right")
-                assert "MRM: integrazione automatica" in m and "Retta: area" in m and "364.1>194.1" in m, m[:400]
+                assert "MRM: automatic integration" in m and "Line: area" in m and "364.1>194.1" in m, m[:400]
                 assert pg.evaluate("document.getElementById('tp-c-cal').width") > 0
                 pg.screenshot(path=str(HERE / "shots" / "tpmine2_real.png"), full_page=True)
             step("real B_ series: offset +0.3 Da, decay, strong candidates", real)
