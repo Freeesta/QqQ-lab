@@ -339,12 +339,13 @@ function ldIon(on, mode) {
         return { x: W / 2 + 56 * Math.sin(a), y: H / 2 + 29 * Math.cos(r), z: Math.sin(r) };
       },
       draw() {                                                     // outer electrode: a barrel in two symmetrical halves with a slit in the middle, the ends closing towards the axis
-        cx.strokeStyle = line; cx.lineWidth = 3; cx.lineJoin = "round";
+        cx.strokeStyle = v("--muted") || line; cx.globalAlpha = 0.55; cx.lineWidth = 3; cx.lineJoin = "round";
         const c = W / 2, m = H / 2, g = 5, Rr = 50, L = 96;
         for (const d of [-1, 1]) for (const e of [-1, 1]) {
           cx.beginPath(); cx.moveTo(c + d * g, m + e * Rr);
           cx.bezierCurveTo(c + d * 56, m + e * (Rr + 1), c + d * L, m + e * 40, c + d * (L + 4), m + e * 10); cx.stroke();
         }
+        cx.globalAlpha = 1;
       },
       mid() {                                                      // central electrode: a short, stout spindle, widest in the middle
         const c = W / 2, m = H / 2, Lh = 72, th = 17;
