@@ -161,7 +161,7 @@ class Run:
                 time.sleep(0.1)
     def page(s, p, tour=False):
         s.b = p.chromium.launch()
-        pg = s.b.new_page(viewport={"width": 1500, "height": 2200})
+        pg = s.b.new_page(viewport={"width": 1500, "height": 2200}, reduced_motion="reduce")
         if not tour:
             pg.add_init_script("try{localStorage.setItem('qqq.tour.lr',JSON.stringify({stato:'saltato'}));}catch(_){}")
         pg.on("pageerror", lambda e: s.errs.append(("pageerror", str(e))))

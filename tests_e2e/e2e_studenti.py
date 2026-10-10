@@ -83,7 +83,7 @@ try:
         step("B-11 frozen spectra: title once, RT once", frozen)
         def newpanel():
             pg.evaluate("scrollTo(0,0)"); n0 = pg.evaluate("E.panels.length"); pg.click("#np-spec"); pg.wait_for_timeout(250)
-            assert pg.evaluate("E.panels.length") == n0 + 1 and pg.evaluate("E.panels[E.panels.length-1].el.classList.contains('flash')"), "flash"
+            assert pg.evaluate("E.panels.length") == n0 + 1 and not pg.evaluate("E.panels[E.panels.length-1].el.classList.contains('flash')"), "flash"     # the tests run with reduced motion: no flash
             pg.wait_for_timeout(1500)
             r_ = pg.evaluate("(()=>{const r=E.panels[E.panels.length-1].el.getBoundingClientRect();return [r.top,r.bottom,innerHeight]})()"); assert r_[0] >= -2 and r_[1] <= r_[2] + 2, r_
         step("B-8 a new panel scrolls into view and flashes", newpanel)

@@ -103,7 +103,7 @@ try:
             wait(1100); pen("mouseMoved", 5, 5); wait(1100)
         step("palm rejection: a touch while the pen is near is ignored", palm)
         def keybar():
-            assert pg.is_visible("#tbar") and pg.locator("#tbar button").count() == 5
+            assert pg.is_visible("#tbar") and pg.locator("#tbar button").count() == 6
             c0 = pg.evaluate(f"E.active && E.active.cur"); x, y = X(12), Ymid(); T("touchStart", [(x, y)]); T("touchEnd", []); wait(500)
             c0 = pg.evaluate(f"{CH}.cur"); pg.evaluate(f"setActive({CH})")
             b = pg.locator('#tbar [data-k=next]').bounding_box(); bx, by = b["x"] + b["width"] / 2, b["y"] + b["height"] / 2
@@ -113,6 +113,12 @@ try:
             T("touchStart", [(b["x"] + 20, b["y"] + 20)]); T("touchEnd", []); wait(400)
             assert pg.evaluate(f"{CH}.zoom") is None, "the bar's whole-view key"
         step("the bar of keys: hold next to step through the scans, whole view", keybar)
+        def fold():
+            pg.click("#tbar .tg"); wait(200)
+            assert pg.evaluate("document.querySelector('#tbar').classList.contains('min')") and pg.locator("#tbar [data-k=next]").is_hidden(), "folded to one small button"
+            pg.click("#tbar .tg"); wait(200)
+            assert pg.locator("#tbar [data-k=next]").is_visible(), "unfolded"
+        step("the bar of keys folds away to a small button and back", fold)
         def grip():
             h0 = pg.evaluate(f"{CH}.h"); b = pg.evaluate(f"(() => {{ const r = {CH}.el.querySelector('.rzg').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }})()")
             T("touchStart", [(b[0], b[1])]); wait(60)

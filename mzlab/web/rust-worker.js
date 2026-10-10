@@ -28,6 +28,12 @@ onmessage = async ev => {
     let out = null, n = 0, info = null;
     switch (m.op) {
       case "open": blobs.set(m.slot, m.blob); info = engine.open(m.slot, m.blob.size, readerFor(m.blob)); break;
+      case "raw2mzml": {                                                              // Thermo .raw -> mzML pieces (the .raw is read block by block, never held)
+        const parts = [];
+        engine.raw_to_mzml(m.name, m.blob.size, readerFor(m.blob), piece => { parts.push(piece); });
+        postMessage({ id, op: m.op, n: parts.length, parts }, parts.map(a => a.buffer));
+        return;
+      }
       case "close": engine.close(m.slot); blobs.delete(m.slot); break;
       case "reset": engine.close_all(); blobs.clear(); break;
       case "crash": engine.crash(); break;                                           // test hook: the supervisor must recover

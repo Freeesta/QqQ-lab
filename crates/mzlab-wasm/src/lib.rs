@@ -4,9 +4,9 @@
 //! `[rt(n), y(n)]` for chromatograms and `[n_total, count, (sid, rt, k, mz(k), y(k)) per scan]` for spectra. Errors are JSON
 //! `{"error_key": ..., "params": {...}}` strings (the page translates the key), never a text.
 use js_sys::{Function, Uint8Array};
-use mzlab_core::{analysis, mzml};
+use mzlab_core::{analysis, mzml, raw};
 use std::collections::HashMap;
-use std::io::{BufReader, Read};
+use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use wasm_bindgen::prelude::*;
 
 /// Version of the engine (core crate), for the page to show and to check the loaded .wasm.
@@ -16,18 +16,29 @@ pub fn version() -> String {
 }
 
 /// Reads a file in blocks asked to JS: `read(offset, length) -> Uint8Array` (a slice of the Blob read synchronously in the worker).
+/// It also seeks (the `.raw` reader jumps from packet to packet): the last block stays in memory, so scans that follow each
+/// other cost one JS call per block, never one per read.
 struct BlockReader {
     read: Function,
     pos: u64,
     size: u64,
+    block: Vec<u8>,
+    block_start: u64,
 }
 
-impl Read for BlockReader {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let want = (buf.len() as u64).min(self.size.saturating_sub(self.pos));
-        if want == 0 {
-            return Ok(0);
+impl BlockReader {
+    fn new(read: Function, size: u64) -> Self {
+        BlockReader {
+            read,
+            pos: 0,
+            size,
+            block: Vec::new(),
+            block_start: 0,
         }
+    }
+
+    fn fill(&mut self) -> std::io::Result<()> {
+        let want = (BLOCK as u64).min(self.size - self.pos);
         let block = self
             .read
             .call2(
@@ -39,10 +50,78 @@ impl Read for BlockReader {
         let block: Uint8Array = block
             .dyn_into()
             .map_err(|_| std::io::Error::other("block is not a Uint8Array"))?;
-        let n = (block.length() as usize).min(buf.len());
-        block.slice(0, n as u32).copy_to(&mut buf[..n]);
+        self.block.clear();
+        self.block.resize(block.length() as usize, 0);
+        block.copy_to(&mut self.block);
+        self.block_start = self.pos;
+        Ok(())
+    }
+}
+
+const BLOCK: usize = 1 << 20;
+
+impl Read for BlockReader {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if buf.is_empty() || self.pos >= self.size {
+            return Ok(0);
+        }
+        let end = self.block_start + self.block.len() as u64;
+        if self.pos < self.block_start || self.pos >= end {
+            self.fill()?;
+            if self.block.is_empty() {
+                return Ok(0);
+            }
+        }
+        let off = (self.pos - self.block_start) as usize;
+        let n = buf.len().min(self.block.len() - off);
+        buf[..n].copy_from_slice(&self.block[off..off + n]);
         self.pos += n as u64;
         Ok(n)
+    }
+}
+
+impl Seek for BlockReader {
+    fn seek(&mut self, to: SeekFrom) -> std::io::Result<u64> {
+        let p = match to {
+            SeekFrom::Start(p) => Some(p),
+            SeekFrom::End(d) => self.size.checked_add_signed(d),
+            SeekFrom::Current(d) => self.pos.checked_add_signed(d),
+        };
+        self.pos = p.ok_or_else(|| std::io::Error::other("seek before the start"))?;
+        Ok(self.pos)
+    }
+}
+
+/// Sends what is written to JS in blocks: `sink(Uint8Array)`; the page keeps the pieces as Blob parts (outside the WASM memory).
+struct BlockWriter {
+    sink: Function,
+    buf: Vec<u8>,
+}
+
+impl BlockWriter {
+    fn flush_block(&mut self) -> std::io::Result<()> {
+        if self.buf.is_empty() {
+            return Ok(());
+        }
+        let a = Uint8Array::from(&self.buf[..]);
+        self.sink
+            .call1(&JsValue::NULL, &a)
+            .map_err(|_| std::io::Error::other("sink failed"))?;
+        self.buf.clear();
+        Ok(())
+    }
+}
+
+impl Write for BlockWriter {
+    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+        self.buf.extend_from_slice(data);
+        if self.buf.len() >= 4 * BLOCK {
+            self.flush_block()?;
+        }
+        Ok(data.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.flush_block()
     }
 }
 
@@ -87,14 +166,7 @@ impl Engine {
     /// `{"spectra": n, "levels": {"1": [scans, profile scans], ...}, "unit": bool, "chromatograms": m}`.
     pub fn open(&mut self, slot: u32, size: f64, read: Function) -> Result<String, JsValue> {
         self.runs.remove(&slot);
-        let reader = BufReader::with_capacity(
-            1 << 20,
-            BlockReader {
-                read,
-                pos: 0,
-                size: size as u64,
-            },
-        );
+        let reader = BufReader::with_capacity(1 << 20, BlockReader::new(read, size as u64));
         let run = mzml::read(reader).map_err(|e| error_json(&e))?;
         let mut levels: std::collections::BTreeMap<u8, (usize, usize)> = Default::default();
         for s in &run.spectra {
@@ -123,6 +195,26 @@ impl Engine {
 
     pub fn close_all(&mut self) {
         self.runs.clear();
+    }
+
+    /// Converts a Thermo `.raw` of `size` bytes (read through `read(offset, length)`) to mzML, sent to `sink(Uint8Array)` piece by piece.
+    /// The `.raw` is never held in memory: only the block being read. Errors are JSON with a key, as in `open`.
+    pub fn raw_to_mzml(
+        &mut self,
+        name: &str,
+        size: f64,
+        read: Function,
+        sink: Function,
+    ) -> Result<(), JsValue> {
+        let mut out = BlockWriter {
+            sink,
+            buf: Vec::new(),
+        };
+        raw::to_mzml(BlockReader::new(read, size as u64), &mut out, name)
+            .map_err(|e| error_json(&e))?;
+        out.flush().map_err(|_| {
+            error_json(&mzlab_core::Error::new("err.file.raw").with("detail", "write"))
+        })
     }
 
     /// Number of scans of one level (the capacity a trace needs).

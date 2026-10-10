@@ -266,7 +266,7 @@ const BANCO = (() => {
     t("pin", a && a.pin); t("norm", a && (a.type === "spec" ? specRel(a) : a.norm100)); t("peaks", a && a.imode === "auto");
     const d = b.querySelector('[data-hb="dec"]'); if (d) d.value = String(decOf());
     renderInfo();
-    const l = b.querySelector(".act"); if (l) l.textContent = a ? I18N.t("bn.active", { type: a.type === "chrom" ? I18N.t("bn.t.chrom") : a.type === "spec" ? I18N.t("bn.t.spec") : a.type === "map" ? I18N.t("bn.t.map") : a.type === "xic" ? "XIC" : a.type }) + (a.filt ? " · " + a.filt : "") : I18N.t("bn.noCell");
+    const l = b.querySelector(".act"); if (l) l.textContent = "";
   }
   // the starting layout of the bench: the survey on top (the trio for a DDA file); product ions that are not a DDA get their own chromatogram and spectrum under it
   function afterLayout() {
@@ -312,8 +312,7 @@ const BANCO = (() => {
     const top = [[I18N.t("bn.h.scan"), h.no], ["RT (min)", num(h.rt)], [I18N.t("bn.h.level"), "MS" + h.level], [I18N.t("lib.col.polarity"), h.polarity === "positive" || h.polarity === "negative" ? I18N.t(`bn.h.pol.${h.polarity}`) : h.polarity], [I18N.t("bn.h.filter"), h.filter], [I18N.t("bn.add.kind"), h.key], [I18N.t("bn.h.prec"), num(h.prec, 5)],
       [I18N.t("bn.h.isoWin"), h.iso ? `${num(h.iso[0])} – ${num(h.iso[1])}` : ""], [I18N.t("bn.h.act"), [h.act, h.ce != null ? I18N.t("bn.h.energy") + " " + h.ce : ""].filter(Boolean).join(" ")], [I18N.t("bn.h.res"), h.res ? Math.round(h.res) : ""],
       [I18N.t("bn.h.analyzer"), h.analyzer || ""], [I18N.t("bn.h.spectrum"), h.profile ? I18N.t("hr.mode.profile") : I18N.t("hr.mode.centroid")], ["TIC", h.tic != null ? (+h.tic).toExponential(3) : ""]].filter(x => x[1] !== "" && x[1] != null);
-    b.innerHTML = `<div class="row"><button type="button" data-ic="copy">${I18N.t("bn.h.copy")}</button><span class="muted">${I18N.t("bn.h.nParams", { n: h.pairs.length })}</span></div>` + kv(top) + `<h4>${I18N.t("bn.h.all")}</h4>` + kv(h.pairs.map(x => [x.name, x.value + (x.unit ? " " + x.unit : "")]));
-    b.querySelector('[data-ic="copy"]').onclick = async () => { try { await navigator.clipboard.writeText([...top, ...h.pairs.map(x => [x.name, x.value])].map(r => r.join("\t")).join("\n")); nearMsg(I18N.t("bn.h.copied")); } catch (e) { nearMsg(I18N.t("bn.h.noClip")); } };
+    b.innerHTML = `<div class="row"><span class="muted">${I18N.t("bn.h.nParams", { n: h.pairs.length })}</span></div>` + kv(top) + `<h4>${I18N.t("bn.h.all")}</h4>` + kv(h.pairs.map(x => [x.name, x.value + (x.unit ? " " + x.unit : "")]));
   }
   function goScan(p, sid, rt, k) {
     const c = p.type === "spec" ? E.panels.find(q => q.id === p.link) : p;
