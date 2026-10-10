@@ -177,7 +177,6 @@
   "tbl.iso.unavailable": "{s} = simbolo dell'elemento.",
   "tbl.loss.sameNominal": "Titolo di un riquadro che raggruppa perdite neutre con la stessa massa nominale; {n} = massa nominale.",
   "help.start.body": "Testo di aiuto (guida) per lo studente; contiene HTML. I nomi tra virgolette « » sono le etichette dell'interfaccia: vanno rese come in lang/en.js.",
-  "help.header.body": "Riquadro «i» in alto a destra; {app} = nome del programma.",
   "lst.compatible": "Riga d'intestazione del riquadro che si apre sul picco (alta risoluzione).",
   "lst.more": "Nel riquadro del picco: quante altre voci compatibili non sono mostrate.",
   "lst.user.of": "Valore dei campi «fonte» e «licenza» delle liste scritte dall'utente.",
