@@ -27,7 +27,16 @@
   const perfMark = t => { if (window.PERF) PERF.mark(t); else if (/[?&]perf\b/.test(location.search)) (window.PERF_EARLY = window.PERF_EARLY || []).push([performance.now(), t]); };
   const step = t => { window.qqStep = t; console.debug("[mzLab]", t); perfMark(t); };
   const phase = m => { window.qqPhaseCur = m ? { key: m.key, pct: m.pct, params: m.params } : null; if (m) step(m.key); if (window.ldRefresh && window.I18N) ldRefresh(); };
-  const restart = () => { const u = new URL(location.href); u.searchParams.delete("ripresa"); u.searchParams.set("riparti", "1"); location.replace(u.href); };
+  // the ONE clean slate («New session» and «Start from scratch»): saved files, notebook, user lists, caches (app, engine, libraries) and service worker are removed, then the page reloads
+  // from the network; ?riparti=1 makes the new worker delete the saved files itself if the database could not be deleted now (another tab holds it)
+  const wait = p => Promise.race([p, new Promise(r => setTimeout(r, 4000))]).catch(() => {});
+  window.qqHardReset = async () => {
+    await wait(new Promise(r => { const q = indexedDB.deleteDatabase("qqq_lab"); q.onsuccess = q.onerror = q.onblocked = () => r(); }));
+    await wait((async () => { for (const k of await caches.keys()) if (k.startsWith("qqq-") || k === "mzlab-libs") await caches.delete(k); })());
+    await wait((async () => { for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); })());
+    const u = new URL(location.href); u.search = "?riparti=1"; location.replace(u.href);
+  };
+  const restart = () => window.qqHardReset();
   // i18n.js loads after this script: the message is a catalog key, written when the page (and I18N) is there
   const fail = (key, params, again) => { window.qqFailed = key; window.qqPhaseCur = null; const show = () => { const m = document.getElementById("ldmsg"); if (m) m.textContent = window.I18N ? I18N.t(key, params) : key; if (again && window.ldAction && window.I18N) ldAction(I18N.t("load.restart"), restart); }; show(); document.addEventListener("DOMContentLoaded", show); };
   document.addEventListener("DOMContentLoaded", () => { step(window.qqStep); if (window.qqPhaseCur) ldRefresh(); });

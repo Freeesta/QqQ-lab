@@ -162,7 +162,7 @@ I18N.add("en", {
   "load.step.resume": "Reopening the files of the last visit...",
   "load.step.start": "Starting the engine...",
   "load.blocked": "The saved files are locked by another {app} tab: close the other {app} tabs and this one will carry on by itself.",
-  "load.err.resumeTimeout": "Reopening the saved files is not answering. You can start from scratch: the files saved in this browser are deleted, the notebook is kept.",
+  "load.err.resumeTimeout": "Reopening the saved files is not answering. You can start from scratch: the files saved in this browser are deleted, and so are the notebook and the stored copies.",
   "load.restart": "Start from scratch",
   "load.slow": "The first visit downloads about 15 MB: it may take a minute.",
   "busy.aria": "Working",

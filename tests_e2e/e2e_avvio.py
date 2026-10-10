@@ -1,5 +1,5 @@
 """Start-up of the site: static title, ONE status line with a progress bar, and a saved-files database that is blocked by another tab
-or never answers (message, «start from scratch» button that keeps the notebook). Build first: python tools/build_site.py"""
+or never answers (message, «start from scratch» button = same clean slate as «New session»). Build first: python tools/build_site.py"""
 import re, subprocess, sys, time
 from playwright.sync_api import sync_playwright
 from lib import ROOT, free_port
@@ -59,9 +59,9 @@ try:
             pg.wait_for_selector("#drop", timeout=120000)
             left = pg.evaluate("""() => new Promise(res => { const r = indexedDB.open("qqq_lab"); r.onsuccess = () => { const db = r.result, t = db.transaction(["files", "kv"]);
               const a = t.objectStore("files").count(), n = t.objectStore("kv").get("notebook"); t.oncomplete = () => { db.close(); res([a.result, n.result]); }; }; })""")
-            assert left[0] == 0 and left[1] == '{"k":1}', left
+            assert left[0] == 0 and left[1] is None, left
             pg.close()
-        step("«start from scratch» deletes the saved files and keeps the notebook", keeps_notebook)
+        step("«start from scratch» deletes the saved files and the notebook", keeps_notebook)
         def bar_while_loading():
             holder.evaluate(GONE)
             pg = ctx.new_page(); pg.goto(URL)

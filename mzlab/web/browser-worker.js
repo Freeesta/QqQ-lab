@@ -6,7 +6,7 @@ const say = (key, pct = null, params) => postMessage({ type: "step", key, pct, p
 const WORK = "/work/sessione";
 const Q = new URL(import.meta.url).searchParams;
 const STALL = +Q.get("r") || 30000;     // ms without any progress while reopening the saved files (?ripresa=ms on the page, for the tests)
-const FRESH = Q.get("riparti") === "1"; // «start from scratch»: the saved files are deleted, the notebook is kept
+const FRESH = Q.get("riparti") === "1"; // «start from scratch»: the saved files and the notebook are deleted
 
 // ---- the browser's own storage (IndexedDB): files and notebook survive a reload, like the work folder of the local program
 const DB = "qqq_lab"; // kept from the old name: renaming it would lose the users' data
@@ -58,7 +58,7 @@ function stallGuard() {
 const within = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);
 async function resume(tick) {
   say("load.step.resume", 60);
-  if (FRESH) { await within(safe(() => tx("files", "readwrite", s => s.clear())), 5000); }
+  if (FRESH) { await within(safe(() => tx("files", "readwrite", s => s.clear())), 5000); await within(safe(() => tx("kv", "readwrite", s => s.clear())), 5000); }
   const names = FRESH ? [] : await safe(() => tx("files", "readonly", s => s.getAllKeys()));
   tick(); say("load.step.resume", 62);
   const bigs = [];
@@ -70,7 +70,7 @@ async function resume(tick) {
     if (typeof Blob !== "undefined" && buf instanceof Blob) bigs.push([n, buf]);        // a big file: mounted below, once Python is up
     else py.FS.writeFile(`${WORK}/${n}`, new Uint8Array(buf));
   }
-  const nb = await (FRESH ? within(safe(() => tx("kv", "readonly", s => s.get("notebook"))), 5000) : safe(() => tx("kv", "readonly", s => s.get("notebook"))));
+  const nb = FRESH ? null : await safe(() => tx("kv", "readonly", s => s.get("notebook")));
   if (nb) py.FS.writeFile(`${WORK}/taccuino.json`, nb);
   for (const [n, blob] of bigs) { try { py.FS.symlink(mountBig(blob), `${WORK}/${n}`); } catch (e) { console.debug("[mzLab] big file not reopened", n, e); } }
 }

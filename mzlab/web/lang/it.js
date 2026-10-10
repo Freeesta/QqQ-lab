@@ -162,7 +162,7 @@ I18N.add("it", {
   "load.step.resume": "Riapro i file dell'ultima visita...",
   "load.step.start": "Avvio il motore...",
   "load.blocked": "I file salvati sono bloccati da un'altra scheda di {app}: chiudi le altre schede di {app} e questa ripartirà da sola.",
-  "load.err.resumeTimeout": "La ripresa dei file salvati non risponde. Puoi ripartire da zero: i file salvati in questo browser vengono cancellati, il taccuino resta.",
+  "load.err.resumeTimeout": "La ripresa dei file salvati non risponde. Puoi ripartire da zero: i file salvati in questo browser vengono cancellati, e anche il taccuino e le copie in memoria.",
   "load.restart": "Riparti da zero",
   "load.slow": "La prima apertura scarica circa 15 MB: può volerci un minuto.",
   "busy.aria": "Elaborazione in corso",
