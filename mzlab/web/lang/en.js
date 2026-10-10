@@ -255,7 +255,7 @@ I18N.add("en", {
   "load.loaded.title": "Files already loaded ({n})",
   "load.loaded.back": "◀ Back to the data",
   "load.loaded.hint": "Add more files below: the ones already loaded stay in the session.",
-  "load.newSession.confirm": "Start a <b>new session</b>? The saved work will be lost (the files on your computer are not touched).",
+  "load.newSession.confirm": "Start a <b>new session</b>? The saved work and the stored copy of the program will be deleted and everything reloads from scratch (the files on your computer are not touched).",
   "load.hrmix.replace": "Close the open files and load these",
   "settings.title": "Settings",
   "settings.gear.title": "Settings: text, theme, chart colors",

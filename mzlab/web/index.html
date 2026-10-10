@@ -661,8 +661,15 @@ async function wipeLocal(){
   Object.keys(NB).forEach(k=>delete NB[k]);NB.ui=null;NB.session=null;
   document.dispatchEvent(new Event("nbreset"));
   if(typeof uipApply==="function")uipApply()}
+// «New session» in the site = a clean slate: saved files, notebook, user lists, caches (app, engine, libraries) and service worker are all removed, then the page reloads from the network
+async function hardReset(){
+  const t=p=>Promise.race([p,new Promise(r=>setTimeout(r,4000))]).catch(()=>{});
+  await t(new Promise(r=>{const q=indexedDB.deleteDatabase("qqq_lab");q.onsuccess=q.onerror=q.onblocked=()=>r()}));
+  await t((async()=>{for(const k of await caches.keys())if(k.startsWith("qqq-")||k==="mzlab-libs")await caches.delete(k)})());
+  await t((async()=>{for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister()})());
+  const u=new URL(location.href);u.search="";location.replace(u.href)}
 $("#newrun").onclick=async()=>{if(!await yesno(I18N.t("load.newSession.confirm")))return;
-  try{await post("api/new",{fresh:true});S.sess=null;S.adding=false;E.files=[];E.key="";E.panels.forEach(p=>p.el.remove());E.panels=[];$("#dpanels").innerHTML="";await wipeLocal();await init()}catch(e){fail(e)}};
+  try{await post("api/new",{fresh:true});S.sess=null;S.adding=false;E.files=[];E.key="";E.panels.forEach(p=>p.el.remove());E.panels=[];$("#dpanels").innerHTML="";await wipeLocal();if(window.QQQ_BROWSER){await hardReset();return}await init()}catch(e){fail(e)}};
 function openSessionMenu(ev){ev.preventDefault();
   menu(ev,[
     {label:I18N.t("header.newRun.long"),fn:()=>$("#newrun").click()},
