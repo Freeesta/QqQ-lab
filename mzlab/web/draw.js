@@ -218,6 +218,7 @@ function applyTools() {
       if (bs.length === 0 || bs.every(b => w.getComputedStyle(b).display === "none" || b.closest('[style*="display: none"]'))) g.style.display = "none";
     });
     kFit();
+    const kl = Q("#kload"); if (kl) kl.hidden = true;
   } catch (_) { /* editor not loaded yet: applied when it starts */ }
 }
 function toolCard() {

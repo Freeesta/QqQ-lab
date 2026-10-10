@@ -6,11 +6,26 @@
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>{APP} • Analisi dati MS</title><script src="static/appname.js"></script>
 <script src="static/i18n.js"></script><script src="static/lang/it.js"></script><script src="static/lang/en.js"></script><script src="static/tour.js"></script>
 <script>document.title=I18N.t("app.title",{app:window.APP_NAME||"mzLab"})</script>
-<script>(function(){try{var p=JSON.parse(localStorage.getItem("qqq.prefs")||"{}");var d=p.theme==="dark"||(p.theme!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.setAttribute("data-theme","dark");else if(p.theme==="light")document.documentElement.setAttribute("data-theme","light");}catch(e){}})()</script>
+<script>(function(){try{var p=JSON.parse(localStorage.getItem("qqq.prefs")||"{}");var d=p.theme==="dark"||(p.theme!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.setAttribute("data-theme","dark");else if(p.theme==="light")document.documentElement.setAttribute("data-theme","light");var a=JSON.parse(localStorage.getItem("qqq.a11y")||"{}");if(a.font)document.documentElement.setAttribute("data-a11y-font",a.font);if(a.bg)document.documentElement.setAttribute("data-a11y-bg",a.bg);var rm=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;if(a.motion==="always"||(rm&&a.motion!=="never"))document.documentElement.setAttribute("data-a11y-reduce","");}catch(e){}})()</script>
 <style>
+@font-face{font-family:"Atkinson Hyperlegible Next";src:url(static/teoria/fonts/AtkinsonHyperlegibleNext-Regular.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Atkinson Hyperlegible Next";src:url(static/teoria/fonts/AtkinsonHyperlegibleNext-Bold.woff2) format("woff2");font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:"OpenDyslexic";src:url(static/teoria/fonts/OpenDyslexic-Regular.woff2) format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"OpenDyslexic";src:url(static/teoria/fonts/OpenDyslexic-Bold.woff2) format("woff2");font-weight:700;font-style:normal;font-display:swap}
+:root[data-a11y-font=atkinson] body,:root[data-a11y-font=atkinson] button,:root[data-a11y-font=atkinson] input,:root[data-a11y-font=atkinson] select,:root[data-a11y-font=atkinson] textarea{font-family:"Atkinson Hyperlegible Next",system-ui,sans-serif}
+:root[data-a11y-font=dyslexic] body,:root[data-a11y-font=dyslexic] button,:root[data-a11y-font=dyslexic] input,:root[data-a11y-font=dyslexic] select,:root[data-a11y-font=dyslexic] textarea{font-family:"OpenDyslexic","Comic Sans MS",system-ui,sans-serif}
 :root{color-scheme:light;--bg:#f7f8fa;--panel:#ffffff;--line:#e2e5ea;--ink:#25282c;--muted:#687080;--accent:#2b5c8a;--ok:#047857;--bad:#b42318;--warn:#92400e;--sel:#edf2f8;--soft:#f0f3f6}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;--bg:#14171b;--panel:#1d2127;--line:#323944;--ink:#e4e7eb;--muted:#98a2b0;--accent:#7db4e6;--ok:#34d399;--bad:#f87171;--warn:#fbbf24;--sel:#27303b;--soft:#252b33}}
 :root[data-theme=dark]{color-scheme:dark;--bg:#14171b;--panel:#1d2127;--line:#323944;--ink:#e4e7eb;--muted:#98a2b0;--accent:#7db4e6;--ok:#34d399;--bad:#f87171;--warn:#fbbf24;--sel:#27303b;--soft:#252b33}
+:root[data-a11y-bg=hc][data-theme=light],:root[data-a11y-bg=hc]:not([data-theme=dark]){--bg:#fff;--panel:#fff;--ink:#000;--muted:#1a1a1a;--line:#000;--sel:#e6e6e6;--code:#ededed;--accent:#0030a0;--accent2:#7a2800;--ok:#00522f;--bad:#8c0000;--warn:#5c2a00}
+:root[data-a11y-bg=hc][data-theme=dark]{--bg:#000;--panel:#000;--ink:#fff;--muted:#ececec;--line:#fff;--sel:#262626;--code:#1a1a1a;--accent:#8fd0ff;--accent2:#ffb36b;--ok:#6ee7a8;--bad:#ff9a9a;--warn:#ffd36b}
+section[id^="v-"]:not([hidden]){animation:tabFade 160ms ease-out}
+@keyframes tabFade{from{opacity:0}to{opacity:1}}
+.pnl{animation:pnlOpen 160ms ease-out}
+@keyframes pnlOpen{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+canvas{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion:reduce){section[id^="v-"],.pnl:not(.flash){animation:none!important}}
+:root[data-a11y-reduce] section[id^="v-"],:root[data-a11y-reduce] .pnl:not(.flash){animation:none!important}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline;font-family:inherit;font-weight:inherit}
 sub{bottom:-0.22em}
@@ -142,7 +157,7 @@ html.in-draw,html.in-draw body{overscroll-behavior-x:none}#v-draw{overscroll-beh
 #v-draw.noside{grid-template-columns:1fr}#v-draw.noside aside{display:none}#side-toggle{font-size:12px}
 #keys-body table{border-collapse:collapse;width:100%}#keys-body td{padding:2px 4px;border-bottom:1px solid var(--line);font-size:12px}#keys-body td:first-child{white-space:nowrap;font-weight:600}
 #v-theory{padding:0}#tframe[hidden]{display:none}#theory-sorry{max-width:560px;margin:12vh auto;padding:0 16px;text-align:center}#theory-sorry p{color:var(--muted);line-height:1.5}#theory-sorry button{margin-top:10px}#tframe{display:block;width:100%;height:calc(100vh - 52px);border:0;background:#fff}
-#kload{position:absolute;left:0;right:0;top:40px;text-align:center;font-size:15px;z-index:1;pointer-events:none}#kld-dots span{display:inline-block;width:5px;visibility:hidden}
+#kload{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;font-size:15px;z-index:1;pointer-events:none}#kld-dots span{display:inline-block;width:5px;visibility:hidden}
 #kframe{width:100%;height:max(calc(100vh - var(--hh,48px) - 24px),700px);min-height:520px;border:1px solid var(--line);border-radius:6px;background:#fff}
 .sm{font-size:12px}
 #refdlg{max-width:min(1100px,96vw);width:96vw;max-height:92vh}#refbody{max-height:80vh;overflow:auto}#refdlg h4{margin:12px 0 4px}
@@ -269,29 +284,84 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
 const NPHRASES = 17;   // the phrases are the catalog keys load.phrase.1 ... load.phrase.17 (lang/it.js, en.js)
 // loading screen (functions used by loading() in explore.js): one phrase every 5 s, in random order without repeats; the three dots appear one after the other
 let ldTimer = null, ldDotTimer = null, ldSince = 0, ldBag = [], ldLast = -1;
-// data loading (engine already running): three ions turning on a helix in place, their trail drifting back so they seem to fly forward.
-// The helix is centred on the canvas, so it sits right above the phrase. Colours from the theme; one still frame with reduced motion.
+// data loading: three ions drawn always the same way (a dot with a fading trail of its past positions), in one of three analysers chosen at random:
+// a quadrupole (helix), a reflectron TOF (packet leaves, turns in the mirror, arrives separated), an Orbitrap (orbits round the spindle and swings along it).
 let ldIonRaf = 0;
-function ldIon(on) {
+function ldIon(on, mode) {
   const cv = document.getElementById("ldion"), bars = document.querySelector("#loading .ms");
   cancelAnimationFrame(ldIonRaf); ldIonRaf = 0;
-  cv.style.display = on ? "block" : "none"; bars.style.display = on ? "none" : "";
+  cv.style.display = on ? "block" : "none"; if (bars) bars.style.display = on ? "none" : "";
   if (!on) return;
-  const W = 420, H = 120, N = 26, STEP = 9, A = 30, w = 2 * Math.PI / 1.6, R = window.devicePixelRatio || 1;
-  const X0 = W / 2 + (N - 1) * STEP / 2;                              // head at the right, trail to the left: the whole helix is centred
-  const css = getComputedStyle(document.documentElement), col = ["--accent", "--ok", "--bad"].map(v => css.getPropertyValue(v).trim());
+  const W = 420, H = 120, R = window.devicePixelRatio || 1, TAU = 2 * Math.PI;
+  const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim();
+  const col = [v("--accent"), v("--ok"), v("--bad")], line = v("--line") || "#ccc";
   cv.width = W * R; cv.height = H * R; const cx = cv.getContext("2d"); cx.setTransform(R, 0, 0, R, 0, 0);
-  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const A = {
+    quad: {
+      n: 26, dt: 0.045, step: 9,
+      at(j, t) { const ph = TAU / 1.6 * t + j * TAU / 3; return { x: 0, y: H / 2 + 30 * Math.sin(ph), z: Math.cos(ph) }; },
+      shift(k) { return W / 2 + 25 * 9 / 2 - k * 9; },
+    },
+    tof: {
+      n: 14, dt: 0.03, T: 4.6, v: [260, 205, 165],
+      at(j, t) {
+        const u = ((t % this.T) + this.T) % this.T, vj = this.v[j], L = 290, t1 = L / vj, tr = 0.0026 * vj, p = vj * tr / Math.PI;
+        if (u < t1) { const f = u / t1; return { x: 40 + L * f, y: 34 + 26 * f }; }
+        if (u < t1 + tr) { const f = (u - t1) / tr; return { x: 330 + p * Math.sin(Math.PI * f), y: 60 + 4 * f }; }
+        const f = (u - t1 - tr) / t1; if (f > 1) return null;
+        return { x: 330 - L * f, y: 64 + 26 * f };
+      },
+      draw() {
+        cx.strokeStyle = line; cx.lineWidth = 2;
+        for (let i = 0; i < 6; i++) { const x = 338 + i * 12; cx.beginPath(); cx.moveTo(x, 22); cx.lineTo(x, 102); cx.stroke(); }
+        cx.beginPath(); cx.moveTo(26, 24); cx.lineTo(26, 44); cx.stroke();
+        cx.lineWidth = 4; cx.beginPath(); cx.moveTo(30, 80); cx.lineTo(30, 100); cx.stroke();
+      },
+    },
+    orbi: {
+      n: 22, dt: 0.035, w: [1.0, 0.82, 0.68],
+      at(j, t) {
+        const a = TAU * 0.55 * this.w[j] * t + j * 1.7, r = TAU * 1.3 * t + j * TAU / 3;
+        return { x: W / 2 + 120 * Math.sin(a), y: H / 2 + 26 * Math.cos(r), z: Math.sin(r) };
+      },
+      draw() {
+        cx.strokeStyle = line; cx.lineWidth = 2;
+        // outer barrel electrode: split into two symmetrical halves
+        const cx0 = W / 2, cy0 = H / 2, gap = 4;
+        cx.beginPath(); cx.arc(cx0 - 15 - gap, cy0, 48, -Math.PI / 2.3, Math.PI / 2.3); cx.stroke();
+        cx.beginPath(); cx.arc(cx0 + 15 + gap, cy0, 48, Math.PI - Math.PI / 2.3, Math.PI + Math.PI / 2.3); cx.stroke();
+      },
+      mid() {
+        cx.fillStyle = line;
+        // central spindle electrode: thick in center, tapering to tips
+        const cx0 = W / 2, cy0 = H / 2;
+        cx.beginPath();
+        cx.moveTo(cx0 - 130, cy0 - 2);
+        cx.quadraticCurveTo(cx0, cy0 - 16, cx0 + 130, cy0 - 2);
+        cx.lineTo(cx0 + 130, cy0 + 2);
+        cx.quadraticCurveTo(cx0, cy0 + 16, cx0 - 130, cy0 + 2);
+        cx.closePath(); cx.fill();
+      },
+    },
+  };
+  const keys = Object.keys(A), an = A[mode in A ? mode : keys[Math.floor(Math.random() * keys.length)]];
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.hasAttribute("data-a11y-reduce"), t0 = performance.now();
   const frame = ms => {
-    const t = still ? 0.4 : ms / 1000, pts = [];
-    cx.clearRect(0, 0, W, H);
-    for (let j = 0; j < 3; j++) for (let k = 0; k < N; k++) {
-      const ph = w * (t - k * 0.045) + j * 2 * Math.PI / 3, z = Math.cos(ph);
-      pts.push({ x: X0 - k * STEP, y: H / 2 + A * Math.sin(ph), z, r: (5.5 + 2.5 * z) * (1 - k / N * 0.7), a: (1 - k / N) * (0.55 + 0.45 * (z + 1) / 2), c: col[j] });
+    const t = still ? 1.2 : (ms - t0) / 1000, pts = [];
+    cx.clearRect(0, 0, W, H); cx.globalAlpha = 1; if (an.draw) an.draw();
+    for (let j = 0; j < 3; j++) for (let k = 0; k < an.n; k++) {
+      const tk = t - k * an.dt; if (an.T && tk < 0) continue;
+      const q = an.at(j, tk); if (!q) continue;
+      const z = q.z ?? 0, x = an.shift ? an.shift(k) : q.x;
+      pts.push({ x, y: q.y, z, r: (5.5 + 2 * z) * (1 - k / an.n * 0.7), a: (1 - k / an.n) * (0.6 + 0.4 * (z + 1) / 2), c: col[j] });
     }
-    pts.sort((p, q) => p.z - q.z);                                   // far points first, near ones on top
-    for (const p of pts) { cx.globalAlpha = p.a; cx.fillStyle = p.c; cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 7); cx.fill(); }
-    cx.globalAlpha = 1;
+    pts.sort((p, q) => p.z - q.z);
+    let midDone = !an.mid;
+    for (const p of pts) {
+      if (!midDone && p.z >= 0) { cx.globalAlpha = 1; an.mid(); midDone = true; }
+      cx.globalAlpha = p.a; cx.fillStyle = p.c; cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, TAU); cx.fill();
+    }
+    cx.globalAlpha = 1; if (!midDone) an.mid();
     if (!still) ldIonRaf = requestAnimationFrame(frame);
   };
   ldIonRaf = requestAnimationFrame(frame);

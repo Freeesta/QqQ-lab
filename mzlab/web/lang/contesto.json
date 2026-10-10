@@ -251,7 +251,6 @@
   "og.leg.par": "Legenda del grafico dell'origine; {mz} = m/z del progenitore.",
   "og.lossHint": "Suggerimento su una riga della tabella; {dm} = differenza di massa dal candidato, {lost} = stessa differenza arrotondata.",
   "og.waitN": "Contatore di secondi durante il calcolo; {s} = secondi trascorsi.",
-  "bn.active": "Etichetta nella barra del banco; {type} = tipo di cella.",
   "bn.com.hint": "«Segui» / «Follow» = la casella bn.com.follow.",
   "bn.idn.hint": "«Cerca nelle librerie» = lib.search.title.",
   "bn.dec.n": "Voce del menu dei decimali; {n} = numero di decimali.",
