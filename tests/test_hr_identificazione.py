@@ -11,7 +11,7 @@ JS = ROOT / "mzlab" / "web" / "libreria-worker.js"
 
 def _dati():
     for c in (os.environ.get("MZLAB_DATI"), os.environ.get("QQQ_DATI"), str(ROOT.parent / "mzlab-dati"), str(ROOT.parent / "QqQ-lab-dati")):
-        if c and (Path(c) / "librerie" / "massbank_eu_qft_pos.msp").is_file() and list((Path(c) / "HRMS").glob("*/TIM_TiO2_t010min.mzML")):
+        if c and (Path(c) / "librerie" / "massbank_eu_qft_pos.msp").is_file() and list((Path(c) / "HRMS").glob("*/*_TiO2_t010min.mzML")):
             return Path(c)
     return None
 
@@ -29,7 +29,7 @@ def _queries(d):
     from mzlab.reader.mzml import Run
     out, allq = {}, []
     for fn in ("t002min", "t010min", "t020min", "t045min"):                  # the TP show up at different times: every target is looked for in the four files
-        f = next((d / "HRMS").glob(f"*/TIM_TiO2_{fn}.mzML")); r = Run(str(f))
+        f = next((d / "HRMS").glob(f"*/*_TiO2_{fn}.mzML")); r = Run(str(f))
         for k, (mz, lo, hi) in TARGETS.items():
             for s in r.scans:
                 if s.level == 2 and lo <= s.rt <= hi and abs((s.iso[0] + s.iso[1]) / 2 - mz) <= 0.005:

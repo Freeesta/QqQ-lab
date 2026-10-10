@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = ["crates/mzlab-core", "crates/mzlab-wasm"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/Freeesta/mzlab"
+
+[profile.release]
+panic = "abort"
+opt-level = "z"
+lto = true
+codegen-units = 1
