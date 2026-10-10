@@ -22,7 +22,9 @@ def test_tags_have_the_name_and_absolute_addresses():
     for k in ("og:title", "og:description", "og:image", "og:url", "twitter:card", "og:site_name"):
         assert k in t, k
     assert f'content="{bs.APP_NAME}"' in t and bs.APP_NAME in t.split("og:title")[1].split(">")[0]
-    assert f'content="{bs.SITE_URL}static/anteprima.png"' in t and bs.SITE_URL.startswith("https://")
+    assert re.search(rf'property="og:image" content="{re.escape(bs.SITE_URL)}static/anteprima\.png(\?v=\d+)?"', t) and bs.SITE_URL.startswith("https://")
+    assert re.search(rf'name="twitter:image" content="{re.escape(bs.SITE_URL)}static/anteprima\.png', t)
+    assert 'property="og:image:width" content="1200"' in t and 'property="og:image:height" content="630"' in t
     assert "{APP}" not in t and len(bs.DESCRIPTION) < 200
 
 

@@ -126,7 +126,7 @@ Unico documento per gli agenti: descrive lo STATO ATTUALE (la storia è in git e
 - La tabella dei picchi HR è float32: per i valori esatti di una scansione si legge dal file. Nei file Thermo il «selected ion m/z» può non essere il picco isolato: usare il centro della finestra di isolamento (`tgt` di `/api/dda`).
 - Ketcher: `zoomAccordingContent` riduce lo zoom dopo ogni incolla; l'etichetta dello zoom visibile è il secondo `[data-testid=zoom-selector]` (il primo è della modalità macromolecole, nascosta).
 - Un `title` su un iframe diventa un suggerimento su tutto il suo contenuto: usare `aria-label`.
-- Il service worker tiene in cache l'app: dopo un deploy prove a mano con Cmd/Ctrl+Shift+R; le anteprime dei link restano in cache presso le app di messaggistica (`?v=2`).
+- Il service worker tiene in cache l'app: dopo un deploy prove a mano con Cmd/Ctrl+Shift+R; le anteprime dei link restano in cache presso le app di messaggistica (`?v=2` sul link; con un'immagine nuova si cambia anche il `?v=` di `og:image` in `build_site.py`). L'anteprima (`tools/genera_anteprima.py`) è il logo «mz» seguito da «Lab» in testo, una parola sola.
 - Due branch che aggiungono righe allo stesso punto di AGENTS.md danno conflitti banali: tenere entrambe.
 - Un `verifica.py` lanciato mentre si modificano i file contamina il risultato: un giro alla volta su un worktree fermo (in parallelo i test a tempo diventano instabili).
 - `ask()` restituisce `null` anche per il testo vuoto: per «valore predefinito» usare una parola («auto»).

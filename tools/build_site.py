@@ -52,7 +52,7 @@ def preview_tags() -> str:
     """Open Graph + Twitter card + description: what a chat app reads (without running any JavaScript) to build the preview of a shared link."""
     a = lambda t: t.replace("&", "&amp;").replace('"', "&quot;")
     title = f"{APP_NAME} · {TAGLINE}"
-    img = SITE_URL + "static/anteprima.png"
+    img = SITE_URL + "static/anteprima.png?v=3"          # ?v=N: change N with a new picture, the chat apps keep the old one by its address
     meta = [("name", "description", DESCRIPTION), ("property", "og:type", "website"), ("property", "og:site_name", APP_NAME), ("property", "og:locale", "it_IT"), ("property", "og:url", SITE_URL),
             ("property", "og:title", title), ("property", "og:description", DESCRIPTION), ("property", "og:image", img), ("property", "og:image:type", "image/png"),
             ("property", "og:image:width", "1200"), ("property", "og:image:height", "630"), ("property", "og:image:alt", f"Logo e nome di {APP_NAME}"),
