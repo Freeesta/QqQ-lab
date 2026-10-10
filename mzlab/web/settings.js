@@ -54,6 +54,13 @@ function uipOpen(btn) {
     ${!(window.BANCO && BANCO.on()) ? `
     <div class="uip-tour-sec" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0;margin-top:8px;border-top:1px solid var(--line);padding-top:8px"><span>${I18N.t("tour.impost.titolo")}</span> <button id="uip-tour" type="button">${I18N.t(typeof E !== "undefined" && E.files && E.files.length ? "tour.impost.rifai" : "tour.impost.esempio")}</button></div>
     ` : ""}
+    <div class="uip-wf-sec" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0;margin-top:8px;border-top:1px solid var(--line);padding-top:8px">
+      <span>${I18N.t("workflow.title")}</span>
+      <span style="display:inline-flex;gap:4px">
+        <button id="uip-wf-exp" type="button">${I18N.t("workflow.menu.exportShort")}</button>
+        <button id="uip-wf-opn" type="button">${I18N.t("workflow.menu.openShort")}</button>
+      </span>
+    </div>
     `;
   document.body.appendChild(d);
   const uipLang = d.querySelector("#uip-lang"); uipLang.value = I18N.lang;   // the label is always bilingual: whoever cannot read the current language finds it
@@ -72,6 +79,8 @@ function uipOpen(btn) {
       else TOUR.caricaEsempio();
     }
   };
+  const uipWfExp = d.querySelector("#uip-wf-exp"); if (uipWfExp) uipWfExp.onclick = () => { d.remove(); if (window.WORKFLOW) WORKFLOW.export(); };
+  const uipWfOpn = d.querySelector("#uip-wf-opn"); if (uipWfOpn) uipWfOpn.onclick = () => { d.remove(); if (window.WORKFLOW) WORKFLOW.open(); };
   const uipCont = d.querySelector("#uip-cont"); if (uipCont) uipCont.onchange = e => { if (window.LISTE) LISTE.setOn(e.target.checked); };
   const uipLab = d.querySelector("#uip-lab"); if (uipLab) uipLab.onclick = () => { d.remove(); if (window.LISTE) LISTE.openLab(); };
   const uipTog = d.querySelector("#uip-tog"); if (uipTog) uipTog.onchange = e => { if (typeof setTogether === "function") setTogether(e.target.checked); };

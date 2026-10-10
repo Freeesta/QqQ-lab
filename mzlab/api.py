@@ -105,6 +105,20 @@ def dispatch(app, method: str, path: str, q: dict, stream=None, length: int = 0)
             if path == "/api/new":
                 app.reset(bool(body.get("fresh")))
                 return _json(app.state())
+            if path == "/api/workflow/validate":
+                from .workflow import validate_workflow, verify_file_hashes
+                ok, msg = validate_workflow(body)
+                actual_hashes = {f["name"]: f.get("sha256", "") for f in app.files()}
+                mismatches = verify_file_hashes(body, actual_hashes) if ok else []
+                return _json({"valid": ok, "message": msg, "mismatches": mismatches})
+            if path == "/api/export/mgf":
+                from .workflow import format_mgf
+                text = format_mgf(body.get("spectra", []), lr=bool(body.get("lr")))
+                return 200, "text/plain; charset=utf-8", text.encode("utf-8"), {"Content-Disposition": 'attachment; filename="export.mgf"'}
+            if path == "/api/export/msp":
+                from .workflow import format_msp
+                text = format_msp(body.get("spectra", []), lr=bool(body.get("lr")))
+                return 200, "text/plain; charset=utf-8", text.encode("utf-8"), {"Content-Disposition": 'attachment; filename="export.msp"'}
             return _json({"error": "unknown endpoint"}, 404)
         except MemoryError:
             return _json(too_big(), 507)

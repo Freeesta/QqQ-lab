@@ -130,6 +130,15 @@ def main() -> None:
     (out / "index.html").write_text(html, encoding="utf-8")
     (static / "index.html").unlink()
     (out / ".nojekyll").write_text("", encoding="utf-8")
+    # program version and git commit for reproducibility (.mzworkflow)
+    try:
+        import subprocess
+        commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, cwd=ROOT).stdout.strip() or "dev"
+    except Exception:
+        commit = "dev"
+    ver_match = re.search(r'__version__\s*=\s*"([^"]+)"', (ROOT / "mzlab" / "__init__.py").read_text(encoding="utf-8"))
+    ver = ver_match.group(1) if ver_match else "0.1.0"
+    (static / "version.js").write_text(f'window.MZLAB_VERSION = "{ver}";\nwindow.MZLAB_COMMIT = "{commit}";\n', encoding="utf-8")
     # the Python code (mzlab package)
     with zipfile.ZipFile(static / "mzlab.zip", "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted([*(ROOT / "mzlab").rglob("*.py"), *(ROOT / "mzlab" / "chem").glob("*.json")]):       # the list of known contaminants is data of the package

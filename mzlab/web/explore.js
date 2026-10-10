@@ -2855,6 +2855,7 @@ function ctxFor(p, e, x, px, py) {
     } });
     if (p.iso) items.push({ label: I18N.t("ctx.spec.isoOff"), fn: () => { p.iso = null; draw(p); } });
     if (window.LIB && p.level === 2) items.push("-", { label: I18N.t("ctx.libSearch"), fn: () => LIB.searchFrom(p) });
+    if (p.level === 2 && window.WORKFLOW) items.push("-", { label: I18N.t("ctx.spec.exportMgf"), fn: () => WORKFLOW.exportSpectrumMgf(p) }, { label: I18N.t("ctx.spec.exportMsp"), fn: () => WORKFLOW.exportSpectrumMsp(p) });
     const srcP = p.src && E.panels.find(q => q.id === p.src && q.el);
     if (window.DDA) { const q = DDA.menuShow(p); if (q) items.push("-", q); }
     if (p.link) items.push("-", { label: I18N.t("ctx.spec.freeze"), fn: () => { freezeSpec(p); uiSave(); } });
