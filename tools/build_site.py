@@ -105,6 +105,21 @@ def pack_mzfinder(static: Path) -> None:
     (dst / "indice.json").write_text(json.dumps({"js": js, "files": files + data, "py": "tpmine.zip"}, indent=1), encoding="utf-8")
 
 
+def write_manifest(out: Path, version: str) -> None:
+    """static/manifest.json: SHA-256 and size of every file of the site (the desktop app downloads only the ones that changed),
+    the commit as `version` and `desktop_min`, the oldest native desktop binary this web part works with (crates/mzlab-desktop/DESKTOP_MIN).
+    sw.js is left out (the desktop app has no service worker) and so is the manifest itself."""
+    files = {}
+    for f in sorted(out.rglob("*")):
+        rel = f.relative_to(out).as_posix()
+        if f.is_file() and rel not in ("sw.js", "static/manifest.json"):
+            data = f.read_bytes()
+            files[rel] = {"sha256": hashlib.sha256(data).hexdigest(), "size": len(data)}
+    desktop_min = (ROOT / "crates" / "mzlab-desktop" / "DESKTOP_MIN").read_text(encoding="utf-8").strip()
+    doc = {"version": version, "desktop_min": desktop_min, "files": files}
+    (out / "static" / "manifest.json").write_text(json.dumps(doc, indent=1, sort_keys=True), encoding="utf-8")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pyodide-dir", type=Path)
@@ -168,6 +183,7 @@ def main() -> None:
             h.update(f.relative_to(out).as_posix().encode() + f.read_bytes())
     big = PYODIDE + "-" + hashlib.sha1("".join(f"{f.name}{f.stat().st_size}" for f in sorted((static / "vendor").rglob("*")) if f.is_file()).encode()).hexdigest()[:8]
     (out / "sw.js").write_text(sw.replace("__APP__", h.hexdigest()[:10]).replace("__BIG__", big), encoding="utf-8")
+    write_manifest(out, commit)
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
     print(f"site/ ready: {size / 1e6:.1f} MB")
 
