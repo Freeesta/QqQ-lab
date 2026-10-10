@@ -21,7 +21,7 @@ const HELP = {
   "losses": [I18N.t("help.losses.title"), I18N.t("help.losses.body")],
   "adducts": [I18N.t("help.adducts.title"), I18N.t("help.adducts.body")],
   "language": [I18N.t("help.language.title"), I18N.t("help.language.body")],
-  "header": ["", I18N.t("help.header.body", { app: APP_NAME })],
+  "header": ["", I18N.t("help.header.body")],
 };
 
 (() => {

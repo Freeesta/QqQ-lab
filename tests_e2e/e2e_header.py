@@ -19,12 +19,11 @@ try:
             b = pg.locator("button.hq[data-help=header]"); assert b.count() == 1 and b.get_attribute("title") == "Informazioni su mzLab" and b.locator("svg").count() == 1 and b.inner_text().strip() == ""
             b.click(); pg.wait_for_timeout(300)
             assert pg.is_visible("#helppop") and pg.locator("#helppop .hp-t b").inner_text().strip() == "", "no title"
-            ps = pg.locator("#helppop p"); assert ps.count() == 2, ps.count()
-            assert "programma didattico per il laboratorio di inquinanti della laurea magistrale in Chimica dell'ambiente." in ps.nth(0).inner_text()
-            assert ps.nth(1).inner_text().startswith("Suggerimenti e correzioni: federico.cristaudo@unito.it (Federico Cristaudo, Università di Torino).")
+            ps = pg.locator("#helppop p"); assert ps.count() == 1, ps.count()
+            assert ps.nth(0).inner_text().startswith("Suggerimenti e correzioni: federico.cristaudo@unito.it (Federico Cristaudo, Università di Torino).")
             assert pg.get_attribute("#helppop a", "href") == "mailto:federico.cristaudo@unito.it"
             pg.keyboard.press("Escape")
-        step("(i) opens the two-paragraph box with the mailto link", info)
+        step("(i) opens the box with the mailto link", info)
         def chapter():
             t = r.teoria(pg)
             assert "Come si usa mzLab" in t and "Aprire i dati" in t and "Backspace" in t and "Ctrl/Cmd + Z" in t and "Crediti e licenze" in t, t[:300]
