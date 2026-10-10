@@ -137,3 +137,44 @@ def test_hidden_isf_row_through_the_api(hidden, monkeypatch):
     cid = next(x["id"] for x in out["rows"] if x["id"] < 0)
     assert json.loads(api.detail(cid))["id"] == cid
     assert api.inclusion_csv(5).startswith("m/z")
+
+
+# ---------------------------------------------------------------------------------------------------------------------- gap filling
+def test_a_weak_product_at_the_first_time_gets_its_area_filled(tmp_path):
+    files = LS.write_series(tmp_path, weak=0.2)                       # the +O product at t = 5 is under the detection height (1.2e5 < 2e5)
+    msn = MS.write_msn(tmp_path / "cafe_msn.mzML", MS.caffeine_nodes())
+    files.append({"name": "cafe_msn.mzML", "path": str(msn), "time": None, "type": "sample"})
+    plain = EN.ExperimentHR(files, {"smiles": SMILES}, {"fill_gaps": False})
+    plain.run()
+    filled = EN.ExperimentHR(files, {"smiles": SMILES})
+    filled.run()
+    a = next(x for x in plain.result["rows"] if x["formula"] == "C8H11N4O3")
+    b = next(x for x in filled.result["rows"] if x["formula"] == "C8H11N4O3")
+    k5 = [f["time"] for f in filled.result["files"]].index(5.0)
+    assert a["series"][k5] == 0 and a["filled"] == []
+    assert b["filled"] == [k5] and 3e5 < b["series"][k5] < 3e6            # peak height 1.2e5 x about 9 scans x 2.4 s = 1.1e6 counts x s
+    assert [v for i, v in enumerate(b["series"]) if i != k5] == [v for i, v in enumerate(a["series"]) if i != k5]      # nothing else changes
+    assert b["onset"] <= a["onset"] and b["onset"] <= 5.0
+    # the reference files are never filled
+    ref = [i for i, f in enumerate(filled.result["files"]) if f["time"] <= 0]
+    assert all(b["series"][i] == a["series"][i] for i in ref)
+    assert not any(set(x["filled"]) & set(ref) for x in filled.result["rows"])
+
+
+def test_trace_area_needs_a_real_trace():
+    import numpy as np
+    from mzlab.reader.mzml import PeakTable
+    from tpmine.hr import features as FT
+    rt = np.arange(0, 2, 0.05)
+    z = np.arange(len(rt))
+    # 12 scans of a trace at 200.0 around 1.0 min (height 5e4, under MIN_HEIGHT), single noise peaks elsewhere
+    mz = np.r_[np.full(12, 200.0), 150.0, 250.0]
+    it = np.r_[np.full(12, 5e4), 3e4, 3e4]
+    pos = np.r_[np.arange(14, 26), 3, 30]
+    o = np.argsort(mz, kind="stable")
+    t = PeakTable(rt=rt, scan_ids=z, mz=mz[o], inten=it[o], pos=pos[o])
+    area, apex = FT.trace_area(t, 200.0, 0.9, 1.3)
+    assert area == pytest.approx(12 * 5e4 * 3.0, rel=1e-6) and 0.7 <= apex <= 1.3
+    assert FT.trace_area(t, 200.0, 0.0, 0.5)[0] == 0.0                  # apex outside the window
+    assert FT.trace_area(t, 150.0, 0.0, 0.5)[0] == 0.0                  # one point is not a trace
+    assert FT.trace_area(t, 200.002, 0.9, 1.3)[0] == 0.0                # 10 ppm away

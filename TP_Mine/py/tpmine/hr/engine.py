@@ -30,7 +30,7 @@ from . import similarity as SM
 from . import spectra as SP
 
 DEFAULT_SETTINGS = {"floor": FT.FLOOR, "min_height": FT.MIN_HEIGHT, "fold": 5.0, "min_treated": 2, "rt_min": 0.7, "max_rows": 500, "iimn_top": 400,
-                    "ppm_prec": 5.0, "weights": dict(NW.WEIGHTS), "polarity": 1, "inclusion": 50, "min_ms2_scans": 1, "flat_min_present": 2}
+                    "ppm_prec": 5.0, "weights": dict(NW.WEIGHTS), "polarity": 1, "inclusion": 50, "min_ms2_scans": 1, "flat_min_present": 2, "fill_gaps": True}
 NO_PROGRESS = lambda text, frac=None: None      # noqa: E731
 
 
@@ -88,6 +88,7 @@ class ExperimentHR:
         self._tree()
         self._features()
         self._filters()
+        self._fill_gaps()
         self._assemble()
         self._network()
         self.timing["total"] = round(time.perf_counter() - t0, 2)
@@ -184,6 +185,30 @@ class ExperimentHR:
         if any(m is not None for m in self.isf_measures):
             self.isf_hidden = FL.isf_hidden(self.isf_measures, self.times, types, self.isf_masses, self.sessions)
 
+    def _fill_gaps(self):
+        """Zero areas of the candidates in the treated files become the area of the same ion re-extracted at the intensity floor (a weak product at
+        the first times falls under `min_height` and would look like a late one). The files are read again, one at a time; `self.filled` marks the cells."""
+        self.filled = np.zeros(self.al.area.shape, bool)
+        if not self.s["fill_gaps"] or len(self.funnel.idx) == 0:
+            return
+        t0 = time.perf_counter()
+        self.progress("Filling gaps...", 0.55)
+        getters = self._runs()
+        last = []
+
+        def tables(k):
+            for r in last:                                   # one file in memory at a time
+                r._tables.clear()
+                r.close()
+            last.clear()
+            r = getters[k]()
+            last.append(r)
+            return r.table(1, self.s["polarity"])
+        self.filled = FT.fill_gaps(self.al, self.funnel.idx, tables, [int(c) for c in self.tr_c], floor=self.s["floor"])
+        self._close_runs()
+        gc.collect()
+        self.timing["riempimento"] = round(time.perf_counter() - t0, 2)
+
     def _parent_group(self):
         near = np.flatnonzero(np.abs(self.al.mz - self.parent_mz) <= self.parent_mz * 5e-6)
         if len(near) == 0:
@@ -278,8 +303,9 @@ class ExperimentHR:
         if pspec is not None and specs:
             M, W, P = SM.pad([pspec] + specs, [self.parent_mz] + precs)
             _, sc, nm = SM.one_against_all(M, W, P, 0)
+            _, se, ne = SM.entropy_one_against_all(M, W, P, 0)
             for j, kk in enumerate(pos):
-                cands[kk]["ms2"].update(modcos=float(sc[j]), n_matched=int(nm[j]))
+                cands[kk]["ms2"].update(modcos=float(sc[j]), n_matched=int(nm[j]), entropy=float(se[j]), n_matched_entropy=int(ne[j]))
             self._pad = (M, W, P, pos)
         # localisation of the candidates that have MS2 and a formula
         if self.library is not None and self.tree is not None and self.tree.subs is not None:
@@ -413,9 +439,9 @@ class ExperimentHR:
                 "tmax": kin.get("tmax"), "class": kin.get("class_text"), "onset": kin.get("onset"),
                 "score": round(c["priority"]["score"], 1), "components": {k: round(c["priority"]["components"][k], 3) for k in NW.WEIGHTS},
                 "level": c["confidence"]["level"], "ms2_scans": ms2.get("n_scans", 0), "modcos": None if ms2.get("modcos") is None else round(ms2["modcos"], 3),
-                "n_matched": ms2.get("n_matched", 0), "region": loc.get("region") if loc.get("ok") else None, "margin": None if not loc.get("ok") else round(loc["margin"], 2),
+                "n_matched": ms2.get("n_matched", 0), "entropy": None if ms2.get("entropy") is None else round(ms2["entropy"], 3), "region": loc.get("region") if loc.get("ok") else None, "margin": None if not loc.get("ok") else round(loc["margin"], 2),
                 "predecessor": (c.get("predecessor") or {}).get("predecessor"), "transformation": (c.get("predecessor") or {}).get("transformation"),
-                "flags": flags, "series": [round(float(v)) for v in c["areas"]]}
+                "flags": flags, "filled": [int(k) for k in np.flatnonzero(self.filled[c["id"]])] if not c.get("hidden") and self.filled[c["id"]].any() else [], "series": [round(float(v)) for v in c["areas"]]}
 
     def _summary(self) -> dict:
         rows = [self._row(c) for c in self.ranked[: self.s["max_rows"]]]
