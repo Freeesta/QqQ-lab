@@ -313,7 +313,17 @@ def main() -> None:
         sys.exit("site/ missing: python3 tools/build_site.py")
     if a.velocita:
         import tempfile
-        print("\n".join(main_velocita(Path(tempfile.mkdtemp(prefix="mzlab-bench-")))))
+        lines = main_velocita(Path(tempfile.mkdtemp(prefix="mzlab-bench-")))
+        print("\n".join(lines))
+        if a.scrivi:
+            md = ROOT / "docs" / "agenti" / "misure.md"
+            commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
+            sec = [f"## Molti file (`python3 tools/bench.py --velocita --scrivi`, motore Python, {time.strftime('%Y-%m-%d')}, commit {commit})",
+                   "Apertura = invio dei file, lettura mzML e primo disegno; riapertura = nuova pagina nello stesso profilo (IndexedDB), fino al primo disegno "
+                   "(HR: fino alla lista dei file, poi «Apri»). I passi sono i secondi tra i messaggi del worker; «ready» include la rilettura da IndexedDB e l'avvio di `mzlab.browser`."] + lines
+            txt = md.read_text(encoding="utf-8")
+            txt = txt.split("\n## Molti file")[0].rstrip("\n") + "\n\n" + "\n".join(sec) + "\n"
+            md.write_text(txt, encoding="utf-8")
         return
     names = sorted(p for p in Path(MZ).glob("*FullMass*.mzML"))[:a.files]
     if not names:
