@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 import math
 import re
+import time
 from pathlib import Path
 
 import numpy as np
@@ -13,8 +14,9 @@ import numpy as np
 from mzlab.chem import elements as E
 from mzlab.reader.mzml import Run
 
-from . import chem, mrm
-from .peaks import find_peak
+from . import chem, esperti, mrm
+from .hr import kinetics
+from .peaks import find_peak, find_peaks
 from .score import DEFAULT_THRESHOLDS, M2_SHIFT, confidence, halogen_expectation, score_candidate
 
 DEFAULT_SETTINGS = {"tol_da": 0.35, "rt_tol_min": 0.25, "max_steps": 2, "rt_min": 0.5, "discover": True, "max_unexpected": 40,
@@ -124,8 +126,8 @@ class Experiment:
         keep = t.rt >= self.rt_min
         return t.rt[keep], y[keep]
 
-    def _peaks_for(self, mz: float, ref_rt: float | None = None):
-        """Peak of every sample at one reference RT (that of the strongest treated sample)."""
+    def _peaks_for(self, mz: float, ref_rt: float | None = None, rt_tol: float | None = None):
+        """Peak of every sample at one reference RT (that of the strongest treated sample; given for an isomer or an unexpected ion)."""
         thr = self.thr["peak"]
         sk, mp = int(thr.get("smooth_points", 3)), int(thr["min_points"])
         traces = [self.trace(k, mz) for k in range(len(self.full))]
@@ -138,7 +140,7 @@ class Experiment:
                 if pk and (best is None or pk["height"] > best["height"]):
                     best = pk
             ref_rt = best["apex_rt"] if best else None
-        peaks = [find_peak(rt, y, rt_center=ref_rt, rt_tol=self.rt_tol, smooth_k=sk, min_points=mp) if ref_rt is not None else None
+        peaks = [find_peak(rt, y, rt_center=ref_rt, rt_tol=rt_tol or self.rt_tol, smooth_k=sk, min_points=mp) if ref_rt is not None else None
                  for rt, y in traces]
         return ref_rt, traces, peaks
 
@@ -216,7 +218,7 @@ class Experiment:
     def _analyse_base(self, e: dict) -> dict:
         if e["id"] in self._base:
             return self._base[e["id"]]
-        ref_rt, traces, peaks = self._peaks_for(e["mz_x"])
+        ref_rt, traces, peaks = self._peaks_for(e["mz_x"], e.get("rt_ref"), e.get("rt_win"))
         rows = []
         for x, pk in zip(self.full, peaks):
             det = bool(pk and pk["ok"] and pk["snr"] >= self.thr["peak"]["snr_min"])
@@ -227,7 +229,7 @@ class Experiment:
         obs = None
         if exp is not None and ref_rt is not None:
             kb = max(range(len(rows)), key=lambda k: rows[k]["area"])
-            _, _, pk2 = self._peaks_for(e["mz_x"] + M2_SHIFT, ref_rt)
+            _, _, pk2 = self._peaks_for(e["mz_x"] + M2_SHIFT, ref_rt, e.get("rt_win"))
             if pk2[kb] and pk2[kb]["ok"] and rows[kb]["area"] > 0:
                 obs = pk2[kb]["area"] / rows[kb]["area"]
         sc = ({"score": None, "label": "progenitore", "criteria": []} if e["steps"] == 0 and e["kind"] == "candidate"
@@ -268,6 +270,10 @@ class Experiment:
                 out["score"], out["label"] = min(out["score"], 40), "debole"
             else:
                 crit.append({"name": "not an isotope peak", "status": "pass", "text": "no more intense ion at M-1 or M-2 in the same peak"})
+            gen = self._generation(out["rows"]) if any(c["name"] == "grows over time" and c["status"] == "pass" for c in crit) else None
+            if gen:
+                crit.append({"name": "kinetic generation", "status": "n/a", "text": gen["text"]})
+            out["generation"] = gen["verdict"] if gen else None
             out["criteria"] = crit
             out["isotope_of"] = hit[0]["id"] if hit else None
         self._final[e["id"]] = out
@@ -278,6 +284,20 @@ class Experiment:
     def _kinetics(rows: list[dict]) -> list[dict]:
         timed = sorted([r for r in rows if r["type"] == "sample" and r["time"] is not None], key=lambda r: r["time"])
         return [{"time": r["time"], "area": r["area"] if r["detected"] else 0.0, "height": r["height"] if r["detected"] else 0.0} for r in timed]
+
+    def _generation(self, rows: list[dict]) -> dict | None:
+        """First or second generation product (hr.kinetics.generation: chain A->B vs A->I->B with an unseen intermediate), shown as evidence only.
+        Needs four timed samples from t >= 0; the parent's decay rate (when it can be measured) fixes the first step of the chain."""
+        pts = sorted((k["time"], k["area"]) for k in self._kinetics(rows) if k["time"] >= 0)
+        if len(pts) < 4 or max(a for _, a in pts) <= 0:
+            return None
+        if not hasattr(self, "_kpar"):
+            d = self.parent_decay()
+            self._kpar = d["k_per_min"] if d and d["k_per_min"] and d["k_per_min"] > 0 else 0.02
+        g = kinetics.generation([t for t, _ in pts], [a for _, a in pts], self._kpar)
+        what = {"first": "1st generation (formed directly from the parent)", "second": "2nd generation (a product of a product)",
+                "undecidable": "generation undecidable with these points"}[g["verdict"]]
+        return {"verdict": g["verdict"], "text": f"{what}; AICc direct {g['aicc_first']:.1f} vs through an intermediate {g['aicc_second']:.1f}"}
 
     def parent_decay(self) -> dict | None:
         """First-order decay of the parent: k (1/min), t1/2 (min), R2, from ln(area) vs time on the detected points."""
@@ -295,46 +315,84 @@ class Experiment:
         return {"k_per_min": round(k, 5), "half_life_min": round(math.log(2) / k, 2) if k > 0 else None, "r2": round(r2, 3), "points": len(pts)}
 
     # ------------------------------------------------------------------ untargeted search
+    def _plausible(self, mz: float, rt: float) -> bool:
+        """Cheap pre-filter of a map maximum, before peak detection: the blank and t0 stay under the thresholds at its RT, the series does not peak at
+        its first point and the best treated file stands out of its own XIC (8 x the median of the non-zero points). The real criteria come after."""
+        ys, v = [], []
+        for k in range(len(self.full)):
+            r, y = self.trace(k, mz)
+            m = np.abs(r - rt) <= self.rt_tol
+            ys.append(y)
+            v.append(float(y[m].max()) if m.any() else 0.0)
+        ref = [v[k] for k, x in enumerate(self.full) if x.type in ("blank", "control") or (x.type == "sample" and x.time == 0)]
+        timed = sorted([(x.time, v[k], k) for k, x in enumerate(self.full) if x.type == "sample" and x.time is not None and x.time >= 0])
+        a = np.array([h for _, h, _ in timed])
+        if len(a) < 3 or a.max() <= 0 or max(ref or [0.0]) > min(self.thr["blank"]["ratio_max"], self.thr["t0"]["ratio_max"]) * a.max():
+            return False
+        imax = int(np.argmax(a))
+        if imax == 0 or a[imax] < 1.5 * a[:imax].min():
+            return False
+        nz = ys[timed[imax][2]]
+        nz = nz[nz > 0]
+        return len(nz) > 0 and a[imax] >= 8 * float(np.median(nz))
+
+    @staticmethod
+    def _rises(a: dict) -> bool:
+        """An unexpected ion is only worth listing when it grows over time (the criterion is not 'fail')."""
+        return all(c["status"] != "fail" for c in a["criteria"] if c["name"] == "grows over time")
+
     def discover(self):
-        """Ions that rise in time, are absent at t0 / in the blank, and do not correspond to any candidate: 'unexpected ions'."""
-        t = self._table(self.full[0])
-        lo, hi = float(t.mz.min()), float(t.mz.max())
-        step = self.tol
-        centers = np.arange(lo + step, hi - step, step)
-        known = [c["mz_x"] for c in self.entries]
+        """Ions that rise in time, are absent at t0 / in the blank, and do not correspond to any candidate: 'unexpected ions'.
+        One RT x m/z map per file (the grid of esperti.build_grid, an XIC window at every column); the local maxima of treated - max(t0, blank)
+        with S/N and ratio (esperti.find_points) are the only ions that go through the criteria."""
+        tabs = [self._table(x) for x in self.full]
+        treated = [k for k, x in enumerate(self.full) if x.type == "sample" and x.time]
+        refs = [k for k, x in enumerate(self.full) if x.type in ("blank", "control") or (x.type == "sample" and x.time == 0)]
         n0 = len(self.entries)
+        if not treated or not all(len(t.mz) for t in tabs):
+            return 0
+        lo, hi = min(float(t.mz.min()) for t in tabs), max(float(t.mz.max()) for t in tabs)
+        rt0, rt1 = self.rt_min, max(float(t.rt.max()) for t in tabs)
+        dts = np.diff(tabs[0].rt)
+        drt = float(np.clip(1.25 * (np.median(dts) if len(dts) else 0.05), 0.02, 0.06))
+        dmz = max(0.1, (hi - lo) / 16000)
+        nrt, nmz = max(int(math.ceil((rt1 - rt0) / drt)), 3), int(math.ceil((hi - lo) / dmz)) + 1
+        win = max(int(self.tol / dmz), 1)
+        self.progress("Searching for unexpected ions...", 0.7)
+        ref = np.zeros((nrt, nmz), np.float32)
+        for k in refs:
+            np.maximum(ref, esperti.build_grid(tabs[k], rt0, drt, nrt, lo, dmz, nmz, win), out=ref)
+        top = np.zeros((nrt, nmz), np.float32)           # max over the treated files: max(A_k - ref) = max(A_k) - ref
+        for k in treated:
+            np.maximum(top, esperti.build_grid(tabs[k], rt0, drt, nrt, lo, dmz, nmz, win), out=top)
+        pts = esperti.find_points(top - ref, top, rt0, rt0 + nrt * drt, lo, dmz,
+                                  {"min_sn": 5.0, "min_ratio": 3.0, "min_width": 1.5 * drt, "max_points": 4 * int(self.s["max_unexpected"])})
+        del ref, top
+        known = [c["mz_x"] for c in self.entries]
         found: list[dict] = []
+        seeds: list[float] = []
         uid = 100000
-        sk, mp = int(self.thr["peak"].get("smooth_points", 3)), int(self.thr["peak"]["min_points"])
-        for i, mz in enumerate(centers):
-            if i % 50 == 0:
-                self.progress("Searching for unexpected ions...", i / len(centers))
-            if any(abs(mz - m) <= self.tol for m in known):
+        for p in pts:                      # strongest first: one seed per m/z, its peaks (isomers) come from the traces
+            mz = p["mz"]
+            if any(abs(mz - m) <= self.tol for m in known + seeds) or not self._plausible(mz, p["rt"]):
                 continue
-            hit = False
-            for k, x in enumerate(self.full):
-                if x.type != "sample" or not x.time:
-                    continue
-                rt, y = self.trace(k, mz)
-                if len(y) < 10 or y.max() <= 0:
-                    continue
-                nz = y[y > 0]
-                if y.max() < 8 * float(np.median(nz)) if len(nz) else True:
-                    continue
-                hit = True
-                break
-            if not hit:
-                continue
+            seeds.append(mz)
             uid += 1
             e = {"id": uid, "kind": "unexpected", "name": f"unexpected ion m/z {mz - self.offset:.2f}", "alternatives": [],
                  "delta": "", "formula": "", "formula_dict": None, "neutral_mass": None, "mz": mz - self.offset, "mz_x": float(mz),
-                 "steps": 1, "adduct": self.adduct, "delta_dict": None}
-            a = self._analyse_base(e)
-            if a["label"] in ("forte", "possibile") and a["ref_rt"] is not None:
-                e["_area"] = max([r["area"] for r in a["rows"] if r["detected"]] or [0.0])
-                found.append(e)
-                self.entries.append(e)       # temporary: lets the isotope check see them
-        # keep the best of neighbouring windows (same peak seen by two windows) and drop isotope peaks
+                 "steps": 1, "adduct": self.adduct, "delta_dict": None, "rt_ref": float(p["rt"])}
+            groups = self._isomer_groups(e) or [{"rt": float(p["rt"]), "win": None}]
+            for j, g in enumerate(groups):
+                if j:
+                    uid += 1
+                    e = dict(e, id=uid)
+                e["rt_ref"], e["rt_win"] = g["rt"], g["win"]
+                a = self._analyse_base(e)
+                if a["label"] in ("forte", "possibile") and a["ref_rt"] is not None and self._rises(a):
+                    e["_area"] = max([r["area"] for r in a["rows"] if r["detected"]] or [0.0])
+                    found.append(e)
+                    self.entries.append(e)       # temporary: lets the isotope check see them
+        # keep the best of neighbouring points (same peak seen twice) and drop isotope peaks
         found.sort(key=lambda e: -e["_area"])
         kept: list[dict] = []
         for e in found:
@@ -351,7 +409,7 @@ class Experiment:
         good = []
         for e in kept:
             a = self.analyse(e)
-            if a["label"] in ("forte", "possibile"):
+            if a["label"] in ("forte", "possibile") and self._rises(a):
                 good.append(e)
         good.sort(key=lambda e: (-(self._final[e["id"]]["score"] or 0), -e["_area"]))
         self.entries = self.entries[:n0] + good[:int(self.s["max_unexpected"])]
@@ -448,25 +506,94 @@ class Experiment:
                              "intensita_rel_%": f["rel"], "scansioni_ms2": m["scans"], "nota": "candidate: to be optimised on the instrument"})
         return rows
 
-    # ------------------------------------------------------------------ outputs
-    def run(self) -> dict:
-        self.progress("Calibrating m/z on the parent...", 0.02)
-        self.calibrate()
-        self.progress("Generating candidates...", 0.05)
-        self.build_candidates()
-        n = len(self.entries)
+    # ------------------------------------------------------------------ isomers
+    def _isomer_groups(self, e: dict) -> list[dict]:
+        """Chromatographic peaks of a candidate m/z across the treated samples, grouped by RT: [{rt, win, area}] strongest first. Two peaks of the
+        same file are never one group (a valley deeper than half separates them); a peak of another file joins the nearest group within rt_tol."""
+        thr, iso = self.thr["peak"], self.thr["isomer"]
+        sk, mp, snr = int(thr.get("smooth_points", 3)), int(thr["min_points"]), float(thr["snr_min"])
+        found = []
+        for k, x in enumerate(self.full):
+            if x.type != "sample" or (x.time is not None and x.time <= 0):
+                continue
+            for pk in find_peaks(*self.trace(k, e["mz_x"]), rt_tol=self.rt_tol, smooth_k=sk, min_points=mp, snr_min=snr, valley_max=iso["valley_max"]):
+                found.append((pk["height"], pk["area"], pk["apex_rt"], k))
+        groups: list[dict] = []
+        for _, area, rt, k in sorted(found, reverse=True):
+            fit = [g for g in groups if k not in g["files"] and abs(g["rt"] - rt) <= self.rt_tol]
+            if fit:
+                g = min(fit, key=lambda g: abs(g["rt"] - rt))
+                g["files"].add(k)
+                g["area"] = max(g["area"], area)
+            else:
+                groups.append({"rt": rt, "area": area, "files": {k}})
+        groups.sort(key=lambda g: -g["area"])
+        groups = [g for g in groups if g["area"] >= iso["area_frac_min"] * groups[0]["area"]][:int(iso["max_peaks"])]
+        for g in groups:
+            gap = min([abs(g["rt"] - h["rt"]) for h in groups if h is not g] or [self.rt_tol])
+            g["win"] = max(min(self.rt_tol, 0.5 * gap), 0.03)
+        return groups
+
+    def expand_isomers(self, tick):
+        """Analyses every candidate; one with several significant peaks (isomers with the same nominal m/z, other RT) becomes one entry per peak:
+        name + ' @ RT min', the first keeps the id of the candidate, the others id + 10000 x index."""
+        out, n = [], len(self.entries)
         for i, e in enumerate(self.entries):
             if i % 10 == 0:
-                self.progress("Extracting XICs and searching for peaks...", 0.05 + 0.6 * i / n)
+                tick(i, n)
+            # only an ion with a valid peak in a treated sample can have isomers: the others keep the single-peak analysis
+            base = self._analyse_base(e) if e["steps"] > 0 else None
+            groups = self._isomer_groups(e) if base and any(r["detected"] and r["type"] == "sample" and (r["time"] is None or r["time"] > 0) for r in base["rows"]) else []
+            if groups:
+                e["rt_ref"], e["rt_win"] = groups[0]["rt"], groups[0]["win"]
+                self._base.pop(e["id"], None)
+            out.append(e)
+            if len(groups) > 1:
+                e["base_name"] = e["name"]
+                e["name"] = f"{e['name']} @ {groups[0]['rt']:.2f} min"
+                for j, g in enumerate(groups[1:], 1):
+                    out.append(dict(e, id=e["id"] + 10000 * j, name=f"{e['base_name']} @ {g['rt']:.2f} min", rt_ref=g["rt"], rt_win=g["win"], isomer=j))
+        self.entries = out
+        for e in self.entries:
             self.analyse(e)
+
+    # ------------------------------------------------------------------ outputs
+    def run(self) -> dict:
+        self.timing = {}
+        t0 = t = time.perf_counter()
+
+        def lap(key):
+            nonlocal t
+            now = time.perf_counter()
+            self.timing[key] = round(now - t, 3)
+            t = now
+        self.progress("Calibrating m/z on the parent...", 0.02)
+        self.calibrate()
+        lap("calibration")
+        self.progress("Generating candidates...", 0.05)
+        self.build_candidates()
+        lap("candidates")
+        self.expand_isomers(lambda i, n: self.progress("Extracting XICs and searching for peaks...", 0.05 + 0.6 * i / n))
+        lap("xic")
         if self.s.get("discover", True):
             self.discover()
+        lap("unexpected")
         self.mrm = None
         if self.mrmfiles:
             self.progress("Integrating MRMs...", 0.93)
             self.mrm = mrm.analyse(self.mrmfiles, self.rt_tol)
+        if self.ms2files:
+            self.progress("Looking for MS2 scans...", 0.95)
+            for e in self.entries:
+                if e["kind"] != "candidate" or e["steps"]:
+                    self.ms2(e)
+        lap("ms2")
         self.progress("Computing the tables...", 0.97)
-        return self.summary()
+        out = self.summary()
+        lap("summary")
+        self.timing["total"] = round(time.perf_counter() - t0, 3)
+        out["timing"] = self.timing
+        return out
 
     def level(self, e: dict, a: dict) -> tuple[int | None, str]:
         if e["kind"] == "candidate" and e["steps"] == 0:
@@ -513,7 +640,7 @@ class Experiment:
                          "level": lev, "level_text": ltxt, "ref_rt": round(a["ref_rt"], 2) if a["ref_rt"] else None, "kinetics": kin,
                          "max_area": max([k["area"] for k in kin] or [0.0]),
                          "tmax": max(kin, key=lambda k: k["area"])["time"] if kin and max(k["area"] for k in kin) > 0 else None,
-                         "isotope_of": a.get("isotope_of"), "delta_mz": round(e["mz"] - p_mz, 2),
+                         "isotope_of": a.get("isotope_of"), "generation": a.get("generation"), "delta_mz": round(e["mz"] - p_mz, 2),
                          # an unexpected ion that co-elutes with the parent and is lighter is most likely an in-source fragment of it
                          "isf": isf_ev.get(e["id"]),
                          # measured evidence (tpmine.isf) when available; otherwise the plain heuristic
