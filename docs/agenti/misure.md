@@ -36,3 +36,5 @@ Reopening, seconds spent between worker messages:
 |---|---|---|---|---|---|
 | 20 Full Scan LR | 0.1 | 4.2 | 0.84 | 0.03 | 4.5 |
 | 9 HR DDA | 0.1 | 3.88 | 0.93 | 0.01 | 2.95 |
+
+Avvio del motore, prove senza guadagno (non tenute): rilettura di tutti i file da IndexedDB in una sola transazione (riapertura di 20 file LR 18,8–21,5 s prima, 19,7–21,2 s dopo: dentro il rumore, il passo «ready» resta 3,7–4,4 s). Il precarico in parallelo di `numpy` e `mzlab.zip` c'è già (`browser-worker.js`); `numpy` pesa ~3,5–4,3 s e serve a ogni lettura, quindi non si può rimandare. L'istantanea della memoria di Pyodide non è stabile nella versione fissata: no. Dopo `ready` restano ~12 s (LR) per rileggere e rielaborare i file: è il lavoro della cache dei risultati (pacchetto MZIDX).
