@@ -5,7 +5,21 @@
 const UIP_KEY = "qqq.prefs"; // kept from the old name: renaming it would lose the users' data
 const uipRead = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const uipWrite = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* storage not available: the setting lasts until the page is closed */ } };
+function a11yRead() { var o = {}; try { o = JSON.parse(localStorage.getItem("qqq.a11y") || "{}") || {}; } catch (e) {} return o; }
+function a11yApply(o) {
+  const r = document.documentElement;
+  if (o.font) r.setAttribute("data-a11y-font", o.font); else r.removeAttribute("data-a11y-font");
+  if (o.bg === "hc") r.setAttribute("data-a11y-bg", "hc"); else r.removeAttribute("data-a11y-bg");
+  const rm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (o.motion === "always" || (rm && o.motion !== "never")) r.setAttribute("data-a11y-reduce", ""); else r.removeAttribute("data-a11y-reduce");
+}
+function a11yWrite(o) {
+  try { localStorage.setItem("qqq.a11y", JSON.stringify(o)); } catch (e) {}
+  a11yApply(o);
+}
+window.QA11Y = window.QA11Y || { read: a11yRead, apply: a11yApply, write: a11yWrite };
 function uipLoad() {
+  QA11Y.apply(QA11Y.read());
   try { const o = JSON.parse(uipRead(UIP_KEY) || "{}"); if (["auto", "light", "dark"].includes(o.theme)) UIP.theme = o.theme; if (PALS[o.pal]) UIP.pal = o.pal; if (o.merge === false) UIP.merge = false; if (o.tog === true) UIP.tog = true;  if (o.hrPpm >= 1 && o.hrPpm <= 50) UIP.hrPpm = +o.hrPpm; if ([3, 4, 5].includes(o.hrDec)) UIP.hrDec = o.hrDec; } catch (e) { /* corrupt value: defaults */ }
   setPal(UIP.pal);
 }
@@ -40,6 +54,8 @@ function uipOpen(btn) {
   d.innerHTML = `<div class="sm" style="font-weight:600;margin-bottom:6px">${I18N.t("settings.title")}</div>
     <div class="row"><span>${I18N.t("settings.language.label")}</span> <select id="uip-lang" title="${I18N.t("settings.language.title")}" aria-label="${I18N.t("settings.language.label")}"><option value="it">Italiano</option><option value="en">English</option></select></div>
     <div class="row">${I18N.t("settings.theme")} <select id="uip-th"><option value="auto">${I18N.t("settings.theme.auto")}</option><option value="light">${I18N.t("settings.theme.light")}</option><option value="dark">${I18N.t("settings.theme.dark")}</option></select></div>
+    <div class="row"><span>${I18N.t("settings.font.label")}</span> <select id="uip-font"><option value="">${I18N.t("settings.font.default")}</option><option value="atkinson">${I18N.t("settings.font.atkinson")}</option><option value="dyslexic">${I18N.t("settings.font.dyslexic")}</option></select></div>
+    <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-hc"> <span>${I18N.t("settings.hc.label")}</span></label>
     <div class="row">${I18N.t("settings.pal.label")} <select id="uip-pal" title="${I18N.t("settings.pal.title")}">${Object.keys(PALS).map(k => `<option value="${k}">${I18N.t(`settings.pal.${k}`)}</option>`).join("")}</select></div>
     <label class="row" style="align-items:flex-start;gap:6px"><input type="checkbox" id="uip-merge" ${UIP.merge ? "checked" : ""}> <span>${I18N.t("settings.merge")}</span></label>
     ${typeof E !== "undefined" && E.files && E.files.length && !(window.BANCO && BANCO.on()) ? `<label class="row" style="align-items:flex-start;gap:6px" title="${I18N.t("settings.together.title")}"><input type="checkbox" id="uip-tog" ${UIP.tog ? "checked" : ""}> <span>${I18N.t("settings.together")}</span></label>` : ""}
@@ -58,6 +74,20 @@ function uipOpen(btn) {
   document.body.appendChild(d);
   const uipLang = d.querySelector("#uip-lang"); uipLang.value = I18N.lang;   // the label is always bilingual: whoever cannot read the current language finds it
   uipLang.onchange = e => I18N.set(e.target.value);                         // remembered in qqq.lang, then the page reloads (open files come back with the session)
+  const a11yCur = QA11Y.read();
+  const uipFont = d.querySelector("#uip-font");
+  if (uipFont) {
+    uipFont.value = a11yCur.font || "";
+    uipFont.onchange = e => { const c = QA11Y.read(); c.font = e.target.value; QA11Y.write(c); };
+  }
+  const uipHc = d.querySelector("#uip-hc");
+  if (uipHc) {
+    uipHc.checked = a11yCur.bg === "hc";
+    uipHc.onchange = e => {
+      const c = QA11Y.read(); c.bg = e.target.checked ? "hc" : ""; QA11Y.write(c);
+      if (typeof redrawAll === "function") redrawAll();
+    };
+  }
   d.querySelector("#uip-th").value = UIP.theme; d.querySelector("#uip-pal").value = UIP.pal;
   const r = btn.getBoundingClientRect(); d.style.top = r.bottom + 6 + "px"; d.style.left = Math.max(8, Math.min(r.left, innerWidth - d.offsetWidth - 8)) + "px";
   d.querySelector("#uip-merge").onchange = e => {            // spectra are asked again to the server with / without the merge
