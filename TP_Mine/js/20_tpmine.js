@@ -15,7 +15,7 @@
 .tp .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0}.tp .grow{flex:1;min-width:120px}.tp input[type=text],.tp textarea,.tp input[type=number]{width:100%;box-sizing:border-box}
 .tp .mut{color:var(--muted);font-size:12px}.tp table{border-collapse:collapse;width:100%;font-size:12px}.tp th,.tp td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
 .tp th{position:sticky;top:0;background:var(--panel);font-weight:600;color:var(--muted)}.tp td.n{text-align:right;font-variant-numeric:tabular-nums}
-.tp tr.sel{background:var(--sel)}.tp tr.clk{cursor:pointer}.tp tr.clk:hover{background:var(--sel)}
+.tp tr.sel{background:var(--sel)}.tp tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}.tp tr.clk{cursor:pointer}.tp tr.clk:hover{background:var(--sel)}
 .tp .badge{display:inline-block;padding:0 6px;border-radius:9px;font-size:11px;font-weight:600;border:1px solid var(--line)}
 .tp .b-forte{background:#e7f6ee;color:var(--ok);border-color:#b7e1c9}.tp .b-possibile{background:#fdf3e0;color:var(--warn);border-color:#f1d9a8}.tp .b-debole{color:var(--muted)}
 .tp .lv{display:inline-block;min-width:18px;text-align:center;border-radius:4px;color:#fff;font-weight:700;font-size:11px;padding:0 4px}.tp .lv3{background:#047857}.tp .lv4{background:#2b5c8a}.tp .lv5{background:#8a6d2b}
@@ -26,40 +26,30 @@
 .tp .err{color:var(--bad)}.tp details>summary{cursor:pointer;color:var(--muted);font-size:12px}.tp textarea{font:12px ui-monospace,monospace;min-height:150px}
 .tp .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px}.tp .kv b{color:var(--muted);font-weight:600}
 .tp-wrap{padding:0}
-.pm-bar{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:12px 20px;color:#fff;background:linear-gradient(110deg,#101b2e 0%,#1f3a5f 45%,#3b2a73 100%);border-bottom:2px solid transparent;border-image:linear-gradient(90deg,#f4c95d,#fff3c4,#d99a1d) 1;box-shadow:0 6px 24px rgba(16,27,46,.35);position:relative;overflow:hidden}
-.pm-bar::after{content:"";position:absolute;top:0;left:-40%;width:30%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.12),transparent);animation:tpShine 6s ease-in-out infinite}
-.pm-brand{display:flex;align-items:center;gap:12px}.pm-ico{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;color:#ffd27a;background:rgba(255,255,255,.08);border:1px solid rgba(255,210,122,.55);box-shadow:0 0 14px rgba(255,210,122,.35)}
-.pm-name{font-size:20px;font-weight:800;letter-spacing:.3px;line-height:1.1}.pm-tag{font-size:12px;opacity:.8}
-.pm-crown{display:inline-block;vertical-align:middle;margin-left:8px;font-size:10px;font-weight:800;letter-spacing:1.4px;padding:2px 9px;border-radius:10px;color:#3a2a00;background:linear-gradient(135deg,#ffe29a,#f4c95d 55%,#d99a1d);box-shadow:0 0 10px rgba(244,201,93,.6)}
-.pm-steps{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:12px}.pm-sep{opacity:.45}
-.pm-step{display:inline-flex;align-items:center;gap:6px;padding:3px 11px 3px 4px;border-radius:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);opacity:.75}
-.pm-step i{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;font-style:normal;font-weight:700;font-size:11px;background:rgba(255,255,255,.2)}
-.pm-step.ok{opacity:1;border-color:rgba(125,255,181,.7)}.pm-step.ok i{background:#7dffb5;color:#06361f}
-.pm-chips{display:flex;gap:8px}.pm-chip{font-size:11px;font-weight:700;padding:3px 11px;border-radius:12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25)}.pm-chip.hr{background:rgba(212,181,255,.2);border-color:#d4b5ff;color:#ecdcff}.pm-chip.lr{background:rgba(125,255,181,.15);border-color:#7dffb5;color:#c8ffe0}
 #qt-nav-tab,nav button[data-v="tpmine"]{background:linear-gradient(135deg,#ffe29a,#f4c95d 55%,#d99a1d)!important;color:#3a2a00!important;border-color:#d99a1d!important;font-weight:700}
-@media(prefers-reduced-motion:reduce){.pm-bar::after{animation:none}}
-.hero{background:linear-gradient(135deg,#17324d,#2b5c8a 55%,#4b2c83);color:#fff;border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 6px 22px rgba(43,92,138,.35);animation:tpIn .5s ease}
-.hero button{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.35)}.hero button:hover{background:rgba(255,255,255,.25)}
-.tp #tp-files th{position:static}.tp .hero-i{font-size:40px;line-height:1}.hero-t{display:flex;gap:12px;align-items:center}.hero h2{margin:0;font-size:22px}.hero-s{opacity:.85;font-size:12px}.hero-i{filter:drop-shadow(0 0 8px #ffd27a);color:#ffd27a;animation:tpGlow 2.4s ease-in-out infinite}
-.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.stat{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:6px 14px;min-width:110px;animation:tpIn .6s ease both}
-.stat b{display:block;font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}.stat span{font-size:11px;opacity:.85}.stat.g b{color:#7dffb5}.stat.a b{color:#ffd27a}.stat.v b{color:#d4b5ff}
-.vtabs{display:flex;gap:6px;margin:0 0 8px;flex-wrap:wrap}.vt{border-radius:16px;padding:4px 14px}.vt.on{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 8px rgba(43,92,138,.4)}
+.hero{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px}
+.tp #tp-files th{position:static}.tp .hero-i{display:inline-flex;color:var(--accent)}.hero-t{display:flex;gap:12px;align-items:center}.hero h2{margin:0;font-size:20px}.hero-s{color:var(--muted);font-size:12px}
+.tp-title{margin:12px 16px 2px;font-size:20px}.tp-sub{margin:0 16px;color:var(--muted);font-size:12px}.tp .fsum{font-size:12px;color:var(--muted);margin:2px 0 6px}.tp #tp-files td,.tp #tp-files th{padding:1px 6px}.tp #tp-files select,.tp #tp-files input{font-size:11px;padding:0 3px;height:20px}
+.tp .dig{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;font-size:18px;font-weight:700}.tp .dig .qi{display:inline-flex}.tp .tp-q{display:inline-grid;place-items:center;width:16px;height:16px;border:1px solid var(--muted);border-radius:50%;font-size:11px;color:var(--muted);cursor:help;margin-left:4px;font-style:normal}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.stat{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:6px 14px;min-width:110px}
+.stat b{display:block;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}.stat span{font-size:11px;color:var(--muted)}.stat.g b{color:var(--ok)}.stat.a b{color:var(--warn)}.stat.v b{color:var(--accent)}
+.vtabs{display:flex;gap:6px;margin:0 0 8px;flex-wrap:wrap}.vt{border-radius:16px;padding:4px 14px}.vt.on{background:var(--accent);color:var(--panel);border-color:var(--accent)}
 .gems{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-bottom:10px}
-.gem{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;transition:transform .15s,box-shadow .15s;animation:tpIn .45s ease both}.gem:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,.15)}
-.gem.forte{border-color:#7ed0a6;box-shadow:0 0 0 1px #b7e1c9,0 0 14px rgba(4,120,87,.18)}.gem.forte::after{content:"";position:absolute}.gem-h{display:flex;justify-content:space-between;gap:6px;align-items:center}
-.gem.possibile{border-color:#f1d9a8}.gem{position:relative;overflow:hidden}.gem.forte::before{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);animation:tpShine 3.2s ease-in-out infinite}
-.mnode{cursor:pointer}.mnode circle{transition:r .2s}.mnode:hover circle{stroke:#ffd27a;stroke-width:3}
+.gem{position:relative;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer}.gem:hover{background:var(--sel)}.gem.sel,.mnode.sel{background:var(--sel);border-left-color:var(--accent)}
+.gem.forte{border-left-color:var(--ok)}.gem.possibile{border-left-color:var(--warn)}.gem.sel{border-left-color:var(--accent)}.gem-h{display:flex;justify-content:space-between;gap:6px;align-items:center}
+
+.mnode{cursor:pointer}.mnode:hover circle{stroke:var(--accent);stroke-width:3}.mnode.sel circle{stroke:var(--accent);stroke-width:4}
 .frow{display:grid;grid-template-columns:210px 1fr 60px;gap:8px;align-items:center;padding:3px 0;cursor:pointer;font-size:12px}.frow:hover{background:var(--sel)}
 .ft{display:block;height:14px;background:var(--line);border-radius:7px;overflow:hidden}.ft i{display:block;height:100%;width:0;border-radius:7px;transition:width .8s cubic-bezier(.3,.9,.3,1)}.fv{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
 .struct{text-align:center;margin-bottom:6px}.struct svg{max-width:100%;height:auto}
-.words p{font-size:13px}.mine{height:46px;position:relative;text-align:center;margin-bottom:4px;overflow:hidden}.mine .pick{display:inline-block;font-size:34px;transform-origin:75% 85%;color:var(--accent)}.mine .rock{position:absolute;bottom:2px;opacity:0;font-size:12px;color:#d99a1d}
-.mining .pick{animation:tpSwing .5s ease-in-out infinite alternate}.mining .rock{animation:tpRock .9s ease-out infinite}.mining .r2{animation-delay:.3s;left:55%}.mining .r1{left:42%}.mining .r3{animation-delay:.6s;left:62%}
-.mining .bar i{background:linear-gradient(90deg,#2b5c8a,#7c3aed,#2b5c8a);background-size:200% 100%;animation:tpSlide 1s linear infinite}
-.tp-toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#17324d;color:#fff;padding:8px 18px;border-radius:20px;z-index:99;box-shadow:0 6px 20px rgba(0,0,0,.3);animation:tpIn .3s ease;transition:opacity .5s}.tp-toast.out{opacity:0}
-@keyframes tpIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@keyframes tpGlow{50%{filter:drop-shadow(0 0 16px #ffe7a8)}}
-@keyframes tpShine{0%,60%{left:-60%}100%{left:130%}}@keyframes tpSwing{from{transform:rotate(-35deg)}to{transform:rotate(25deg)}}
-@keyframes tpRock{0%{opacity:0;transform:translate(0,6px)}30%{opacity:1}100%{opacity:0;transform:translate(14px,-34px) rotate(180deg)}}@keyframes tpSlide{to{background-position:-200% 0}}
-@media(prefers-reduced-motion:reduce){.tp *,.hero,.gem{animation:none!important;transition:none!important}}`;
+.words p{font-size:13px}
+
+
+.tp-toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 18px;border-radius:20px;z-index:99;box-shadow:0 6px 20px rgba(0,0,0,.3);animation:tpIn .3s ease;transition:opacity .5s}.tp-toast.out{opacity:0}
+@keyframes tpIn{from{opacity:0}to{opacity:1}}
+
+
+@media(prefers-reduced-motion:reduce){.tp *{animation:none!important;transition:none!important}}`;
 
   // ---------------------------------------------------------------- worker and calls
   let worker = null, ready = null, seq = 0;
@@ -151,22 +141,13 @@
   function open(sec) {
     if (!document.getElementById("tp-css")) { const st = document.createElement("style"); st.id = "tp-css"; st.textContent = CSS; document.head.appendChild(st); }
     sec.innerHTML = `<div class="tp-wrap">
-<div class="pm-bar">
- <div class="pm-brand"><span class="pm-ico">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 26) : "⛏"}</span>
-  <div><div class="pm-name">mzFinder <span class="pm-crown">★ PREMIUM</span></div><div class="pm-tag">Automated transformation-product discovery</div></div></div>
- <div class="pm-steps" aria-label="Workflow">
-  <span class="pm-step" id="pm-s1"><i>1</i> Files</span><span class="pm-sep">›</span>
-  <span class="pm-step" id="pm-s2"><i>2</i> Parent</span><span class="pm-sep">›</span>
-  <span class="pm-step" id="pm-s3"><i>3</i> Settings</span><span class="pm-sep">›</span>
-  <span class="pm-step" id="pm-s4"><i>4</i> Dig</span></div>
- <div class="pm-chips"><span class="pm-chip" id="pm-mode">No data</span><span class="pm-chip" id="pm-count">0 files</span></div>
-</div>
+<h2 class="tp-title">mzFinder</h2><p class="tp-sub">Automated transformation-product discovery</p>
 <div class="tp">
 <div id="tp-left">
  <div class="card"><h3>1 · Files</h3>
   <div class="row"><button id="tp-page" title="Reload the mzML files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick">Choose mzML...</button></div>
   <input type="file" id="tp-in" accept=".mzML,.mzml" multiple hidden>
-  <div id="tp-files" class="mut"></div></div>
+  <div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
  <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div>
   <div class="row"><input type="text" id="tp-name" placeholder="Name (optional)"></div>
   <div class="row"><input type="text" id="tp-mol" placeholder="Neutral molecular formula (C10H12N2O3S) or SMILES" spellcheck="false"></div>
@@ -176,22 +157,30 @@
   <div class="row"><label class="mut grow">RT tolerance ±min</label><input type="number" id="tp-rtt" value="0.25" step="0.05" min="0.05" style="width:70px"></div>
   <div class="row"><label class="mut grow">Combined transformations (steps)</label><input type="number" id="tp-steps" value="2" min="1" max="3" style="width:70px"></div>
   <div class="row"><label class="mut grow">Ignore RT before (min)</label><input type="number" id="tp-rtmin" value="0.5" step="0.1" min="0" style="width:70px"></div>
-  <div class="row"><label><input type="checkbox" id="tp-disc" checked> Also look for unexpected ions</label></div>
+  <div class="row"><label><input type="checkbox" id="tp-disc" checked> Also look for unexpected ions</label><i class="tp-q" id="tp-disc-h" tabindex="0" role="note" aria-label="About unexpected ions" title="Low resolution only. Besides the candidates from the transformation rules, it searches the whole m/z range for ions that grow over time, are missing at t0 and in the blank, and match no candidate. Slower. With high-resolution files this option is hidden: the HR pipeline is already untargeted.">?</i></div>
   <details><summary>List of transformations (name;change)</summary><textarea id="tp-tr" spellcheck="false"></textarea></details></div>
- <div class="card" id="tp-minecard"><div class="mine"><span class="pick">⛏</span><span class="rock r1">◆</span><span class="rock r2">◇</span><span class="rock r3">◆</span></div><button id="tp-go" class="imp" style="width:100%">⛏ Dig</button><div class="bar"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" style="margin-top:4px"></div></div>
+ <div class="card" id="tp-minecard"><button id="tp-go" class="imp dig" type="button" aria-busy="false">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : ""}<span id="tp-go-t">Dig</span></button><div class="bar"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" role="status" style="margin-top:4px"></div></div>
 </div>
 <div id="tp-right"><div class="card mut" id="tp-empty">Load the files, enter the parent and press <b>Dig</b>: mzFinder calibrates the m/z on the parent, generates the candidates, extracts the XICs, looks for peaks that grow over time and are missing from the blank, checks the isotopes, compares the product ions with those of the parent and assigns a confidence level (Schymanski, as far as the resolution allows).</div></div></div></div>`;
     const $ = s => sec.querySelector(s);
-    const st = { files: [], summary: null, sel: null, view: "gems", took: 0, filter: { forte: true, possibile: true, unexp: true, debole: false } };
+    const st = { files: [], showAll: false, summary: null, sel: null, view: "gems", took: 0, filter: { forte: true, possibile: true, unexp: true, debole: false } };
     const msg = (t, err) => { $("#tp-msg").textContent = t || ""; $("#tp-msg").className = "mut" + (err ? " err" : ""); };
     onProgress = (t, f) => { msg(t); if (f != null) $("#tp-bar").style.width = Math.round(f * 100) + "%"; };
 
+    $("#tp-more").onclick = () => { st.showAll = !st.showAll; renderFiles(); };
     // ---- files
     const renderFiles = () => {
-      modeUI(); if (!st.files.length) { $("#tp-files").innerHTML = ""; return; }
+      modeUI(); if (!st.files.length) { $("#tp-files").innerHTML = ""; $("#tp-more").hidden = true; return; }
       $("#tp-files").innerHTML = `<table><tr><th>File</th><th>Data type</th><th>Sample</th><th>t (min)</th></tr>` + st.files.map((f, i) => `<tr><td title="${esc(f.name)}">${esc(f.name.replace(/\.mzml$/i, ""))}</td><td>${KINDS[f.kind] || f.kind}${f.error ? ` <span class="err" title="${esc(f.error)}">!</span>` : ""}</td>
         <td>${f.kind === "full" || f.kind === "mrm" || f.kind === "hr" ? `<select data-i="${i}" data-k="type">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}"${f.type === k ? " selected" : ""}>${v}</option>`).join("")}</select>` : (f.kind === "ms2" ? "fragments" : "-")}</td>
         <td>${f.kind === "full" || f.kind === "ms2" || f.kind === "mrm" || f.kind === "hr" ? `<input type="number" data-i="${i}" data-k="time" value="${f.time ?? ""}" style="width:60px" step="any">` : ""}</td></tr>`).join("") + "</table>";
+      const MAXV = 6, many = st.files.length > MAXV;
+      $("#tp-files").querySelectorAll("tr").forEach((tr, i) => { if (i > 0) tr.hidden = many && !st.showAll && i > MAXV; });
+      const more = $("#tp-more"); more.hidden = !many; more.setAttribute("aria-expanded", st.showAll ? "true" : "false");
+      more.textContent = st.showAll ? "Show fewer" : "Show all " + st.files.length + " files";
+      const cn = {}; st.files.forEach(f => { const k = f.kind === "hr" ? "LC-HRMS" : f.kind === "msn" ? "MSn" : (KINDS[f.kind] || f.kind); cn[k] = (cn[k] || 0) + 1; });
+      const bl = st.files.filter(f => f.type === "blank").length;
+      $("#tp-fsum").textContent = Object.entries(cn).map(([k, v]) => v + " " + k).join(" · ") + (bl ? " · " + bl + (bl === 1 ? " blank" : " blanks") : "");
       $("#tp-files").querySelectorAll("[data-k]").forEach(el => el.onchange = () => { const f = st.files[+el.dataset.i]; f[el.dataset.k] = el.dataset.k === "time" ? (el.value === "" ? null : +el.value) : el.value; });
     };
     const BIG = 50 << 20;                   // as in the main program: above this a file is mounted from its Blob, not copied (13 HR files = 1 GB)
@@ -238,9 +227,7 @@
         } else { $("#tp-tol-l").textContent = "XIC window ±Da"; t.value = 0.35; t.step = 0.05; t.min = 0.05; r.value = 0.25; r.title = ""; }
       }
       const n = st.files.length;
-      $("#pm-mode").textContent = m === "hr" ? "HRMS" : m === "lr" ? "Unit resolution" : "No data"; $("#pm-mode").className = "pm-chip " + m;
-      $("#pm-count").textContent = n + (n === 1 ? " file" : " files");
-      $("#pm-s1").classList.toggle("ok", n > 0); $("#pm-s2").classList.toggle("ok", !!$("#tp-mol").value.trim()); $("#pm-s3").classList.toggle("ok", n > 0);
+      $("#tp-disc").closest(".row").hidden = m === "hr";                // the HR pipeline is already untargeted
     }
     $("#tp-mol").addEventListener("input", modeUI);
     setTimeout(() => loadFromData(true), 0);
@@ -271,12 +258,13 @@
     startWorker().then(async () => { $("#tp-tr").value = await callRaw("default_transformations"); }).catch(e => msg(String(e.message || e), true));
 
     // ---- run
+    const setBusy = b => { const g = $("#tp-go"); g.disabled = b; g.setAttribute("aria-busy", b ? "true" : "false"); $("#tp-go-t").textContent = b ? "Digging..." : "Dig"; };
     $("#tp-go").onclick = async () => {
       const mol = $("#tp-mol").value.trim();
       const hrMode = st.files.some(f => f.kind === "hr");
       if (!hrMode && !st.files.some(f => f.kind === "full")) return msg("Full-scan (MS1) sample files are needed.", true);
       if (!mol) return msg("Enter the neutral molecular formula or the SMILES of the parent.", true);
-      $("#tp-go").disabled = true; $("#tp-bar").style.width = "2%"; msg("Digging..."); $("#tp-minecard").classList.add("mining"); const t0 = performance.now();
+      setBusy(true); $("#tp-bar").style.width = "2%"; msg("Digging..."); const t0 = performance.now();
       try {
         const files = st.files.filter(f => f.kind !== "error" && f.kind !== "empty").map(f => ({ name: f.name, type: f.type, time: f.time, kind: f.kind }));
         const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, discover: $("#tp-disc").checked };
@@ -288,12 +276,12 @@
           st.took = performance.now() - t0; st.summary = null; st.det = {};
           window.TPHR.render($("#tp-right"), hs, { esc, fmtA, chart, hue, call, callRaw, toast, dl });
           $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
-          $("#tp-go").disabled = false; $("#tp-minecard").classList.remove("mining"); return;
+          setBusy(false); return;
         }
         st.summary = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
         st.took = performance.now() - t0; st.sel = null; st.det = {}; render(); $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
       } catch (e) { msg(String(e.message || e), true); $("#tp-bar").style.width = "0"; }
-      $("#tp-go").disabled = false; $("#tp-minecard").classList.remove("mining");
+      setBusy(false);
     };
 
     // ---- results
@@ -371,7 +359,7 @@
       const k = r.kinetics, mx = Math.max(...k.map(p => p.area)) || 1, w = 220, h = 54;
       const pts = k.map((p, j) => [(j / Math.max(1, k.length - 1) * (w - 6) + 3), (h - 4 - p.area / mx * (h - 10))]);
       const line = pts.map(p => p.join(",")).join(" "), area = `3,${h - 3} ${line} ${w - 3},${h - 3}`;
-      return `<div class="gem ${r.label}" data-id="${r.id}" style="animation-delay:${Math.min(i, 12) * 60}ms"><div class="gem-h"><b>${esc(shortN(r.name, 34))}</b>${r.level ? `<span class="lv lv${r.level}">${r.level}</span>` : ""}</div>
+      return `<div class="gem ${r.label}${r.id === st.sel ? " sel" : ""}" data-id="${r.id}" tabindex="0"><div class="gem-h"><b>${esc(shortN(r.name, 34))}</b>${r.level ? `<span class="lv lv${r.level}">${r.level}</span>` : ""}</div>
         <div class="mut">${esc(r.formula || "")} · <i>m/z</i> ${r.mz.toFixed(1)} · RT ${r.ref_rt ?? "?"}${r.insource ? " · in-source fragment" + (r.isf ? " (P " + Math.round(100 * r.isf.probs.isf) + "%" + (r.isf.doubtful ? ", doubtful" : "") + ")" : "?") : (r.isf && r.isf.doubtful ? " · doubtful origin (P ISF " + Math.round(100 * r.isf.probs.isf) + "%)" : "")}</div>
         <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}"><polygon points="${area}" fill="${col(r)}" opacity=".15"/><polyline points="${line}" fill="none" stroke="${col(r)}" stroke-width="2"/>${pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.3" fill="${col(r)}"/>`).join("")}</svg>
         <div class="mut">max at ${r.tmax ?? "?"} min · area ${fmtA(r.max_area)}${r.kind === "candidate" ? ` · ${esc(r.delta)}` : ` · Δ<i>m/z</i> ${r.delta_mz >= 0 ? "+" : ""}${r.delta_mz}`}</div></div>`;
@@ -396,7 +384,7 @@
         }
       }
       const nodes = [par, ...cand, ...unx].map(r => { const [x, y] = node(r), rad = 9 + 15 * Math.log10(1 + r.max_area) / Math.log10(1 + maxA);
-        return `<g class="mnode" data-id="${r.id}" transform="translate(${x},${y})"><circle r="${rad.toFixed(1)}" fill="${col(r)}" fill-opacity=".85" stroke="#fff" stroke-width="2"><title>${esc(r.name)}</title></circle>${r.level ? `<text y="4" font-size="11" fill="#fff" font-weight="700" text-anchor="middle">${r.level}</text>` : ""}<text y="${(rad + 13).toFixed(0)}" font-size="11" text-anchor="middle" fill="currentColor">${esc(shortN(r.name, 24))}</text><text y="${(rad + 25).toFixed(0)}" font-size="10" text-anchor="middle" fill="#687080">${r.mz.toFixed(1)}</text></g>`; }).join("");
+        return `<g class="mnode${r.id === st.sel ? " sel" : ""}" data-id="${r.id}" transform="translate(${x},${y})"><circle r="${rad.toFixed(1)}" fill="${col(r)}" fill-opacity=".85" stroke="#fff" stroke-width="2"><title>${esc(r.name)}</title></circle>${r.level ? `<text y="4" font-size="11" fill="#fff" font-weight="700" text-anchor="middle">${r.level}</text>` : ""}<text y="${(rad + 13).toFixed(0)}" font-size="11" text-anchor="middle" fill="currentColor">${esc(shortN(r.name, 24))}</text><text y="${(rad + 25).toFixed(0)}" font-size="10" text-anchor="middle" fill="#687080">${r.mz.toFixed(1)}</text></g>`; }).join("");
       host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-height:${H}px">${[["parent", 0], ["1 step", 1], ["2 steps", 2], ["3 steps / unexpected", 3]].map(([t, i]) => `<text x="${colX[i]}" y="14" font-size="11" fill="#687080" text-anchor="middle" font-weight="700">${t}</text>`).join("")}${edges}${nodes}</svg>`;
       host.querySelectorAll(".mnode").forEach(g => g.onclick = () => show(+g.dataset.id));
     }
@@ -469,6 +457,7 @@
     async function getDetail(id) { return st.det[id] || (st.det[id] = await call("detail", id)); }
     async function show(id) {
       st.sel = id; rows();
+      $("#tp-right").querySelectorAll(".gem,.mnode").forEach(g => g.classList.toggle("sel", +g.dataset.id === id));
       const D = $("#tp-det"); D.innerHTML = `<div class="card mut">Computing...</div>`;
       let d; try { d = await getDetail(id); } catch (e) { D.innerHTML = `<div class="card err">${esc(e.message || e)}</div>`; return; }
       const par = st.summary.rows.find(r => r.label === "progenitore"), drt = par && par.ref_rt && d.ref_rt ? (d.ref_rt - par.ref_rt) : null;
