@@ -3,7 +3,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' blob:">
 <link rel="icon" href="static/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="static/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="static/favicon-32.png"><link rel="apple-touch-icon" href="static/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>{APP} • Analisi dati MS</title><script src="static/appname.js"></script>
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><title>{APP} • Analisi dati MS</title><script src="static/appname.js"></script><script src="static/version.js"></script>
 <script src="static/i18n.js"></script><script src="static/lang/it.js"></script><script src="static/lang/en.js"></script><script src="static/tour.js"></script>
 <script>document.title=I18N.t("app.title",{app:window.APP_NAME||"mzLab"})</script>
 <script>(function(){try{var p=JSON.parse(localStorage.getItem("qqq.prefs")||"{}");var d=p.theme==="dark"||(p.theme!=="light"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.setAttribute("data-theme","dark");else if(p.theme==="light")document.documentElement.setAttribute("data-theme","light");var a=JSON.parse(localStorage.getItem("qqq.a11y")||"{}");if(a.font)document.documentElement.setAttribute("data-a11y-font",a.font);if(a.bg)document.documentElement.setAttribute("data-a11y-bg",a.bg);var rm=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;if(a.motion==="always"||(rm&&a.motion!=="never"))document.documentElement.setAttribute("data-a11y-reduce","");}catch(e){}})()</script>
@@ -220,7 +220,7 @@ html.phone body>:not(header):not(#phone):not(script):not(style){display:none!imp
 </style></head><body>
 <header><img class="logo" src="static/logo-64.png" width="26" height="26" alt="{APP}" title="{APP}">
   <nav id="nav"><button data-v="data" class="on" data-i18n="nav.data">Dati</button><button data-v="draw" data-i18n="nav.draw">Disegno</button><button data-v="theory" data-i18n="nav.theory" data-i18n-title="nav.theory.title" title="Teoria: TP, fotocatalisi, LC, ESI, quadrupolo, triplo quadrupolo">Teoria</button></nav><span class="sp"></span>
-  <button id="newrun" class="ib" hidden data-i18n-title="header.newRun.title" title="Inizia una nuova sessione (la precedente resta nella cartella di lavoro)"><span class="ic" data-ic="newrun"></span><span class="lb" data-i18n="header.newRun.long">Nuova sessione</span><span class="sb" data-i18n="header.newRun.short">Nuova</span></button>
+  <span id="session-btn-wrap" style="display:inline-flex;align-items:center"><button id="newrun" class="ib" hidden data-i18n-title="header.newRun.title" title="Inizia una nuova sessione (la precedente resta nella cartella di lavoro)"><span class="ic" data-ic="newrun"></span><span class="lb" data-i18n="header.newRun.long">Nuova sessione</span><span class="sb" data-i18n="header.newRun.short">Nuova</span></button><button id="session-menu-btn" class="ib" hidden data-i18n-title="header.sessionMenu.title" title="Opzioni della sessione e flusso di lavoro" aria-label="Menu sessione" style="padding:0 5px;margin-left:-3px;font-size:11px">&#9662;</button></span>
   <button id="np-pt" class="ib" data-i18n-title="header.periodic.title" title="Tavola periodica con masse esatte e abbondanze isotopiche"><span class="ic" data-ic="pt"></span><span class="lb" data-i18n="header.periodic.long">Tavola periodica</span><span class="sb" data-i18n="header.periodic.short">Tavola</span></button><button id="np-ad" class="ib" data-i18n-title="header.adducts.title" title="Tabella degli addotti ESI e delle perdite neutre più comuni"><span class="ic" data-ic="adduct"></span><span data-i18n="header.adducts">Addotti</span></button>
   <button id="np-calc2" class="ib" data-i18n-title="header.calc.title" title="Calcolatrice m/z: scrivi una formula bruta e ottieni l'm/z dello ione (anche arrotondato come lo vede lo strumento)"><span class="ic" data-ic="calc"></span><span class="lb" data-i18n="header.calc.long">Calcolatrice m/z</span><span class="sb" data-i18n="header.calc.short">Calcolatrice</span></button><button id="np-nl" class="ib" data-i18n-title="header.losses.title" title="Perdite neutre più comuni"><span class="ic" data-ic="nl"></span><span class="lb" data-i18n="header.losses.long">Perdite neutre</span><span class="sb" data-i18n="header.losses.short">Perdite</span></button><button id="np-liste" class="ib" data-i18n-title="header.lists.title" title="Liste di riferimento e contaminanti noti (Keller, laboratorio e sospetti)"><span class="ic" data-ic="liste"></span><span class="lb" data-i18n="header.lists">Liste</span><span class="sb" data-i18n="header.lists">Liste</span></button>
   <button id="np-pc" data-i18n-title="header.pubchem.title" title="Apre PubChem in un'altra scheda: cerca il tuo composto per nome, formula o struttura">PubChem &#8599;</button>
@@ -443,6 +443,7 @@ if (!window.QQQ_PHONE) { ldNext(); ldTimer = setInterval(ldNext, 5000); }   // a
 <script src="static/settings.js"></script>
 <script src="static/libreria.js"></script>
 <script src="static/touch.js"></script>
+<script src="static/workflow.js"></script>
 <script>document.getElementById("np-pc").addEventListener("click",()=>window.open("https://pubchem.ncbi.nlm.nih.gov/","_blank","noopener"));</script>
 <script src="static/tables.js"></script>
 <script src="static/barra.js"></script>
@@ -471,7 +472,7 @@ function smooth(y,k){if(!k)return y;return y.map((_,i)=>{const a=y[i-1]??y[i],c=
 const M={l:66,r:14,t:14,b:40};   // plot margins (px): room for tick labels and axis titles
 
 async function init(){try{loading(true);await bootSession();await Promise.all(E.panels.map(p=>p.ready).filter(Boolean)).catch(()=>{});
-  const d=await api("api/state");fail();window.qqReady=true;setTimeout(prefetchIdle,3000);$("#newrun").hidden=!(d.app||S.sess);if(!S.sess)showStart(d);else applyView();if(window.BARRA)BARRA.init()}catch(e){fail(e)}finally{loading(false)}}
+  const d=await api("api/state");fail();window.qqReady=true;setTimeout(prefetchIdle,3000);const hasSess=!!(d.app||S.sess);$("#newrun").hidden=!hasSess;if($("#session-menu-btn"))$("#session-menu-btn").hidden=!hasSess;if(!S.sess)showStart(d);else applyView();if(window.BARRA)BARRA.init()}catch(e){fail(e)}finally{loading(false)}}
 
 // ------------------------------------------------------------------ views: Dati (start screen or panels), Disegno
 const ST={files:[],methods:[]};
@@ -622,6 +623,16 @@ async function wipeLocal(){
   if(typeof uipApply==="function")uipApply()}
 $("#newrun").onclick=async()=>{if(!await yesno(I18N.t("load.newSession.confirm")))return;
   try{await post("api/new",{fresh:true});S.sess=null;S.adding=false;E.files=[];E.key="";E.panels.forEach(p=>p.el.remove());E.panels=[];$("#dpanels").innerHTML="";await wipeLocal();await init()}catch(e){fail(e)}};
+function openSessionMenu(ev){ev.preventDefault();
+  menu(ev,[
+    {label:I18N.t("header.newRun.long"),fn:()=>$("#newrun").click()},
+    "-",
+    {label:I18N.t("workflow.menu.export"),fn:()=>window.WORKFLOW&&WORKFLOW.export()},
+    {label:I18N.t("workflow.menu.open"),fn:()=>window.WORKFLOW&&WORKFLOW.open()}
+  ])}
+const smb=document.getElementById("session-menu-btn");
+if(smb)smb.onclick=e=>{e.stopPropagation();openSessionMenu(e)};
+$("#newrun").oncontextmenu=e=>openSessionMenu(e);
 // "m/z" is always written in italics: any text node that contains it is split and the symbol wrapped in <i> (not inside inputs, options, scripts or an existing <i>)
 (function(){const SKIP=/^(SCRIPT|STYLE|OPTION|TEXTAREA|INPUT|CANVAS|TITLE|SELECT)$/,RX=/(m\/z|MS2)/;
  // m/z always in italics and MS2 with a real superscript (never the Unicode characters); text nodes only: titles, options and file names keep the plain "MS2"
