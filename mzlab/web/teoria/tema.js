@@ -25,9 +25,9 @@
   // «Alto contrasto»: axes, text and lines of the figures reach >= 7:1 against the page (the light-theme originals are the keys); grids and light fills stay faint
   var HC = {
     light: { "#24231f": "#000000", "#9b978c": "#595959", "#6b675c": "#1a1a1a", "#57534e": "#1a1a1a", "#c9c5bb": "#595959", "#999": "#595959", "#2b5c8a": "#0030a0", "#c2410c": "#7a2800",
-      "#b42318": "#8c0000", "#0e7490": "#004f5e", "#b45309": "#5c2a00", "rgba(36,35,31,.55)": "rgba(0,0,0,.75)" },
+      "#b42318": "#8c0000", "#0e7490": "#004f5e", "#b45309": "#5c2a00", "#047857": "#00522f", "#7c3aed": "#4b1fa0", "rgba(36,35,31,.55)": "rgba(0,0,0,.75)" },
     dark: { "#24231f": "#ffffff", "#9b978c": "#bdbdbd", "#6b675c": "#ececec", "#57534e": "#ececec", "#c9c5bb": "#bdbdbd", "#999": "#bdbdbd", "#2b5c8a": "#8fd0ff", "#c2410c": "#ffb36b",
-      "#b42318": "#ff9a9a", "#0e7490": "#67e8f9", "#b45309": "#ffd36b", "#fff": "#000000", "#ffffff": "#000000", "#f4f3ef": "#1a1a1a", "#e9e7e1": "#4d4d4d", "rgba(255,255,255,.85)": "rgba(0,0,0,.85)", "rgba(36,35,31,.55)": "rgba(255,255,255,.75)" }
+      "#b42318": "#ff9a9a", "#0e7490": "#67e8f9", "#b45309": "#ffd36b", "#047857": "#6ee7a8", "#7c3aed": "#c4b0ff", "#fff": "#000000", "#ffffff": "#000000", "#f4f3ef": "#1a1a1a", "#e9e7e1": "#4d4d4d", "rgba(255,255,255,.85)": "rgba(0,0,0,.85)", "rgba(36,35,31,.55)": "rgba(255,255,255,.75)" }
   };
   if (window.CanvasRenderingContext2D) ["fillStyle", "strokeStyle"].forEach(function (k) {
     var d = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, k); if (!d || !d.set) return;
@@ -41,9 +41,12 @@
     } });
   });
   // colours written in the <style> blocks and style="" attributes of the pages (the figures define classes such as .bx{fill:#fff}) get the same swap
-  function swapText(t) { return t.replace(/#[0-9a-fA-F]{3,6}\b|rgba\([0-9, .]+\)/g, function (c) { return MAP[c.replace(/\s/g, "").toLowerCase()] || c; }); }
+  function swapText(t) {
+    var hc = R.getAttribute("data-a11y-bg") === "hc" ? HC[R.getAttribute("data-theme") === "dark" ? "dark" : "light"] : null;
+    return t.replace(/#[0-9a-fA-F]{3,6}\b|rgba\([0-9, .]+\)/g, function (c) { var k = c.replace(/\s/g, "").toLowerCase(); return (hc && hc[k]) || (R.getAttribute("data-theme") === "dark" && MAP[k]) || c; });
+  }
   document.addEventListener("DOMContentLoaded", function () {
-    if (R.getAttribute("data-theme") !== "dark") return;
+    if (R.getAttribute("data-theme") !== "dark" && R.getAttribute("data-a11y-bg") !== "hc") return;
     document.querySelectorAll("body style").forEach(function (st) { st.textContent = swapText(st.textContent); });
     document.querySelectorAll("[style]").forEach(function (el) { var v = el.getAttribute("style"); if (/#|rgba/.test(v)) el.setAttribute("style", swapText(v)); });
   });
