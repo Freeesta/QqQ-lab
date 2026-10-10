@@ -213,7 +213,7 @@ class Item:
             if a.get("name"):
                 pairs.append({"name": a["name"], "value": a.get("value", ""), "unit": a.get("unitName", "")})
         return {"sid": sid, "no": self._no(sc), "filter": sc.filter, "rt": round(float(sc.rt), 4), "level": sc.level,
-                "polarity": {1: "positivo", -1: "negativo"}.get(sc.polarity, "?"), "profile": bool(sc.profile),
+                "polarity": {1: "positive", -1: "negative"}.get(sc.polarity, "?"), "profile": bool(sc.profile),
                 "prec": round(float(sum(sc.iso) / 2), 5) if sc.iso else round(float(sc.precursor), 5) if sc.precursor else None,
                 "iso": [round(float(sc.iso[0]), 4), round(float(sc.iso[1]), 4)] if sc.iso else None, "act": sc.act, "ce": sc.collision_energy,
                 "res": sc.res, "analyzer": sc.an, "tic": sc.tic, "key": scan_key(sc), "pairs": pairs}

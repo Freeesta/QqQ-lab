@@ -220,8 +220,9 @@ def classify_report(rep: dict, formula_p: str | None = None, fam: dict | None = 
     if not pr.get("reliable", False):
         reasons.append("misura poco affidabile (poche scansioni, picco assente o ione debole)")
     for w_ in rep.get("warnings", []):
-        if "oincidenza" in w_ or "satura" in w_.lower():
-            reasons.append(w_)
+        if isinstance(w_, dict) and w_.get("key") in ("of.warn.massCoincidence", "of.warn.flatTop"):         # warnings of mzlab.ionfamily are messages {key, params}
+            from mzlab.i18n import italian
+            reasons.append(italian(w_))
     if fam and fam.get("ok"):
         share = fam["ion_share"].get(round(rep["mz"], 1))
         if share and len([s for s in share["components"] if s >= 0.2]) >= 2 and share["parent_component"] is not None and share["components"][share["parent_component"]] < 0.8:

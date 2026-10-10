@@ -11,7 +11,7 @@
 const DDA = (() => {
   const MIN_W = 1100;                 // px: below this width the MS2 panel goes under the Full Scan
   const NEAR_MIN = 1.0, NEAR_MAX = 5; // Nearby Precursors (Thermo FreeStyle): MS2 scans of the same ion within +-1.0 min, at most 5 (the closest in time)
-  const OFF = "Funzione DDA non disponibile per questo file";
+  const OFF = I18N.t("dda.off");
   const byId = id => E.panels.find(q => q.id === id && q.el) || null;
   const phys = f => (f && f.file ? f.file.split("#")[0] : "");
   const fail = (where, e) => { console.info("DDA", where, e); try { nearMsg(OFF); } catch (_) { /* no message possible */ } return false; };
@@ -91,11 +91,11 @@ const DDA = (() => {
     if (p.sid != null || (p.avg && p.avg.length)) return null;
     const s1 = byId(p.dda), D = s1 && ready(s1.k);
     if (p.ion != null && D) {                                              // an ion was followed but the instrument never took an MS2 of it
-      const f = E.files[p.k], dec = HR.prof(f, 2).dec, txt = `Nessuna MS2 di ${p.ion.toFixed(dec)}: il DDA non l'ha scelto.`;
+      const f = E.files[p.k], dec = HR.prof(f, 2).dec, txt = I18N.t("dda.none", { ion: p.ion.toFixed(dec) });
       const mixed = p._mixed ?? (p._mixed = D.sid.map((_, i) => i).filter(i => D.lo[i] != null && D.lo[i] <= p.ion && D.hi[i] >= p.ion));
-      return mixed.length ? txt + ` È però dentro la finestra di isolamento di ${mixed.length} MS2 di altri precursori: ← → per vederle (spettri misti).` : txt;
+      return mixed.length ? txt + " " + I18N.t("dda.mixed", { n: mixed.length }) : txt;
     }
-    return "Clicca una bandierina ▼ nella Full Scan, o un triangolino sul cromatogramma, per vedere una MS2.";
+    return I18N.t("dda.click");
   }
   async function selectMs2(s2, sid, o = {}) {
     try {
@@ -137,7 +137,7 @@ const DDA = (() => {
       }
       const lst = list(s2, D), here = D.idx.get(s2.sid); let j = -1;
       if (d > 0) j = lst.find(i => i > here) ?? -1; else for (let q = lst.length - 1; q >= 0; q--) if (lst[q] < here) { j = lst[q]; break; }
-      if (j < 0) { nearMsg(d > 0 ? "Ultima MS2" + (s2.ion != null ? " di questo ione" : "") : "Prima MS2" + (s2.ion != null ? " di questo ione" : "")); return false; }
+      if (j < 0) { nearMsg(I18N.t(d > 0 ? (s2.ion != null ? "dda.lastIon" : "dda.last") : (s2.ion != null ? "dda.firstIon" : "dda.first"))); return false; }
       return selectMs2(s2, D.sid[j], { zoom: false });
     } catch (e) { return fail("step", e); }
   }
@@ -232,7 +232,7 @@ const DDA = (() => {
       const px = X(d0.mz[jj]), py = Math.max(M.t + MARK + 10, Math.min(Y(Math.min(d0.y[jj], p._a.ymax)), p._a.H - M.b)) - 4;
       idxs.sort((u, v) => Math.abs(D.rt[u] - rt0) - Math.abs(D.rt[v] - rt0));
       g.save(); g.strokeStyle = muted; g.lineWidth = 1.4; g.beginPath(); g.moveTo(px - MARK, py - MARK - 3); g.lineTo(px + MARK, py - MARK - 3); g.lineTo(px, py); g.closePath(); g.stroke(); g.restore();
-      const tip = `<b>Frammentato in un'altra scansione</b><div class="sm">${idxs.length} MS2 di questo ione entro ±${NEAR_MIN} min · precursore ${(D.prec[idxs[0]]).toFixed(q2n.dec)}</div><div class="sm">Clic: la più vicina nel tempo. Tasto destro: media</div>`;
+      const tip = `<b>${I18N.t("dda.near.title")}</b><div class="sm">${I18N.t("dda.near.line", { n: idxs.length, min: NEAR_MIN, prec: (D.prec[idxs[0]]).toFixed(q2n.dec) })}</div><div class="sm">${I18N.t("dda.near.hint")}</div>`;
       p._a.lbls.push({ nb: idxs, ion: D.prec[idxs[0]], x: px - MARK - 3, y: py - MARK - 16, w: 2 * MARK + 6, h: MARK + 18, tip });
     });
     kids.forEach((j, n) => {
@@ -243,7 +243,7 @@ const DDA = (() => {
       g.fillText(String(n + 1), px, py - MARK - 6);
       const chosen = j === here;
       if (chosen) { g.strokeStyle = ac; g.lineWidth = 1.5; g.strokeRect(px - MARK - 2, py - MARK - 5, 2 * MARK + 4, MARK + 7); }
-      const dec = q2.dec, tip = `<b>MS2 n. ${n + 1} di ${kids.length}</b> da questa scansione<div class="sm">precursore ${(D.prec[j] ?? m).toFixed(dec)}${D.act[j] ? " · " + D.act[j] : ""}${D.ce[j] != null ? " · " + (D.nce ? "NCE " + fmt1(D.ce[j]) : "CE " + fmt1(D.ce[j]) + " eV") : ""}</div><div class="sm">Clic: mostra questa MS2</div>`;
+      const dec = q2.dec, tip = `<b>${I18N.t("dda.kid.title", { i: n + 1, n: kids.length })}</b><div class="sm">${I18N.t("dda.kid.prec", { prec: (D.prec[j] ?? m).toFixed(dec) })}${D.act[j] ? " · " + D.act[j] : ""}${D.ce[j] != null ? " · " + (D.nce ? "NCE " + fmt1(D.ce[j]) : "CE " + fmt1(D.ce[j]) + " eV") : ""}</div><div class="sm">${I18N.t("dda.kid.hint")}</div>`;
       p._a.flags.push({ j, px, py });
       p._a.lbls.push({ fl: j, ion: D.prec[j], x: px - MARK - 3, y: py - MARK - 16, w: 2 * MARK + 6, h: MARK + 18, tip });
     });
@@ -255,7 +255,7 @@ const DDA = (() => {
     const ac = css("--accent"), D = ready(p.k), i = D && D.idx.get(p.sid), m = (D && D.prec[i]) ?? j.prec;
     if (m < p._a.x0 || m > p._a.x1) return;
     g.save(); g.strokeStyle = ac; g.fillStyle = ac; g.lineWidth = 1; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(X(m), p._a.H - M.b); g.lineTo(X(m), M.t + 14); g.stroke(); g.setLineDash([]);
-    g.font = fpx(9.5); g.textAlign = "center"; g.fillText("precursore", Math.max(M.l + 26, Math.min(W - M.r - 26, X(m))), M.t + 11); g.restore();
+    g.font = fpx(9.5); g.textAlign = "center"; g.fillText(I18N.t("dda.precursor"), Math.max(M.l + 26, Math.min(W - M.r - 26, X(m))), M.t + 11); g.restore();
   }
   // a click inside a flag
   function click(p, px, py) {
@@ -311,9 +311,9 @@ const DDA = (() => {
       const f = E.files[p.k], D = ready(f.k), out = [];
       const l = (p._a.lbls || []).find(b => (b.fl != null || b.nb) && px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
       const d0 = p._a.data[0].d, rt = D && d0.sid != null ? D.ms1.rt[D.ms1pos.get(d0.sid)] : null;
-      if (l && D && rt != null) { const n = around(D, f, l.ion, rt).length; out.push({ label: `Media delle MS2 di questo ione (${n})`, tip: `Media delle MS2 di questo ione entro ±${NEAR_MIN} min (al massimo ${NEAR_MAX}, le più vicine nel tempo)`, fn: () => average(p, l.ion, rt) }); }
+      if (l && D && rt != null) { const n = around(D, f, l.ion, rt).length; out.push({ label: I18N.t("dda.avg", { n }), tip: I18N.t("dda.avg.tip", { min: NEAR_MIN, max: NEAR_MAX }), fn: () => average(p, l.ion, rt) }); }
       const ion = l ? l.ion : m;
-      if (ion != null) out.push({ label: "Segui questo ione nelle MS2", tip: "Crea l'XIC di questo ione: il cromatogramma mostra dove lo strumento ha preso le MS2 e con ← → nella MS2 le scorri", fn: () => follow(p, ion) });
+      if (ion != null) out.push({ label: I18N.t("dda.follow"), tip: I18N.t("dda.follow.tip"), fn: () => follow(p, ion) });
       return out;
     } catch (e) { console.info("DDA menu", e); return []; }
   }
@@ -331,7 +331,7 @@ const DDA = (() => {
 
   // ---------------------------------------------------------------- list of the precursors (MS2 tab of a DDA file; the MSn Browser of Thermo, simplified)
   const listMode = () => E.tab === "ms2" && tabFiles("ms2").some(f => f.dda) && window.ms2Exps && ms2Exps().length > 8;
-  const listBlock = () => `<div class="fgh"><span>Precursori</span><em>${ms2Exps().length}</em></div><div class="fl pr" style="padding:6px 8px"><button id="ddalist" type="button" title="Tutti gli ioni di cui lo strumento ha preso una MS2: m/z, tempo e numero di MS2. Un clic su una riga mostra la sua MS2 accanto alla Full Scan">Elenco dei precursori…</button></div>`;
+  const listBlock = () => `<div class="fgh"><span>${I18N.t("dda.list.head")}</span><em>${ms2Exps().length}</em></div><div class="fl pr" style="padding:6px 8px"><button id="ddalist" type="button" title="${I18N.t("dda.list.title")}">${I18N.t("dda.list.btn")}</button></div>`;
   // precursors grouped within the tolerance of the profile (ppm for high resolution, 0.5 Da otherwise): [{mz, n, rt0, rt1, best}]
   function groups(D, f, t0, t1) {
     const idx = D.sid.map((_, i) => i).filter(i => D.prec[i] != null && (t0 == null || (D.rt[i] >= t0 && D.rt[i] <= t1))).sort((a, b) => D.prec[a] - D.prec[b]), out = [];
@@ -352,11 +352,11 @@ const DDA = (() => {
       const f = tabFiles("ms2").find(x => x.dda); if (!f) return;
       const D = await get(f.k), c = tabPanels("ms2").find(p => p.type === "chrom"), z = c && c.zoom ? c.zoom : null, dec = HR.prof(f, 2).dec;
       const G = groups(D, f, z ? z[0] : null, z ? z[1] : null), st = { col: "mz", dir: 1 };
-      big("Precursori", `<div class="sm muted" style="margin-bottom:6px">${G.length} ioni${z ? ` con almeno una MS2 fra RT ${z[0].toFixed(2)} e ${z[1].toFixed(2)} min (lo zoom del cromatogramma)` : " (tutto il file; ingrandisci il cromatogramma per ridurre l'elenco)"}. Clic su una riga: la sua MS2 più intensa accanto alla Full Scan.</div><div style="max-height:62vh;overflow:auto"><table id="ddatb"></table></div>`, () => {
+      big(I18N.t("dda.list.head"), `<div class="sm muted" style="margin-bottom:6px">${z ? I18N.t("dda.list.zoom", { n: G.length, t0: z[0].toFixed(2), t1: z[1].toFixed(2) }) : I18N.t("dda.list.all", { n: G.length })} ${I18N.t("dda.list.click")}</div><div style="max-height:62vh;overflow:auto"><table id="ddatb"></table></div>`, () => {
         const render = () => {
           const rows = G.slice().sort((a, b) => st.dir * ((st.col === "mz" ? a.mz - b.mz : st.col === "rt" ? a.rt0 - b.rt0 : a.n - b.n)));
           const ar = c2 => st.col === c2 ? (st.dir > 0 ? " ▲" : " ▼") : "";
-          Q("#ddatb").innerHTML = `<tr><th data-c="mz" style="cursor:pointer"><i>m/z</i> del precursore${ar("mz")}</th><th data-c="rt" style="cursor:pointer">RT (prima–ultima)${ar("rt")}</th><th class="num" data-c="n" style="cursor:pointer">n. MS2${ar("n")}</th></tr>` +
+          Q("#ddatb").innerHTML = `<tr><th data-c="mz" style="cursor:pointer">${I18N.t("dda.col.mz")}${ar("mz")}</th><th data-c="rt" style="cursor:pointer">${I18N.t("dda.col.rt")}${ar("rt")}</th><th class="num" data-c="n" style="cursor:pointer">${I18N.t("dda.col.n")}${ar("n")}</th></tr>` +
             rows.map((g, i) => `<tr data-r="${G.indexOf(g)}" style="cursor:pointer"><td>${g.mz.toFixed(dec)}</td><td>${g.rt0.toFixed(2)}–${g.rt1.toFixed(2)} min</td><td class="num">${g.n}</td></tr>`).join("");
           Q("#ddatb").querySelectorAll("th[data-c]").forEach(h => h.onclick = () => { st.dir = st.col === h.dataset.c ? -st.dir : 1; st.col = h.dataset.c; render(); });
           Q("#ddatb").querySelectorAll("tr[data-r]").forEach(r => r.onclick = () => { Q("#bigdlg").close(); fromList(f, G[+r.dataset.r]); });
@@ -380,7 +380,7 @@ const DDA = (() => {
       const s1 = p.type === "chrom" ? E.panels.find(q => q.type === "spec" && q.link === p.id && q.el) : p.type === "spec" && p.link != null && p.dda == null ? p : null;
       if (!s1 || byId(s1.duo)) return null;
       const f = E.files[s1.k]; if (!f || !f.dda || f.kind !== "full") return null;
-      return { label: "Mostra le MS2 accanto alla Full Scan", tip: "Apre il pannello con la MS2 a destra della Full Scan: ▼ sui picchi, un clic mostra la sua MS2", fn: () => ensure(p) };
+      return { label: I18N.t("dda.show"), tip: I18N.t("dda.show.tip"), fn: () => ensure(p) };
     } catch (e) { return null; }
   }
 

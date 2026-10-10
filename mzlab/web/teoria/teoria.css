@@ -236,3 +236,23 @@ main:focus{outline:none}
 .skip{position:absolute;left:8px;top:-60px;z-index:100;background:var(--panel);color:var(--ink);border:2px solid var(--accent);border-radius:6px;padding:8px 12px;font-weight:600}
 .skip:focus{top:8px}
 .figdesc{margin:6px 0 12px;font-size:14px}.figdesc summary{cursor:pointer;color:var(--muted)}.figdesc p{margin:6px 0 0}
+/* «Alto contrasto»: the colours of the SVG figures follow the page variables (axes, lines, text >= 7:1; the series use --c1...--c5) */
+:root[data-a11y-bg=hc] svg [fill="#24231f"],:root[data-a11y-bg=hc] svg [style*="fill:#24231f"]{fill:var(--ink)}
+:root[data-a11y-bg=hc] svg [stroke="#24231f"],:root[data-a11y-bg=hc] svg [style*="stroke:#24231f"]{stroke:var(--ink)}
+:root[data-a11y-bg=hc] svg [fill="#6b675c"],:root[data-a11y-bg=hc] svg [style*="fill:#6b675c"]{fill:var(--muted)}
+:root[data-a11y-bg=hc] svg [stroke="#6b675c"],:root[data-a11y-bg=hc] svg [style*="stroke:#6b675c"]{stroke:var(--muted)}
+:root[data-a11y-bg=hc] svg [stroke="#9b978c"],:root[data-a11y-bg=hc] svg [style*="stroke:#9b978c"]{stroke:var(--ink)}
+:root[data-a11y-bg=hc] svg [fill="#9b978c"],:root[data-a11y-bg=hc] svg [style*="fill:#9b978c"]{fill:var(--ink)}
+:root[data-a11y-bg=hc] svg [stroke="#c9c5bb"],:root[data-a11y-bg=hc] svg [style*="stroke:#c9c5bb"]{stroke:var(--line)}
+:root[data-a11y-bg=hc] svg [stroke="#9fb5cc"],:root[data-a11y-bg=hc] svg [style*="stroke:#9fb5cc"]{stroke:var(--line)}
+:root[data-a11y-bg=hc] svg [fill="#2b5c8a"],:root[data-a11y-bg=hc] svg [style*="fill:#2b5c8a"]{fill:var(--c1)}
+:root[data-a11y-bg=hc] svg [stroke="#2b5c8a"],:root[data-a11y-bg=hc] svg [style*="stroke:#2b5c8a"]{stroke:var(--c1)}
+:root[data-a11y-bg=hc] svg [fill="#c2410c"],:root[data-a11y-bg=hc] svg [style*="fill:#c2410c"]{fill:var(--c2)}
+:root[data-a11y-bg=hc] svg [stroke="#c2410c"],:root[data-a11y-bg=hc] svg [style*="stroke:#c2410c"]{stroke:var(--c2)}
+:root[data-a11y-bg=hc] svg [fill="#047857"],:root[data-a11y-bg=hc] svg [style*="fill:#047857"]{fill:var(--c3)}
+:root[data-a11y-bg=hc] svg [stroke="#047857"],:root[data-a11y-bg=hc] svg [style*="stroke:#047857"]{stroke:var(--c3)}
+:root[data-a11y-bg=hc] svg [fill="#7c3aed"],:root[data-a11y-bg=hc] svg [style*="fill:#7c3aed"]{fill:var(--c4)}
+:root[data-a11y-bg=hc] svg [stroke="#7c3aed"],:root[data-a11y-bg=hc] svg [style*="stroke:#7c3aed"]{stroke:var(--c4)}
+:root[data-a11y-bg=hc] svg [fill="#b45309"],:root[data-a11y-bg=hc] svg [style*="fill:#b45309"]{fill:var(--c5)}
+:root[data-a11y-bg=hc] svg [stroke="#b45309"],:root[data-a11y-bg=hc] svg [style*="stroke:#b45309"]{stroke:var(--c5)}
+:root[data-a11y-bg=hc] svg text:not([fill]){fill:var(--ink)}

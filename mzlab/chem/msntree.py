@@ -7,6 +7,7 @@ import re
 import numpy as np
 
 from .composition import MASS, compose
+from ..i18n import UserError
 
 _RX = re.compile(r"([A-Z][a-z]?)(\d*)")
 MAX_SCANS = 60          # scans averaged per node (the first ones: enough for a stable consensus)
@@ -63,7 +64,7 @@ def msn_tree(run, formula: str | None = None, ppm: float = 5.0, elements: dict |
     """{nodes: [...], root: {...}}. `formula` = formula of the ION at the root of the tree (the precursor of the first stage), if known: the formulas of
     the nodes are then sub-formulas of it; without it the root is the best candidate of the default elements for its exact m/z."""
     if formula and (not re.fullmatch(r"([A-Z][a-z]?\d*)+", formula) or any(e not in MASS for e in _parse(formula))):
-        raise ValueError(f"formula non valida: {formula}")
+        raise UserError("err.tree.formula", {"formula": formula}, f"invalid formula: {formula}")
     groups: dict[tuple, list[int]] = {}
     paths: dict[tuple, tuple] = {}
     for s in run.scans:
@@ -72,11 +73,11 @@ def msn_tree(run, formula: str | None = None, ppm: float = 5.0, elements: dict |
             groups.setdefault(k, []).append(s.index)
             paths.setdefault(k, s.path)
     if not groups:
-        raise ValueError("il file non ha scansioni MSn con il percorso di frammentazione nel filtro (serve un file MS3 o superiore)")
+        raise UserError("err.tree.noPath", text="the file has no MSn scans with the fragmentation path in the filter (an MS3 or higher file is needed)")
     if max(len(k) for k in groups) < 2:
-        raise ValueError("l'albero serve per file MSn con almeno due stadi di frammentazione (MS3 o superiore)")
+        raise UserError("err.tree.needStages", text="the tree needs MSn files with at least two fragmentation stages (MS3 or higher)")
     if len(groups) > 400:
-        raise ValueError(f"{len(groups)} percorsi di frammentazione: sono troppi per un albero (è pensato per l'infusione MSn)")
+        raise UserError("err.tree.tooMany", {"n": len(groups)}, f"{len(groups)} fragmentation paths: too many for a tree")
     pol = next((s.polarity for s in run.scans if s.polarity), 1)
     ion1 = "[M]+" if pol >= 0 else "[M]-"
     ms1 = [s.index for s in run.scans if s.level == 1][:MAX_SCANS]

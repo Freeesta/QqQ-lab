@@ -250,6 +250,25 @@ try:
                 if name != "20-disegno.html": assert any(x["d"] for x in v), (name, "scheme without long description")
                 q.close()
         step("figures: short alt (<= 125 characters) and long description in <details> (<= 85 words) linked by aria-describedby", figure_texts)
+        def hc_svg():
+            for scheme in ("light", "dark"):
+                for name in ("06-esi.html", "09-quadrupolo.html", "10-qqq.html", "14-frammentazione-esi.html", "18-strategia.html", "index.html"):
+                    q = fresh(name, scheme=scheme, prefs={"bg": "hc"})
+                    bad = q.evaluate("""(()=>{const L=%s,bg=getComputedStyle(document.body).backgroundColor,B=L(bg),out=[];
+                      const cr=c=>{const m=c.match(/[0-9.]+/g);if(!m||(m[3]!==undefined&&+m[3]===0)||c==='none')return null;const y=L(c);return (Math.max(B,y)+.05)/(Math.min(B,y)+.05)};
+                      document.querySelectorAll('main svg[role=img] text').forEach(t=>{const r=cr(getComputedStyle(t).fill);if(r!==null&&r<7)out.push('text '+t.textContent.slice(0,20)+' '+r.toFixed(1))});
+                      document.querySelectorAll('main svg[role=img] :is(line,path,polyline)').forEach(e=>{const s=getComputedStyle(e).stroke,r=cr(s);if(r!==null&&r<3)out.push('line '+s+' '+r.toFixed(1))});
+                      return out.slice(0,5)})()""" % LUM)
+                    assert not bad, (scheme, name, bad)
+                    q.close()
+        step("SVG figures in «Alto contrasto» (light and dark): text >= 7:1, lines >= 3:1", hc_svg)
+        def zones():
+            q = fresh("09-quadrupolo.html"); q.evaluate("document.querySelector('#sim-stab,#sim-mathieu,.sim:has(canvas)').scrollIntoView()")
+            src = q.evaluate("[...document.scripts].map(s=>s.src).filter(s=>s.includes('sim-quad'))[0]")
+            txt = q.evaluate("fetch('%s').then(r=>r.text())" % src)
+            assert "a righe /" in txt and "a righe \\\\" in txt and "bandX" in txt
+            q.close()
+        step("stability zones of the quadrupole are hatched (not only coloured) and the legend says so", zones)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300]))

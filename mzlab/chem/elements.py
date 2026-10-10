@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import re
 
+from ..i18n import UserError
+
 MASS = {
     "H": 1.00782503223, "C": 12.0, "N": 14.00307400443, "O": 15.99491461957, "F": 18.99840316273,
     "P": 30.97376199842, "S": 31.9720711744, "Cl": 34.968852682, "Br": 78.9183376, "I": 126.9044719,
@@ -56,31 +58,31 @@ def parse_formula(s: str) -> dict[str, int]:
     """'C15H12N2O' -> {'C': 15, 'H': 12, 'N': 2, 'O': 1}. Parentheses are allowed: 'C(OH)2'. Lower case is understood (see normalize_formula)."""
     s = normalize_formula(s)
     if not s:
-        raise ValueError("empty formula")
+        raise UserError("err.formula.empty", text="empty formula")
     stack: list[dict[str, int]] = [{}]
     pos = 0
     tok = re.compile(r"([A-Z][a-z]?)(\d*)|(\()|\)(\d*)")
     while pos < len(s):
         m = tok.match(s, pos)
         if not m:
-            raise ValueError(f"cannot read the formula {s!r}")
+            raise UserError("err.formula.unreadable", {"formula": s}, f"cannot read the formula {s!r}")
         if m.group(1):
             el = m.group(1)
             if el not in MASS:
-                raise ValueError(f"unknown element {el!r} in {s!r}")
+                raise UserError("err.formula.element", {"element": el, "formula": s}, f"unknown element {el!r} in {s!r}")
             stack[-1][el] = stack[-1].get(el, 0) + (int(m.group(2)) if m.group(2) else 1)
         elif m.group(3):
             stack.append({})
         else:
             if len(stack) < 2:
-                raise ValueError(f"unbalanced parentheses in {s!r}")
+                raise UserError("err.formula.parens", {"formula": s}, f"unbalanced parentheses in {s!r}")
             inner = stack.pop()
             k = int(m.group(4)) if m.group(4) else 1
             for el, n in inner.items():
                 stack[-1][el] = stack[-1].get(el, 0) + n * k
         pos = m.end()
     if len(stack) != 1 or not stack[0]:
-        raise ValueError(f"cannot read the formula {s!r}")
+        raise UserError("err.formula.unreadable", {"formula": s}, f"cannot read the formula {s!r}")
     return stack[0]
 
 
@@ -102,7 +104,7 @@ def formula_mz(formula: str, adduct: str | None = None) -> dict:
     out = {"formula": fmt(f), "neutral": round(m, 4), "nominal_neutral": int(round_half_up(m, 0)), "adducts": rows}
     if adduct:
         if adduct not in ADDUCT_SHIFT:
-            raise ValueError(f"unknown adduct {adduct!r}")
+            raise UserError("err.adduct.unknown", {"adduct": adduct}, f"unknown adduct {adduct!r}")
         out["adduct"] = adduct
         out.update(rows[adduct])
     return out
