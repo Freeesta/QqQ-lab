@@ -42,13 +42,13 @@ try:
         def go():
             pg.evaluate("(()=>{const q=E.panels.find(q=>q.type==='map');const fs=tabFiles('full').sort((a,b)=>a.time-b.time);q.k=fs[fs.length-1].k;q.ref=fs[0].k;ctl(q);draw(q)})()")
             ready(pg, timeout=240000); pg.wait_for_function("E.panels.some(q=>q.type==='map'&&q._a&&q._a.ref)", timeout=60000)
-            pg.click("#qt-bar button:has-text('Find points')"); pg.wait_for_selector("#esp-go")
+            pg.click("#qt-bar button:has-text('Find points')"); pg.wait_for_selector("#esp-go"); assert pg.get_attribute("#esp-h", "title") and "any open series" in pg.get_attribute("#esp-h", "title") and pg.evaluate("document.querySelectorAll('#qt-body ol li, .tp ol li').length") >= 4
             pg.click("#esp-go"); pg.wait_for_selector("#esp-out tbody tr", timeout=600000)
             n = pg.evaluate("document.querySelectorAll('#esp-out tbody tr').length"); assert n >= 1, n
             t = pg.inner_text("#esp-out"); assert "Proposed role" in t and "Time course" in t and "Priority" in t, t[:300]
             assert pg.evaluate("document.querySelectorAll('#esp-out tbody svg').length") == n
             tr = pg.evaluate("[...document.querySelectorAll('#esp-out tbody tr')].map(r => r.children[9].textContent)")
-            assert all(x in ("cresce", "cala", "costante", "cresce e poi cala") for x in tr), tr[:5]          # five files: every point has a shape of its time course
+            assert all(x in ("rises", "falls", "constant", "rises then falls") for x in tr), tr[:5]          # five files: every point has a shape of its time course
             print(pg.evaluate("[...document.querySelectorAll('#esp-out tbody tr')].slice(0,12).map(r=>[...r.children].map((c,i)=>i==8?'':c.textContent).join(' | ')).join('\\n')"))
         step("mzFinder on: «Find points» on A − B gives a table with rows, roles and time course", go)
         def thresholds():
@@ -64,6 +64,21 @@ try:
             pg.click("#esp-mk"); pg.wait_for_function("document.querySelector('#esp-mk').textContent.startsWith('Marked')")
             assert pg.evaluate("MAPPA.pts(E.panels.find(q=>q.type==='map')).length") == n
         step("«Mark on the map» puts the points in the table of marked points", mark)
+        def card():
+            n = pg.evaluate("document.querySelectorAll('#esp-out tbody tr').length")
+            pg.click("#esp-out tbody tr >> nth=0"); pg.wait_for_selector("#ef-xic polyline", timeout=120000)
+            nf = pg.evaluate("tabFiles('full').filter(f=>f.time!=null).length")
+            assert pg.evaluate("document.querySelectorAll('#ef-xic svg polyline').length") == nf, "one XIC trace per file"
+            assert pg.evaluate("document.querySelectorAll('#ef-xic .ef-edge').length") >= 2, "integration edges"
+            pg.wait_for_function("document.querySelector('#ef-cv') && document.querySelector('#ef-cv').dataset.ready === '1'", timeout=120000)
+            assert pg.evaluate("document.querySelector('#ef-cls').textContent") in ("rises", "falls", "constant", "rises then falls")
+            assert pg.evaluate("document.querySelectorAll('#ef-spec svg').length") >= 1
+            t0 = pg.inner_text("#esp-feat b")
+            if n > 1:
+                pg.click("#ef-next"); pg.wait_for_function("document.querySelector('#esp-feat b').textContent !== arguments[0]".replace("arguments[0]", repr(t0)), timeout=120000)
+                pg.wait_for_selector("#ef-xic polyline", timeout=120000)
+            pg.fill("#ef-w", "0.8"); pg.click("#ef-re"); pg.wait_for_selector("#ef-xic polyline", timeout=120000)
+        step("click on a row: card with XIC in all files, cropped map with the circle, class, spectrum; ↓ changes point", card)
         b.close()
 finally:
     srv.terminate()

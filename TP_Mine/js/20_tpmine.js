@@ -15,7 +15,7 @@
 .tp .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0}.tp .grow{flex:1;min-width:120px}.tp input[type=text],.tp textarea,.tp input[type=number]{width:100%;box-sizing:border-box}
 .tp .mut{color:var(--muted);font-size:12px}.tp table{border-collapse:collapse;width:100%;font-size:12px}.tp th,.tp td{padding:3px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
 .tp th{position:sticky;top:0;background:var(--panel);font-weight:600;color:var(--muted)}.tp td.n{text-align:right;font-variant-numeric:tabular-nums}
-.tp tr.sel{background:var(--sel)}.tp tr.clk{cursor:pointer}.tp tr.clk:hover{background:var(--sel)}
+.tp tr.sel{background:var(--sel)}.tp tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}.tp tr.clk{cursor:pointer}.tp tr.clk:hover{background:var(--sel)}
 .tp .badge{display:inline-block;padding:0 6px;border-radius:9px;font-size:11px;font-weight:600;border:1px solid var(--line)}
 .tp .b-forte{background:#e7f6ee;color:var(--ok);border-color:#b7e1c9}.tp .b-possibile{background:#fdf3e0;color:var(--warn);border-color:#f1d9a8}.tp .b-debole{color:var(--muted)}
 .tp .lv{display:inline-block;min-width:18px;text-align:center;border-radius:4px;color:#fff;font-weight:700;font-size:11px;padding:0 4px}.tp .lv3{background:#047857}.tp .lv4{background:#2b5c8a}.tp .lv5{background:#8a6d2b}
@@ -26,40 +26,35 @@
 .tp .err{color:var(--bad)}.tp details>summary{cursor:pointer;color:var(--muted);font-size:12px}.tp textarea{font:12px ui-monospace,monospace;min-height:150px}
 .tp .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px}.tp .kv b{color:var(--muted);font-weight:600}
 .tp-wrap{padding:0}
-.pm-bar{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:12px 20px;color:#fff;background:linear-gradient(110deg,#101b2e 0%,#1f3a5f 45%,#3b2a73 100%);border-bottom:2px solid transparent;border-image:linear-gradient(90deg,#f4c95d,#fff3c4,#d99a1d) 1;box-shadow:0 6px 24px rgba(16,27,46,.35);position:relative;overflow:hidden}
-.pm-bar::after{content:"";position:absolute;top:0;left:-40%;width:30%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.12),transparent);animation:tpShine 6s ease-in-out infinite}
-.pm-brand{display:flex;align-items:center;gap:12px}.pm-ico{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;color:#ffd27a;background:rgba(255,255,255,.08);border:1px solid rgba(255,210,122,.55);box-shadow:0 0 14px rgba(255,210,122,.35)}
-.pm-name{font-size:20px;font-weight:800;letter-spacing:.3px;line-height:1.1}.pm-tag{font-size:12px;opacity:.8}
-.pm-crown{display:inline-block;vertical-align:middle;margin-left:8px;font-size:10px;font-weight:800;letter-spacing:1.4px;padding:2px 9px;border-radius:10px;color:#3a2a00;background:linear-gradient(135deg,#ffe29a,#f4c95d 55%,#d99a1d);box-shadow:0 0 10px rgba(244,201,93,.6)}
-.pm-steps{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:12px}.pm-sep{opacity:.45}
-.pm-step{display:inline-flex;align-items:center;gap:6px;padding:3px 11px 3px 4px;border-radius:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);opacity:.75}
-.pm-step i{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;font-style:normal;font-weight:700;font-size:11px;background:rgba(255,255,255,.2)}
-.pm-step.ok{opacity:1;border-color:rgba(125,255,181,.7)}.pm-step.ok i{background:#7dffb5;color:#06361f}
-.pm-chips{display:flex;gap:8px}.pm-chip{font-size:11px;font-weight:700;padding:3px 11px;border-radius:12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25)}.pm-chip.hr{background:rgba(212,181,255,.2);border-color:#d4b5ff;color:#ecdcff}.pm-chip.lr{background:rgba(125,255,181,.15);border-color:#7dffb5;color:#c8ffe0}
 #qt-nav-tab,nav button[data-v="tpmine"]{background:linear-gradient(135deg,#ffe29a,#f4c95d 55%,#d99a1d)!important;color:#3a2a00!important;border-color:#d99a1d!important;font-weight:700}
-@media(prefers-reduced-motion:reduce){.pm-bar::after{animation:none}}
-.hero{background:linear-gradient(135deg,#17324d,#2b5c8a 55%,#4b2c83);color:#fff;border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 6px 22px rgba(43,92,138,.35);animation:tpIn .5s ease}
-.hero button{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.35)}.hero button:hover{background:rgba(255,255,255,.25)}
-.tp #tp-files th{position:static}.tp .hero-i{font-size:40px;line-height:1}.hero-t{display:flex;gap:12px;align-items:center}.hero h2{margin:0;font-size:22px}.hero-s{opacity:.85;font-size:12px}.hero-i{filter:drop-shadow(0 0 8px #ffd27a);color:#ffd27a;animation:tpGlow 2.4s ease-in-out infinite}
-.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.stat{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:6px 14px;min-width:110px;animation:tpIn .6s ease both}
-.stat b{display:block;font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}.stat span{font-size:11px;opacity:.85}.stat.g b{color:#7dffb5}.stat.a b{color:#ffd27a}.stat.v b{color:#d4b5ff}
-.vtabs{display:flex;gap:6px;margin:0 0 8px;flex-wrap:wrap}.vt{border-radius:16px;padding:4px 14px}.vt.on{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 8px rgba(43,92,138,.4)}
+.hero{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px}
+.tp #tp-files th{position:static}.tp .hero-i{display:inline-flex;color:var(--accent)}.hero-t{display:flex;gap:12px;align-items:center}.hero h2{margin:0;font-size:20px}.hero-s{color:var(--muted);font-size:12px}
+.tp-title{margin:12px 16px 2px;font-size:20px}.tp-sub{margin:0 16px;color:var(--muted);font-size:12px}.tp .fsum{font-size:12px;color:var(--muted);margin:2px 0 6px}.tp #tp-files td,.tp #tp-files th{padding:1px 6px}.tp #tp-files select,.tp #tp-files input{font-size:11px;padding:0 3px;height:20px}
+.tp .dig{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;font-size:18px;font-weight:700}.tp .dig .qi{display:inline-flex}.tp .tp-q{display:inline-grid;place-items:center;width:16px;height:16px;border:1px solid var(--muted);border-radius:50%;font-size:11px;color:var(--muted);cursor:help;margin-left:4px;font-style:normal}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.stat{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:6px 14px;min-width:110px}
+.stat b{display:block;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}.stat span{font-size:11px;color:var(--muted)}.stat.g b{color:var(--ok)}.stat.a b{color:var(--warn)}.stat.v b{color:var(--accent)}
+.vtabs{display:flex;gap:6px;margin:0 0 8px;flex-wrap:wrap}.vt{border-radius:16px;padding:4px 14px}.vt.on{background:var(--accent);color:var(--panel);border-color:var(--accent)}
 .gems{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-bottom:10px}
-.gem{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;transition:transform .15s,box-shadow .15s;animation:tpIn .45s ease both}.gem:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,.15)}
-.gem.forte{border-color:#7ed0a6;box-shadow:0 0 0 1px #b7e1c9,0 0 14px rgba(4,120,87,.18)}.gem.forte::after{content:"";position:absolute}.gem-h{display:flex;justify-content:space-between;gap:6px;align-items:center}
-.gem.possibile{border-color:#f1d9a8}.gem{position:relative;overflow:hidden}.gem.forte::before{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);animation:tpShine 3.2s ease-in-out infinite}
-.mnode{cursor:pointer}.mnode circle{transition:r .2s}.mnode:hover circle{stroke:#ffd27a;stroke-width:3}
+.gem{position:relative;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer}.gem:hover{background:var(--sel)}.gem.sel,.mnode.sel{background:var(--sel);border-left-color:var(--accent)}
+.gem.forte{border-left-color:var(--ok)}.gem.possibile{border-left-color:var(--warn)}.gem.sel{border-left-color:var(--accent)}.gem-h{display:flex;justify-content:space-between;gap:6px;align-items:center}
+
+.mnode{cursor:pointer}.mnode:hover circle{stroke:var(--accent);stroke-width:3}.mnode.sel circle{stroke:var(--accent);stroke-width:4}
 .frow{display:grid;grid-template-columns:210px 1fr 60px;gap:8px;align-items:center;padding:3px 0;cursor:pointer;font-size:12px}.frow:hover{background:var(--sel)}
 .ft{display:block;height:14px;background:var(--line);border-radius:7px;overflow:hidden}.ft i{display:block;height:100%;width:0;border-radius:7px;transition:width .8s cubic-bezier(.3,.9,.3,1)}.fv{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
 .struct{text-align:center;margin-bottom:6px}.struct svg{max-width:100%;height:auto}
-.words p{font-size:13px}.mine{height:46px;position:relative;text-align:center;margin-bottom:4px;overflow:hidden}.mine .pick{display:inline-block;font-size:34px;transform-origin:75% 85%;color:var(--accent)}.mine .rock{position:absolute;bottom:2px;opacity:0;font-size:12px;color:#d99a1d}
-.mining .pick{animation:tpSwing .5s ease-in-out infinite alternate}.mining .rock{animation:tpRock .9s ease-out infinite}.mining .r2{animation-delay:.3s;left:55%}.mining .r1{left:42%}.mining .r3{animation-delay:.6s;left:62%}
-.mining .bar i{background:linear-gradient(90deg,#2b5c8a,#7c3aed,#2b5c8a);background-size:200% 100%;animation:tpSlide 1s linear infinite}
-.tp-toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#17324d;color:#fff;padding:8px 18px;border-radius:20px;z-index:99;box-shadow:0 6px 20px rgba(0,0,0,.3);animation:tpIn .3s ease;transition:opacity .5s}.tp-toast.out{opacity:0}
-@keyframes tpIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@keyframes tpGlow{50%{filter:drop-shadow(0 0 16px #ffe7a8)}}
-@keyframes tpShine{0%,60%{left:-60%}100%{left:130%}}@keyframes tpSwing{from{transform:rotate(-35deg)}to{transform:rotate(25deg)}}
-@keyframes tpRock{0%{opacity:0;transform:translate(0,6px)}30%{opacity:1}100%{opacity:0;transform:translate(14px,-34px) rotate(180deg)}}@keyframes tpSlide{to{background-position:-200% 0}}
-@media(prefers-reduced-motion:reduce){.tp *,.hero,.gem{animation:none!important;transition:none!important}}`;
+.tp-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.tp-hd .tp-title{margin-right:0}#tp-hd-struct{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}#tp-hd-struct svg{height:48px;width:auto;max-width:120px}
+.tp-ac{position:relative}.tp-ac input{width:100%}#tp-sug{position:absolute;left:0;right:0;top:100%;z-index:20;margin:2px 0 0;padding:2px;list-style:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.18);max-height:260px;overflow:auto}
+#tp-sug li{padding:5px 8px;border-radius:4px;cursor:pointer;display:flex;gap:8px;align-items:baseline;font-size:13px}#tp-sug li span{color:var(--muted);font-size:11px;margin-left:auto;white-space:nowrap}#tp-sug li[aria-selected=true],#tp-sug li:hover{background:var(--sel);box-shadow:inset 3px 0 0 var(--accent)}
+#tp-drawbar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:95;display:flex;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--accent);border-radius:20px;padding:6px 12px;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:13px}#tp-drawbar[hidden]{display:none}
+.tp #tp-warn{font-size:12px;color:var(--bad,#b3261e)}
+.words p{font-size:13px}
+
+
+.tp-toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 18px;border-radius:20px;z-index:99;box-shadow:0 6px 20px rgba(0,0,0,.3);animation:tpIn .3s ease;transition:opacity .5s}.tp-toast.out{opacity:0}
+@keyframes tpIn{from{opacity:0}to{opacity:1}}
+
+
+@media(prefers-reduced-motion:reduce){.tp *{animation:none!important;transition:none!important}}`;
 
   // ---------------------------------------------------------------- worker and calls
   let worker = null, ready = null, seq = 0;
@@ -151,48 +146,53 @@
   function open(sec) {
     if (!document.getElementById("tp-css")) { const st = document.createElement("style"); st.id = "tp-css"; st.textContent = CSS; document.head.appendChild(st); }
     sec.innerHTML = `<div class="tp-wrap">
-<div class="pm-bar">
- <div class="pm-brand"><span class="pm-ico">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 26) : "⛏"}</span>
-  <div><div class="pm-name">mzFinder <span class="pm-crown">★ PREMIUM</span></div><div class="pm-tag">Automated transformation-product discovery</div></div></div>
- <div class="pm-steps" aria-label="Workflow">
-  <span class="pm-step" id="pm-s1"><i>1</i> Files</span><span class="pm-sep">›</span>
-  <span class="pm-step" id="pm-s2"><i>2</i> Parent</span><span class="pm-sep">›</span>
-  <span class="pm-step" id="pm-s3"><i>3</i> Settings</span><span class="pm-sep">›</span>
-  <span class="pm-step" id="pm-s4"><i>4</i> Dig</span></div>
- <div class="pm-chips"><span class="pm-chip" id="pm-mode">No data</span><span class="pm-chip" id="pm-count">0 files</span></div>
-</div>
+<div class="tp-hd"><h2 class="tp-title">mzFinder</h2><div id="tp-hd-struct" aria-live="polite"></div></div><p class="tp-sub">Automated transformation-product discovery</p>
 <div class="tp">
 <div id="tp-left">
  <div class="card"><h3>1 · Files</h3>
   <div class="row"><button id="tp-page" title="Reload the mzML files already open in the Data tab (browser memory)">Reload from Data</button><button id="tp-pick">Choose mzML...</button></div>
   <input type="file" id="tp-in" accept=".mzML,.mzml" multiple hidden>
-  <div id="tp-files" class="mut"></div></div>
+  <div id="tp-fsum" class="fsum"></div><div id="tp-files" class="mut"></div><div class="row"><button id="tp-more" type="button" aria-expanded="false" hidden></button></div></div>
  <div class="card"><h3>2 · Parent compound</h3><div id="tp-struct"></div>
-  <div class="row"><input type="text" id="tp-name" placeholder="Name (optional)"></div>
-  <div class="row"><input type="text" id="tp-mol" placeholder="Neutral molecular formula (C10H12N2O3S) or SMILES" spellcheck="false"></div>
+  <div class="row tp-ac"><input type="text" id="tp-name" placeholder="Name (type 2 letters to search the list)" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tp-sug" aria-label="Parent compound name" autocomplete="off" spellcheck="false"><ul id="tp-sug" role="listbox" aria-label="Suggestions" hidden></ul></div>
+  <div class="row"><input type="text" id="tp-mol" placeholder="Neutral formula (C10H12N2O3S)" aria-label="Neutral molecular formula" spellcheck="false"></div>
+  <div class="row"><input type="text" id="tp-smi" placeholder="SMILES (optional)" aria-label="SMILES" spellcheck="false" style="flex:1"><button id="tp-draw" type="button" title="Draw the molecule in the Draw tab and bring the SMILES back here">Draw</button></div>
+  <div id="tp-warn" role="status"></div>
   <div class="row"><label class="mut">Adduct</label><select id="tp-add"><option>[M+H]+</option><option>[M+Na]+</option><option>[M+NH4]+</option><option>[M-H]-</option></select><span class="mut" id="tp-prev"></span></div></div>
  <div class="card"><h3>3 · Settings</h3>
   <div class="row"><label class="mut grow" id="tp-tol-l">XIC window ±Da</label><input type="number" id="tp-tol" value="0.35" step="0.05" min="0.05" style="width:70px"></div>
   <div class="row"><label class="mut grow">RT tolerance ±min</label><input type="number" id="tp-rtt" value="0.25" step="0.05" min="0.05" style="width:70px"></div>
   <div class="row"><label class="mut grow">Combined transformations (steps)</label><input type="number" id="tp-steps" value="2" min="1" max="3" style="width:70px"></div>
   <div class="row"><label class="mut grow">Ignore RT before (min)</label><input type="number" id="tp-rtmin" value="0.5" step="0.1" min="0" style="width:70px"></div>
-  <div class="row"><label><input type="checkbox" id="tp-disc" checked> Also look for unexpected ions</label></div>
+  <div class="row"><label><input type="checkbox" id="tp-disc" checked> Also look for unexpected ions</label><i class="tp-q" id="tp-disc-h" tabindex="0" role="note" aria-label="About unexpected ions" title="Low resolution only. Besides the candidates from the transformation rules, it searches the whole m/z range for ions that grow over time, are missing at t0 and in the blank, and match no candidate. Slower. With high-resolution files this option is hidden: the HR pipeline is already untargeted.">?</i></div>
   <details><summary>List of transformations (name;change)</summary><textarea id="tp-tr" spellcheck="false"></textarea></details></div>
+<<<<<<< HEAD
  <div class="card" id="tp-minecard"><div class="mine"><span class="pick">⛏</span><span class="rock r1">◆</span><span class="rock r2">◇</span><span class="rock r3">◆</span></div><button id="tp-go" class="imp" style="width:100%">⛏ Dig</button><div class="bar" id="tp-barbox" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" style="margin-top:4px"></div></div>
+=======
+ <div class="card" id="tp-minecard"><button id="tp-go" class="imp dig" type="button" aria-busy="false">${(typeof QICON !== "undefined" && QICON.mine) ? QICON.get("mine", 28) : ""}<span id="tp-go-t">Dig</span></button><div class="bar"><i id="tp-bar"></i></div><div class="mut" id="tp-msg" role="status" style="margin-top:4px"></div></div>
+>>>>>>> origin/main
 </div>
 <div id="tp-right"><div class="card mut" id="tp-empty">Load the files, enter the parent and press <b>Dig</b>: mzFinder calibrates the m/z on the parent, generates the candidates, extracts the XICs, looks for peaks that grow over time and are missing from the blank, checks the isotopes, compares the product ions with those of the parent and assigns a confidence level (Schymanski, as far as the resolution allows).</div></div></div></div>`;
     const $ = s => sec.querySelector(s);
-    const st = { files: [], summary: null, sel: null, view: "gems", took: 0, filter: { forte: true, possibile: true, unexp: true, debole: false } };
+    const st = { files: [], showAll: false, summary: null, sel: null, view: "gems", took: 0, filter: { forte: true, possibile: true, unexp: true, debole: false } };
     const msg = (t, err) => { $("#tp-msg").textContent = t || ""; $("#tp-msg").className = "mut" + (err ? " err" : ""); };
     const bar = f => { const w = Math.round(f * 100); $("#tp-bar").style.width = w + "%"; $("#tp-barbox").setAttribute("aria-valuenow", w); };
     onProgress = (t, f) => { msg(t); if (f != null) bar(f); };
 
+    $("#tp-more").onclick = () => { st.showAll = !st.showAll; renderFiles(); };
     // ---- files
     const renderFiles = () => {
-      modeUI(); if (!st.files.length) { $("#tp-files").innerHTML = ""; return; }
+      modeUI(); if (!st.files.length) { $("#tp-files").innerHTML = ""; $("#tp-more").hidden = true; return; }
       $("#tp-files").innerHTML = `<table><tr><th>File</th><th>Data type</th><th>Sample</th><th>t (min)</th></tr>` + st.files.map((f, i) => `<tr><td title="${esc(f.name)}">${esc(f.name.replace(/\.mzml$/i, ""))}</td><td>${KINDS[f.kind] || f.kind}${f.error ? ` <span class="err" title="${esc(f.error)}">!</span>` : ""}</td>
         <td>${f.kind === "full" || f.kind === "mrm" || f.kind === "hr" ? `<select data-i="${i}" data-k="type">${Object.entries(TYPES).map(([k, v]) => `<option value="${k}"${f.type === k ? " selected" : ""}>${v}</option>`).join("")}</select>` : (f.kind === "ms2" ? "fragments" : "-")}</td>
         <td>${f.kind === "full" || f.kind === "ms2" || f.kind === "mrm" || f.kind === "hr" ? `<input type="number" data-i="${i}" data-k="time" value="${f.time ?? ""}" style="width:60px" step="any">` : ""}</td></tr>`).join("") + "</table>";
+      const MAXV = 6, many = st.files.length > MAXV;
+      $("#tp-files").querySelectorAll("tr").forEach((tr, i) => { if (i > 0) tr.hidden = many && !st.showAll && i > MAXV; });
+      const more = $("#tp-more"); more.hidden = !many; more.setAttribute("aria-expanded", st.showAll ? "true" : "false");
+      more.textContent = st.showAll ? "Show fewer" : "Show all " + st.files.length + " files";
+      const cn = {}; st.files.forEach(f => { const k = f.kind === "hr" ? "LC-HRMS" : f.kind === "msn" ? "MSn" : (KINDS[f.kind] || f.kind); cn[k] = (cn[k] || 0) + 1; });
+      const bl = st.files.filter(f => f.type === "blank").length;
+      $("#tp-fsum").textContent = Object.entries(cn).map(([k, v]) => v + " " + k).join(" · ") + (bl ? " · " + bl + (bl === 1 ? " blank" : " blanks") : "");
       $("#tp-files").querySelectorAll("[data-k]").forEach(el => el.onchange = () => { const f = st.files[+el.dataset.i]; f[el.dataset.k] = el.dataset.k === "time" ? (el.value === "" ? null : +el.value) : el.value; });
     };
     const BIG = 50 << 20;                   // as in the main program: above this a file is mounted from its Blob, not copied (13 HR files = 1 GB)
@@ -241,62 +241,154 @@
         } else { $("#tp-tol-l").textContent = "XIC window ±Da"; t.value = 0.35; t.step = 0.05; t.min = 0.05; r.value = 0.25; r.title = ""; }
       }
       const n = st.files.length;
-      $("#pm-mode").textContent = m === "hr" ? "HRMS" : m === "lr" ? "Unit resolution" : "No data"; $("#pm-mode").className = "pm-chip " + m;
-      $("#pm-count").textContent = n + (n === 1 ? " file" : " files");
-      $("#pm-s1").classList.toggle("ok", n > 0); $("#pm-s2").classList.toggle("ok", !!$("#tp-mol").value.trim()); $("#pm-s3").classList.toggle("ok", n > 0);
+      $("#tp-disc").closest(".row").hidden = m === "hr";                // the HR pipeline is already untargeted
     }
     $("#tp-mol").addEventListener("input", modeUI);
     setTimeout(() => loadFromData(true), 0);
     sec.addEventListener("tpshow", () => { if (!st.files.length) loadFromData(true); });
 
-    // ---- parent preview
-    let pvT = 0;
+    // ---- parent: values, preview, structure
+    const FORMULA = /^[A-Za-z0-9()]+$/;
+    const parentVals = () => {          // formula field and SMILES field; a SMILES typed in the formula field still counts as a SMILES
+      let mol = $("#tp-mol").value.trim(), smi = $("#tp-smi").value.trim();
+      if (mol && !FORMULA.test(mol) && !smi) { smi = mol; mol = ""; }
+      return { mol, smi };
+    };
+    let pvT = 0, OCLp = null;
+    const ocl = () => (OCLp = OCLp || import(new URL("vendor/openchemlib.js", ctx().base).href));
+    const smilesInfo = async t => { try { const m = (await ocl()).Molecule.fromSmiles(t); return { mol: m, formula: m.getMolecularFormula().formula }; } catch (_) { return null; } };
     const preview = () => {
       clearTimeout(pvT);
       pvT = setTimeout(async () => {
-        const t = $("#tp-mol").value.trim(); if (!t) { $("#tp-prev").textContent = ""; return; }
-        structure(r_ => r_, t);
-        try { const r = await call("formula_info", t, $("#tp-add").value); $("#tp-prev").innerHTML = r.ok ? `${esc(r.formula)} · M ${r.neutral} · ${esc($("#tp-add").value)} <i>m/z</i> ${r.mz}` : `<span class="err">${esc(r.error)}</span>`; }
-        catch (e) { $("#tp-prev").textContent = ""; }
+        const { mol, smi } = parentVals(), ad = $("#tp-add").value;
+        $("#tp-warn").textContent = "";
+        if (!mol && !smi) { $("#tp-prev").textContent = ""; structure(""); return; }
+        structure(smi);
+        let info = null;
+        if (smi) info = await smilesInfo(smi);
+        let q = mol || (info && info.formula) || smi;       // formula missing: the one computed from the SMILES (OpenChemLib)
+        if (!mol && info && !$("#tp-mol").value.trim()) { $("#tp-mol").value = info.formula; }
+        try {
+          const r = await call("formula_info", q, ad);
+          $("#tp-prev").innerHTML = r.ok ? `${esc(r.formula)} · M ${r.neutral} · ${esc(ad)} <i>m/z</i> ${r.mz}` : `<span class="err">${esc(r.error)}</span>`;
+          if (r.ok && mol && info && info.formula !== r.formula) $("#tp-warn").textContent = `The formula (${r.formula}) does not match the SMILES (${info.formula}).`;
+        } catch (e) { $("#tp-prev").textContent = ""; }
+        header(info ? info.formula : (mol || ""), smi);
       }, 350);
     };
-    let OCLp = null;
-    async function structure(_, t) {          // parent structure drawn with OpenChemLib (already in the site for the Disegno tab)
+    function structure(t) {             // parent structure drawn with OpenChemLib (already in the site for the Disegno tab)
       const el = $("#tp-struct"); if (!el) return;
-      if (!/[a-z()=#\[\]@\/\\]/.test(t)) { el.innerHTML = ""; return; }
-      try {
-        OCLp = OCLp || import(new URL("vendor/openchemlib.js", ctx().base).href);
-        const OCL = await OCLp, svg = OCL.Molecule.fromSmiles(t).toSVG(300, 170);
-        el.innerHTML = `<div class="struct">${svg}</div>`;
-      } catch (_) { el.innerHTML = ""; }
+      if (!t) { el.innerHTML = ""; return; }
+      ocl().then(OCL => { el.innerHTML = `<div class="struct">${OCL.Molecule.fromSmiles(t).toSVG(300, 170)}</div>`; }).catch(() => { el.innerHTML = ""; });
     }
-    $("#tp-mol").oninput = preview; $("#tp-add").onchange = preview;
+    function header(formula, smi) {      // small structure + name + formula next to the title
+      const el = $("#tp-hd-struct"); if (!el) return;
+      const nm = $("#tp-name").value.trim();
+      if (!smi) { el.innerHTML = ""; return; }
+      ocl().then(OCL => { el.innerHTML = OCL.Molecule.fromSmiles(smi).toSVG(120, 48) + `<span>${esc(nm)}${nm && formula ? " · " : ""}${esc(formula)}</span>`; }).catch(() => { el.innerHTML = ""; });
+    }
+    $("#tp-mol").oninput = preview; $("#tp-smi").oninput = preview; $("#tp-add").onchange = preview;
+
+    // ---- name -> formula / SMILES from the curated list data/composti.csv (already loaded with mzFinder; nothing is downloaded here)
+    let LIST = null;
+    const csvRows = txt => {            // minimal CSV reader (quotes, commas, newlines inside quotes)
+      const out = []; let row = [], f = "", q = false;
+      for (let i = 0; i < txt.length; i++) {
+        const c = txt[i];
+        if (q) { if (c === '"') { if (txt[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+        else if (c === '"') q = true; else if (c === ",") { row.push(f); f = ""; }
+        else if (c === "\n") { row.push(f); out.push(row); row = []; f = ""; } else if (c !== "\r") f += c;
+      }
+      if (f || row.length) { row.push(f); out.push(row); }
+      return out;
+    };
+    const getList = () => LIST || (LIST = csvRows(ctx().files["composti.csv"] || "").slice(1).filter(r => r.length >= 5).map(r => {
+      const names = r[0].split(";").map(x => x.trim()).filter(Boolean);
+      return { names, low: names.map(x => x.toLowerCase()), formula: r[1], mass: parseFloat(r[2]), smiles: r[3] };
+    }));
+    const suggest = q => {
+      const w = q.trim().toLowerCase(); if (w.length < 2) return [];
+      const out = [];
+      for (const c of getList()) {
+        let best = 9;
+        c.low.forEach(n => { const i = n.indexOf(w); if (i < 0) return; const sc = n === w ? 0 : i === 0 ? 1 : /[\s\-(,]/.test(n[i - 1]) ? 2 : 3; if (sc < best) best = sc; });
+        if (best < 9) out.push([best, c.names[0].length, c]);
+      }
+      return out.sort((a, b) => a[0] - b[0] || a[1] - b[1]).slice(0, 8).map(x => x[2]);
+    };
+    let sugItems = [], sugI = -1;
+    const sugBox = $("#tp-sug"), nameIn = $("#tp-name");
+    const sugClose = () => { sugBox.hidden = true; sugI = -1; nameIn.setAttribute("aria-expanded", "false"); nameIn.removeAttribute("aria-activedescendant"); };
+    const pick = i => {
+      const it = sugItems[i]; if (!it) return;
+      if (it.link) { window.open(it.link, "_blank", "noopener"); sugClose(); return; }
+      nameIn.value = it.c.names[0]; $("#tp-mol").value = it.c.formula; $("#tp-smi").value = it.c.smiles; sugClose(); preview(); nameIn.focus();
+    };
+    const sugMark = () => { [...sugBox.children].forEach((li, k) => li.setAttribute("aria-selected", k === sugI ? "true" : "false")); if (sugI >= 0) nameIn.setAttribute("aria-activedescendant", "tp-sug-" + sugI); else nameIn.removeAttribute("aria-activedescendant"); };
+    const sugShow = () => {
+      const w = nameIn.value.trim(); if (w.length < 2) return sugClose();
+      sugItems = suggest(w).map(c => ({ c }));
+      sugItems.push({ link: "https://pubchem.ncbi.nlm.nih.gov/#query=" + encodeURIComponent(w), word: w });
+      sugBox.innerHTML = sugItems.map((it, k) => it.link ? `<li role="option" id="tp-sug-${k}" data-k="${k}" class="mut">Search PubChem for "${esc(it.word)}"</li>` : `<li role="option" id="tp-sug-${k}" data-k="${k}">${esc(it.c.names[0])}<span>${esc(it.c.formula)} · ${it.c.mass.toFixed(4)}</span></li>`).join("");
+      sugBox.hidden = false; nameIn.setAttribute("aria-expanded", "true"); sugI = -1; sugMark();
+    };
+    nameIn.addEventListener("input", () => { sugShow(); header($("#tp-mol").value.trim(), parentVals().smi); });
+    nameIn.addEventListener("keydown", e => {
+      if (sugBox.hidden) { if (e.key === "ArrowDown") sugShow(); return; }
+      if (e.key === "ArrowDown") { sugI = (sugI + 1) % sugItems.length; sugMark(); e.preventDefault(); }
+      else if (e.key === "ArrowUp") { sugI = (sugI - 1 + sugItems.length) % sugItems.length; sugMark(); e.preventDefault(); }
+      else if (e.key === "Enter" && sugI >= 0) { pick(sugI); e.preventDefault(); }
+      else if (e.key === "Escape") { sugClose(); e.preventDefault(); }
+    });
+    nameIn.addEventListener("blur", () => setTimeout(sugClose, 150));
+    sugBox.addEventListener("mousedown", e => { const li = e.target.closest("li"); if (li) { e.preventDefault(); pick(+li.dataset.k); } });
+
+    // ---- Draw: the Draw tab (Ketcher) with a small bar to bring the SMILES back
+    const drawBtn = $("#tp-draw");
+    if (window.MZLAB_PHONE) drawBtn.hidden = true;
+    let dbar = document.getElementById("tp-drawbar");
+    if (!dbar) {
+      dbar = document.createElement("div"); dbar.id = "tp-drawbar"; dbar.hidden = true; dbar.setAttribute("role", "region"); dbar.setAttribute("aria-label", "mzFinder: parent structure");
+      dbar.innerHTML = `<span>Drawing the mzFinder parent</span><button type="button" id="tp-draw-use" class="imp">Use this structure</button><button type="button" id="tp-draw-no">Cancel</button>`;
+      document.body.appendChild(dbar);
+    }
+    let drawing = false;
+    const back = () => { drawing = false; dbar.hidden = true; if (typeof setView === "function") setView("tpmine"); };
+    drawBtn.onclick = () => { drawing = true; dbar.hidden = false; setView("draw"); };
+    document.addEventListener("tpview", e => { dbar.hidden = !(drawing && e.detail.view === "draw"); if (e.detail.view !== "draw" && e.detail.view !== "tpmine") drawing = false; });
+    document.getElementById("tp-draw-no").onclick = back;
+    document.getElementById("tp-draw-use").onclick = async () => {
+      let t = ""; try { t = window.TPDraw ? await window.TPDraw.smiles() : ""; } catch (_) { t = ""; }
+      if (!t) { toast("Nothing drawn yet."); return; }
+      $("#tp-smi").value = t; $("#tp-mol").value = ""; preview(); back();
+    };
     startWorker().then(async () => { $("#tp-tr").value = await callRaw("default_transformations"); }).catch(e => msg(String(e.message || e), true));
 
     // ---- run
+    const setBusy = b => { const g = $("#tp-go"); g.disabled = b; g.setAttribute("aria-busy", b ? "true" : "false"); $("#tp-go-t").textContent = b ? "Digging..." : "Dig"; };
     $("#tp-go").onclick = async () => {
-      const mol = $("#tp-mol").value.trim();
+      const pv = parentVals(), mol = pv.mol || pv.smi;      // the engine takes the formula, or the SMILES when the formula is missing
       const hrMode = st.files.some(f => f.kind === "hr");
       if (!hrMode && !st.files.some(f => f.kind === "full")) return msg("Full-scan (MS1) sample files are needed.", true);
       if (!mol) return msg("Enter the neutral molecular formula or the SMILES of the parent.", true);
-      $("#tp-go").disabled = true; $("#tp-bar").style.width = "2%"; msg("Digging..."); $("#tp-minecard").classList.add("mining"); const t0 = performance.now();
+      setBusy(true); $("#tp-bar").style.width = "2%"; msg("Digging..."); const t0 = performance.now();
       try {
         const files = st.files.filter(f => f.kind !== "error" && f.kind !== "empty").map(f => ({ name: f.name, type: f.type, time: f.time, kind: f.kind }));
         const settings = { tol_da: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value, max_steps: +$("#tp-steps").value, rt_min: +$("#tp-rtmin").value, discover: $("#tp-disc").checked };
         const parent = { name: $("#tp-name").value.trim(), neutral: mol, adduct: $("#tp-add").value };
+        if (pv.smi) parent.smiles = pv.smi;
         if (hrMode) {          // high resolution: its own engine and view (21_tpmine_hr.js)
           if (parent.adduct !== "[M+H]+") throw new Error("High resolution uses the [M+H]+ ion: choose that adduct.");
-          if (/^[A-Za-z0-9()]+$/.test(mol) === false) parent.smiles = mol;
           const hs = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify({ ppm_prec: +$("#tp-tol").value, rt_tol_min: +$("#tp-rtt").value }), ""));
           st.took = performance.now() - t0; st.summary = null; st.det = {};
           window.TPHR.render($("#tp-right"), hs, { esc, fmtA, chart, hue, call, callRaw, toast, dl });
           $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
-          $("#tp-go").disabled = false; $("#tp-minecard").classList.remove("mining"); return;
+          setBusy(false); return;
         }
         st.summary = JSON.parse(await callRaw("run", JSON.stringify(files), JSON.stringify(parent), JSON.stringify(settings), $("#tp-tr").value));
         st.took = performance.now() - t0; st.sel = null; st.det = {}; render(); $("#tp-bar").style.width = "100%"; msg("Done."); $("#tp-right").scrollIntoView({ behavior: "smooth", block: "start" });
       } catch (e) { msg(String(e.message || e), true); $("#tp-bar").style.width = "0"; }
-      $("#tp-go").disabled = false; $("#tp-minecard").classList.remove("mining");
+      setBusy(false);
     };
 
     // ---- results
@@ -374,7 +466,7 @@
       const k = r.kinetics, mx = Math.max(...k.map(p => p.area)) || 1, w = 220, h = 54;
       const pts = k.map((p, j) => [(j / Math.max(1, k.length - 1) * (w - 6) + 3), (h - 4 - p.area / mx * (h - 10))]);
       const line = pts.map(p => p.join(",")).join(" "), area = `3,${h - 3} ${line} ${w - 3},${h - 3}`;
-      return `<div class="gem ${r.label}" data-id="${r.id}" style="animation-delay:${Math.min(i, 12) * 60}ms"><div class="gem-h"><b>${esc(shortN(r.name, 34))}</b>${r.level ? `<span class="lv lv${r.level}">${r.level}</span>` : ""}</div>
+      return `<div class="gem ${r.label}${r.id === st.sel ? " sel" : ""}" data-id="${r.id}" tabindex="0"><div class="gem-h"><b>${esc(shortN(r.name, 34))}</b>${r.level ? `<span class="lv lv${r.level}">${r.level}</span>` : ""}</div>
         <div class="mut">${esc(r.formula || "")} · <i>m/z</i> ${r.mz.toFixed(1)} · RT ${r.ref_rt ?? "?"}${r.insource ? " · in-source fragment" + (r.isf ? " (P " + Math.round(100 * r.isf.probs.isf) + "%" + (r.isf.doubtful ? ", doubtful" : "") + ")" : "?") : (r.isf && r.isf.doubtful ? " · doubtful origin (P ISF " + Math.round(100 * r.isf.probs.isf) + "%)" : "")}</div>
         <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}"><polygon points="${area}" fill="${col(r)}" opacity=".15"/><polyline points="${line}" fill="none" stroke="${col(r)}" stroke-width="2"/>${pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.3" fill="${col(r)}"/>`).join("")}</svg>
         <div class="mut">max at ${r.tmax ?? "?"} min · area ${fmtA(r.max_area)}${r.kind === "candidate" ? ` · ${esc(r.delta)}` : ` · Δ<i>m/z</i> ${r.delta_mz >= 0 ? "+" : ""}${r.delta_mz}`}</div></div>`;
@@ -399,7 +491,7 @@
         }
       }
       const nodes = [par, ...cand, ...unx].map(r => { const [x, y] = node(r), rad = 9 + 15 * Math.log10(1 + r.max_area) / Math.log10(1 + maxA);
-        return `<g class="mnode" data-id="${r.id}" transform="translate(${x},${y})"><circle r="${rad.toFixed(1)}" fill="${col(r)}" fill-opacity=".85" stroke="#fff" stroke-width="2"><title>${esc(r.name)}</title></circle>${r.level ? `<text y="4" font-size="11" fill="#fff" font-weight="700" text-anchor="middle">${r.level}</text>` : ""}<text y="${(rad + 13).toFixed(0)}" font-size="11" text-anchor="middle" fill="currentColor">${esc(shortN(r.name, 24))}</text><text y="${(rad + 25).toFixed(0)}" font-size="10" text-anchor="middle" fill="#687080">${r.mz.toFixed(1)}</text></g>`; }).join("");
+        return `<g class="mnode${r.id === st.sel ? " sel" : ""}" data-id="${r.id}" transform="translate(${x},${y})"><circle r="${rad.toFixed(1)}" fill="${col(r)}" fill-opacity=".85" stroke="#fff" stroke-width="2"><title>${esc(r.name)}</title></circle>${r.level ? `<text y="4" font-size="11" fill="#fff" font-weight="700" text-anchor="middle">${r.level}</text>` : ""}<text y="${(rad + 13).toFixed(0)}" font-size="11" text-anchor="middle" fill="currentColor">${esc(shortN(r.name, 24))}</text><text y="${(rad + 25).toFixed(0)}" font-size="10" text-anchor="middle" fill="#687080">${r.mz.toFixed(1)}</text></g>`; }).join("");
       host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-height:${H}px">${[["parent", 0], ["1 step", 1], ["2 steps", 2], ["3 steps / unexpected", 3]].map(([t, i]) => `<text x="${colX[i]}" y="14" font-size="11" fill="#687080" text-anchor="middle" font-weight="700">${t}</text>`).join("")}${edges}${nodes}</svg>`;
       host.querySelectorAll(".mnode").forEach(g => g.onclick = () => show(+g.dataset.id));
     }
@@ -472,6 +564,7 @@
     async function getDetail(id) { return st.det[id] || (st.det[id] = await call("detail", id)); }
     async function show(id) {
       st.sel = id; rows();
+      $("#tp-right").querySelectorAll(".gem,.mnode").forEach(g => g.classList.toggle("sel", +g.dataset.id === id));
       const D = $("#tp-det"); D.innerHTML = `<div class="card mut">Computing...</div>`;
       let d; try { d = await getDetail(id); } catch (e) { D.innerHTML = `<div class="card err">${esc(e.message || e)}</div>`; return; }
       const par = st.summary.rows.find(r => r.label === "progenitore"), drt = par && par.ref_rt && d.ref_rt ? (d.ref_rt - par.ref_rt) : null;

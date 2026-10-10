@@ -72,3 +72,42 @@ def find_peak(rt: np.ndarray, y: np.ndarray, rt_center: float | None = None, rt_
     return {"apex_rt": float(rt[ia]), "height": float(height), "area": area, "fwhm": fwhm,
             "snr": float(height / noise), "points": int(n_pts), "left": float(rt[l]), "right": float(rt[r]),
             "ok": bool(n_pts >= min_points)}
+
+
+def find_peaks(rt: np.ndarray, y: np.ndarray, rt_tol: float = 0.25, smooth_k: int = 3, min_points: int = 5, snr_min: float = 3.0,
+               valley_max: float = 0.5, max_peaks: int = 8) -> list[dict]:
+    """Every chromatographic peak of y above the noise, strongest first (same dict as find_peak, only the valid ones: ok and S/N >= snr_min).
+    Two maxima are one peak unless the valley between them drops below valley_max x the lower of the two (heights above the baseline)."""
+    rt, y = np.asarray(rt, float), np.asarray(y, float)
+    if len(rt) < 3 or y.max() <= 0:
+        return []
+    ys = smooth(y, smooth_k)
+    base = float(np.median(ys))
+    noise = float(1.4826 * np.median(np.abs(ys - base))) or float(np.std(ys[ys <= np.percentile(ys, 90)])) or 1.0
+    thr = max(base + 3.0 * noise, base + 0.10 * (float(ys.max()) - base))       # a peak under 10 % of the strongest one is not worth a candidate
+    mid = ys[1:-1]
+    idx = [int(i) + 1 for i in np.flatnonzero((mid >= ys[:-2]) & (mid > ys[2:]) & (mid > thr))]
+    if ys[0] > thr and ys[0] > ys[1]:
+        idx.insert(0, 0)
+    if ys[-1] > thr and ys[-1] >= ys[-2] and (not idx or idx[-1] != len(ys) - 1):
+        idx.append(len(ys) - 1)
+    while len(idx) > 1:                       # drop the lower side of the pair whose valley is shallowest, until every valley is deep enough
+        worst, drop = valley_max, None
+        for a, b in zip(idx[:-1], idx[1:]):
+            lo = min(ys[a], ys[b]) - base
+            ratio = (float(ys[a:b + 1].min()) - base) / lo if lo > 0 else 1.0
+            if ratio > worst:
+                worst, drop = ratio, (a if ys[a] < ys[b] else b)
+        if drop is None:
+            break
+        idx.remove(drop)
+    idx = sorted(idx, key=lambda i: -ys[i])[:max_peaks]
+    dt = float(np.median(np.diff(rt))) if len(rt) > 1 else 0.0
+    out = []
+    for i in idx:
+        gap = min([abs(rt[i] - rt[j]) for j in idx if j != i] or [rt_tol])
+        pk = find_peak(rt, y, rt_center=float(rt[i]), rt_tol=max(min(rt_tol, 0.5 * gap), 2 * dt), smooth_k=smooth_k, min_points=min_points)
+        if pk and pk["ok"] and pk["snr"] >= snr_min:
+            out.append(pk)
+    out.sort(key=lambda pk: -pk["height"])
+    return out

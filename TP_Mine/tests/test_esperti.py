@@ -108,3 +108,20 @@ def test_hr_subformula_coherence():
     assert rows[1]["role"].startswith("possible in-source fragment") and "C15H18NO5 − H2O = C15H16NO4" in rows[1]["proof"]
     b["forms"] = ["C14H20N2O4"]
     assert "sottoformula" not in X.analyse([a, b], FILES, hr=True, ppm=5.0, loss_formulas=LOSSES)[1]["proof"]
+
+
+def test_feature_card_edges_areas_and_peaks():
+    f = X.feature({"rt": 2.0, "mz": 300.0}, FILES, point(300.0, 1e6)["traces"], members=[{"n": 2, "rt": 2.0, "mz": 301.0}],
+                  spectrum={"mz": [250.0, 300.0, 301.0, 320.0], "y": [5.0, 100.0, 20.0, 7.0]}, hr=False)
+    assert [o["label"] for o in f["files"]] == [x["label"] for x in FILES]
+    big = f["files"][2]                                                          # t10: factor 1.0, gaussian sd 0.04
+    assert abs(big["apex"] - 2.0) < 0.02 and 1.7 < big["a"] < 1.95 and 2.05 < big["b"] < 2.3
+    assert abs(big["area"] - 1e6 * 0.04 * (2 * np.pi) ** 0.5) / big["area"] < 0.1  # area of a gaussian h * sd * sqrt(2 pi)
+    assert f["trend"] == "rises then falls" and f["areas"][2] == max(f["areas"])
+    marks = {round(p["mz"]): p["mark"] for p in f["peaks"]}
+    assert marks[300] == 0 and marks[301] == 2 and marks[250] is None and marks[320] is None
+
+
+def test_feature_without_trace_is_zero():
+    f = X.feature({"rt": 2.0, "mz": 300.0}, FILES[:2], {"0": gauss(2.0, 10)})
+    assert f["files"][1]["area"] == 0.0 and f["files"][0]["area"] > 0

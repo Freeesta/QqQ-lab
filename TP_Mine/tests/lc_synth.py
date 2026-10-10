@@ -31,15 +31,15 @@ def _g(t, c, s):
 ISF_FRAGMENT = mass_of("C6H8N3O")              # a fragment of the parent that the source also makes (2 % of the parent in every file)
 
 
-def write_series(folder: Path, times=(-1, 0, 5, 10, 20, 40), seed=5, hidden_isf: bool = False) -> list[dict]:
-    """Writes one file per time (-1: dark adsorption) and returns [{name, path, time, type}]. hidden_isf: a product of the treatment with the mass
+def write_series(folder: Path, times=(-1, 0, 5, 10, 20, 40), seed=5, hidden_isf: bool = False, weak: float = 1.0) -> list[dict]:
+    """Writes one file per time (-1: dark adsorption) and returns [{name, path, time, type}]. weak: factor on the +O product (0.2: its first time stays under the detection height). hidden_isf: a product of the treatment with the mass
     of the parent's fragment, co-eluting with the parent and consumed with it: it never makes a feature of its own (the fragment is there in
     every file) but the ratio fragment / parent grows with the treatment."""
     rng = np.random.default_rng(seed)
     out = []
     for t in times:
         k = max(t, 0)
-        amp = {PARENT: 6e7 * np.exp(-k / 18.0), HYDROXY: 0.0 if t <= 0 else 4e6 * (1 - np.exp(-k / 30.0)), DEMETHYL: 0.0 if t <= 0 else 3e6 * (k / 8.0) * np.exp(-k / 8.0)}
+        amp = {PARENT: 6e7 * np.exp(-k / 18.0), HYDROXY: 0.0 if t <= 0 else weak * 4e6 * (1 - np.exp(-k / 30.0)), DEMETHYL: 0.0 if t <= 0 else 3e6 * (k / 8.0) * np.exp(-k / 8.0)}
         rtc = {PARENT: 5.0, HYDROXY: 4.6, DEMETHYL: 4.2}
         specs, rts, tic = [], np.arange(0, 10, 0.04), []
         i = 0
