@@ -1,0 +1,29 @@
+# Vista Dati, bassa risoluzione (`explore.js` e compagni)
+Stato attuale; aggiornalo riscrivendo le righe, non aggiungendo storia. Il nucleo è in AGENTS.md.
+
+## Caricamento
+- Riquadro 1 = mzML (riconosciuto dal CONTENUTO; il nome dà solo tipo/tempo/concentrazione, in giallo se indovinati), riquadro 2 = `.dam` facoltativo (se di tipo diverso dai file compare `#methwarn`, `/api/method_warnings`: MRM si decodifica dal file, Full Scan/MS2 solo dal NOME del metodo).
+- «Prova con i file di esempio ▾»: Full Scan (5 file), MS2 (2), MRM (4 standard), HRMS (1 Orbitrap DDA, si apre in alta risoluzione); si scarica solo il gruppo scelto, al clic.
+- Le frasi della schermata di caricamento (`PHRASES`, `ldNext`) stanno in uno script in linea dopo `#loading` in `index.html`: non spostarle in `explore.js`.
+
+## Schede e grafici
+- **Schede** Full Scan / MS2 / MRM: mai grafici misti. Vista iniziale: TIC + spettro all'apice (+ MRM); DDA/IDA: trio affiancato sopra 1100 px. «Mostra tutti gli esperimenti insieme» (ingranaggio, spenta di base): `tabs.js` `setTogether`, `allTabs()`; test `e2e_tutti`.
+- **Cromatogramma**: clic = spettro di una scansione; trascina = intervallo (spettro medio); clic destro = spettro in un pannello, XIC, integrazione, annotazione. Dopo un clic ← → una scansione (tenuti premuti scorrono), Maiusc salti di 5, Spazio scorrimento automatico, Esc lo ferma. Ctrl/Cmd + rotella = zoom attorno al cursore.
+- **XIC**: finestra `openXic` (fino a 10 ioni, m/z o formula + addotto) e clic destro. LR: finestra [n−0,2; n+0,8] sulla massa nominale (`XIC_BELOW = 0.2`; da un centroide cliccato n = round(m − 0,25)), perché i centroidi del 3200 QTRAP stanno +0,14…+0,38 sopra il calcolato. HR: ppm del profilo del file (5 FTMS, 10 TOF).
+- **Integrazione**: solo XIC e MRM (TIC/BPC/PDA rimandano all'XIC); automatica o manuale, mai sovrapposte; tabella con S/N e parametri cromatografici facoltativi; Excel. La retta di taratura NON c'è.
+- **Correzione** (menu «Correz.»): nessuna | sottrai un file (qualunque della scheda) | fondo di un tratto | linea di base SNIP. Il popover «▾»: m/z da…a…, RT da…a…, scala log, precursore.
+- **Spettro**: asse m/z fisso sull'intervallo del livello, lucchetto solo su y, righello (si aggancia all'etichetta m/z più vicina entro 34 px; si annulla se cambiano zoom m/z, scansione, file o livello), annotazioni, profilo isotopico di una formula dal clic destro (una formula con `+`/`-` finale è lo ione così com'è; cambiando lo zoom il profilo si spegne), ricerca in libreria per le MS2.
+- **Mappa RT×m/z** (`drawMap` in `explore.js`; mouse, tastiera, mirino e zoom vero in `mappa.js`, `MAPPA`; scelte in `qqq.mappa`): 2D e 3D, Ridge resta tolto. Rotella = zoom sui due assi (Maiusc solo m/z, Alt solo RT; Ctrl/Cmd+rotella come prima), trascina = zoom a riquadro, Alt+trascina = spettro dell'intervallo, doppio clic = spettro, ⤢ o 0 = vista intera, Backspace = zoom precedente. **Zoom vero**: 150 ms dopo l'ultimo cambio `/api/map?rt0=&rt1=&mz0=&mz1=&nrt=&nmz=` (`Item.ionmap_region`, al massimo 1000×1000, mai più bin delle scansioni né più grossi della mappa intera; colori con la stessa scala della mappa intera). **Mirino** (pulsante o M; acceso a schermo intero, F): croce, lettura, spettro della scansione di lato (stesso asse m/z) e XIC sotto (stesso asse RT; LR [n−0,2; n+0,8], HR ppm del profilo); sotto 700 px solo croce e lettura. **Blocco**: clic destro, L o pressione lunga; Maiusc+clic destro e il menu «⋯» = XIC. Frecce: ←/→ scansione, ↑/↓ un bin, Maiusc = apice dell'XIC / picco dello spettro sopra 3× il rumore MAD. Test `e2e_mappa`, `tests/test_mappa.py`.
+- **Rilevamento dei picchi**: `PK` / `PK_DEF` (`qqq.picchi`), finestra «Parametri di rilevamento dei picchi…» (`peakParams`) su `autoEdges`; i valori di partenza riproducono l'algoritmo originale (`e2e_picchi`).
+
+## Barra laterale e strumenti
+- Barra laterale a schede (File, Calc, Perdite, Addotti, Liste, Tavola). Calcolatrice m/z anche a tendina nell'header; «Cerca in Δm» apre Perdite neutre (`tables.js`, scheda `ls`) con |Δm|. Chip di polarità: `ESI+` blu, `ESI−` rosso, `ESI+/-` viola.
+- **Liste di riferimento e contaminanti** (`liste.js`, `#np-liste`): un motore per LR e HR (CSV con `;` e virgola decimale, formato NORMAN; IndexedDB `"qqq_lab"`, archivio `liste_utente`). LR: ricerca per m/z nominale (±0,5 Da), NESSUNA segnalazione automatica sugli spettri (principio 1), dal clic destro «Cerca nelle liste dei contaminanti…», testo didattico su coincidenze casuali e serie (PEG ogni 44 Da, silossani ogni 74 Da). HR: ricerca in ppm e riga «Compatibile con un contaminante noto» al mouse sul picco. Lista integrata `chem/contaminants.json` (Keller 2008, 286 voci, **senza m/z**, calcolate da `contaminants.py`, `/api/contaminants`; nomi inglesi in `contaminants_en.json`); liste utente in `qqq.contaminanti`, interruttore `qqq.contaminanti.on`. Test `e2e_contaminanti`, `tests/test_liste.py`.
+- **Tolti per decisione di Federico (non reintrodurre)**: schede Attribuzioni e Suggerimenti, retta di taratura, spettro simulato e sagoma, didascalie automatiche, scheda Isotopi, «?» nei pannelli dei grafici (resta la guida generale), «Da dove viene?» nei menu, «Intanto leggi la Teoria» durante il caricamento.
+
+## Fatti sui dati del 3200 QTRAP
+- Analyst 1.6.3; il programma legge solo mzML (ProteoWizard MSConvert su Windows, istruzioni nella schermata di carico; consigliato il profilo).
+- Negli mzML il PDA è solo il cromatogramma totale (TWC): niente spettri UV.
+- Scostamento dell'asse m/z: +0,14…+0,38 (mediana +0,24) sopra il calcolato.
+- File MRM: solo cromatogrammi. File MS2: molte scansioni vuote (gestite). Q1 contro EMS non è nell'mzML: lo sceglie lo studente.
+- Il QTRAP frammenta molto in sorgente: molti ioni che sembrano TP sono frammenti del progenitore (Teoria cap. 17).
