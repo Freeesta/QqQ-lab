@@ -10,7 +10,7 @@ use quick_xml::Reader;
 
 use crate::error::{Error, Result};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Spectrum {
     pub index: usize,
     pub id: String,
@@ -52,12 +52,16 @@ pub struct Chromatogram {
 pub enum Item {
     Spectrum(Spectrum),
     Chromatogram(Chromatogram),
+    /// Name of a cvParam of an `<analyzer>` component (instrumentConfiguration), e.g. "quadrupole", "orbitrap".
+    Analyzer(String),
 }
 
 #[derive(Debug, Default)]
 pub struct Run {
     pub spectra: Vec<Spectrum>,
     pub chromatograms: Vec<Chromatogram>,
+    /// Names of the analyzer components of the instrument (lower case), in file order.
+    pub analyzers: Vec<String>,
 }
 
 /// Reads the whole file into memory.
@@ -66,6 +70,7 @@ pub fn read<R: Read>(reader: R) -> Result<Run> {
     parse(reader, |item| match item {
         Item::Spectrum(s) => run.spectra.push(s),
         Item::Chromatogram(c) => run.chromatograms.push(c),
+        Item::Analyzer(n) => run.analyzers.push(n.to_lowercase()),
     })?;
     Ok(run)
 }
@@ -270,6 +275,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
     let mut array: Option<Array> = None;
     let mut in_binary = false;
     let mut in_precursor_list = false;
+    let mut in_analyzer = false;
 
     loop {
         let ev = xml.read_event_into(&mut buf).map_err(xml_error)?;
@@ -317,6 +323,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                         scope = Scope::Chromatogram;
                     }
                     "precursorList" => in_precursor_list = true,
+                    "analyzer" if !empty => in_analyzer = true,
                     "binaryDataArray" => {
                         array = Some(Array {
                             kind: ArrayKind::Other,
@@ -329,6 +336,9 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                     "binary" if !empty => in_binary = true,
                     "cvParam" => {
                         let a = attrs(e);
+                        if in_analyzer {
+                            f(Item::Analyzer(get(&a, "name").unwrap_or("").to_string()));
+                        }
                         let acc = get(&a, "accession").unwrap_or("");
                         let value = get(&a, "value").unwrap_or("");
                         let unit = get(&a, "unitName").unwrap_or("");
@@ -397,6 +407,7 @@ pub fn parse<R: Read, F: FnMut(Item)>(reader: R, mut f: F) -> Result<()> {
                         }
                     }
                     "precursorList" => in_precursor_list = false,
+                    "analyzer" => in_analyzer = false,
                     "spectrum" => {
                         if let Some(s) = spec.take() {
                             f(Item::Spectrum(finish_spectrum(s)?));

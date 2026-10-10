@@ -91,6 +91,15 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Complete verification
         run: python tools/verifica.py --browser chromium
+      # the second round of the engine: the built site with the Rust engine (?motore=rust) against Python on the same files
+      - name: Rust engine on the built site
+        run: |
+          python tools/build_site.py
+          ver=$(grep -A1 'name = "wasm-bindgen"$' Cargo.lock | sed -n 's/version = "\(.*\)"/\1/p')
+          cargo install wasm-bindgen-cli --version "$ver" --locked
+          cargo build --locked --release --target wasm32-unknown-unknown -p mzlab-wasm
+          wasm-bindgen --target web --no-typescript --out-dir site/static/wasm target/wasm32-unknown-unknown/release/mzlab_wasm.wasm
+          python tools/verifica.py --browser chromium --solo e2e_rust
       - name: Print the logs of the failed tests (readable in the job log)
         if: failure()
         shell: bash
