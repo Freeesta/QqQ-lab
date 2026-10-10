@@ -3,7 +3,7 @@ Stato attuale; aggiornalo riscrivendo le righe, non aggiungendo storia. Il nucle
 
 ## Caricamento
 - Riquadro 1 = mzML (riconosciuto dal CONTENUTO; il nome dà solo tipo/tempo/concentrazione, in giallo se indovinati), riquadro 2 = `.dam` facoltativo (se di tipo diverso dai file compare `#methwarn`, `/api/method_warnings`: MRM si decodifica dal file, Full Scan/MS2 solo dal NOME del metodo).
-- «Prova con i file di esempio ▾»: Full Scan (5 file), MS2 (2), MRM (4 standard), HRMS (1 Orbitrap DDA, si apre in alta risoluzione); si scarica solo il gruppo scelto, al clic.
+- «Prova con i file di esempio ▾»: Full Scan (5 file), MS2 (2), MRM (4 standard), HRMS (4 Orbitrap DDA, si apre in alta risoluzione); si scarica solo il gruppo scelto, al clic.
 - Schermata di caricamento (`#loading`): all'avvio del motore barre a picchi (`.ms`), durante il caricamento dei dati (`window.qqReady` vero) tre ioni a spirale centrati sopra le frasi (`#ldion`, `ldIon()`; colori `--accent`, `--ok`, `--bad`; fermi con animazioni ridotte). Frasi (`PHRASES`, `ldNext`) e `ldIon` stanno in uno script in linea dopo `#loading` in `index.html`: non spostarli in `explore.js`.
 
 ## Schede e grafici
