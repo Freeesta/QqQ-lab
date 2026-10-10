@@ -92,6 +92,51 @@ try:
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("f"); pg.wait_for_timeout(500)
             assert not pg.evaluate(f"{M}.el.classList.contains('max')") and not pg.evaluate(f"{M}.el.classList.contains('mzmir')")
         step("F again: back in the page, sight off", leave)
+        def diff():
+            pg.evaluate(f"(()=>{{const q={M};q.k=E.files[1].k;q.ref=E.files[0].k;ctl(q);draw(q)}})()")
+            pg.wait_for_function(f"!!({M}._img && {M}._img.b && {M}._img.key.includes('rttol'))", timeout=20000)     # A - B from the server, with the tolerance in RT
+            assert pg.evaluate("[...LUT_DIV.slice(0,3)]") == [213, 94, 0] and pg.evaluate("[...LUT_DIV.slice(1020,1023)]") == [0, 114, 178]   # vermilion <-> blue
+            pg.select_option(".pnl.map [data-mz=show]", "up")
+            pg.wait_for_function(f"MAPPA.diffOpt().show==='up' && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
+            assert pg.evaluate("JSON.parse(localStorage.getItem('qqq.mappa')).show") == "up"
+            pg.fill(".pnl.map [data-mz=thr]", "5"); pg.dispatch_event(".pnl.map [data-mz=thr]", "change")
+            pg.wait_for_function(f"MAPPA.diffOpt().thr===0.05 && {M}._img.key.includes(JSON.stringify(MAPPA.diffOpt()))", timeout=10000)
+            pg.select_option(".pnl.map [data-mz=show]", "all"); pg.fill(".pnl.map [data-mz=thr]", "2"); pg.dispatch_event(".pnl.map [data-mz=thr]", "change"); pg.wait_for_timeout(500)
+        step("difference t30 - t0: tolerance in RT, Okabe-Ito colours, show increases only, noise threshold", diff)
+        def points():
+            pg.evaluate(M + ".el.scrollIntoView({block:'start'})"); pg.wait_for_timeout(300)
+            pg.click(".pnl.map [data-mz=mark]")
+            for n, (rt, mz) in enumerate([(14.33, 194.5), (14.33, 152.4), (18.5, 365.2)], 1):
+                xy = pg.evaluate(f"(()=>{{const a={M}._a,c={M}.cv.getBoundingClientRect();return [c.left+a.X({rt}),c.top+a.Y({mz})]}})()")
+                pg.mouse.click(*xy); pg.wait_for_function(f"MAPPA.pts({M}).length==={n}", timeout=10000)
+            pg.wait_for_function(f"!!(MAPPA.st({M}).rows && MAPPA.st({M}).rows.length===3 && MAPPA.st({M}).rows[2].g!=null)", timeout=15000)
+            rows = pg.evaluate(f"MAPPA.st({M}).rows")
+            assert rows[0]["g"] == rows[1]["g"] != rows[2]["g"], [(r["rt"], r["mz"], r["g"]) for r in rows]          # two at the same RT, one alone: two groups
+            top, oth = sorted(rows[:2], key=lambda r: -r["ia"])
+            assert top["dm"] == 0 and abs(oth["dm"] - (oth["mz"] - top["mz"])) < 1e-6 and rows[2]["dm"] == 0, rows
+            assert all(r["ib"] is not None and r["sn"] is not None for r in rows) and abs(rows[0]["d"] - (rows[0]["ia"] - rows[0]["ib"])) < 1e-3
+            assert pg.locator(".pnl.map .mztab tbody tr").count() == 3
+            pg.click(".pnl.map .mztab a[data-dm]"); pg.wait_for_timeout(600)                                    # the Δm opens the neutral losses, filtered
+            v = pg.evaluate("(()=>{const i=document.querySelector('#sb-panel-losses #nl-q')||document.querySelector('#nl-q');return i&&i.value})()")
+            assert v and abs(float(v) - abs(oth["dm"])) < 0.06, (v, oth["dm"])
+            pg.screenshot(path=SH + "mappa_punti.png")
+        step("marked points: snap, two RT groups, Δm from the most intense, the Δm opens the losses filtered", points)
+        def excel():
+            with pg.expect_download(timeout=30000) as dl: pg.click(".pnl.map .mztab [data-t=xl]")
+            path = dl.value.path(); rows = xlsx_rows(path)
+            head = [c[1] for c in rows[0] if c]; assert len(rows) == 4 and "m/z" in head and "Δm" in head, rows[:2]
+            assert len(xlsx_sheets(path)) == 2, xlsx_sheets(path)                                              # points + metadata
+        step("the table goes to Excel with a metadata sheet", excel)
+        def persist():
+            pg.locator(".pnl.map .mztab tbody input[data-note]").first.fill("prova"); pg.dispatch_event(".pnl.map .mztab tbody input[data-note] >> nth=0", "change"); pg.wait_for_timeout(1500)
+            pg.reload(); ready(pg); pg.wait_for_timeout(1500)
+            pg.wait_for_function(f"!!({M} && MAPPA.pts({M}).length===3)", timeout=20000)
+            assert pg.evaluate(f"MAPPA.pts({M}).some(q=>q.note==='prova')")
+            pg.wait_for_selector(".pnl.map .mztab tbody tr", timeout=15000)
+            pg.locator(".pnl.map .mztab tbody tr").nth(2).click(); pg.wait_for_timeout(300)                    # the row: centred and locked
+            assert pg.evaluate(f"!!{M}._mz.lock")
+            pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Delete"); pg.wait_for_function(f"MAPPA.pts({M}).length===2", timeout=5000)
+        step("points saved for the pair of files (a note too) and back after a reload; row = lock; Canc removes", persist)
         b.close()
     r.close()
 except Exception as e:
