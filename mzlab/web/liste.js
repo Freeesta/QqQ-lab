@@ -484,12 +484,6 @@ const LISTE = (() => {
 
     container.innerHTML = `
       <div class="liste-panel" style="display:flex;flex-direction:column;gap:10px;padding:8px 12px;height:100%;box-sizing:border-box;overflow:auto">
-        <div class="card" style="padding:10px 12px;background:var(--soft,#f8fafc);border:1px solid var(--line,#e2e8f0);border-radius:8px">
-          <div style="font-size:12.5px;line-height:1.45;color:var(--ink,#1e293b)">
-            ${I18N.t("lst.note")}
-          </div>
-        </div>
-
         <div class="liste-bar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
           <label style="display:inline-flex;align-items:center;gap:4px">
             <span><i>m/z</i></span>
@@ -517,17 +511,10 @@ const LISTE = (() => {
         <div style="display:flex;align-items:center;gap:12px;font-size:12px;flex-wrap:wrap">
           <span class="muted">${I18N.t("lst.active")}</span>
           <span id="lst-src-checks" style="display:inline-flex;gap:10px;flex-wrap:wrap"></span>
-          <span style="flex:1"></span>
-          <button type="button" id="lst-btn-lab" style="font-size:11.5px;padding:2px 8px">${I18N.t("lst.btnLab")}</button>
-          <button type="button" id="lst-btn-upload" style="font-size:11.5px;padding:2px 8px" class="go">${I18N.t("lst.btnUpload")}</button>
-          <input type="file" id="lst-file-in" accept=".csv,.txt" hidden>
         </div>
 
         <div id="lst-userlists-bar" style="font-size:12px;padding:4px 8px;background:var(--panel,#fff);border:1px dashed var(--line,#cbd5e1);border-radius:6px" hidden></div>
-
-        <div style="display:flex;align-items:baseline;justify-content:space-between">
-          <span id="lst-count" class="muted sm">${I18N.t("lst.loading")}</span>
-        </div>
+        <span id="lst-count" hidden></span>
 
         <div id="lst-table-wrap" style="flex:1;min-height:220px;overflow:auto;border:1px solid var(--line,#e2e8f0);border-radius:6px;background:var(--panel,#fff)">
           <table class="lct" style="width:100%;border-collapse:collapse;font-size:12px">
@@ -562,7 +549,7 @@ const LISTE = (() => {
 
     function renderSourceChecks() {
       const act = rd(KEY_LISTS, {});
-      const allLists = [...ST.lists, labList(labRows()), ...ST.userLists];
+      const allLists = [...ST.lists, ...ST.userLists];
       elChecks.innerHTML = allLists.map(L => {
         const on = act[L.id] !== false;
         return `<label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer">
@@ -627,7 +614,7 @@ const LISTE = (() => {
 
       const limit = 400;
       const shown = items.slice(0, limit);
-      elCount.innerHTML = I18N.t("lst.found", { n: items.length }) + (items.length > limit ? " " + I18N.t("lst.firstShown", { limit }) : "") + (hasMz ? " " + I18N.t(isNom ? "lst.withinDa" : "lst.withinPpm", { tol: tolVal, mz: qMz }) : "");
+      if (elCount) elCount.innerHTML = "";
 
       if (!shown.length) {
         elTbody.innerHTML = `<tr><td colspan="9" class="muted" style="text-align:center;padding:16px">${I18N.t("lst.noMatch")}</td></tr>`;
@@ -682,26 +669,6 @@ const LISTE = (() => {
         render();
       };
     });
-
-    const bUpload = container.querySelector("#lst-btn-upload");
-    if (bUpload && elFileIn) {
-      bUpload.onclick = () => elFileIn.click();
-      elFileIn.onchange = async e => {
-        const file = e.target.files[0];
-        if (!file) return;
-        try {
-          const text = await file.text();
-          await addUserListFromCsv(file.name, text);
-          renderSourceChecks();
-          render();
-        } catch (err) {
-          if (typeof toast === "function") toast(I18N.t("lst.csvError", { message: err.message }));
-        }
-      };
-    }
-
-    const bLab = container.querySelector("#lst-btn-lab");
-    if (bLab) bLab.onclick = () => openLab();
 
     ready().then(() => {
       renderSourceChecks();

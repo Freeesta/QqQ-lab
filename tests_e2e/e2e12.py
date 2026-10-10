@@ -29,7 +29,7 @@ with sync_playwright() as p:
         t = flst_own(pg); assert "scan MS1" not in t and "RT 0.5" not in t and "Doppio clic" not in pg.inner_text("#dfiles"), t
         assert "FULL SCAN" in t.upper() and "MS2" not in t and "MRM" not in t and "EMS" not in t, t
         d = pg.inner_text("#dtabs"); assert "Full Scan" in d and "MS2 (Product Ion)" in d and "MRM" in d and "Tempi ed esperimenti" in d, d
-        assert pg.locator("#flst .fgh").count() >= 1 and pg.locator("#flst .tag").count() == 0 and pg.locator('#dfiles .hq').count() == 0
+        assert pg.locator("#flst .fgh").count() >= 1 and pg.locator("#flst .tag").count() == 0 and pg.locator('#flst .hq').count() == 0
         assert pg.locator("#np-export, #np-ints, #kindinfo").count() == 0
         assert pg.locator("#credits").count() == 0 and pg.locator('.pnl.chrom [data-o=norm]').count() == 0
         fw = pg.evaluate("document.querySelector('.pnl.chrom [data-o=mz0]').offsetWidth"); assert fw < 90, fw

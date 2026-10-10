@@ -91,7 +91,8 @@ try:
 
         def header_btn():
             pg.click("#np-liste"); pg.wait_for_selector("#sb-panel-lists", timeout=5000)
-            assert pg.is_visible("#sb-panel-lists") and pg.evaluate("BARRA.curTab") == "lists" and "Risoluzione unitaria" in pg.inner_text("#sb-panel-lists")
+            assert pg.is_visible("#sb-panel-lists") and pg.evaluate("BARRA.curTab") == "lists"
+            assert pg.is_visible("#sb-help") and pg.locator("#sb-help").get_attribute("data-help") == "liste"
             # Close dialog
             shut(pg, "#listex"); pg.wait_for_timeout(400)
         step("header button: #np-liste opens the Liste tab of the sidebar", header_btn)
@@ -140,11 +141,12 @@ try:
             tol_val = pg.evaluate("document.querySelector('#lst-tol').value")
             assert float(tol_val) == 0.5
             body_txt = pg.inner_text("#sb-panel-lists")
-            assert "Risoluzione unitaria" in body_txt and "PEG" in body_txt and "silossani" in body_txt
+            assert "Risoluzione unitaria" not in body_txt
+            assert "Risoluzione unitaria" in pg.evaluate("HELP.liste[1]") and "silossani" in pg.evaluate("HELP.liste[1]")
             # Results table is populated and sorted
             assert pg.locator("#lst-tbody tr").count() > 0
             shut(pg, "#listex")
-        step("low resolution: context menu search opens nominal ±0.5 Da search with educational text", lr_context_menu_search)
+        step("low resolution: context menu search opens nominal ±0.5 Da search", lr_context_menu_search)
 
     r2.close()
 except Exception as e:
