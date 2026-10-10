@@ -236,11 +236,11 @@ def scenario(name: str, files: list[str], port: int) -> dict:
             out["engine_start_s"] = round(time.perf_counter() - t0, 2)
             t1 = time.perf_counter()
             pg.set_input_files("#pick", files)
-            pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n}", timeout=900000)
+            pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n}", timeout=600000)
             out["read_mzml_s"] = round(time.perf_counter() - t1, 2)
             t2 = time.perf_counter()
             pg.click("#opbtn")
-            pg.wait_for_selector(".pnl.chrom canvas", timeout=900000)
+            pg.wait_for_selector(".pnl.chrom canvas", timeout=600000)
             out["first_draw_s"] = round(time.perf_counter() - t2, 2)
             t3 = time.perf_counter()
             for k in range(n):
@@ -254,14 +254,9 @@ def scenario(name: str, files: list[str], port: int) -> dict:
             pg = ctx.new_page()
             t4 = time.perf_counter()
             pg.goto(f"http://127.0.0.1:{port}/?motore=python")
-            pg.wait_for_selector("#drop, .pnl.chrom canvas", timeout=900000)
-            out["reopen_landing_s"] = round(time.perf_counter() - t4, 2)
-            pg.wait_for_function(f"document.querySelectorAll('#flist input[data-k=use]').length >= {n} || (window.E && E.files && E.files.length >= {n})", timeout=900000)
-            out["reopen_files_listed_s"] = round(time.perf_counter() - t4, 2)
-            if pg.query_selector(".pnl.chrom canvas") is None:
-                pg.click("#opbtn")
-                pg.wait_for_selector(".pnl.chrom canvas", timeout=900000)
+            pg.wait_for_selector(".pnl.chrom canvas", timeout=600000)       # a reload goes straight to the data view, no file list
             out["reopen_first_draw_s"] = round(time.perf_counter() - t4, 2)
+            out["reopen_files"] = pg.evaluate("fetch('api/state').then(r => r.json()).then(d => (d.files || d.items || []).length)")
             steps = pg.evaluate("window.__steps") or []
             prev = 0
             for text, at in steps:
@@ -295,7 +290,7 @@ def main_velocita(tmp: Path) -> list:
         port += 1
         rows.append(scenario(name, fl, port))
     keys = ["scenario", "files", "file_mb", "engine_start_s", "read_mzml_s", "first_draw_s", "tic_xic_s", "idb_mb"]
-    keys2 = ["scenario", "reopen_landing_s", "reopen_files_listed_s", "reopen_first_draw_s", "pyodide_wasm_mb", "rss_peak_mb"]
+    keys2 = ["scenario", "reopen_first_draw_s", "reopen_files", "pyodide_wasm_mb", "rss_peak_mb"]
     step_keys = sorted({k for r in rows for k in r if k.startswith("reopen_step[")})
     return [f"Files: {origin}.", ""] + table(keys, rows) + [""] + table(keys2, rows) + ["", "Reopening, seconds spent between worker messages:"] + table(["scenario"] + step_keys, rows)
 
