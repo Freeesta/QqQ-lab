@@ -110,6 +110,31 @@ def msn_tree() -> str:
     return _out(_hr.msn_tree())
 
 
+def frag_tree() -> str:
+    """Fragmentation tree of the parent (fragtree.py), the same JSON for LR (supposed, from the MS2 of the parent) and HR (MSn tree)."""
+    from . import fragtree
+    if _hr is not None:
+        return _out(fragtree.hr(_hr))
+    if _ex is None:
+        raise ValueError("no experiment in memory: run the analysis first")
+    return _out(fragtree.lr(_ex))
+
+
+def frag_tree_compare(cid: int) -> str:
+    """Nodes of the parent tree found in the MS2 of one product (fragtree.compare_*): {marks: {node id: {state: same|shifted, delta}}, n_same, n_shifted}."""
+    from . import fragtree
+    if _hr is not None:
+        return _out(fragtree.compare_hr(fragtree.hr(_hr), _hr.detail(int(cid)).get("localization")))
+    if _ex is None:
+        raise ValueError("no experiment in memory: run the analysis first")
+    e = next((x for x in _ex.entries if x["id"] == int(cid)), None)
+    if e is None:
+        raise ValueError("candidate not found")
+    p = _ex.entries[0]
+    dm = e["neutral_mass"] - p["neutral_mass"] if e.get("neutral_mass") and p.get("neutral_mass") else None
+    return _out(fragtree.compare_lr(fragtree.lr(_ex), _ex.ms2(e), dm))
+
+
 def inclusion_csv(n: int = 50) -> str:
     if _hr is None:
         raise ValueError("no high-resolution experiment in memory")
@@ -132,26 +157,3 @@ def isf_classify(mzs_json: str, formula_p: str = "") -> str:
     res = isf.classify_ions(samples, float(_ex.entries[0]["mz_x"]), [float(v) for v in json.loads(mzs_json)], formula_p or (chem.fmt(_ex.neutral) if _ex.neutral else None))
     res["sheets"] = isf.to_sheets(res)
     return _out(res)
-
-
-def esperti_trova(json_in: str) -> str:
-    """Expert tools on the difference map (esperti.py): the points of A - B. In: {diff, a (base64 float32 grids), nrt, nmz, rt0, rt1, mz0, dmz, soglie}."""
-    from . import esperti
-    q = json.loads(json_in)
-    nrt, nmz = int(q["nrt"]), int(q["nmz"])
-    pts = esperti.find_points(esperti._grid(q["diff"], nrt, nmz), esperti._grid(q["a"], nrt, nmz), float(q["rt0"]), float(q["rt1"]), float(q["mz0"]), float(q["dmz"]), q.get("soglie"))
-    return _out({"points": pts})
-
-
-def esperti_analisi(json_in: str) -> str:
-    """Groups, roles with proof, time course and priority of the points (esperti.analyse). In: {points (with traces per file), files, hr, ppm, losses, soglie}."""
-    from . import esperti
-    q = json.loads(json_in)
-    return _out({"rows": esperti.analyse(q["points"], q["files"], bool(q.get("hr")), float(q.get("ppm") or 5.0), q.get("losses") or [], q.get("soglie"))})
-
-
-def esperti_feature(json_in: str) -> str:
-    """Card of one point (esperti.feature): integration edges and area per file, time course class, spectrum peaks of its group. In: {point, files, traces, members, spectrum, hr, ppm}."""
-    from . import esperti
-    q = json.loads(json_in)
-    return _out(esperti.feature(q["point"], q["files"], q.get("traces") or {}, q.get("members"), q.get("spectrum"), bool(q.get("hr")), float(q.get("ppm") or 5.0), float(q.get("half") or 0.3)))
